@@ -1,0 +1,138 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.protobuf'
+}
+
+// Packaged vision model: prefer downloaded OP v0.8.13 (full F2 / lead alive).
+// Override: ./gradlew assembleDebug -PsupercomboModel=/path/to.onnx
+def supercomboSrc = file(findProperty('supercomboModel')
+        ?: "${rootProject.projectDir}/models/sc_v0.8.13.onnx")
+def supercomboDst = file("${projectDir}/src/main/assets/supercombo.onnx")
+
+tasks.register('syncSupercomboModel', Copy) {
+    description = 'Copy models/sc_v0.8.13.onnx → assets/supercombo.onnx for APK'
+    onlyIf {
+        if (!supercomboSrc.isFile()) {
+            logger.warn("supercombo source missing: ${supercomboSrc} — keeping existing assets/supercombo.onnx")
+            return false
+        }
+        return true
+    }
+    from supercomboSrc
+    into supercomboDst.parentFile
+    rename { 'supercombo.onnx' }
+    outputs.file(supercomboDst)
+    doFirst {
+        logger.lifecycle("Packaging supercombo: ${supercomboSrc} → ${supercomboDst}")
+    }
+}
+
+tasks.named('preBuild').configure { dependsOn('syncSupercomboModel', 'syncTrafficYoloModel') }
+
+def trafficYoloSrc = file(findProperty('trafficYoloModel')
+        ?: "${rootProject.projectDir}/models/yolov8n_traffic_256.onnx")
+if (!trafficYoloSrc.isFile()) {
+    trafficYoloSrc = file("${rootProject.projectDir}/models/yolov8n_traffic_320.onnx")
+}
+def trafficYoloDst = file("${projectDir}/src/main/assets/traffic_yolo.onnx")
+
+tasks.register('syncTrafficYoloModel', Copy) {
+    description = 'Copy models/yolov8n_traffic_256.onnx (or _320) → assets/traffic_yolo.onnx'
+    onlyIf {
+        if (!trafficYoloSrc.isFile()) {
+            logger.warn("traffic YOLO missing: ${trafficYoloSrc} — put ONNX there or adb push to /sdcard/adas_models/traffic_yolo.onnx")
+            return false
+        }
+        return true
+    }
+    from trafficYoloSrc
+    into trafficYoloDst.parentFile
+    rename { 'traffic_yolo.onnx' }
+    outputs.file(trafficYoloDst)
+    doFirst {
+        logger.lifecycle("Packaging traffic YOLO: ${trafficYoloSrc} → ${trafficYoloDst}")
+    }
+}
+
+android {
+    namespace 'ai.flow.adas'
+    compileSdk 34
+    buildToolsVersion "34.0.0"
+
+    defaultConfig {
+        applicationId "ai.flow.adas"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+
+    packagingOptions {
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libprotobuf.so'
+        pickFirst '**/libprotobuf-lite.so'
+        pickFirst '**/libprotoc.so'
+        pickFirst '**/libzmq.so'
+        pickFirst 'META-INF/LICENSE'
+        pickFirst 'META-INF/LICENSE.txt'
+        pickFirst 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/native-image/**'
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+
+    implementation 'com.google.protobuf:protobuf-java:3.24.4'
+    implementation 'com.google.protobuf:protobuf-java-util:3.24.4'
+    implementation 'org.zeromq:jeromq:0.6.0'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
+
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.3'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+}
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:3.24.4'
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {
+                    option 'lite'
+                }
+            }
+        }
+    }
+}

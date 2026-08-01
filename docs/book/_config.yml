@@ -1,0 +1,38 @@
+# Jupyter Book — ADAS student course (inspired by Algorithms-for-Automated-Driving)
+title: Algorithms for Phone ADAS
+author: Atom ADAS / student course notes
+logo: logo.svg
+
+# Without these, `\(...\)` / `\[...\]` are stripped to `(...)` / `[...]` and MathJax never sees math.
+parse:
+  myst_enable_extensions:
+    - dollarmath
+    - amsmath
+    - colon_fence
+    - deflist
+    - html_admonition
+    - html_image
+    - linkify
+    - replacements
+    - smartquotes
+    - substitution
+    - tasklist
+
+html:
+  home_page_in_navbar: false
+  use_edit_page_button: false
+  use_repository_button: false
+  use_issues_button: false
+  extra_footer: >
+    Inspired by
+    <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a>
+    (CC BY 4.0). Project-specific chapters document the Android ADAS stack
+    of the ADAS repository.
+
+sphinx:
+  config:
+    html_show_copyright: false
+    language: ru
+    myst_dmath_double_inline: true
+
+exclude_patterns: ['_build']

@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+import "camera.proto";
+import "gps.proto";
+import "imu.proto";
+import "can.proto";
+import "panda.proto";
+import "camera_intrinsics.proto";
+import "lanes.proto";
+import "car_state.proto";
+import "steer.proto";
+import "lane_keep.proto";
+import "localization.proto";
+import "camera_calib.proto";
+import "middleware_stats.proto";
+import "model_long.proto";
+import "safety_warn.proto";
+import "traffic_vision.proto";
+import "phone_stats.proto";
+
+// Main message wrapper for ZMQ
+message ZMQMessage {
+    int64 timestamp = 1;
+    string topic = 2;
+
+    oneof payload {
+        CameraImage camera_image = 3;
+        GPSLocation gps_location = 5;
+        GPSData gps_data = 6;
+        IMUData imu_data = 7;
+        CANData can_data = 11;
+        PandaHealth panda_health = 12;
+        CameraIntrinsics camera_intrinsics = 13;
+        LaneLines lane_lines = 14;
+        CarState car_state = 15;
+        SteerCommand steer_command = 16;
+        LaneKeepState lane_keep = 17;
+        LocalizationPose localization_pose = 18;
+        CameraCalibrationState camera_calib = 19;
+        LaneUv lane_uv = 20;
+        CameraOdometry camera_odometry = 21;
+        MiddlewareStats middleware_stats = 22;
+        LaneKeepDebug lane_keep_debug = 23;
+        ModelLongPlan model_long_plan = 24;
+        LongPlanState long_plan = 25;
+        SafetyWarnState safety_warn = 26;
+        CameraCalibDebug camera_calib_debug = 27;
+        TrafficDetections traffic_detections = 28;
+        TrafficVisionState traffic_vision = 29;
+        PhoneStats phone_stats = 30;
+    }
+}

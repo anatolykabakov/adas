@@ -1,0 +1,16 @@
+# MetaDrive driving simulator (sim/main.py)
+#
+# WRONG package (asks "Type your GitHub username"):
+#   pip install metadrive          # automation tool, NOT the simulator
+#
+# Correct install:
+#   pip uninstall -y metadrive
+#   pip install -r requirements.txt
+#
+# Or from source (recommended upstream):
+#   git clone https://github.com/metadriverse/metadrive.git
+#   cd metadrive && pip install -e .
+
+-r ../requirements.txt
+
+metadrive-simulator>=0.4.2.4

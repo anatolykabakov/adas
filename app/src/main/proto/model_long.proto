@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "ModelLongOuter";
+
+// Vision lead (modelV2.leadsV3) — distance / velocity of nearest obstacle.
+message LeadTrack {
+  float prob = 1;
+  float prob_time = 2;           // prediction horizon label (s), e.g. 0 / 2
+  // Trajectories length 6 (LEAD_TRAJ_LEN): x forward, y right+, v abs, a
+  repeated float x = 3;
+  repeated float y = 4;
+  repeated float v = 5;
+  repeated float a = 6;
+  // Convenience: t=0 sample (also x[0]..)
+  float d_rel = 7;               // = x[0], m
+  float y_rel = 8;
+  float v_lead = 9;
+  float a_lead = 10;
+}
+
+// Longitudinal heads from supercombo for ACC / long planner.
+message ModelLongPlan {
+  int64 timestamp = 1;           // capture ms
+  int32 frame_id = 2;
+  // Best PLAN hypothesis velocity (device frame), length 33 @ T_IDXS
+  repeated float plan_v_x = 3;
+  repeated float plan_v_y = 4;
+  repeated float plan_v_z = 5;
+  float plan_v0 = 6;             // plan_v_x[0]
+  LeadTrack lead0 = 7;           // t=0s presence
+  LeadTrack lead1 = 8;           // t=2s
+  // Model pose slice (same as CameraOdometry.trans) — ego rate estimate
+  float pose_vx = 9;
+  float pose_vy = 10;
+  float pose_vz = 11;
+  bool pose_valid = 12;
+  LeadTrack lead2 = 13;          // t=4s (flowpilot LEAD_MHP_SELECTION=3)
+}
+
+// Output of ADAS longitudinal planner (debug / future ACC).
+message LongPlanState {
+  int64 timestamp = 1;
+  float v_ego = 2;
+  float v_target = 3;
+  float a_target = 4;
+  float lead_d = 5;
+  float lead_v = 6;
+  float lead_prob = 7;
+  bool has_lead = 8;
+  string source = 9;             // "cruise" | "lead" | "plan_v" | "none" (+"+curv")
+  string status = 10;
+  // Curvature preview: what the path ahead asks for, before the lead/plan reference is applied.
+  float v_curv = 11;             // speed at which the curve ahead costs curv_a_lat_max
+  float kappa_ahead = 12;        // 1/m, high percentile over the preview window
+}

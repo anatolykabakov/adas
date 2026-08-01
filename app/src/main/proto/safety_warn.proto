@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "SafetyWarnOuter";
+
+// Port of that project's app fcw SafetyPlanner (FCW / AEB / LLDW / RLDW) — warnings only.
+message SafetyWarnState {
+  int64 timestamp = 1;
+  float accel_ms2 = 2;           // IDM desired accel (debug)
+  float cte_m = 3;               // + = ego right of path
+  float epsi_rad = 4;
+  float kappa = 5;
+  bool lateral_valid = 6;
+  float v_ego = 7;
+  float lead_d = 8;
+  float lead_v = 9;
+  float lead_prob = 10;
+  bool has_lead = 11;
+  bool fcw = 12;
+  bool aeb = 13;
+  bool lldw = 14;                // left lane departure
+  bool rldw = 15;                // right lane departure
+  string status = 16;
+  // Threat state behind FCW/AEB — warnings come from these, not from accel_ms2.
+  float cte_rate_ms = 17;        // + = drifting right
+  float ttc_s = 18;              // gap / closing speed; 0 when not closing on anything
+  float a_req_ms2 = 19;          // deceleration that still stops before the lead
+  bool threat_valid = 20;
+  bool driver_steering = 21;     // LDW is suppressed while the driver steers
+  bool lane_anchored = 22;       // path stands on both lane lines — LDW needs this
+}

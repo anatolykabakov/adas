@@ -1,0 +1,12 @@
+# Host profile: native Linux x86_64 (build machine / linux target)
+[settings]
+os=Linux
+arch=x86_64
+compiler=gcc
+compiler.version=11
+compiler.libcxx=libstdc++11
+compiler.cppstd=gnu17
+build_type=Release
+
+[tool_requires]
+*: cmake/[>=3 <4]

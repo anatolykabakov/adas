@@ -1,0 +1,50 @@
+default_language_version:
+  node: 17.9.0
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-case-conflict
+      - id: mixed-line-ending
+
+  - repo: https://github.com/psf/black
+    rev: 21.12b0
+    hooks:
+      - id: black
+        args: [-l 90]
+        additional_dependencies: ["click==8.0.4"]
+
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+  #   rev: v2.5.1
+  #   hooks:
+  #     - id: prettier
+  #       args: [--print-width=80, --prose-wrap=always]
+
+  - repo: local
+    hooks:
+      - id: clang-format
+        name: clang-format
+        description: Formats C, C++, Objective-C, and Java code
+        entry: clang-format
+        args: [-i]
+        language: python
+        types: [c++]
+      - id: cmake-lint
+        name: cmake-lint
+        description:
+          cmake-lint will check your listfiles for style violations, common
+          mistakes, and anti-patterns.
+        entry: cmake-lint
+        language: python
+        types: [cmake]
+      - id: cmake-format
+        name: cmake-format
+        description:
+          cmake-format can format your listfiles nicely so that they don't look
+          like crap.
+        entry: cmake-format -c cmake_format.yaml
+        args: [-i]
+        language: python
+        types: [cmake]

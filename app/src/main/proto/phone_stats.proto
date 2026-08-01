@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "PhoneStatsOuter";
+
+// Phone CPU / thermal snapshot for bag correlation with vision stalls.
+message PhoneStats {
+  int64 timestamp = 1;          // BOOTTIME ms (TimeUtil.nowMs)
+  float cpu_pct = 2;            // system busy % over last interval (0–100)
+  float cpu_app_pct = 3;        // this process share of total jiffies (0–100)
+  int32 thermal_status = 4;     // PowerManager: 0=NONE … 6=SHUTDOWN; -1 = N/A
+  float battery_temp_c = 5;
+  float battery_pct = 6;        // 0–100
+  float cpu_temp_c = 7;         // best-effort from thermal_zone* (0 if unknown)
+  float skin_temp_c = 8;
+  float gpu_temp_c = 9;
+  int32 cpu0_freq_khz = 10;     // scaling_cur_freq; 0 if unknown
+  repeated ThermalZone zones = 11;
+}
+
+message ThermalZone {
+  string name = 1;              // zone type string (e.g. "cpu-0-0-usr", "skin")
+  float temp_c = 2;
+}

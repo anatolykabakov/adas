@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "CarStateOuter";
+
+message WheelSpeeds {
+    float fl = 1;  // m/s
+    float fr = 2;
+    float rl = 3;
+    float rr = 4;
+}
+
+// Minimal VW MQB / Golf 7 car state for calib + lane keep (from CAN via DBC).
+message CarState {
+    int64 timestamp = 1;
+
+    float v_ego = 2;       // m/s (filtered mean of wheels)
+    float v_ego_raw = 3;   // m/s
+    float a_ego = 4;       // m/s^2
+    bool standstill = 5;
+
+    WheelSpeeds wheel_speeds = 6;
+
+    float steering_angle_deg = 7;
+    float steering_rate_deg = 8;
+    float steering_torque = 9;   // driver torque (cNm as in DBC)
+    bool steering_pressed = 10;
+
+    float yaw_rate = 11;   // rad/s
+
+    float gas = 12;        // 0..1
+    bool gas_pressed = 13;
+    float brake = 14;      // normalized pressure proxy
+    bool brake_pressed = 15;
+
+    int32 gear = 16;       // raw GE_Fahrstufe
+
+    // Steering-wheel ACC stalk (GRA_ACC_01) — Set/Resume engage stock ACC → panda controls_allowed
+    bool cruise_main_switch = 17;   // GRA_Hauptschalter
+    bool cruise_set = 18;           // GRA_Tip_Setzen
+    bool cruise_resume = 19;        // GRA_Tip_Wiederaufnahme
+    bool cruise_cancel = 20;        // GRA_Abbrechen
+    bool cruise_accel = 21;         // GRA_Tip_Hoch
+    bool cruise_decel = 22;         // GRA_Tip_Runter
+    int32 cruise_gap_adjust = 23;   // GRA_Verstellung_Zeitluecke 0..3
+
+    // TSK_06 — ACC/cruise state that enables lateral (volkswagen safety)
+    int32 acc_status = 24;          // TSK_Status: 2=enabled, 3/4/5=engaged
+    bool cruise_available = 25;     // main on / available
+    bool cruise_engaged = 26;       // regulating / override / brake_only
+
+    // Gateway_72 — turn signals. A lane departure warning has to stay quiet when the driver
+    // signals a lane change; steering torque alone is a poor substitute for that.
+    bool left_blinker = 27;         // BH_Blinker_li
+    bool right_blinker = 28;        // BH_Blinker_re
+}

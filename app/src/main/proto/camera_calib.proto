@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "CameraCalibOuter";
+
+// Dynamic camera calibration (pitch/yaw); roll=0, height from prior.
+// Android/sim live path: pose-based calib. Host bag can also use VP.
+message CameraCalibrationState {
+  int64 timestamp = 1;
+  double roll_deg = 2;
+  double pitch_deg = 3;
+  double yaw_deg = 4;
+  double camera_height_m = 5;
+  double fx = 6;
+  double fy = 7;
+  double cx = 8;
+  double cy = 9;
+  bool calibration_success = 10;
+  int32 n_updates = 11;
+  double vp_u = 12;
+  double vp_v = 13;
+  bool has_vp = 14;
+  int32 cal_percent = 15;
+  int32 cal_status = 16;  // 0 uncalibrated, 1 calibrated, 2 invalid, 3 recalibrating
+}
+
+/**
+ * Per-frame pose/VP calib internals for PlotJuggler (like control/lane_keep_debug).
+ * Published on calibration/camera_debug every cam-odom tick (incl. rejects).
+ */
+message CameraCalibDebug {
+  int64 timestamp = 1;
+  string source = 2;             // "pose" | "vp" | "none"
+  string status = 3;             // Uncalibrated|Calibrated|Invalid|Recalibrating
+  int32 cal_status = 4;
+  int32 cal_percent = 5;
+  bool calibration_success = 6;
+  bool sample_accepted = 7;      // pose path: this odom sample entered a block
+
+  // --- published estimate ---
+  double roll_deg = 10;
+  double pitch_deg = 11;
+  double yaw_deg = 12;
+  double height_m = 13;
+
+  // --- pose gates / inputs ---
+  double v_ego = 20;
+  double odom_trans_x = 21;
+  double odom_trans_y = 22;
+  double odom_trans_z = 23;
+  double odom_rot_z = 24;
+  double odom_angle_std = 25;    // atan2(trans_std.y, trans.x) [rad]
+  bool gate_speed = 26;          // ego & odom.trans.x > min (~6.7 m/s)
+  bool gate_yaw_rate = 27;       // |rot.z| < max
+  bool gate_rpy_certain = 28;    // angle_std < max (or still warming)
+  bool gate_odom_valid = 29;
+
+  // --- pose internals ---
+  double observed_pitch_deg = 30;  // from this sample before block average
+  double observed_yaw_deg = 31;
+  double spread_pitch_deg = 32;
+  double spread_yaw_deg = 33;
+  double spread_max_deg = 34;
+  int32 valid_blocks = 35;
+  int32 block_idx = 36;
+  int32 sample_in_block = 37;      // idx within 100-sample block
+  double old_rpy_weight = 38;
+
+  // --- VP path (when used) ---
+  bool has_vp = 40;
+  double vp_u = 41;
+  double vp_v = 42;
+  int32 vp_n_updates = 43;
+  int32 vp_history = 44;
+  bool vp_success = 45;
+
+  string reject_reason = 50;     // empty if accepted; else "no_odom"|"slow"|"yaw_rate"|"uncertain"
+}
+
+message LaneUvPoint {
+  double u = 1;
+  double v = 2;
+}
+
+/** Image-space left/right lane samples for VP calib (pixels). Host-only. */
+message LaneUv {
+  int64 timestamp = 1;
+  repeated LaneUvPoint left_uv = 2;
+  repeated LaneUvPoint right_uv = 3;
+}
+
+/**
+ * Model pose / cameraOdometry. Units after parse:
+ *   trans m/s, rot rad/s, stds already exp()'d (rotStd in rad).
+ */
+message CameraOdometry {
+  int64 timestamp = 1;
+  repeated float trans = 2;
+  repeated float rot = 3;
+  repeated float trans_std = 4;
+  repeated float rot_std = 5;
+  int32 frame_id = 6;
+}

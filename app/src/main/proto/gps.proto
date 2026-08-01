@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// GPS location message
+message GPSLocation {
+    int64 timestamp = 1;
+
+    // Coordinates
+    double latitude = 2;
+    double longitude = 3;
+    double altitude = 4;
+
+    // Accuracy
+    float horizontal_accuracy = 5;
+    float vertical_accuracy = 6;
+
+    // Speed and bearing
+    float speed = 7;        // m/s
+    float bearing = 8;      // degrees
+
+    // Additional GPS data
+    int32 satellites_used = 9;
+    float hdop = 10;        // Horizontal Dilution of Precision
+    float vdop = 11;        // Vertical Dilution of Precision
+
+    // GPS fix type
+    enum FixType {
+        NO_FIX = 0;
+        DEAD_RECKONING = 1;
+        FIX_2D = 2;
+        FIX_3D = 3;
+        GPS_DEAD_RECKONING = 4;
+        TIME_ONLY = 5;
+    }
+    FixType fix_type = 12;
+}
+
+// GPS data message (raw GPS data)
+message GPSData {
+    int64 timestamp = 1;
+
+    // Raw GPS values
+    double latitude = 2;
+    double longitude = 3;
+    double altitude = 4;
+    float speed = 5;
+    float bearing = 6;
+
+    // Timestamp from GPS
+    int64 gps_timestamp = 7;
+
+    // Provider information
+    string provider = 8;  // "gps", "network", "passive"
+}

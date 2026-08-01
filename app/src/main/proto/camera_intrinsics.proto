@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// Camera intrinsic parameters message
+message CameraIntrinsics {
+    int64 timestamp = 1;
+
+    // Physical focal length in mm
+    float physical_focal_length_mm = 2;
+
+    // Sensor physical size in mm
+    float sensor_width_mm = 3;
+    float sensor_height_mm = 4;
+
+    // Active pixel array size (actual image resolution from sensor)
+    int32 active_array_width = 5;
+    int32 active_array_height = 6;
+
+    // Lens distortion coefficients (k1, k2, k3, k4, k5)
+    repeated float distortion_coefficients = 7;
+
+    // Lens intrinsic calibration [fx, fy, cx, cy, s]
+    repeated float intrinsic_calibration = 8;
+
+    // Calculated focal length in pixels
+    float focal_length_px = 9;
+
+    // Capture resolution
+    int32 capture_width = 10;
+    int32 capture_height = 11;
+
+    // Camera information
+    string camera_id = 12;
+    string distortion_model = 13; // "radial_tangential" or "fisheye"
+}

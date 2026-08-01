@@ -1,0 +1,35 @@
+format: jb-book
+root: Introduction/intro
+parts:
+- caption: Architecture
+  chapters:
+  - file: Architecture/Overview.md
+  - file: Architecture/Middleware.md
+  - file: Architecture/JavaLayer.md
+  - file: Architecture/Pipeline.md
+- caption: Vision
+  chapters:
+  - file: Vision/Overview.md
+  - file: Vision/Coordinates.md
+  - file: Vision/Supercombo.md
+- caption: Control
+  chapters:
+  - file: Control/Overview.md
+  - file: Control/BicycleModel.md
+  - file: Control/PurePursuit.md
+  - file: Control/VehicleModel.md
+  - file: Control/MPC_and_FP.md
+- caption: Safety
+  chapters:
+  - file: Safety/Warnings.md
+- caption: Calibration and latency
+  chapters:
+  - file: Calibration/Overview.md
+  - file: Latency/Overview.md
+  - file: Logging/Bags.md
+- caption: Practice
+  chapters:
+  - file: Exercises/StudentProjects.md
+  - file: Appendix/Setup.md
+  - file: Appendix/ReadingList.md
+  - file: ATTRIBUTION.md

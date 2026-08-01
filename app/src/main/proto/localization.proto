@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "LocalizationOuter";
+
+// Online EKF / bicycle-odom localization for bag visualization.
+message LocalizationPose {
+  int64 timestamp = 1;
+  double x = 2;
+  double y = 3;
+  double yaw = 4;
+  double v = 5;
+  double yaw_rate = 6;
+  double odom_x = 7;
+  double odom_y = 8;
+  double ekf_x = 9;
+  double ekf_y = 10;
+}

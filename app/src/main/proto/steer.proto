@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "SteerOuter";
+
+// Desired lateral command for CarController (not a raw CAN frame).
+message SteerCommand {
+  // Assist torque in cNm, signed. Left = negative. Clamp ±300.
+  int32 torque_cnm = 1;
+  // When false (or torque==0), CarController stays in HCA standby.
+  bool enabled = 2;
+  // Provenance for latency (BOOTTIME ms).
+  int64 vision_ts_ms = 3;    // ONNX done
+  int64 chassis_ts_ms = 4;
+  int64 publish_ts_ms = 5;
+  int64 capture_ts_ms = 6;   // camera frame arrival — e2e pipeline start
+}

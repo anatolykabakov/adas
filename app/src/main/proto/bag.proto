@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package bag;
+
+import "google/protobuf/timestamp.proto";
+import "messages.proto";
+
+message Bag {
+    google.protobuf.Timestamp timestamp = 1;
+    repeated ai.flow.adas.ZMQMessage messages = 2;
+}

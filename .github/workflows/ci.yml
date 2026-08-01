@@ -1,0 +1,152 @@
+# Build, tests, and controller run. All inside the same image as locally
+# (.devcontainer/Dockerfile, tools target) — otherwise CI and the dev machine diverge on dependencies.
+name: ci
+
+on:
+  push:
+    branches: [main, mvp]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  image:
+    name: tools image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: build and cache image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          target: tools
+          build-args: |
+            USER_UID=1001
+            USER_GID=1001
+          tags: adas-tools:ci
+          outputs: type=docker,dest=/tmp/adas-tools.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adas-tools-image
+          path: /tmp/adas-tools.tar
+          retention-days: 1
+
+  tests:
+    name: unit tests
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: adas-tools-image
+          path: /tmp
+      - run: docker load -i /tmp/adas-tools.tar
+      # Separate conan cache: dependency build takes longer than the project build itself.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ hashFiles('app/src/main/cpp/conanfile.py') }}
+          restore-keys: conan-
+      # If the dir is missing, Docker creates the mount as root → Conan cannot write global.conf.
+      - run: mkdir -p "$HOME/.conan2"
+      - name: host build + tests
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace/adas" \
+            -v "$HOME/.conan2:/home/dev/.conan2" \
+            -w /workspace/adas \
+            -u root \
+            adas-tools:ci bash -lc '
+              set -euo pipefail
+              chown -R dev:dev /home/dev/.conan2
+              runuser -u dev -- bash -lc "
+                set -euo pipefail
+                conan profile detect --force >/dev/null 2>&1 || true
+                ./app/src/main/cpp/build_cpp.sh -t linux --test
+              "
+            '
+
+  controller:
+    name: controller run
+    needs: image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: adas-tools-image
+          path: /tmp
+      - run: docker load -i /tmp/adas-tools.tar
+      - uses: actions/cache@v4
+        with:
+          path: ~/.conan2
+          key: conan-${{ hashFiles('app/src/main/cpp/conanfile.py') }}
+          restore-keys: conan-
+      - run: mkdir -p "$HOME/.conan2"
+      # Regression: non-zero exit = controller exceeded track thresholds.
+      # Thresholds and rationale — docs/SIM_CONTROLLER_TEST.md.
+      - name: highway + curvy
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace/adas" \
+            -v "$HOME/.conan2:/home/dev/.conan2" \
+            -w /workspace/adas \
+            -u root \
+            adas-tools:ci bash -lc '
+              set -euo pipefail
+              chown -R dev:dev /home/dev/.conan2
+              runuser -u dev -- bash -lc "
+                set -euo pipefail
+                conan profile detect --force >/dev/null 2>&1 || true
+                ./app/src/main/cpp/build_cpp.sh -t linux
+                test -f app/src/main/scripts/pyadas/core*.so \
+                  || { echo \"pyadas core.so missing after build\" >&2; ls -la app/src/main/scripts/pyadas; exit 1; }
+                cd app/src/main/scripts
+                python3 -c \"from pyadas import core; print(core)\"
+                python3 -m sim.eval --track highway --controllers fp --max-steps 1400 --json /tmp/highway.json
+                python3 -m sim.eval --track curvy   --controllers fp --max-steps 1300 --json /tmp/curvy.json
+                cp /tmp/highway.json /tmp/curvy.json /workspace/adas/
+              "
+            '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-reports
+          path: |
+            highway.json
+            curvy.json
+
+  apk:
+    name: APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.conan2
+            ~/.gradle/caches
+          key: apk-${{ hashFiles('app/src/main/cpp/conanfile.py', 'app/build.gradle') }}
+          restore-keys: apk-
+      - name: conan + ndk
+        run: |
+          pipx install "conan>=2.0,<3"
+          conan profile detect --force
+          sdkmanager --install "ndk;26.1.10909125" >/dev/null
+      - name: build APK
+        env:
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
+        run: ./scripts/build_project.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk

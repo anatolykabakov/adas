@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    tools:context="ai.flow.adas.MainActivity">
+
+    <TextureView
+        android:id="@+id/textureView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/flowStrip"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ai.flow.adas.vision.LaneOverlayView
+        android:id="@+id/laneOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintBottom_toBottomOf="@id/textureView"
+        app:layout_constraintEnd_toEndOf="@id/textureView"
+        app:layout_constraintStart_toStartOf="@id/textureView"
+        app:layout_constraintTop_toTopOf="@id/textureView" />
+
+    <!-- Side control strip (left) -->
+    <LinearLayout
+        android:id="@+id/flowStrip"
+        android:layout_width="88dp"
+        android:layout_height="0dp"
+        android:background="#E6101014"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:letterSpacing="0.08"
+            android:text="@string/can_label"
+            android:textAllCaps="true"
+            android:textColor="#B0FFFFFF"
+            android:textSize="13sp"
+            android:typeface="monospace" />
+
+        <View
+            android:id="@+id/canOnlineLed"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_status_led_off" />
+
+        <TextView
+            android:id="@+id/canOnlineText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text="@string/can_offline"
+            android:textColor="#80FFFFFF"
+            android:textSize="11sp"
+            android:typeface="monospace" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="18dp"
+            android:background="#33FFFFFF" />
+
+        <ImageButton
+            android:id="@+id/paramsToggleButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/params_toggle"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_params" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/loggingToggleButton"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_log_fab"
+            android:contentDescription="@string/log_toggle"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_log_rec" />
+    </LinearLayout>
+
+    <!-- Params drawer (hidden) — opens from strip toward camera -->
+    <ScrollView
+        android:id="@+id/paramsPanel"
+        android:layout_width="300dp"
+        android:layout_height="0dp"
+        android:background="#F0141418"
+        android:elevation="8dp"
+        android:fillViewport="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/flowStrip"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="@string/params_title"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="10dp"
+                android:text="@string/params_hint"
+                android:textColor="#99FFFFFF"
+                android:textSize="11sp" />
+
+            <!-- Camera RPY / mount -->
+            <TextView
+                style="@style/ParamsSection"
+                android:text="@string/params_section_camera" />
+
+            <include
+                android:id="@+id/rowRoll"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowPitch"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowYaw"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowHeight"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowCamX"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowCamY"
+                layout="@layout/row_param_slider" />
+
+            <TextView
+                style="@style/ParamsSection"
+                android:text="@string/params_section_logging" />
+
+            <CheckBox
+                android:id="@+id/recordImagesCheck"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="@string/params_record_images"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp" />
+
+            <TextView
+                style="@style/ParamsSection"
+                android:text="@string/params_section_pp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:text="@string/params_lk_controller"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp" />
+
+                <RadioGroup
+                    android:id="@+id/laneKeepControllerGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/laneKeepPp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/params_lk_pp"
+                        android:textColor="#FFFFFF" />
+
+                    <RadioButton
+                        android:id="@+id/laneKeepMpc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/params_lk_mpc"
+                        android:textColor="#FFFFFF" />
+
+                    <RadioButton
+                        android:id="@+id/laneKeepFlowpilot"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/params_lk_flowpilot"
+                        android:textColor="#FFFFFF" />
+                </RadioGroup>
+            </LinearLayout>
+
+            <include
+                android:id="@+id/rowPpKdd"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowPpLdMin"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowPpLdMax"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowWheelbase"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowPpShift"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowSteerRatio"
+                layout="@layout/row_param_slider" />
+            <include
+                android:id="@+id/rowLaneBlend"
+                layout="@layout/row_param_slider" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/paramsResetButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/params_reset"
+                    android:textColor="#CCFFFFFF" />
+
+                <Button
+                    android:id="@+id/paramsSaveButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/params_save" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

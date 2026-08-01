@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "Lanes";
+
+// One lane or road-edge polyline in device/openpilot frame:
+// X forward, Y right-positive, Z up (same as flowpilot modelV2).
+message LanePolyline {
+    repeated float y = 1;  // lateral offset (m), typically 33 samples
+    float prob = 2;        // confidence (lanes); unused for edges
+    repeated float z = 3;  // height (m), same length as y when set
+    // Model's own lateral sigma per point (m). Empty on bags recorded before 2026-08-02;
+    // consumers must read "empty" as no information rather than as certainty.
+    repeated float y_std = 4;
+}
+
+// Supercombo / vision lane output for bag logging.
+message LaneLines {
+    int64 timestamp = 1;            // capture / frame arrival (BOOTTIME ms) — primary
+    int32 frame_id = 2;
+    repeated float x = 3;           // longitudinal sample points (m) for lanes/edges
+    repeated LanePolyline lanes = 4; // 4: leftFar, leftNear, rightNear, rightFar
+    repeated LanePolyline edges = 5; // 2: left, right road edges
+    // Best PLAN hypothesis (primary driving path), ego xyz
+    repeated float plan_x = 6;
+    repeated float plan_y = 7;
+    repeated float plan_z = 8;
+    int32 plan_hyp = 9;             // MHP index 0..4; -1 if absent
+    // Latency provenance (BOOTTIME ms)
+    int64 capture_ts_ms = 10;       // ImageReader / submitBitmap (same as timestamp when set)
+    int64 infer_ts_ms = 11;         // after ONNX returns
+    // Full supercombo flat output (~6409) for offline re-parse / debug
+    repeated float model_out = 12;
+    // Pure OrtSession.run wall time (ms). Full vision e2e = infer_ts_ms - capture_ts_ms.
+    float infer_duration_ms = 13;
+    // PLAN orientation.z / orientationRate.z (rad, rad/s), same length as plan_x.
+    // Device frame (Y right+): same source as flowpilot modelV2.orientation(.Rate).z.
+    repeated float plan_yaw = 14;
+    repeated float plan_yaw_rate = 15;
+    // CIPV / longitudinal heads (also on vision/model_long) — bag-visible summary.
+    float lead_d = 16;              // best lead x[0] (m)
+    float lead_y = 17;
+    float lead_v = 18;              // abs speed (m/s)
+    float lead_prob = 19;           // max leadsV3 presence
+    float plan_v0 = 20;             // PLAN velocity x[0]
+    bool lead_valid = 21;           // prob ≥ threshold (see ModelLongParse)
+}
