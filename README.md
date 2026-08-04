@@ -11,7 +11,7 @@ pop_messages` via `pyadas`).
 **Status:** MVP drives on the highway. Latest run — 58 minutes recorded, **35.6 min under
 control**: lane-center tracking **0.16 m** median (p95 0.53 m) at 15–27 m/s, 0.14 m on straights,
 0.19–0.21 m on arcs R 200–1000 m; driver touched the wheel 3% of the time. On the same
-road a human averaged 0.17 m. Analysis — [`docs/RUN_0801_HIGHWAY.md`](docs/RUN_0801_HIGHWAY.md),
+road a human averaged 0.17 m. Numbers from the 2026-08-01 highway bag;
 applicability limits and what the system cannot do —
 [`docs/CONTROLLER_LIMITS.md`](docs/CONTROLLER_LIMITS.md).
 
@@ -85,7 +85,7 @@ Full chain with all fields and timings:
 Measured latencies: capture → command publish 69 ms, command → rack 40 ms, rack → yaw
 120 ms, **total capture → vehicle response ≈ 230 ms**. The planner uses the actual frame step,
 not a hard-coded constant — after that fix, vision jitter stopped affecting the command
-(see [`docs/FRAME_DT_FIX_0801.md`](docs/FRAME_DT_FIX_0801.md)).
+(measured vision `frame_dt`, not fixed `DT_MDL`).
 
 ### Controllers
 
@@ -112,7 +112,7 @@ Switch in `config.json` (`vehicle.lane_keep_controller`) or in the in-app parame
 | `path_camera_offset_m` | `0.05` | path shift right: compensates model plan left bias |
 | `calibration.camera.position_m` | — | camera mount: `y_left`, `z_up`, `x_forward` |
 
-Lateral block values tuned in closed loop on arcs; see `docs/RUN_0802_ARC_OFFSET.md`.
+Lateral block values tuned in closed loop on arcs.
 
 The file is copied to `filesDir` on first launch and **is not overwritten** by APK install: to
 pick up new defaults, use `scripts/push_config.sh --apply` (preserves camera calibration)
@@ -229,6 +229,6 @@ PID, VW CAN (HCA/counter/CRC), middleware, FCW/AEB/LDW warnings.
 
 Engineering reports and course — [`docs/README.md`](docs/README.md).
 
-Start with [`docs/PIPELINE_AUDIT_0801.md`](docs/PIPELINE_AUDIT_0801.md) (pipeline audit,
-measured vehicle model, fixes) and
-[`docs/CONTROLLER_LIMITS.md`](docs/CONTROLLER_LIMITS.md) (applicability limits).
+Start with the [course book](docs/book/Introduction/intro.md), then
+[`docs/IMAGE_TO_CAN_PIPELINE.md`](docs/IMAGE_TO_CAN_PIPELINE.md) and
+[`docs/CONTROLLER_LIMITS.md`](docs/CONTROLLER_LIMITS.md). Index: [`docs/README.md`](docs/README.md).

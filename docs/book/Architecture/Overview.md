@@ -36,24 +36,27 @@ Next in this part: [Middleware](./Middleware.md) (native bus) → [Java layer](.
 
 ## Configuration you will touch
 
-`app/src/main/assets/config.json` (optional override in app `filesDir`):
+`app/src/main/assets/config.json` (optional override in app `filesDir`).
+
+Vehicle knobs (`vehicle.*`):
 
 ```json
 "lane_keep_controller": "fp",
 "lat_use_vehicle_model": true,
 "tire_stiffness_factor": 0.64,
-"fp_steer_delay_s": 0.35,
-"vision_traffic": false,
-"phone_stats": true
+"fp_steer_delay_s": 0.35
 ```
+
+Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`,
+`"safety_warn": true`.
 
 | key | purpose |
 |---|---|
-| `lane_keep_controller` | `pp` \| `mpc` \| `fp` |
-| `lat_use_vehicle_model` | $\kappa\to$ SWA via understeer model |
-| `fp_steer_delay_s` | state lookahead for pipeline delay |
-| `vision_traffic` | YOLO; keep `false` when measuring lane-keep |
-| `phone_stats` | 1 Hz CPU / thermal into the bag |
+| `vehicle.lane_keep_controller` | `pp` \| `mpc` \| `fp` |
+| `vehicle.lat_use_vehicle_model` | $\kappa\to$ SWA via understeer model |
+| `vehicle.fp_steer_delay_s` | state lookahead for pipeline delay |
+| `nodes.vision_traffic` | YOLO; keep `false` when measuring lane-keep |
+| `nodes.phone_stats` | 1 Hz CPU / thermal into the bag |
 
 ## Typical student workflow
 

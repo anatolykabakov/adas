@@ -1,11 +1,9 @@
 # Items Requiring Further Work
 
-Compiled 2026-08-02, updated 2026-08-04. Sources: road runs (`RUN_0801_*`,
-`RUN_0802_ARC_OFFSET.md`, `PIPELINE_AUDIT_0801.md`), simulator runs
-(`SIM_CONTROLLER_TEST.md`), warning analysis (`SAFETY_WARN.md`), and **dragonpilot logs from
-comma-two on the same car** (`VS_DRAGONPILOT_0803.md`). Order reflects what blocks progress first.
+Compiled 2026-08-02, updated 2026-08-04. Sources: road bags, simulator (`SIM_CONTROLLER_TEST.md`), warnings (`SAFETY_WARN.md`), and **dragonpilot logs from
+comma-two on the same car** (`BENCHMARK_COMMA2.md`). Order reflects what blocks progress first.
 
-For lateral control there is a consolidated work plan with targets in meters: **`PLAN_TO_COMMA2.md`**.
+For lateral control there is a consolidated work plan with targets in meters: **`BENCHMARK_COMMA2.md`**.
 
 ## 1. Requires On-Vehicle Verification
 
@@ -19,9 +17,9 @@ with logging enabled closes most of the list: topics `safety/warn`, `vision/mode
 | MPC feedback coefficients restored (`epsi 0.3`, `cte_gain_base 0.6`, `floor 0.02`) | MPC controller actually holds the lane; on the phone `fp` is default, so this is not urgent |
 | curvature-based speed limit (`long_plan.curv_*`, a_lat ≤ 1.8 m/s²) | κ ahead is computed adequately; execution currently only via cruise buttons |
 | turn signal from `Gateway_72` (`0x3DB`) | signal actually arrives and bits are correct: older runs lack this frame, receive filter was dropping it |
-| arc offset: `path_lane_blend_scale` 0.6, σ thresholds 0.3/1.5, width up to 4.6 | car cut inside the turn by 0.51 m (left arc) and 0.71 m (right) because the supercombo plan goes 0.33–0.48 m inside. Three config fixes applied. On-road expectation without the centering term (disabled): left +0.51 → **+0.45**, right −0.71 → **−0.54**, straight stays ≈0. This is noticeably more modest than needed; the fast loop and vehicle parameters should provide most of the gain — see `PLAN_TO_COMMA2.md`. **Not verified on road**; measure with `bag_arc_offset.py` |
+| arc offset: `path_lane_blend_scale` 0.6, σ thresholds 0.3/1.5, width up to 4.6 | car cut inside the turn by 0.51 m (left arc) and 0.71 m (right) because the supercombo plan goes 0.33–0.48 m inside. Three config fixes applied. On-road expectation without the centering term (disabled): left +0.51 → **+0.45**, right −0.71 → **−0.54**, straight stays ≈0. This is noticeably more modest than needed; the fast loop and vehicle parameters should provide most of the gain — see `BENCHMARK_COMMA2.md`. **Not verified on road**; measure with `bag_arc_offset.py` |
 | `center_force` disabled (0.0) | at real command rate (12.5 Hz, not 20 as in replay) the term does nothing: offset magnitude 0.21 → 0.19 on right arc and 0.26 vs 0.25 on left. It also eats stability margin — at 1.2 the left arc diverges (0.81 m, p95 2.95). Comma-two logs show tracking error ~0 without centering because the loop runs at 100 Hz. Revisit only after speeding up the loop |
-| ~~`intrinsics_prior` fx 951 → 993.4 / 995.2~~ | **verified 2026-08-04**: camera odometry scale 0.844 → **0.888** vs expected +4.5 %. Remaining 11 % is not explained by focal length — model domain gap. `RUN_0804_PERCEPTION.md` |
+| ~~`intrinsics_prior` fx 951 → 993.4 / 995.2~~ | **verified 2026-08-04**: camera odometry scale 0.844 → **0.888** vs expected +4.5 %. Remaining 11 % is not explained by focal length — model domain gap. 2026-08-04 bag |
 | ~~CAN receive 50 → 10 ms~~ | **verified 2026-08-04**: `vehicle/state` 10 ms (p99 18, max 88), `controls/steer` 10 ms, panda callback 1.1 ms, no drops. But a vision tail appeared — see section 2 |
 | **σ threshold analysis on arcs** | run 0804 turned out to be urban: only 38 frames with \|κ\|>0.004, zero arc episodes. Main question (0.51/0.71 m inside arc) still unverified; need a highway run |
 | **calibration prior `rpy_deg`** | config has `pitch −1.79 / yaw 0.52`, learned value is `+1.4 / −2.7` in 1.5 min and holds ±0.2°. Camera was remounted, prior is stale; learned value is not persisted, so every drive starts with wrong warp |
@@ -160,7 +158,7 @@ lane markings are too poor for such comparison.
 
 ## 4. Lateral Control: Open Items
 
-**Consolidated plan — `PLAN_TO_COMMA2.md`.** Individual items below; work order and expected effect
+**Consolidated plan — `BENCHMARK_COMMA2.md`.** Individual items below; work order and expected effect
 there, with numbers from comma-two logs on the same car.
 
 **Gap measured on the same car.** Offset magnitude on arcs: comma-two 0.07 and 0.20 m, us 0.51 and
@@ -215,7 +213,7 @@ coefficient. Failed:
   warp — network sees different image and outputs different plan.
 
 Cannot bake in such a coefficient: on another calibration it adds its own offset. Details and
-tables — `RUN_0802_ARC_OFFSET.md`.
+tables — arc-offset bags.
 
 **Consequence favoring two other levers:** lane blending requires no tunable number
 at all, and integral term removes steady offset regardless of cause, including the part that
@@ -244,8 +242,7 @@ neither `fp_steering_rate_weight` (150 and 800 — no change) nor `fp_steer_dela
 
 Ported `center_force` from `flowpilot/selfdrive/controls/lib/lane_planner.py` — proportional
 term on cross-track at the vehicle, added to entire reference, clamp ±0.8 m, attenuation toward
-current turn direction. Lives in `laneLinesToPath`, coefficient `center_force_gain = 0.4` tuned by
-replay (upstream 0.72…1.2 oscillate). Still to verify on road.
+current turn direction. **Shipped `center_force_gain = 0.0`** (disabled at ~12.5 Hz command rate). Replay once used 0.4.
 
 **Single lane does not hold reference, and this is intentional.** We require both host lines for `anchored`,
 flowpilot needs only the better one (`lane_trust = clamp(1.2·max(l_vis, r_vis)^0.5, 0, 1)`). Did not relax yet:
@@ -258,7 +255,7 @@ relax two-line requirement.
 **Horizon change not needed.** flowpilot keeps `N = 32` (10 s), we took dragonpilot `N = 16`
 (2.5 s), but grid `T_IDXS` is quadratic: 11 of our 17 nodes in the first second — same as
 flowpilot. Lengthening only adds far nodes and at equal weights dilutes the near zone,
-and costs roughly 4× more (we use GD instead of acados). Details — `RUN_0802_ARC_OFFSET.md`.
+and costs roughly 4× more (we use GD instead of acados). Details — arc-offset bags.
 
 **HCA torque hits ±300 cNm ceiling in 34–41 % of arc frames** (19 % on straight). While torque
 is saturated, there is no feedback at all. This is MQB HCA limit, not fixable in config; reduce
@@ -305,10 +302,10 @@ steer angle does not participate.
 * `maps/Moscow.osm.pbf` — 81 MB of 87 MB in `maps/`. Needed only to rebuild
   `Moscow.osm.admap` (4.9 MB), re-downloaded by `mapmatch/fetch_map.py`. Candidate for deletion,
   your call.
-* Dated reports `RUN_0801_*` and `PIPELINE_AUDIT_0801.md` contain suggestions since implemented
+* Dated reports dated August bags and pipeline audit notes contain suggestions since implemented
   differently. Not rewritten: history with measurements. Where a later measurement refined the
-  conclusion, explicit footnote — e.g. `RUN_0801_LEFT_DRIFT.md` (plan offset turned out to be function of
-  curvature, not constant left pull), `RUN_0801_LOWSPEED.md`, `PIPELINE_AUDIT_0801.md`.
+  conclusion, explicit footnote — e.g. left-drift bags (plan offset turned out to be function of
+  curvature, not constant left pull), low-speed bags, pipeline audit notes.
 
 * `models/` — ~250 MB weights with no references (`sc_v0.8.12`, `sc_v0.9.0`,
   `supercombo_op089`, `supercombo_op094`, `yolov8n_traffic_192`, `yolov8n_coco_256`,
@@ -318,7 +315,7 @@ steer angle does not participate.
   re-download.
 * `docs/calib/` — two chessboards (1920×1080 and 2560×1440), in git intentionally: needed for
   repeat calibration.
-* `docs/FRAME_DT_FIX_0801.md` — five mentions of removed `fpa` controller. Dated report with
+* frame-dt fix notes (removed) — five mentions of removed `fpa` controller. Dated report with
   measured numbers, left as-is.
 * Book build gives 4 warnings: links from chapters to docs outside `docs/book` (`../README`,
   `../IMAGE_TO_CAN_PIPELINE`) sphinx does not treat as documents. Links work in editor and on GitHub,
@@ -342,7 +339,7 @@ steer angle does not participate.
   no silent CPU fallback. So ~80 ms inference is NNAPI speed on this phone; vision stalls
   must be sought elsewhere.
 
-* **Run 0804 analysis** — `RUN_0804_PERCEPTION.md`: perception after focal fix, planner reference,
+* **Run 0804 analysis** — 2026-08-04 bag: perception after focal fix, planner reference,
   100 Hz loop confirmation, and why steering was silent.
 * **Panda with comma-two firmware no longer breaks control.** Its `pandad` reflashes its
   firmware, which returns `health` version 11 instead of 16: everything after `rx_buffer_overflow` shifts by
@@ -356,10 +353,10 @@ steer angle does not participate.
   (7 % accepted samples in turn, heading 0.07° off), but after fix there is a **third
   independent yaw scale source**: camera vs ESP gives 0.92 at correlation −0.879.
 * Comparison with dragonpilot on **same car and roads** from its logs: where exactly the gap
-  (`VS_DRAGONPILOT_0803.md`), plus stage-by-stage pipeline check — what matches 1:1 and what diverges.
+  (`BENCHMARK_COMMA2.md`), plus stage-by-stage pipeline check — what matches 1:1 and what diverges.
   Tool `rlog_arc_offset.py` reads rlog via cereal schema and computes same breakdown as
   `bag_arc_offset.py`.
-* Consolidated work plan with meter targets — `PLAN_TO_COMMA2.md`.
+* Consolidated work plan with meter targets — `BENCHMARK_COMMA2.md`.
 * Intrinsics calibration with chessboard: `camera_calib_chessboard.py` (parameters like flowpilot —
   9×6, subpixel 7×7, view selection by diversity), board generator `make_chessboard.py`, boards
   in `docs/calib/`. Verified on synthetic with known fx: 700 → 700.2 at error 0.083 px.
@@ -383,13 +380,11 @@ steer angle does not participate.
 
 * Analyzed arc offset: car cuts **inside** turn by +0.51 m (left) and −0.71 m
   (right), centered on straight. Decomposed into tracking error and setpoint offset, cause of
-  each found — `RUN_0802_ARC_OFFSET.md`. Reproduced on second run.
+  each found — arc-offset bags. Reproduced on second run.
 * Measured bar: driver without controller also goes ±0.14 m inside, magnitude 0.15–0.17 m. On straight
   controller already smoother than human.
 * Config: `path_lane_blend_scale` 0.3 → 0.6, σ thresholds 0.2/0.8 → 0.3/1.5, width up to 4.6 m with filter.
-* Ported `center_force` from flowpilot (`center_force_gain = 0.4`, chosen by replay; upstream
-  0.72…1.2 oscillate). Plus dead zone on curvature gate — without it term lost 30 % on straight from
-  numerical fit noise.
+* Ported `center_force` from flowpilot (replay chose 0.4; later shipped default **0.0**).
 * Run is self-documenting: `lane_offset_m`, `center_force_m`, `lane_width_m`, `lane_anchored` and
   three config keys written to `control/lane_keep_debug`.
 * New tool `bag_arc_offset.py` — offset breakdown on run with self-checks and plots.

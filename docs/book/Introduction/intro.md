@@ -15,6 +15,7 @@ After working through the book you should be able to:
 * distinguish wheel steer angle $\delta$ from steering-wheel angle (SWA) on the bus;
 * implement / tune Pure Pursuit and explain how `mpc` / `fp` differ from one-step geometry;
 * account for understeer (`tire_stiffness_factor`) and transport delay (`fp_steer_delay_s`);
+* project GPS to local ENU, explain phone IMU lock, and read `localization/pose`;
 * compute FCW/AEB TTC / $a_{\mathrm{req}}$ and gated LDW conditions;
 * separate vision degradation (thermal, competing YOLO) from controller error when reading a bag.
 
@@ -48,10 +49,11 @@ Use this book when you want an **industry-near phone pipeline** and discipline a
 
 1. [Architecture](../Architecture/Overview.md) → [Middleware](../Architecture/Middleware.md) → [Java](../Architecture/JavaLayer.md) → [Pipeline](../Architecture/Pipeline.md)
 2. [Vision](../Vision/Overview.md) → [coordinates](../Vision/Coordinates.md) → [Supercombo](../Vision/Supercombo.md)
-3. [Bicycle](../Control/BicycleModel.md) → [Pure Pursuit](../Control/PurePursuit.md) → [Vehicle model](../Control/VehicleModel.md) → [MPC / fp](../Control/MPC_and_FP.md)
-4. [FCW / AEB / LDW](../Safety/Warnings.md)
-5. [Calibration](../Calibration/Overview.md) → [Latency](../Latency/Overview.md) → [Bags](../Logging/Bags.md)
-6. [Exercises](../Exercises/StudentProjects.md)
+3. [Localization](../Localization/Overview.md) (GPS ENU, phone IMU, EKF)
+4. [Bicycle](../Control/BicycleModel.md) → [Pure Pursuit](../Control/PurePursuit.md) → [Vehicle model](../Control/VehicleModel.md) → [MPC / fp](../Control/MPC_and_FP.md)
+5. [FCW / AEB / LDW](../Safety/Warnings.md)
+6. [Calibration](../Calibration/Overview.md) → [Latency](../Latency/Overview.md) → [Bags](../Logging/Bags.md)
+7. [Exercises](../Exercises/StudentProjects.md)
 
 Road experiments with HCA require an instructor. Default course mode: **bag + scripts**.
 

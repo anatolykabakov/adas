@@ -11,7 +11,7 @@ PKG=ai.flow.adas
 ACT=.TrafficYoloBenchActivity
 APK="$ROOT/app/build/outputs/apk/debug/app-debug.apk"
 REPORT_REMOTE=/sdcard/adas_models/traffic_yolo_bench.txt
-REPORT_LOCAL="$ROOT/docs/mpc_img/traffic_yolo_bench_phone.txt"
+REPORT_LOCAL="/tmp/traffic_yolo_bench_phone.txt"
 MODEL_SRC="$ROOT/models/yolov8n_traffic_${SIZE}.onnx"
 
 cd "$ROOT"

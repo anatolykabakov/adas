@@ -66,7 +66,7 @@ class EchoService : public adas::Service {
     subscribe<adas::ChassisSample>(
         adas::topics::kVehicleChassis,
         [this](const adas::ChassisSample& m) {
-          last_v_ = m.speed_ms;  // field names: see ChassisSample
+          last_v_ = m.speed_mps;  // ChassisSample / VehicleState use speed_mps
         });
 
     scheduleTimer(50, [this] { tick(); }, "tick");  // 50 ms

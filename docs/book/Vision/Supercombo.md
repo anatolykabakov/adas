@@ -65,4 +65,4 @@ AAD has you train segmentation and run IPM. Here industry practice is closer to 
 <!-- next-chapter -->
 ---
 
-**Next:** [Control — overview](../Control/Overview.md)
+**Next:** [Localization](../Localization/Overview.md)

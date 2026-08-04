@@ -10,7 +10,7 @@ the car's response by up to 65 % and hides under-steer, hence the separate plant
     ./bag_config_sweep.py adas_logs/<session> --t0 1360 --t1 1520
 
 Two config sets: `--set default` (the July straight-line tuning history) and `--set arcs` — the
-levers for cutting the inside of a curve, measured in `docs/RUN_0802_ARC_OFFSET.md`:
+levers for cutting the inside of a curve, measured on arc-offset bags:
 
     ./bag_config_sweep.py adas_logs/2026_08_02_22_02_38 --t0 662 --t1 686 \
         --set arcs --cam-y-left 0

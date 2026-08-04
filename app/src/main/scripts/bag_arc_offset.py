@@ -26,7 +26,7 @@ discrepancy exceeds a few centimeters, reference replay does not match the run (
 `blend`/shift or a different version of `laneLinesToPath`), and the numbers cannot be trusted.
 
   python3 bag_arc_offset.py adas_logs/<run>
-  python3 bag_arc_offset.py adas_logs/<run> --plots docs/mpc_img --prefix 0802
+  python3 bag_arc_offset.py adas_logs/<run> --plots /tmp/adas_plots --prefix 0802
   python3 bag_arc_offset.py adas_logs/<run> --cache /tmp/run.npz   # second run is instant
   python3 bag_arc_offset.py adas_logs/<run> --weight-by-std        # how σ weight behaves
 
@@ -36,7 +36,7 @@ the wrong reference is restored, and the CTE self-check will show it:
   python3 bag_arc_offset.py adas_logs/<run> --blend 0.6 --weight-by-std \
       --std-good 0.3 --std-bad 1.5 --center-force <value from config.json>
 
-Report for run 2026_08_02_22_02_38 — `docs/RUN_0802_ARC_OFFSET.md`.
+Example run: 2026_08_02_22_02_38.
 """
 
 from __future__ import annotations

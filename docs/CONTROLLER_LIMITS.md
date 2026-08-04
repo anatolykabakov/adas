@@ -2,7 +2,7 @@
 
 All measured on runs 2026-07-31 / 2026-08-01 (Golf 7 MQB, supercombo 0.8.13, `fp` controller).
 Main numeric source — evening highway run `2026_08_01_20_55_15`: 58 minutes recorded,
-35.6 minutes under control (`RUN_0801_HIGHWAY.md`). This document answers "where the assistant
+35.6 minutes under control (2026-08-01 highway bag). This document answers "where the assistant
 works normally and where it cannot be relied on".
 
 ## Summary
@@ -33,7 +33,7 @@ Both host lines with probability > 0.5 and plausible width:
 | 01_14_22 (mixed) | 24 809 | 43 % | 77 % | **39 %** |
 
 The rest of the time only the model plan anchors, with centering ability
-only 45–50 % and systematic left bias ~0.1 m (see `RUN_0801_LEFT_DRIFT.md`).
+only 45–50 % and systematic left bias ~0.1 m (plan / camera offset).
 
 ### Actuator limit
 
@@ -70,7 +70,7 @@ openpilot comfort limit (2.5 m/s²) corresponds to R ≈ 190 m at 22 m/s.
 Model metric scale is unstable: 0.80–0.98 across three estimates (visual odometry, lane
 width, curvature). In practice lateral quantities may be ~10 % low,
 curvature equally high. Model speed (`trans[0]`) is 5–20 % low and
-not used for control. Details — `CALIBRATION_FROM_BAGS.md`.
+not used for control. See book [Calibration](book/Calibration/Overview.md).
 
 ### What remains imperfect
 
@@ -102,7 +102,7 @@ not used for control. Details — `CALIBRATION_FROM_BAGS.md`.
 * **Lane weight by uncertainty** — `laneLineStds` added to protocol and Java parser;
   blending now fades smoothly from σ 0.3 m to 1.5 m instead of step at `prob ≥ 0.3`.
   Threshold 0.2/0.8 was tuned on straights and suppressed lane markings in arcs where they matter most — see
-  `RUN_0802_ARC_OFFSET.md`.
+  arc-offset bags.
 
 ## How to safely expand applicability further
 

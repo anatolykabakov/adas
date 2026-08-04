@@ -123,4 +123,4 @@ Texts match flowpilot `events.py` (`fcw` / `ldw` / `stockAeb`).
 IDM acceleration remains as longitudinal reference (and as a debug field). Calibrated on run
 2026-07-31 `10_33_17`, offline v0.8.13: classic Δv instead of absolute target speed and
 `v_lim` 100 km/h instead of 60 removed constant braking on the highway (`a=1.5`, `b=3.0`, `T=1.5`,
-`s0=2.0`). Plot — `mpc_img/54_lead_long_warn_v0813_103317.png`.
+`s0=2.0`). Plot — [`figures/54_lead_long_warn_v0813_103317.png`](figures/54_lead_long_warn_v0813_103317.png).

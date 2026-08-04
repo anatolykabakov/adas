@@ -9,7 +9,7 @@ run the model twice.
 What to watch, in order of importance:
 
 * **lane line σ** (`laneLineStds`) — main gap vs upstream: we see 0.19 on straights and
-  0.60–0.93 in arcs, dragonpilot 0.05 (docs/VS_DRAGONPILOT_0803.md). Wrong input geometry
+  0.60–0.93 in arcs, dragonpilot 0.05 (docs/BENCHMARK_COMMA2.md). Wrong input geometry
   should drop σ;
 * line probabilities and lane width — same confidence from another angle;
 * plan offset from lane center — the quantity that did not match across bags (50.2·κ) and is
