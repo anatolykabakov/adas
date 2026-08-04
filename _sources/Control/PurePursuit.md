@@ -31,15 +31,17 @@ $$
 ```python
 import numpy as np
 
-def lookahead(v, K_dd=0.4, ld_min=3.0, ld_max=20.0):
+def lookahead(v, K_dd=0.8, ld_min=8.0, ld_max=25.0):
+    """Defaults match shipped config.json (C++ class defaults are smaller)."""
     return float(np.clip(K_dd * v, ld_min, ld_max))
 
 for v in (5, 15, 30):
     print(f"v={v:2d} m/s → ld={lookahead(v):.1f} m")
-# 5 → 3.0 (hit min), 15 → 6.0, 30 → 12.0
+# 5 → 8.0 (hit min), 15 → 12.0, 30 → 24.0
 ```
 
 Small $l_d$: aggressive, chatty. Large $l_d$: smooth, cuts corners.
+Shipped phone config: `pp_k_dd=0.8`, `pp_ld_min=8`, `pp_ld_max=25`.
 
 ## Geometry
 
@@ -148,7 +150,7 @@ print(f"delta for y=-2.8: {math.degrees(d_left):.1f} deg  (sign flips)")
 
 # Look-ahead vs speed (config-style)
 import numpy as np
-def lookahead(v, K_dd=0.4, ld_min=3.0, ld_max=20.0):
+def lookahead(v, K_dd=0.8, ld_min=8.0, ld_max=25.0):
     return float(np.clip(K_dd * v, ld_min, ld_max))
 print("ld at 15 m/s:", lookahead(15))
 ```

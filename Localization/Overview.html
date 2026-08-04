@@ -1,0 +1,877 @@
+
+<!DOCTYPE html>
+
+
+<html lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Localization: GPS, phone IMU, and the EKF &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Localization/Overview';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Control — Overview" href="../Control/Overview.html" />
+    <link rel="prev" title="Supercombo on Device" href="../Vision/Supercombo.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Localization/Overview.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Localization: GPS, phone IMU, and the EKF</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#frames-do-not-mix">Frames (do not mix)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gps-local-meters">1. GPS → local meters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phone-imu-calibration">2. Phone IMU calibration</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lock-procedure-imucalibrator">Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mount-prior">Mount prior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fusion-ekf-bicycle">3. Fusion (EKF + bicycle)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict">Predict</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#imu-update">IMU update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-cam-odo">Optional cam-odo</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gps-update">GPS update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#output">Output</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">4. How this relates to lane-keep</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="localization-gps-phone-imu-and-the-ekf">
+<h1>Localization: GPS, phone IMU, and the EKF<a class="headerlink" href="#localization-gps-phone-imu-and-the-ekf" title="Ссылка на этот заголовок">#</a></h1>
+<p>Lane-keep lives in the <strong>car frame</strong>. Map pose, bags overlaid on OSM, and some debug
+trajectories live in a <strong>local ENU plane</strong>. This chapter is how the phone builds that plane:
+project GPS, calibrate the phone gyro, fuse with the bicycle model.</p>
+<p>Code anchors:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GpsLocalProjector</span></code> — lat/lon → East/North meters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">ImuCalibService</span></code> — phone IMU → vehicle yaw rate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OnlineLocalizer</span></code> / <code class="docutils literal notranslate"><span class="pre">VehicleEKF</span></code> / <code class="docutils literal notranslate"><span class="pre">LocalizationService</span></code> — fuse → <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code></p></li>
+</ul>
+<p>Camera RPY for Supercombo warp is a <strong>different</strong> story (<a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Calibration</span></a>);
+it only shares the mount prior with the IMU and optionally feeds cam-odo yaw rate into the EKF.</p>
+<section id="pipeline">
+<h2>Pipeline<a class="headerlink" href="#pipeline" title="Ссылка на этот заголовок">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Android GPS / IMU
+    → sensors/gps/location (lat, lon) , sensors/imu
+TopicConvert
+    → GpsLocalProjector → GpsSample (x East, y North)
+    → sensors/imu_raw
+ImuCalibService
+    → sensors/imu_yaw   (yaw_rate in vehicle frame)
+LocalizationService  (tick on vehicle/chassis)
+    ← chassis + GPS ENU + imu_yaw (+ optional cam-odo)
+    → localization/pose
+</pre></div>
+</div>
+<p>Feature flags: <code class="docutils literal notranslate"><span class="pre">nodes.localization</span></code>, <code class="docutils literal notranslate"><span class="pre">nodes.imu_calib</span></code> (if omitted, IMU calib follows localization).</p>
+</section>
+<section id="frames-do-not-mix">
+<h2>Frames (do not mix)<a class="headerlink" href="#frames-do-not-mix" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>frame</p></th>
+<th class="head"><p>axes</p></th>
+<th class="head"><p>used for</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Local ENU</strong></p></td>
+<td><p><span class="math notranslate nohighlight">\(x\)</span> East, <span class="math notranslate nohighlight">\(y\)</span> North; origin = first GPS fix</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>, GPS samples after convert</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>GPS bearing</strong></p></td>
+<td><p>degrees <strong>clockwise from North</strong> (Android)</p></td>
+<td><p>course → ENU yaw</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Bicycle / vehicle</strong></p></td>
+<td><p>planar yaw in ENU; <span class="math notranslate nohighlight">\(\delta\)</span> at front axle</p></td>
+<td><p>EKF predict</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>ISO vehicle</strong></p></td>
+<td><p><span class="math notranslate nohighlight">\(y\)</span> <strong>left+</strong></p></td>
+<td><p>camera mount prior</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Device / Supercombo</strong></p></td>
+<td><p><span class="math notranslate nohighlight">\(y\)</span> <strong>right+</strong></p></td>
+<td><p>lanes / cam-odo (see <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">Coordinates</span></a>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="warning admonition">
+<p class="admonition-title">Same topic name, two payloads</p>
+<p>Java publishes <code class="docutils literal notranslate"><span class="pre">sensors/gps/location</span></code> as <strong>lat/lon proto</strong>. After <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code>, the <strong>same topic
+name</strong> carries a typed <code class="docutils literal notranslate"><span class="pre">GpsSample</span></code> in ENU meters. Offline tools must know which side of convert
+they read.</p>
+</div>
+</section>
+<hr class="docutils" />
+<section id="gps-local-meters">
+<h2>1. GPS → local meters<a class="headerlink" href="#gps-local-meters" title="Ссылка на этот заголовок">#</a></h2>
+<p>Origin <span class="math notranslate nohighlight">\((\phi_0,\lambda_0)\)</span> = first valid fix. Earth radius <span class="math notranslate nohighlight">\(R = 6371000\)</span> m:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+\Delta\phi &amp;= (\phi-\phi_0)\tfrac{\pi}{180},&amp;
+\Delta\lambda &amp;= (\lambda-\lambda_0)\tfrac{\pi}{180},\\
+y &amp;= R\,\Delta\phi &amp;&amp; \text{(North)},\\
+x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(East)}.
+\end{aligned}
+\end{split}\]</div>
+<p>Bearing (deg from North, CW) → ENU yaw (from East, CCW):</p>
+<div class="math notranslate nohighlight">
+\[
+\psi = \mathrm{normalize}\Big(\tfrac{\pi}{2} - b_{\deg}\tfrac{\pi}{180}\Big).
+\]</div>
+<p>Course is trusted only when <span class="math notranslate nohighlight">\(v &gt; 2\)</span> m/s (and not the standstill quirk <span class="math notranslate nohighlight">\(v&lt;0.5\)</span> with near-zero bearing).
+Then <span class="math notranslate nohighlight">\(v_x = v\sin b\)</span>, <span class="math notranslate nohighlight">\(v_y = v\cos b\)</span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">R_EARTH</span> <span class="o">=</span> <span class="mf">6_371_000.0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">enu_from_ll</span><span class="p">(</span><span class="n">lat_deg</span><span class="p">,</span> <span class="n">lon_deg</span><span class="p">,</span> <span class="n">lat0_deg</span><span class="p">,</span> <span class="n">lon0_deg</span><span class="p">):</span>
+    <span class="n">dlat</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat_deg</span> <span class="o">-</span> <span class="n">lat0_deg</span><span class="p">)</span>
+    <span class="n">dlon</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon_deg</span> <span class="o">-</span> <span class="n">lon0_deg</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">dlat</span> <span class="o">*</span> <span class="n">R_EARTH</span>                          <span class="c1"># North</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">dlon</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat0_deg</span><span class="p">))</span> <span class="o">*</span> <span class="n">R_EARTH</span>  <span class="c1"># East</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="n">bearing_deg</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">bearing_deg</span><span class="p">)</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+
+<span class="c1"># ~111 m North, ~71 m East at φ₀=55°</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">enu_from_ll</span><span class="p">(</span><span class="mf">55.001</span><span class="p">,</span> <span class="mf">37.001</span><span class="p">,</span> <span class="mf">55.0</span><span class="p">,</span> <span class="mf">37.0</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;bearing 0° (N) → yaw&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)),</span> <span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;° (should be +90)&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;bearing 90° (E) → yaw&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="mf">90.0</span><span class="p">)),</span> <span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;° (should be 0)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Flat-Earth is fine for a drive of a few km. Crossing the origin reset (app restart) starts a <strong>new</strong> plane — do not stitch bags without re-anchoring.</p>
+</section>
+<hr class="docutils" />
+<section id="phone-imu-calibration">
+<h2>2. Phone IMU calibration<a class="headerlink" href="#phone-imu-calibration" title="Ссылка на этот заголовок">#</a></h2>
+<p>The phone is glued at a weird angle. Raw gyro is in <strong>phone axes</strong>; the bicycle needs
+<strong>vehicle yaw rate</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span>.</p>
+<section id="lock-procedure-imucalibrator">
+<h3>Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)<a class="headerlink" href="#lock-procedure-imucalibrator" title="Ссылка на этот заголовок">#</a></h3>
+<ol class="arabic simple">
+<li><p>Need chassis speed. <strong>Stationary:</strong> <span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> km/h.</p></li>
+<li><p><strong>Quiet:</strong> <span class="math notranslate nohighlight">\(\big|\|a\| - g\big| \le 1.5\)</span> m/s² and <span class="math notranslate nohighlight">\(\|\omega\| \le 0.08\)</span> rad/s.</p></li>
+<li><p>Collect ≥ 50 accel + gyro samples →</p>
+<ul class="simple">
+<li><p>orientation <span class="math notranslate nohighlight">\(R\)</span>: rotate measured gravity onto vehicle <strong>down</strong> <span class="math notranslate nohighlight">\((-Z)\)</span>;</p></li>
+<li><p>bias <span class="math notranslate nohighlight">\(b\)</span>: mean gyro.</p></li>
+</ul>
+</li>
+<li><p>While still quiet: bias EMA with <span class="math notranslate nohighlight">\(\alpha = 0.02\)</span>.</p></li>
+<li><p>Output (default <code class="docutils literal notranslate"><span class="pre">invert_yaw_rate=true</span></code> on Android):</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+\dot\psi = \pm \big(R(\omega - b)\big)_z.
+\]</div>
+</section>
+<section id="mount-prior">
+<h3>Mount prior<a class="headerlink" href="#mount-prior" title="Ссылка на этот заголовок">#</a></h3>
+<p>If <code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code> is set, the same roll/pitch/yaw seeds</p>
+<div class="math notranslate nohighlight">
+\[
+R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
+\]</div>
+<p>and the service can publish yaw rate <strong>before</strong> a standstill lock (<code class="docutils literal notranslate"><span class="pre">ready</span> <span class="pre">=</span> <span class="pre">has_prior</span> <span class="pre">∨</span> <span class="pre">orientation_locked</span></code>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="mf">9.81</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rotation_from_gravity</span><span class="p">(</span><span class="n">accel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Map measured gravity direction onto vehicle +down (-Z). Toy: Rodrigues via two vectors.&quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">accel</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>  <span class="c1"># down in vehicle</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">vx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">@</span> <span class="n">vx</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">c</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">R</span> <span class="o">@</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gyro</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bias</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="o">-</span><span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">if</span> <span class="n">invert</span> <span class="k">else</span> <span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+<span class="c1"># Phone nearly upright, slight pitch: gravity mostly in phone -z</span>
+<span class="n">R</span> <span class="o">=</span> <span class="n">rotation_from_gravity</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">g</span><span class="p">])</span>
+<span class="n">bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">])</span>
+<span class="n">gyro</span> <span class="o">=</span> <span class="n">bias</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">])</span>   <span class="c1"># +0.12 about phone z after bias</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;R:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;yaw_rate&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="s2">&quot;rad/s&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Until <code class="docutils literal notranslate"><span class="pre">ready</span></code>, there is <strong>no</strong> <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> — localization falls back to chassis yaw rate (if any) or pure bicycle.</p>
+<div class="tip admonition">
+<p class="admonition-title">Drive-off tip</p>
+<p>Sit still a few seconds after ignition so orientation can lock. A bad prior + no lock → wrong sign
+or huge bias → EKF yaw-rate gate rejects IMU (<code class="docutils literal notranslate"><span class="pre">|ω</span> <span class="pre">−</span> <span class="pre">v</span> <span class="pre">tanδ</span> <span class="pre">/</span> <span class="pre">L|</span> <span class="pre">&lt;</span> <span class="pre">0.35</span></code> rad/s).</p>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="fusion-ekf-bicycle">
+<h2>3. Fusion (EKF + bicycle)<a class="headerlink" href="#fusion-ekf-bicycle" title="Ссылка на этот заголовок">#</a></h2>
+<p>State <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> in ENU. Tick on <strong>chassis</strong> (~10 ms after CAN RX fix).</p>
+<section id="predict">
+<h3>Predict<a class="headerlink" href="#predict" title="Ссылка на этот заголовок">#</a></h3>
+<p>Same kinematics as <a class="reference internal" href="../Control/BicycleModel.html"><span class="std std-doc">Bicycle</span></a>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\dot\psi_{\mathrm{pred}} = \frac{v\tan\delta}{L},\qquad
+\begin{aligned}
+x &amp;\leftarrow x + v\cos\psi\,dt,\\
+y &amp;\leftarrow y + v\sin\psi\,dt,\\
+\psi &amp;\leftarrow \psi + \dot\psi_{\mathrm{pred}}\,dt.
+\end{aligned}
+\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(L\)</span> from <code class="docutils literal notranslate"><span class="pre">vehicle.wheelbase_m</span></code> (≈ 2.636 m). A parallel <strong>pure odom</strong> trajectory (no GPS) is kept for debug.</p>
+<div class="warning admonition">
+<p class="admonition-title">Heading is mostly bicycle</p>
+<p>Predict <strong>writes</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span> from <span class="math notranslate nohighlight">\(\delta\)</span>. IMU only weakly corrects heading through the filter
+(~tens of percent per step with current <span class="math notranslate nohighlight">\(Q\)</span>/<span class="math notranslate nohighlight">\(R\)</span>). Without GPS course, heading drifts with
+understeer / steer-offset error — see <span class="xref myst"><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code></span>.</p>
+</div>
+</section>
+<section id="imu-update">
+<h3>IMU update<a class="headerlink" href="#imu-update" title="Ссылка на этот заголовок">#</a></h3>
+<p>If calibrated yaw rate agrees with bicycle within <strong>0.35</strong> rad/s (or <span class="math notranslate nohighlight">\(v &lt; 0.5\)</span>): scalar update on
+<span class="math notranslate nohighlight">\(\dot\psi\)</span> with <span class="math notranslate nohighlight">\(R \approx 0.05^2\)</span>.</p>
+</section>
+<section id="optional-cam-odo">
+<h3>Optional cam-odo<a class="headerlink" href="#optional-cam-odo" title="Ссылка на этот заголовок">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> <code class="docutils literal notranslate"><span class="pre">rot[2]</span></code> if <code class="docutils literal notranslate"><span class="pre">rot_std</span></code> small, <span class="math notranslate nohighlight">\(v&gt;1\)</span>, same agree gate.</p>
+</section>
+<section id="gps-update">
+<h3>GPS update<a class="headerlink" href="#gps-update" title="Ссылка на этот заголовок">#</a></h3>
+<p>Age gate ≈ 2.5 s; rate limit ≈ 0.2 s.</p>
+<ul class="simple">
+<li><p>Position: innovation gate 25 m (reseed 50 m).</p></li>
+<li><p>Course valid: hard snap if <span class="math notranslate nohighlight">\(|\Delta\psi|&gt;0.5\)</span> rad, else soft yaw update; velocity update.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">L</span> <span class="o">=</span> <span class="mf">2.636</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">bicycle_step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+    <span class="n">yaw_rate</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.01</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-3</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">yaw</span> <span class="o">=</span> <span class="n">yaw</span> <span class="o">+</span> <span class="n">yaw_rate</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">yaw_rate</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">gps_accept</span><span class="p">(</span><span class="n">innov_m</span><span class="p">,</span> <span class="n">soft</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span> <span class="n">hard</span><span class="o">=</span><span class="mf">50.0</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">innov_m</span> <span class="o">&gt;</span> <span class="n">hard</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;reseed&quot;</span>
+    <span class="k">if</span> <span class="n">innov_m</span> <span class="o">&gt;</span> <span class="n">soft</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;reject&quot;</span>
+    <span class="k">return</span> <span class="s2">&quot;update&quot;</span>
+
+<span class="c1"># 1 s open-loop at 15 m/s, 2° wheel</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">y</span> <span class="o">=</span> <span class="n">yaw</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">bicycle_step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">2.0</span><span class="p">),</span> <span class="mf">0.1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;odom after 1 s: x=</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> y=</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> yaw=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°  r=</span><span class="si">{</span><span class="n">r</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> rad/s&quot;</span><span class="p">)</span>
+
+<span class="c1"># GPS jump</span>
+<span class="k">for</span> <span class="n">dx</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;innov </span><span class="si">{</span><span class="n">dx</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> m → </span><span class="si">{</span><span class="n">gps_accept</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="output">
+<h3>Output<a class="headerlink" href="#output" title="Ссылка на этот заголовок">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>: fused <span class="math notranslate nohighlight">\(x,y,\psi,v,\dot\psi\)</span> plus odom_/ekf_ traces for PlotJuggler.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="how-this-relates-to-lane-keep">
+<h2>4. How this relates to lane-keep<a class="headerlink" href="#how-this-relates-to-lane-keep" title="Ссылка на этот заголовок">#</a></h2>
+<p>Lateral MPC / PP <strong>do not</strong> need global ENU to steer — they track <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> in the device frame.
+Localization still matters for:</p>
+<ul class="simple">
+<li><p>bag maps / mapmatch overlays (<span class="xref myst"><code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></span> is a <strong>separate</strong> offline track-shape matcher);</p></li>
+<li><p>sanity checks (GPS vs odom divergence);</p></li>
+<li><p>any future map-relative features.</p></li>
+</ul>
+<p>Wrong IMU sign will not immediately invert HCA if lane-keep ignores pose — but it <strong>will</strong> poison
+any consumer of <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> and confuse offline forensics.</p>
+</section>
+<hr class="docutils" />
+<section id="config-checklist">
+<h2>Config checklist<a class="headerlink" href="#config-checklist" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>key / node</p></th>
+<th class="head"><p>role</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nodes.localization</span></code> / <code class="docutils literal notranslate"><span class="pre">nodes.imu_calib</span></code></p></td>
+<td><p>enable services</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.wheelbase_m</span></code></p></td>
+<td><p>bicycle <span class="math notranslate nohighlight">\(L\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code></p></td>
+<td><p>IMU mount prior (and camera warp prior)</p></td>
+</tr>
+<tr class="row-odd"><td><p>(code defaults)</p></td>
+<td><p>GPS <span class="math notranslate nohighlight">\(R_{\mathrm{pos}}{=}0.5\)</span> m, update every 0.2 s, cam-odo on</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<hr class="docutils" />
+<section id="exercise">
+<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Project two GPS fixes 1° apart in latitude at your city φ; compare <span class="math notranslate nohighlight">\(y\)</span> to <span class="math notranslate nohighlight">\(111\)</span> km.</p></li>
+<li><p>Convert bearings <span class="math notranslate nohighlight">\(\{0,90,180,270\}\)</span> → ENU yaw; sketch on paper.</p></li>
+<li><p>On a bag: time from start until <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> appears; correlate with speed≈0 windows.</p></li>
+<li><p>Plot <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> vs pure odom on a highway bag; where does GPS snap heading?</p></li>
+</ol>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Camera calibration</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Localization"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../Vision/Supercombo.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Supercombo on Device</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Control/Overview.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Control — Overview</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#frames-do-not-mix">Frames (do not mix)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gps-local-meters">1. GPS → local meters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phone-imu-calibration">2. Phone IMU calibration</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lock-procedure-imucalibrator">Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mount-prior">Mount prior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fusion-ekf-bicycle">3. Fusion (EKF + bicycle)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict">Predict</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#imu-update">IMU update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-cam-odo">Optional cam-odo</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#gps-update">GPS update</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#output">Output</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">4. How this relates to lane-keep</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

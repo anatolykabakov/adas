@@ -225,6 +225,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
@@ -493,7 +497,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 <span class="w">    </span><span class="n">subscribe</span><span class="o">&lt;</span><span class="n">adas</span><span class="o">::</span><span class="n">ChassisSample</span><span class="o">&gt;</span><span class="p">(</span>
 <span class="w">        </span><span class="n">adas</span><span class="o">::</span><span class="n">topics</span><span class="o">::</span><span class="n">kVehicleChassis</span><span class="p">,</span>
 <span class="w">        </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">adas</span><span class="o">::</span><span class="n">ChassisSample</span><span class="o">&amp;</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">          </span><span class="n">last_v_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="p">.</span><span class="n">speed_ms</span><span class="p">;</span><span class="w">  </span><span class="c1">// field names: see ChassisSample</span>
+<span class="w">          </span><span class="n">last_v_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="p">.</span><span class="n">speed_mps</span><span class="p">;</span><span class="w">  </span><span class="c1">// ChassisSample / VehicleState use speed_mps</span>
 <span class="w">        </span><span class="p">});</span>
 
 <span class="w">    </span><span class="n">scheduleTimer</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">tick</span><span class="p">();</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s">&quot;tick&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 50 ms</span>

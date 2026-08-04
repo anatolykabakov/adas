@@ -227,6 +227,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — Overview</a></li>
@@ -463,15 +467,17 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">20.0</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">25.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Defaults match shipped config.json (C++ class defaults are smaller).&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K_dd</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">ld_min</span><span class="p">,</span> <span class="n">ld_max</span><span class="p">))</span>
 
 <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">30</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;v=</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2"> m/s → ld=</span><span class="si">{</span><span class="n">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="c1"># 5 → 3.0 (hit min), 15 → 6.0, 30 → 12.0</span>
+<span class="c1"># 5 → 8.0 (hit min), 15 → 12.0, 30 → 24.0</span>
 </pre></div>
 </div>
-<p>Small <span class="math notranslate nohighlight">\(l_d\)</span>: aggressive, chatty. Large <span class="math notranslate nohighlight">\(l_d\)</span>: smooth, cuts corners.</p>
+<p>Small <span class="math notranslate nohighlight">\(l_d\)</span>: aggressive, chatty. Large <span class="math notranslate nohighlight">\(l_d\)</span>: smooth, cuts corners.
+Shipped phone config: <code class="docutils literal notranslate"><span class="pre">pp_k_dd=0.8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_min=8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_max=25</span></code>.</p>
 </section>
 <section id="geometry">
 <h2>Geometry<a class="headerlink" href="#geometry" title="Ссылка на этот заголовок">#</a></h2>
@@ -570,7 +576,7 @@ R = \frac{l_d}{2\sin\alpha}.
 
 <span class="c1"># Look-ahead vs speed (config-style)</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">20.0</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">25.0</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K_dd</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">ld_min</span><span class="p">,</span> <span class="n">ld_max</span><span class="p">))</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ld at 15 m/s:&quot;</span><span class="p">,</span> <span class="n">lookahead</span><span class="p">(</span><span class="mi">15</span><span class="p">))</span>
 </pre></div>

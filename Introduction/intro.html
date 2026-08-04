@@ -228,6 +228,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
@@ -427,6 +431,7 @@ Bicycle-model and Pure Pursuit chapters reuse AAD figures and derivations (CC BY
 <li><p>distinguish wheel steer angle <span class="math notranslate nohighlight">\(\delta\)</span> from steering-wheel angle (SWA) on the bus;</p></li>
 <li><p>implement / tune Pure Pursuit and explain how <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> differ from one-step geometry;</p></li>
 <li><p>account for understeer (<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>) and transport delay (<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>);</p></li>
+<li><p>project GPS to local ENU, explain phone IMU lock, and read <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>;</p></li>
 <li><p>compute FCW/AEB TTC / <span class="math notranslate nohighlight">\(a_{\mathrm{req}}\)</span> and gated LDW conditions;</p></li>
 <li><p>separate vision degradation (thermal, competing YOLO) from controller error when reading a bag.</p></li>
 </ul>
@@ -484,6 +489,7 @@ Use this book when you want an <strong>industry-near phone pipeline</strong> and
 <ol class="arabic simple">
 <li><p><a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Architecture</span></a> → <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> → <a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Pipeline</span></a></p></li>
 <li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Vision</span></a> → <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">coordinates</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a></p></li>
+<li><p><a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a> (GPS ENU, phone IMU, EKF)</p></li>
 <li><p><a class="reference internal" href="../Control/BicycleModel.html"><span class="std std-doc">Bicycle</span></a> → <a class="reference internal" href="../Control/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> → <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a> → <a class="reference internal" href="../Control/MPC_and_FP.html"><span class="std std-doc">MPC / fp</span></a></p></li>
 <li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p></li>
 <li><p><a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Calibration</span></a> → <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a> → <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a></p></li>
@@ -503,6 +509,8 @@ Use this book when you want an <strong>industry-near phone pipeline</strong> and
 <hr class="docutils" />
 <p><strong>Next:</strong> <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">System overview</span></a></p>
 </section>
+<div class="toctree-wrapper compound">
+</div>
 <div class="toctree-wrapper compound">
 </div>
 <div class="toctree-wrapper compound">

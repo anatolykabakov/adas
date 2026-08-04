@@ -225,6 +225,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
@@ -394,8 +398,8 @@
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external">External</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#internal-primary-sources-docs">Internal primary sources (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-anchors">Code “anchors”</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#internal-docs">Internal (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-anchors">Code anchors</a></li>
 </ul>
             </nav>
         </div>
@@ -412,13 +416,13 @@
 <section id="external">
 <h2>External<a class="headerlink" href="#external" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> — camera, IPM, bicycle, Pure Pursuit (CC BY 4.0).</p></li>
-<li><p>Coursera <em>Introduction to Self-Driving Cars</em> (weeks on lateral control) — alongside AAD Control.</p></li>
-<li><p>openpilot / flowpilot — Supercombo and stock lateral context.</p></li>
+<li><p><a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0)</p></li>
+<li><p>Coursera <em>Introduction to Self-Driving Cars</em> (lateral control weeks)</p></li>
+<li><p>openpilot / flowpilot — Supercombo and stock lateral</p></li>
 </ul>
 </section>
-<section id="internal-primary-sources-docs">
-<h2>Internal primary sources (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)<a class="headerlink" href="#internal-primary-sources-docs" title="Ссылка на этот заголовок">#</a></h2>
+<section id="internal-docs">
+<h2>Internal (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)<a class="headerlink" href="#internal-docs" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>file</p></th>
@@ -426,85 +430,70 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code></p></td>
-<td><p>FCW / AEB / LDW rules and FP history</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">IMAGE_TO_CAN_PIPELINE.md</span></code></p></td>
+<td><p>camera→HCA</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IMAGE_TO_CAN_PIPELINE.md</span></code></p></td>
-<td><p>full camera→HCA path</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROLLER_LIMITS.md</span></code> / <code class="docutils literal notranslate"><span class="pre">BACKLOG.md</span></code></p></td>
+<td><p>limits / open work</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BENCHMARK_COMMA2.md</span></code></p></td>
+<td><p>vs comma-two + closing plan</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code></p></td>
+<td><p>FCW / AEB / LDW</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></p></td>
-<td><p>VisionPilot MPC breakdown</p></td>
+<td><p>VisionPilot MPC</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PIPELINE_AUDIT_0801.md</span></code></p></td>
-<td><p>pipeline audit + vehicle model</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
+<td><p>params learning / offline map match</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RUN_0801_STRAIGHTS.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CURVE</span></code> / <code class="docutils literal notranslate"><span class="pre">LOWSPEED</span></code></p></td>
-<td><p>window analyses</p></td>
+<tr class="row-even"><td><p>book <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
+<td><p>GPS ENU, phone IMU, live EKF</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code></p></td>
-<td><p>YOLO / COCO</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
+<td><p>adjacent</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code></p></td>
-<td><p>lead / long</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CONTROLLER_LIMITS.md</span></code></p></td>
-<td><p>applicability limits</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CALIBRATION_FROM_BAGS.md</span></code></p></td>
-<td><p>what is calibrated from runs</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">RUN_0801_LEFT_DRIFT.md</span></code></p></td>
-<td><p>left drift and its cause</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
+<td><p>MetaDrive eval</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Book <strong>does not replace</strong> these notes: it builds a teaching path and links to them.</p>
 </section>
 <section id="code-anchors">
-<h2>Code “anchors”<a class="headerlink" href="#code-anchors" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Code anchors<a class="headerlink" href="#code-anchors" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>path</p></th>
-<th class="head"><p>why open</p></th>
+<th class="head"><p>why</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">…/cpp/.../middleware/middleware.hpp</span></code></p></td>
-<td><p>Service / ParamBag / timers</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/middleware.hpp</span></code></p></td>
+<td><p>Service / ParamBag</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">…/cpp/.../test_middleware.cpp</span></code></p></td>
-<td><p>smallest working examples</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code></p></td>
+<td><p>smallest examples</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">…/java/.../VisionPipeline.java</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline.java</span></code></p></td>
 <td><p>inference queue</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">…/java/.../ZMQBridgeService.java</span></code></p></td>
-<td><p>Java ↔ native</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">…/cpp/.../lane_keep_service.cpp</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code></p></td>
 <td><p>controller selection</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">…/cpp/.../safety_warn_service.cpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">safety_warn_service.cpp</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">…/cpp/.../vehicle_model.h</span></code></p></td>
-<td><p>understeer</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">online_localizer</span></code> / <code class="docutils literal notranslate"><span class="pre">imu_calibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">gps_local_projector</span></code></p></td>
+<td><p>ENU pose / IMU lock / GPS</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">…/scripts/latency.py</span></code></p></td>
-<td><p>delays</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">…/scripts/bag_safety_warn.py</span></code></p></td>
-<td><p>warning episodes on bag</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">…/assets/config.json</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code></p></td>
 <td><p>all levers</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<!-- next-chapter -->
-<hr class="docutils" />
 <p><strong>End of course.</strong> <a class="reference internal" href="../Introduction/intro.html"><span class="std std-doc">Back to start</span></a></p>
 </section>
 </section>
@@ -576,8 +565,8 @@
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#external">External</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#internal-primary-sources-docs">Internal primary sources (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-anchors">Code “anchors”</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#internal-docs">Internal (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-anchors">Code anchors</a></li>
 </ul>
   </nav></div>
 

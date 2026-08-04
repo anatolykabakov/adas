@@ -227,6 +227,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
@@ -463,15 +467,16 @@ This chapter is the map of the repository before we dive into vision and control
 </section>
 <section id="configuration-you-will-touch">
 <h2>Configuration you will touch<a class="headerlink" href="#configuration-you-will-touch" title="Ссылка на этот заголовок">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (optional override in app <code class="docutils literal notranslate"><span class="pre">filesDir</span></code>):</p>
+<p><code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (optional override in app <code class="docutils literal notranslate"><span class="pre">filesDir</span></code>).</p>
+<p>Vehicle knobs (<code class="docutils literal notranslate"><span class="pre">vehicle.*</span></code>):</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;lane_keep_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fp&quot;</span><span class="p">,</span>
 <span class="nt">&quot;lat_use_vehicle_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="nt">&quot;tire_stiffness_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span>
-<span class="nt">&quot;fp_steer_delay_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span><span class="p">,</span>
-<span class="nt">&quot;vision_traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="nt">&quot;phone_stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="nt">&quot;fp_steer_delay_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span>
 </pre></div>
 </div>
+<p>Feature flags (<code class="docutils literal notranslate"><span class="pre">nodes.*</span></code>), e.g. <code class="docutils literal notranslate"><span class="pre">&quot;vision_traffic&quot;:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;phone_stats&quot;:</span> <span class="pre">true</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;safety_warn&quot;:</span> <span class="pre">true</span></code>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>key</p></th>
@@ -479,19 +484,19 @@ This chapter is the map of the repository before we dive into vision and control
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lane_keep_controller</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lat_use_vehicle_model</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span></code></p></td>
 <td><p><span class="math notranslate nohighlight">\(\kappa\to\)</span> SWA via understeer model</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.fp_steer_delay_s</span></code></p></td>
 <td><p>state lookahead for pipeline delay</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision_traffic</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">nodes.vision_traffic</span></code></p></td>
 <td><p>YOLO; keep <code class="docutils literal notranslate"><span class="pre">false</span></code> when measuring lane-keep</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">phone_stats</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nodes.phone_stats</span></code></p></td>
 <td><p>1 Hz CPU / thermal into the bag</p></td>
 </tr>
 </tbody>

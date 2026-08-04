@@ -16,8 +16,12 @@ On driver-steered frames, plot $\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}$ by
 **Deliverable:** table vs the course reference bins; comment at $v\sim 20$ m/s.
 
 ### A3 Driver vs HCA
-Reproduce metrics from `RUN_0801_STRAIGHTS` windows (or an instructor-assigned bag).
+Reproduce CTE metrics on an instructor-assigned straight/arc bag.
 **Deliverable:** |CTE| med/p95 on straight vs arc; state vision Hz on those windows.
+
+### A4 Localization
+Read [Localization](../Localization/Overview.md). On a bag: (1) ENU track from GPS, (2) time until `imu_yaw` valid, (3) overlay `localization/pose` vs odom.
+**Deliverable:** one plot + note where GPS heading snaps.
 
 ## B — offline control
 
