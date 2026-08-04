@@ -2,10 +2,10 @@
 
 Analysis of `selfdrive/locationd/paramsd.py` and `models/car_kf.py` from dragonpilot
 (`COMMA_VERSION 2023.04.13`). Needed for step 4 of the plan in
-`PLAN_TO_COMMA2.md`: we set steer ratio, tire stiffness, and steering offset as constants,
+`BENCHMARK_COMMA2.md`: we set steer ratio, tire stiffness, and steering offset as constants,
 and have no road grade at all — they learn all of that on the fly.
 
-What it gives on our car, measured from logs (`VS_DRAGONPILOT_0803.md`): `steerRatio 16.27 ± 0.10`,
+What it gives on our car, measured from logs (`BENCHMARK_COMMA2.md`): `steerRatio 16.27 ± 0.10`,
 `stiffnessFactor 1.319 ± 0.007`, steering offset +0.094°, road grade median −0.78° (p10 −2.55°).
 
 ## Architecture

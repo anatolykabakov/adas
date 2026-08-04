@@ -260,7 +260,7 @@ def plan_orientation_from_lanes(
 
 # stock lane_planner.CAMERA_OFFSET (flowpilot 0.08). Keep in sync with the C++ default in
 # TopicConvertService::Config::path_camera_offset_m / assets/config.json.
-DEFAULT_CAMERA_OFFSET_M = 0.08  # measured plan left bias; see docs/RUN_0801_LEFT_DRIFT.md
+DEFAULT_CAMERA_OFFSET_M = 0.08  # measured plan left bias
 
 
 def path_bundle_from_bag_lanes(

@@ -85,10 +85,9 @@ On each `onImageAvailable`:
 
 1. `acquireLatestImage()` (drop stale frames).
 2. If `VisionPipeline` enabled (`nodes.vision_supercombo` and init OK):
-   - `convertImageToArgbBitmap` → full-res ARGB;
    - `captureTs = TimeUtil.nowMs()` (BOOTTIME ms);
-   - `visionPipeline.submitBitmap(color, captureTs)`;
-   - bitmap `recycle()` immediately after queueing (pipeline copies frame).
+   - pack `YuvFrame` from `Image` planes;
+   - `visionPipeline.submitYuv(yuv, captureTs)` (preferred; `submitBitmap` is legacy);
 3. For bag (only if `Logger.isRunning()`):
    - grayscale bitmap → scale `SCALE_FACTOR=2` → **640×360**;
    - JPEG quality 70;
@@ -259,9 +258,12 @@ On `vision/path` polyline + speed from chassis:
 - lookahead \(L_d = \mathrm{clamp}(K_{dd}\cdot v, L_{d,\min}, L_{d,\max})\);
 - rear-axle shift `pp_shift` (m back along X);
 - target = lookahead circle intersection with polyline (\(x>0\));
-- \(\delta = \mathrm{atan2}(2\,L\,\sin\alpha,\,L_d^2)\) → `steer_rad` (wheel angle, device frame).
+- \(\delta = \arctan(2\,L\,\sin\alpha / L_d)\) → `steer_rad` (wheel angle, device frame).
+  Code: `pure_pursuit.cpp` — `atan((2 * wheel_base * sin(α)) / lookahead)` (not `atan2(..., L_d²)`).
 
-Live params from UI: `ppKdd`, `ppLdMin/Max`, `ppShift`, `steerRatio` → JNI `nativeSetLaneKeepPp` / `nativeSetSteerRatio` (after `nativeStart` reset from pending).
+Live params from UI: `RuntimeParams` / sliders → `AdasAppHandler.applyLaneKeepParams` → JNI
+`nativeUpdateParams` → `Middleware::setParameter` (ParamBag). Per-knob `nativeSetLaneKeepPp` /
+`nativeSetSteerRatio` were removed.
 
 ### 7.2 VW sign
 

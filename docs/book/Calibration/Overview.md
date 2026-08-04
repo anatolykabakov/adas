@@ -5,6 +5,9 @@ A few degrees of pitch error do not "look dramatic" in the HUD, but they bias th
 
 This is the Phone ADAS analogue of AAD's vanishing-point calibration chapter: we still care about extrinsics, but the main live path is the **model odometry head** rather than a chessboard every drive.
 
+Camera RPY for Supercombo is **not** vehicle ENU pose. The same `rpy_deg` prior also seeds
+phone IMU mount rotation — see [Localization](../Localization/Overview.md).
+
 ## Prior (shipped config)
 
 `config.json` → `calibration.camera`:
@@ -38,6 +41,18 @@ Before raising Pure Pursuit or MPC gains, compare **prior vs live RPY** in the b
 * Do not judge lane-keep quality in the first minutes after a cold calib start.
 * Persistent lateral bias on a straight **without** HCA engaged is a calib / offset candidate, not a `pp_k_dd` candidate.
 * Chessboard intrinsics (`camera_calib_chessboard.py`) refine $f_x,f_y$; extrinsics remain a separate story.
+
+## What bags can and cannot measure
+
+Verified on three 2026-08-01 runs (phone remounted between first and second).
+
+| parameter | from bag | in config | takeaway |
+|---|---|---|---|
+| **roll** | ≈0° (≤0.2°) | 0.0 | leave roll at 0 |
+| **y (lateral)** | +0.14…+0.18 m | 0.10 | IQR large — prefer tape + `path_camera_offset_m` |
+| **x (forward)** | not geometric | 1.5 | tape only; `fp` does not use it |
+| **height / scale** | 0.80–0.98 | 1.1 m | unstable; use wheel speed, not model `trans[0]` |
+| pitch / yaw | live calib | prior −1.8 / +0.5 | works after remount |
 
 ## Exercise
 

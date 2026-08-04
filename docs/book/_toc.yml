@@ -12,6 +12,9 @@ parts:
   - file: Vision/Overview.md
   - file: Vision/Coordinates.md
   - file: Vision/Supercombo.md
+- caption: Localization
+  chapters:
+  - file: Localization/Overview.md
 - caption: Control
   chapters:
   - file: Control/Overview.md

@@ -52,7 +52,7 @@ app/src/main/scripts/run/
 app/src/main/scripts/run_*/
 
 # Run and analysis exports: sim.eval --csv/--json/--plot, bag_*.py, PlotJuggler.
-# Report figures live in docs/mpc_img/ and are not covered by this rule.
+# Keep curated plots under docs/figures/; do not commit ad-hoc analysis dumps.
 app/src/main/scripts/*.csv
 app/src/main/scripts/*.json
 app/src/main/scripts/*.png

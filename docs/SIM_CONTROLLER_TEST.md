@@ -54,7 +54,7 @@ By default the anchor is not ideal but what the controller sees on the car:
 
 | parameter | value | source |
 |---|---|---|
-| `--vision-latency-ms` | 90 | median capture→path on phone (`PIPELINE_AUDIT_0801.md`) |
+| `--vision-latency-ms` | 90 | median capture→path on phone |
 | `--vision-noise-m` | 0.15 | path estimate spread between frames at 20 m from runs 07-26 (0.10–0.15 m at 20 m, 0.21–0.23 m at 40 m); noise grows with distance |
 | `--vision-jump-hz` / `--vision-jump-m` | 0 / 1.6 | plan jumps on model hypothesis change: p95 \|Δy\| ≈ 1.6 m at 20 m, rate ~0.5 Hz. **Off by default** — see below |
 
@@ -98,7 +98,7 @@ command in simulator is ~1.6× high, and car runs the arc with stable inward off
 vehicle*, not a controller defect, so runs default to kinematics;
 `--vehicle-model` restores model from config.json.
 
-Golf under-steer model is verified on recordings (`PIPELINE_AUDIT_0801.md`), not here.
+Golf under-steer model is verified on road bags, not here.
 
 ## Results (2026-08-02, seed 7, vision 90 ms / noise 0.15 m)
 
@@ -126,7 +126,7 @@ config (see below), with them the run passes.
 Return to center from 1.1 m offset at 25 m/s (`--offset 1.1`): `fp` returns to 0.02 m median,
 `pp` — to 0.00; LDW fires for both (see `SAFETY_WARN.md`).
 
-![CTE and command, highway track](mpc_img/70_sim_highway.png)
+![CTE and command, highway track](figures/70_sim_highway.png)
 
 Plot shows `fp` behavior on curvature step: spike to ±0.2 m on arc entry and exit,
 then recovery. `pp` with perfect perception barely errs.

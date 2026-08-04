@@ -364,7 +364,7 @@ class LaneKeepController:
 
         pairs = [(float(x), float(y)) for x, y in poly]
         # Real step: the C++ planner measures its solve period from these stamps and scales
-        # the x0 advance, jerk clips and slew guards by it (docs/FRAME_DT_FIX_0801.md).
+        # the x0 advance, jerk clips and slew guards by it (measured vision frame_dt).
         self._t_us += int(round(float(dt_s if dt_s is not None else self.dt_s) * 1e6))
         self._app.publish_chassis(self._t_us, float(speed_mps), 0.0, float(yaw_rate))
         self._app.publish_lanes(self._t_us, pairs, lane_anchored=lane_anchored)
