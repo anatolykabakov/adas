@@ -1,0 +1,756 @@
+
+<!DOCTYPE html>
+
+
+<html lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Kinematic Bicycle Model &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Control/BicycleModel';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Pure Pursuit" href="PurePursuit.html" />
+    <link rel="prev" title="Control — Overview" href="Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — Overview</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Control/BicycleModel.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Kinematic Bicycle Model</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#wheel-steer-angle-vs-swa">Wheel steer angle vs SWA</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-tan-delta-l-r">Why <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example-by-hand">Worked example (by hand)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-x-y-theta">State <span class="math notranslate nohighlight">\((x, y, \theta)\)</span></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantaneous-center-of-rotation-icr">Instantaneous center of rotation (ICR)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lateral-slip-preview">Lateral slip (preview)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="kinematic-bicycle-model">
+<h1>Kinematic Bicycle Model<a class="headerlink" href="#kinematic-bicycle-model" title="Ссылка на этот заголовок">#</a></h1>
+<blockquote>
+<div><p>Geometric basis of Pure Pursuit and part of MPC. Figures — from <a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">AAD</a> (CC BY 4.0).</p>
+</div></blockquote>
+<p>With a <strong>constant</strong> front-wheel angle <span class="math notranslate nohighlight">\(\delta\)</span>, the rear axle traces a <strong>circular arc</strong> in the plane.
+Lateral control = choose <span class="math notranslate nohighlight">\(\delta\)</span> (then SWA on the bus) so that arc matches the road you want.</p>
+<section id="wheel-steer-angle-vs-swa">
+<h2>Wheel steer angle vs SWA<a class="headerlink" href="#wheel-steer-angle-vs-swa" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>quantity</p></th>
+<th class="head"><p>meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(\delta\)</span></p></td>
+<td><p>front wheel angle relative to the body (model)</p></td>
+</tr>
+<tr class="row-odd"><td><p>SWA</p></td>
+<td><p>steering-column / rack angle on CAN</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>They are related by a nearly constant gear ratio and a sign convention:</p>
+<div class="math notranslate nohighlight">
+\[
+\mathrm{SWA} = \texttt{steer\_sign} \cdot \delta \cdot \texttt{steer\_ratio}.
+\]</div>
+<p>Golf MQB numbers in <code class="docutils literal notranslate"><span class="pre">config.json</span></code>: <span class="math notranslate nohighlight">\(L \approx 2.636\)</span> m, <code class="docutils literal notranslate"><span class="pre">steer_ratio</span> <span class="pre">≈</span> <span class="pre">15.7</span></code>, <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>.</p>
+<div class="tip admonition">
+<p class="admonition-title">Tiny numerical example</p>
+<p><span class="math notranslate nohighlight">\(\delta = +5°\)</span> (wheels turn “model-positive”).
+Then <span class="math notranslate nohighlight">\(|\mathrm{SWA}| = 15.7 \times 5° = 78.5°\)</span>, and with <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code> the CAN command is <span class="math notranslate nohighlight">\(\mathrm{SWA} = -78.5°\)</span>.
+One degree at the wheel is about sixteen degrees at the steering wheel — that is why bag SWA looks “large”.</p>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">L</span> <span class="o">=</span> <span class="mf">2.636</span>          <span class="c1"># m, wheelbase</span>
+<span class="n">STEER_RATIO</span> <span class="o">=</span> <span class="mf">15.7</span>
+<span class="n">STEER_SIGN</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">swa_from_delta_deg</span><span class="p">(</span><span class="n">delta_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Wheel angle [deg] → steering-wheel angle on CAN [deg].&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">STEER_SIGN</span> <span class="o">*</span> <span class="n">delta_deg</span> <span class="o">*</span> <span class="n">STEER_RATIO</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">swa_from_delta_deg</span><span class="p">(</span><span class="mf">5.0</span><span class="p">))</span>   <span class="c1"># -78.5</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">swa_from_delta_deg</span><span class="p">(</span><span class="o">-</span><span class="mf">5.0</span><span class="p">))</span>  <span class="c1"># +78.5</span>
+</pre></div>
+</div>
+<p><img alt="Definition of front wheel angles" src="../_images/WheelAngle.png" /></p>
+<p>Left and right road wheels differ (Ackermann). The bicycle model replaces the front axle by <strong>one</strong> equivalent <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
+</section>
+<section id="why-tan-delta-l-r">
+<h2>Why <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span><a class="headerlink" href="#why-tan-delta-l-r" title="Ссылка на этот заголовок">#</a></h2>
+<p><img alt="Bicycle model on vehicle body" src="../_images/BicycleModel.png" /></p>
+<p><img alt="Arc at constant δ" src="../_images/BicycleModelGeometry.png" /></p>
+<p>Assume rolling <strong>without lateral slip</strong>. The rear wheel velocity is along the body; the front wheel velocity is along the steered wheel.
+Instantaneous motion is pure rotation about the <strong>ICR</strong> (intersection of the wheel axes).</p>
+<p>Look at the right triangle ICR–rear–front:</p>
+<ul class="simple">
+<li><p>opposite to <span class="math notranslate nohighlight">\(\delta\)</span> is the wheelbase <span class="math notranslate nohighlight">\(L\)</span>;</p></li>
+<li><p>adjacent is the arc radius <span class="math notranslate nohighlight">\(R\)</span> of the rear axle.</p></li>
+</ul>
+<p>Therefore</p>
+<div class="math notranslate nohighlight">
+\[
+\tan\delta = \frac{L}{R}.
+\]</div>
+<p>Solve for the three equivalent forms students must memorize:</p>
+<div class="math notranslate nohighlight">
+\[
+\delta = \arctan\frac{L}{R},
+\qquad
+R = \frac{L}{\tan\delta},
+\qquad
+\kappa = \frac{1}{R} = \frac{\tan\delta}{L}.
+\]</div>
+<p>Here <span class="math notranslate nohighlight">\(\kappa\)</span> is <strong>path curvature</strong> of the rear axle [1/m]. Straight road: <span class="math notranslate nohighlight">\(\kappa = 0\)</span> <span class="math notranslate nohighlight">\(\Rightarrow\)</span> <span class="math notranslate nohighlight">\(\delta = 0\)</span>.</p>
+<section id="worked-example-by-hand">
+<h3>Worked example (by hand)<a class="headerlink" href="#worked-example-by-hand" title="Ссылка на этот заголовок">#</a></h3>
+<p>Take <span class="math notranslate nohighlight">\(L = 2.64\)</span> m and <span class="math notranslate nohighlight">\(\delta = 5° = 5\pi/180 \approx 0.08727\)</span> rad.</p>
+<div class="math notranslate nohighlight">
+\[
+\kappa = \frac{\tan(0.08727)}{2.64} \approx \frac{0.0875}{2.64} \approx 0.0331~\mathrm{m}^{-1},
+\qquad
+R = \frac{1}{\kappa} \approx 30.2~\mathrm{m}.
+\]</div>
+<p>So a gentle <span class="math notranslate nohighlight">\(5°\)</span> at the wheels is already a ~30 m radius — city-arc territory.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">kappa_from_delta</span><span class="p">(</span><span class="n">delta_rad</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta_rad</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">delta_from_radius</span><span class="p">(</span><span class="n">R</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">/</span> <span class="n">R</span><span class="p">)</span>
+
+<span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">k</span> <span class="o">=</span> <span class="n">kappa_from_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+<span class="n">R</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">k</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;kappa=</span><span class="si">{</span><span class="n">k</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m,  R=</span><span class="si">{</span><span class="n">R</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+
+<span class="c1"># Inverse check: radius 50 m → wheel angle</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;delta for R=50 m: </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta_from_radius</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> deg&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Expected print roughly: <code class="docutils literal notranslate"><span class="pre">kappa=0.0331</span></code>, <code class="docutils literal notranslate"><span class="pre">R=30.2</span></code>, <code class="docutils literal notranslate"><span class="pre">delta</span> <span class="pre">for</span> <span class="pre">R=50</span> <span class="pre">m</span> <span class="pre">≈</span> <span class="pre">3.02°</span></code>.</p>
+</section>
+</section>
+<section id="state-x-y-theta">
+<h2>State <span class="math notranslate nohighlight">\((x, y, \theta)\)</span><a class="headerlink" href="#state-x-y-theta" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>symbol</p></th>
+<th class="head"><p>meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(x, y\)</span></p></td>
+<td><p>rear-axle position in a planar world frame [m]</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(\theta\)</span></p></td>
+<td><p>yaw (heading) [rad]</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(v\)</span></p></td>
+<td><p>longitudinal speed [m/s]</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><img alt="State x, y, θ" src="../_images/BicycleModel_x_y_theta.png" /></p>
+<p>With no slip, the kinematic ODEs are:</p>
+<div class="math notranslate nohighlight">
+\[
+\dot x = v\cos\theta,
+\qquad
+\dot y = v\sin\theta,
+\qquad
+\dot\theta = \frac{v}{L}\tan\delta = v\,\kappa.
+\]</div>
+<div class="note admonition">
+<p class="admonition-title">Discrete step (what a simulator does)</p>
+<p>For a small <span class="math notranslate nohighlight">\(\Delta t\)</span>:
+<span class="math notranslate nohighlight">\(x \leftarrow x + v\cos\theta\,\Delta t\)</span>,
+<span class="math notranslate nohighlight">\(y \leftarrow y + v\sin\theta\,\Delta t\)</span>,
+<span class="math notranslate nohighlight">\(\theta \leftarrow \theta + v\tan\delta / L \cdot \Delta t\)</span>.</p>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">bicycle_step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.64</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;One Euler step of the kinematic bicycle [SI units].&quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">theta</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span>
+
+<span class="c1"># Drive 2 s at 10 m/s with +3° wheel angle — expect slow left/right turn</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">y</span> <span class="o">=</span> <span class="n">theta</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">40</span><span class="p">):</span>  <span class="c1"># 40 * 0.05 s = 2 s</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span> <span class="o">=</span> <span class="n">bicycle_step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;after 2 s: x=</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m, y=</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m, yaw=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="instantaneous-center-of-rotation-icr">
+<h2>Instantaneous center of rotation (ICR)<a class="headerlink" href="#instantaneous-center-of-rotation-icr" title="Ссылка на этот заголовок">#</a></h2>
+<p>For planar rigid-body motion there is always an ICR such that</p>
+<div class="math notranslate nohighlight">
+\[
+\dot{\mathbf{r}} = \boldsymbol{\Omega}\times(\mathbf{r}-\mathbf{r}_{\mathrm{ICR}}).
+\]</div>
+<p><img alt="ICR and velocity orthogonality" src="../_images/ICR.png" /></p>
+<p><img alt="Constructing ICR from two velocity directions" src="../_images/ICR_construction.png" /></p>
+<p>No-slip ⇒ wheel velocity ⊥ wheel axle. Draw both axle lines; they meet at ICR. Ackermann steering is exactly “make those lines meet at one point”.</p>
+<section id="lateral-slip-preview">
+<h3>Lateral slip (preview)<a class="headerlink" href="#lateral-slip-preview" title="Ссылка на этот заголовок">#</a></h3>
+<p>At high <span class="math notranslate nohighlight">\(v\)</span>, tires slip sideways. The true ICR moves, and</p>
+<div class="math notranslate nohighlight">
+\[
+\kappa_{\mathrm{fact}} = \frac{\dot\psi}{v} &lt; \frac{\tan\delta}{L} = \kappa_{\mathrm{kin}}.
+\]</div>
+<p><img alt="ICR with slip" src="../_images/ICR_Slip.png" /></p>
+<p>Highway kinematics <strong>overstate</strong> curvature — next chapter.</p>
+</section>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p><span class="math notranslate nohighlight">\(\kappa = \tan\delta / L\)</span>, <span class="math notranslate nohighlight">\(R = 1/\kappa\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathrm{SWA} = \texttt{steer\_sign}\cdot\delta\cdot\texttt{steer\_ratio}\)</span>.</p></li>
+<li><p>ICR explains the geometry; slip breaks the no-slip assumption at speed.</p></li>
+</ol>
+<div class="tip admonition">
+<p class="admonition-title">Exercise</p>
+<ol class="arabic simple">
+<li><p>For <span class="math notranslate nohighlight">\(L=2.64\)</span> m, <span class="math notranslate nohighlight">\(R=50\)</span> m: compute <span class="math notranslate nohighlight">\(\delta\)</span> [deg] and <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\)</span> with ratio <span class="math notranslate nohighlight">\(15.7\)</span>.</p></li>
+<li><p>Modify the Python <code class="docutils literal notranslate"><span class="pre">bicycle_step</span></code> loop: what <span class="math notranslate nohighlight">\(y\)</span> do you get after 2 s if <span class="math notranslate nohighlight">\(\delta=0\)</span>? (Should stay ~0.)</p></li>
+<li><p>Convince yourself from the ICR figure that the bottom-left angle equals <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
+</ol>
+</div>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Control"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Overview.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Control — Overview</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="PurePursuit.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Pure Pursuit</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#wheel-steer-angle-vs-swa">Wheel steer angle vs SWA</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-tan-delta-l-r">Why <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#worked-example-by-hand">Worked example (by hand)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-x-y-theta">State <span class="math notranslate nohighlight">\((x, y, \theta)\)</span></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#instantaneous-center-of-rotation-icr">Instantaneous center of rotation (ICR)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lateral-slip-preview">Lateral slip (preview)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

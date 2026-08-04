@@ -1,0 +1,772 @@
+
+<!DOCTYPE html>
+
+
+<html lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Middleware (C++ bus) &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Middleware';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Java layer (phone shell)" href="JavaLayer.html" />
+    <link rel="prev" title="System Overview" href="Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">System Overview</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Architecture/Middleware.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Middleware (C++ bus)</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mental-model">Mental model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-modes">Two modes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-a-tiny-service">Writing a tiny service</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-are-allowed-to-call-from-configure">What you are allowed to call from <code class="docutils literal notranslate"><span class="pre">configure()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#topics-students-see-often">Topics students see often</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag-live-knobs">ParamBag (live knobs)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#queues-and-drops">Queues and drops</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-study-this-in-the-repo">How to study this in the repo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="middleware-c-bus">
+<h1>Middleware (C++ bus)<a class="headerlink" href="#middleware-c-bus" title="Ссылка на этот заголовок">#</a></h1>
+<p>After vision and before HCA, almost everything in native code talks through one object: <strong><code class="docutils literal notranslate"><span class="pre">adas::Middleware</span></code></strong>.
+If you understand Middleware, you can read any service (<code class="docutils literal notranslate"><span class="pre">LaneKeep</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, <code class="docutils literal notranslate"><span class="pre">Panda</span></code>, …) without drowning in Android.</p>
+<p>Source of truth: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/middleware/middleware.hpp</span></code>.
+Tests that read like a tutorial: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/tests/test_middleware.cpp</span></code>.</p>
+<section id="mental-model">
+<h2>Mental model<a class="headerlink" href="#mental-model" title="Ссылка на этот заголовок">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌──────────── Service A ────────────┐     ┌──────────── Service B ────────────┐
+│ worker thread                     │     │ worker thread                     │
+│  • subscribe callbacks            │     │  • subscribe callbacks            │
+│  • scheduleTimer ticks            │pub──▶│  • scheduleTimer ticks            │
+│  • ParamBag (own knobs)         │     │  • ParamBag                      │
+└───────────────────────────────────┘     └───────────────────────────────────┘
+                 ▲
+                 │ Middleware::setParameter / publish
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>A <strong>Service</strong> is one concurrent unit: its own thread (Realtime) or shared <code class="docutils literal notranslate"><span class="pre">step()</span></code> (Simulated).</p></li>
+<li><p><strong>Topics</strong> are typed string names (<code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>, …).</p></li>
+<li><p><strong>Publish</strong> copies the message into each subscriber queue; the <strong>owner</strong> of that queue runs the callback.</p></li>
+<li><p><strong>Parameters</strong> can be set from any thread (UI / JNI); they are <strong>applied</strong> on the service thread between callbacks.</p></li>
+</ul>
+<div class="tip admonition">
+<p class="admonition-title">Why not call services directly?</p>
+<p>Java, bag replay, and MetaDrive all need the same algorithms. A bus + <code class="docutils literal notranslate"><span class="pre">Mode::Simulated</span></code> lets Python/<code class="docutils literal notranslate"><span class="pre">pyadas</span></code> drive the <strong>same</strong> C++ without Camera2.</p>
+</div>
+</section>
+<section id="two-modes">
+<h2>Two modes<a class="headerlink" href="#two-modes" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>mode</p></th>
+<th class="head"><p>who turns the crank</p></th>
+<th class="head"><p>when students meet it</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Realtime</span></code></p></td>
+<td><p>each service thread + OS time</p></td>
+<td><p>phone / APK</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Simulated</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">setTime(t_us)</span></code> + <code class="docutils literal notranslate"><span class="pre">step()</span></code></p></td>
+<td><p>unit tests, <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>, bag offline</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Conceptual host loop (pyadas / tests do this for you)</span>
+<span class="c1"># mw = Middleware(Mode.Simulated)</span>
+<span class="c1"># mw.register_services(...)</span>
+<span class="c1"># for t in bag_timestamps_us:</span>
+<span class="c1">#     mw.set_time(t)</span>
+<span class="c1">#     mw.publish(&quot;vehicle/chassis&quot;, chassis_sample)</span>
+<span class="c1">#     mw.publish(&quot;vision/path&quot;, path_msg)</span>
+<span class="c1">#     mw.step()</span>
+<span class="c1">#     msgs = mw.pop_messages()  # outbound for logging / asserts</span>
+</pre></div>
+</div>
+</section>
+<section id="writing-a-tiny-service">
+<h2>Writing a tiny service<a class="headerlink" href="#writing-a-tiny-service" title="Ссылка на этот заголовок">#</a></h2>
+<p>Real API names (simplified Echo):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;middleware/middleware.hpp&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;utils/adas_topics.h&quot;</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">EchoService</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">adas</span><span class="o">::</span><span class="n">Service</span><span class="w"> </span><span class="p">{</span>
+<span class="w"> </span><span class="k">public</span><span class="o">:</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">getName</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;echo&quot;</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">configure</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">registerParameter</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;gain&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">gain_</span><span class="p">);</span>
+
+<span class="w">    </span><span class="n">subscribe</span><span class="o">&lt;</span><span class="n">adas</span><span class="o">::</span><span class="n">ChassisSample</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">        </span><span class="n">adas</span><span class="o">::</span><span class="n">topics</span><span class="o">::</span><span class="n">kVehicleChassis</span><span class="p">,</span>
+<span class="w">        </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">adas</span><span class="o">::</span><span class="n">ChassisSample</span><span class="o">&amp;</span><span class="w"> </span><span class="n">m</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="n">last_v_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="p">.</span><span class="n">speed_ms</span><span class="p">;</span><span class="w">  </span><span class="c1">// field names: see ChassisSample</span>
+<span class="w">        </span><span class="p">});</span>
+
+<span class="w">    </span><span class="n">scheduleTimer</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">tick</span><span class="p">();</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s">&quot;tick&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 50 ms</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w"> </span><span class="k">private</span><span class="o">:</span>
+<span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">tick</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// publish something other services / ZMQ OUT can see</span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">gain_</span><span class="p">;</span>
+<span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">last_v_</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+
+<span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">gain_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">;</span>
+<span class="w">  </span><span class="kt">float</span><span class="w"> </span><span class="n">last_v_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.f</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Register it:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">adas</span><span class="o">::</span><span class="n">Middleware</span><span class="w"> </span><span class="nf">mw</span><span class="p">(</span><span class="n">adas</span><span class="o">::</span><span class="n">Middleware</span><span class="o">::</span><span class="n">Mode</span><span class="o">::</span><span class="n">Simulated</span><span class="p">);</span>
+<span class="n">mw</span><span class="p">.</span><span class="n">registerService</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">EchoService</span><span class="o">&gt;</span><span class="p">());</span>
+<span class="n">mw</span><span class="p">.</span><span class="n">setParameter</span><span class="p">(</span><span class="s">&quot;gain&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;2.5&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// string in, parsed to double</span>
+<span class="n">mw</span><span class="p">.</span><span class="n">setTime</span><span class="p">(</span><span class="cm">/*us=*/</span><span class="mi">0</span><span class="p">);</span>
+<span class="n">mw</span><span class="p">.</span><span class="n">step</span><span class="p">();</span><span class="w">  </span><span class="c1">// flush params + drain queues + fire due timers</span>
+</pre></div>
+</div>
+<section id="what-you-are-allowed-to-call-from-configure">
+<h3>What you are allowed to call from <code class="docutils literal notranslate"><span class="pre">configure()</span></code><a class="headerlink" href="#what-you-are-allowed-to-call-from-configure" title="Ссылка на этот заголовок">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>API</p></th>
+<th class="head"><p>meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">subscribe&lt;T&gt;(topic,</span> <span class="pre">cb)</span></code></p></td>
+<td><p>typed inbox</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">publish(topic,</span> <span class="pre">msg)</span></code></p></td>
+<td><p>typed outbox (type must match subscribers)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">scheduleTimer(ms,</span> <span class="pre">cb,</span> <span class="pre">name)</span></code></p></td>
+<td><p>periodic on this service</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">registerParameter&lt;T&gt;(name,</span> <span class="pre">ref)</span></code></p></td>
+<td><p>live knob</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">now()</span></code></p></td>
+<td><p>middleware time [µs]</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</section>
+<section id="topics-students-see-often">
+<h2>Topics students see often<a class="headerlink" href="#topics-students-see-often" title="Ссылка на этот заголовок">#</a></h2>
+<p>Defined in <code class="docutils literal notranslate"><span class="pre">utils/adas_topics.h</span></code>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>topic</p></th>
+<th class="head"><p>typical producer → consumer</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
+<td><p>Java (ZMQ) → <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision/path</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> → <code class="docutils literal notranslate"><span class="pre">LaneKeep</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision/model_long</span></code></p></td>
+<td><p>Java → <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, <code class="docutils literal notranslate"><span class="pre">LongPlan</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code></p></td>
+<td><p>Panda decode / Java → many</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
+<td><p>LaneKeep → Panda / bag</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">safety/warn</span></code></p></td>
+<td><p>SafetyWarn → ZMQ OUT → UI / bag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code></p></td>
+<td><p>stats service → bag</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="parambag-live-knobs">
+<h2>ParamBag (live knobs)<a class="headerlink" href="#parambag-live-knobs" title="Ссылка на этот заголовок">#</a></h2>
+<p>Problem: UI thread must not race the control thread.</p>
+<p>Solution:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">setParameter(&quot;pp_k_dd&quot;,</span> <span class="pre">&quot;0.8&quot;)</span></code> <strong>queues</strong> a string on the owning service.</p></li>
+<li><p>Before the next callback / timer, <code class="docutils literal notranslate"><span class="pre">ParamBag::flush()</span></code> parses and writes the C++ variable.</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student intuition (not the real class, but the timing)</span>
+<span class="n">pending</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">:</span> <span class="s2">&quot;0.8&quot;</span><span class="p">}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">pending</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">pending</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>  <span class="c1"># or bool/int/...</span>
+    <span class="n">pending</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">}</span>
+<span class="n">flush</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">pending</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.8</span>
+</pre></div>
+</div>
+<p>Supported types: <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code>, <code class="docutils literal notranslate"><span class="pre">string</span></code>.
+Android NDK needs the parse helpers as free functions (see <code class="docutils literal notranslate"><span class="pre">detail::parseParamText</span></code> in the header) — a class-static template failed to link.</p>
+</section>
+<section id="queues-and-drops">
+<h2>Queues and drops<a class="headerlink" href="#queues-and-drops" title="Ссылка на этот заголовок">#</a></h2>
+<p>Default subscriber capacity is finite (~100). If a slow service does not drain:</p>
+<ul class="simple">
+<li><p>new messages can be <strong>dropped</strong>;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows lagging timers / drops.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Предупреждение</p>
+<p>A “bad controller” on a bag where <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows huge timer lag is often a <strong>scheduling</strong> story, not a gain story.</p>
+</div>
+</section>
+<section id="how-to-study-this-in-the-repo">
+<h2>How to study this in the repo<a class="headerlink" href="#how-to-study-this-in-the-repo" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Skim <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">KnobService</span></code>).</p></li>
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code> → <code class="docutils literal notranslate"><span class="pre">configure()</span></code>: parameters + subscriptions.</p></li>
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">zmq_bridge_service.cpp</span></code>: Java messages enter the same bus.</p></li>
+<li><p>Run host tests: <code class="docutils literal notranslate"><span class="pre">./scripts/docker.sh</span> <span class="pre">tests</span></code> (or <code class="docutils literal notranslate"><span class="pre">build_cpp.sh</span> <span class="pre">-t</span> <span class="pre">linux</span> <span class="pre">--test</span></code>).</p></li>
+</ol>
+</section>
+<section id="exercise">
+<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Draw the path of one <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> from Panda (or bag) to <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code>.</p></li>
+<li><p>Add a hypothetical parameter <code class="docutils literal notranslate"><span class="pre">echo.gain</span></code> — which thread writes it, which thread reads it?</p></li>
+<li><p>In Simulated mode, why must you call <code class="docutils literal notranslate"><span class="pre">setTime</span></code> before <code class="docutils literal notranslate"><span class="pre">step</span></code> for timers to fire?</p></li>
+</ol>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Java layer</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Architecture"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Overview.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">System Overview</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="JavaLayer.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Java layer (phone shell)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#mental-model">Mental model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-modes">Two modes</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-a-tiny-service">Writing a tiny service</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-you-are-allowed-to-call-from-configure">What you are allowed to call from <code class="docutils literal notranslate"><span class="pre">configure()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#topics-students-see-often">Topics students see often</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag-live-knobs">ParamBag (live knobs)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#queues-and-drops">Queues and drops</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-study-this-in-the-repo">How to study this in the repo</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
