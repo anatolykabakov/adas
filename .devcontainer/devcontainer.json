@@ -1,0 +1,21 @@
+{
+  "name": "adas",
+  "dockerComposeFile": ["docker-compose.yml"],
+  "service": "adas",
+  "workspaceFolder": "/workspace/adas",
+  "remoteUser": "dev",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "cmake.buildDirectory": "${workspaceFolder}/app/src/main/cpp/build-docker"
+      }
+    }
+  }
+}

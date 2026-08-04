@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// IMU sensor data message
+message IMUData {
+    int64 timestamp = 1;
+
+    // Accelerometer data (m/s²)
+    float accel_x = 2;
+    float accel_y = 3;
+    float accel_z = 4;
+
+    // Gyroscope data (rad/s)
+    float gyro_x = 5;
+    float gyro_y = 6;
+    float gyro_z = 7;
+
+    // Magnetometer data (μT)
+    float mag_x = 8;
+    float mag_y = 9;
+    float mag_z = 10;
+
+    // Sensor accuracy
+    int32 accuracy = 11;
+
+    // Temperature (if available)
+    float temperature = 12;
+
+    // Sample count (for batch processing)
+    int32 sample_count = 13;
+}

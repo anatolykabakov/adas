@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "LaneKeepOuter";
+
+message LaneKeepState {
+  int64 timestamp = 1;
+  double steer_rad = 2;
+  double steer_norm = 3;
+  double throttle = 4;
+  double brake = 5;
+  double lookahead_m = 6;
+  double target_x = 7;
+  double target_y = 8;
+  bool has_target = 9;
+  double curvature = 10;
+  string status = 11;
+  int64 vision_ts_ms = 12;
+  int64 chassis_ts_ms = 13;
+  int64 publish_ts_ms = 14;
+  int64 capture_ts_ms = 15;
+  bool torque_saturated = 16;
+  int32 torque_cnm = 17;
+}
+
+message LaneKeepDebug {
+  int64 timestamp = 1;
+  string controller = 2;
+  string status = 3;
+  bool has_target = 4;
+
+  double speed_mps = 10;
+  int32 n_points = 11;
+  double cam_y_left_m = 12;
+
+  double pp_lookahead_m = 20;
+  double pp_target_x = 21;
+  double pp_target_y = 22;
+  double pp_curvature = 23;
+  double pp_steer_raw_rad = 24;
+
+  double mpc_cte_m = 30;
+  double mpc_epsi_rad = 31;
+  double mpc_kappa_path = 32;
+  double mpc_kappa_yaw = 33;
+  double mpc_kappa_used = 34;
+  double mpc_dkappa_ds = 35;
+  double mpc_delta_vp_rad = 36;
+  double mpc_delta_clamped_rad = 37;
+  double mpc_max_steer_rad = 38;
+
+  double steer_rad = 40;
+  double steer_norm = 41;
+  bool slew_clipped = 42;
+  double max_steer_rad = 43;
+  double desired_swa_deg = 44;
+  double actual_swa_deg = 45;
+  double angle_error_deg = 46;
+  int32 torque_cnm = 47;
+  bool steer_output_enabled = 48;
+  double frame_dt_ms = 49;
+
+  bool lane_anchored = 50;
+  double lane_width_m = 51;
+  double lane_offset_m = 52;
+  double center_force_m = 53;
+
+  double p_k_dd = 60;
+  double p_ld_min = 61;
+  double p_ld_max = 62;
+  double p_ld_curv_gain = 63;
+  double p_max_steer_deg = 64;
+  double p_mpc_epsi_gain = 65;
+  double p_mpc_ff_scale = 66;
+  double p_mpc_kappa_yaw_blend = 67;
+  double p_lane_blend_scale = 68;
+  double p_camera_offset_m = 69;
+  double p_center_force_gain = 70;
+
+  int64 capture_ts_ms = 80;
+  int64 vision_ts_ms = 81;
+  int64 chassis_ts_ms = 82;
+  int64 publish_ts_ms = 83;
+}

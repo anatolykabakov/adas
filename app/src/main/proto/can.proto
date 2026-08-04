@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// Single CAN frame
+message CANFrame {
+    int64 address = 1;      // CAN ID (address)
+    bytes data = 2;         // CAN data as bytes array
+    int64 bus_time = 3;     // Bus time
+    int64 src = 4;          // Source
+}
+
+// CAN data message with timestamp and array of frames
+message CANData {
+    int64 timestamp = 1; // Timestamp in milliseconds
+    repeated CANFrame frames = 2; // Array of CAN frames
+}

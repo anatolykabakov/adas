@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// Camera image message
+message CameraImage {
+    // Image metadata
+    int64 timestamp = 1;
+    int32 width = 2;
+    int32 height = 3;
+    string format = 4;  // e.g., "YUV420", "RGB", "JPEG"
+    int32 frame_id = 5;
+
+    // Image data
+    bytes image_data = 6;
+
+    // Camera parameters
+    float focal_length_x = 7;
+    float focal_length_y = 8;
+    float principal_point_x = 9;
+    float principal_point_y = 10;
+
+    // Camera type
+    enum CameraType {
+        UNKNOWN = 0;
+        WIDE_ROAD = 1;
+        NARROW_ROAD = 2;
+        DRIVER = 3;
+    }
+    CameraType camera_type = 11;
+}

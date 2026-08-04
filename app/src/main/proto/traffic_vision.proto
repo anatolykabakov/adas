@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "TrafficVisionOuter";
+
+enum TrafficLightColor {
+  TFL_UNKNOWN = 0;
+  TFL_RED = 1;
+  TFL_YELLOW = 2;
+  TFL_GREEN = 3;
+  TFL_OFF = 4;
+}
+
+message TrafficDetection {
+  string label = 1;           // e.g. "traffic_light", "3_24", "speed_60"
+  float conf = 2;
+  float x1 = 3;               // normalized [0,1] image coords
+  float y1 = 4;
+  float x2 = 5;
+  float y2 = 6;
+  int32 speed_limit_kmh = 7;  // >0 if this det encodes a speed limit
+  TrafficLightColor tfl_color = 8;
+  bool speed_from_ocr = 9;    // true if km/h came from crop OCR
+}
+
+/** Raw detections from low-freq YOLO runner (Java → C++ / bag). */
+message TrafficDetections {
+  int64 timestamp = 1;
+  int32 frame_id = 2;
+  repeated TrafficDetection dets = 3;
+  string model = 4;
+  int32 infer_ms = 5;          // total wall (prep+ort+decode+ocr)
+  int32 prep_ms = 6;
+  int32 ort_ms = 7;
+  int32 decode_ms = 8;
+  int32 ocr_ms = 9;
+  int64 capture_ts_ms = 10;    // BOOTTIME / TimeUtil at capture
+  int64 infer_ts_ms = 11;      // when infer finished
+  string ep = 12;              // xnnpack | cpu | nnapi…
+  int32 input_size = 13;
+}
+
+/**
+ * Fused traffic HUD state from TrafficSignService.
+ * Published on traffic/state for Android overlay + bag.
+ */
+message TrafficVisionState {
+  int64 timestamp = 1;
+  int32 speed_limit_kmh = 2;       // 0 = unknown / none
+  int32 speed_limit_age_ms = 3;    // since last limit sign seen
+  float v_ego_kmh = 4;
+  bool overspeed = 5;
+  float overspeed_kmh = 6;         // max(0, v_ego - limit - margin)
+  TrafficLightColor tfl_color = 7;
+  float tfl_conf = 8;
+  int32 tfl_age_ms = 9;
+  string status = 10;              // ok | no_model | no_dets
+  string speed_limit_label = 11;   // raw class that set the limit
+  int32 n_dets = 12;
+}

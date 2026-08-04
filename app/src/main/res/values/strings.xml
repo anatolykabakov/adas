@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">adas</string>
+    <string name="log_toggle">Toggle logging</string>
+    <string name="log_toggle_start">Start logging</string>
+    <string name="log_toggle_stop">Stop logging</string>
+    <string name="can_label">CAN</string>
+    <string name="can_online">online</string>
+    <string name="can_offline">offline</string>
+    <string name="params_toggle">Parameters</string>
+    <string name="params_title">Parameters</string>
+    <string name="params_hint">Live: rpy / X Y H move overlay (+ warp). PP/MPC/FP switches lane-keep instantly. Save writes filesDir for next native start.</string>
+    <string name="params_section_camera">Lines: rpy + X Y H (live)</string>
+    <string name="params_section_pp">Lane keep</string>
+    <string name="params_lk_controller">Controller</string>
+    <string name="params_section_logging">Logging</string>
+    <string name="params_record_images">Write camera frames to bag</string>
+    <string name="params_lk_pp">PP</string>
+    <string name="params_lk_mpc">MPC</string>
+    <string name="params_lk_flowpilot">FP</string>
+    <string name="params_reset">Reset</string>
+    <string name="params_save">Save</string>
+</resources>

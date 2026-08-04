@@ -1,0 +1,17 @@
+# Core (bags, visualizer, lane projection, calibration)
+# Pin numpy<2: old pandas/seaborn wheels break on numpy 2.x (MetaDrive import chain).
+numpy>=1.21.0,<2.0
+pandas>=2.0.0
+matplotlib>=3.5.0
+opencv-python>=4.5.0
+Pillow>=8.0.0
+scipy>=1.9.0
+
+# vis/interactive_visualizer.py / supercombo overlay
+onnxruntime>=1.14.0
+
+# MetaDrive sim — see sim/requirements.txt (package: metadrive-simulator)
+# Do NOT `pip install metadrive` — that is a different project and asks for GitHub login.
+
+# Optional: analyze_can_frames.py
+# opendbc

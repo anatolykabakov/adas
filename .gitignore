@@ -1,0 +1,81 @@
+# Android / Gradle
+.gradle/
+.idea/
+*.iml
+local.properties
+.cxx/
+.externalNativeBuild/
+captures/
+app/build/
+build/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Native C++ (Conan / CMake)
+# One pattern for all build dirs: build-linux, build-android, build-docker,
+# build-docker-tests and any custom ones — conan/cmake write absolute paths into cache,
+# so each environment needs its own directory.
+app/src/main/cpp/build*/
+app/src/main/cpp/CMakeUserPresets.json
+app/src/main/cpp/CMakePresets.json
+app/src/main/cpp/conan_toolchain.cmake
+app/src/main/cpp/sbom.json
+# Conan environment scripts (VirtualBuildEnv/VirtualRunEnv)
+app/src/main/cpp/conanbuild*.sh
+app/src/main/cpp/conanrun*.sh
+app/src/main/cpp/deactivate_conan*.sh
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/compile_commands.json
+
+# Generated protobuf bindings (app/src/main/scripts/generate_proto_python.sh)
+app/src/main/scripts/proto/*
+app/src/main/scripts/vis/proto/*
+
+# Packaged / copied native libs (built by scripts/build_project.sh or gradle)
+app/libs/
+app/src/main/jniLibs/
+*.so
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# MetaDrive / bag dump dirs (sim.main --out-dir, default "run")
+app/src/main/scripts/run/
+app/src/main/scripts/run_*/
+
+# Run and analysis exports: sim.eval --csv/--json/--plot, bag_*.py, PlotJuggler.
+# Report figures live in docs/mpc_img/ and are not covered by this rule.
+app/src/main/scripts/*.csv
+app/src/main/scripts/*.json
+app/src/main/scripts/*.png
+app/src/main/scripts/*.npz
+
+# Bag sessions pulled from the phone (scripts/pull_bags.sh) — never commit these
+adas_logs/
+
+# Large ONNX downloads (models/ is populated by scripts/install_dependencies.sh)
+models/
+
+# OSM extracts and graph built from them (mapmatch/fetch_map.py) — downloaded, not committed
+maps/
+
+# Course book build (cd docs/book && jupyter-book build .)
+docs/book/_build/
+
+# Editor / OS / toolchain caches
+*~
+*.swp
+.DS_Store
+.tools/
+
+# Root-level PlotJuggler / analysis dumps
+/*.csv
+/*.json

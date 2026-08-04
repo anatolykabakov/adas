@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// Panda device health status
+message PandaHealth {
+    int64 timestamp = 1;
+
+    // Uptime
+    uint32 uptime_pkt = 2;
+
+    // Safety status
+    bool controls_allowed = 3;
+    uint32 safety_mode = 4;
+    uint32 safety_param = 5;
+    uint32 fault_status = 6;
+
+    // Power status
+    uint32 voltage_mv = 7;
+    uint32 current_ma = 8;
+    bool power_save_enabled = 9;
+
+    // TX/RX counters
+    uint32 tx_blocked = 10;
+    uint32 tx_overflow = 11;
+    uint32 rx_invalid = 12;
+    uint32 rx_overflow = 13;
+    uint32 rx_checks_invalid = 14;
+
+    // Faults and errors
+    uint32 faults_pkt = 15;
+    uint32 spi_error_count = 16;
+
+    // Ignition status
+    bool ignition_line = 17;
+    bool ignition_can = 18;
+
+    // Car harness status
+    uint32 car_harness_status = 19;
+
+    // Heartbeat status
+    bool heartbeat_lost = 20;
+
+    // Alternative experience
+    uint32 alternative_experience = 21;
+
+    // System load
+    float interrupt_load = 22;
+
+    // Fan status
+    uint32 fan_power = 23;
+
+    // SBU voltages
+    uint32 sbu1_voltage_mv = 24;
+    uint32 sbu2_voltage_mv = 25;
+
+    // System status
+    bool som_reset_triggered = 26;
+}

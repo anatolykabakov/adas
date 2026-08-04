@@ -1,0 +1,33 @@
+services:
+  adas:
+    container_name: adas_dev
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      target: ${ADAS_TARGET:-tools}      # tools | android
+      network: host
+      args:
+        # Container username is fixed (dev) — from the host we only take
+        # UID/GID so files in the mounted repo stay owned by you.
+        USER_UID: ${ADAS_UID:-1000}
+        USER_GID: ${ADAS_GID:-1000}
+    image: adas-${ADAS_TARGET:-tools}
+    working_dir: /workspace/adas
+    network_mode: host
+    tty: true
+    stdin_open: true
+    volumes:
+      - ..:/workspace/adas
+      - adas-conan:/home/dev/.conan2
+      - adas-gradle:/home/dev/.gradle
+      - ${HOME}/.android:/home/dev/.android
+      # visualizer / matplotlib window on host X11
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY=${DISPLAY:-}
+      - PYTHONPATH=/workspace/adas/app/src/main/scripts
+      - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+
+volumes:
+  adas-conan:
+  adas-gradle:

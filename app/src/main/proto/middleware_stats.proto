@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+// One periodic timer on a service thread (Ratekeeper-style interval stats).
+message TimerTiming {
+  string name = 1;             // e.g. "tx", "rx"; empty → "{period}ms"
+  float period_ms = 2;
+  float last_dt_ms = 3;
+  float mean_dt_ms = 4;
+  float max_dt_ms = 5;
+  bool lagging = 6;            // mean_dt > period / 0.9
+  uint64 fired = 7;
+}
+
+// Periodic middleware / service runtime stats for bag analysis.
+message ServiceTiming {
+  string name = 1;
+  bool running = 2;
+
+  uint64 messages_processed = 3;
+  uint64 timers_fired = 4;
+  uint64 exceptions = 5;
+  uint64 dropped = 6;          // messages dropped (backlog overflow) for this service
+  uint32 inbox_depth = 7;      // pending drain jobs
+  uint32 backlog_depth = 8;    // pending messages across subscriptions
+
+  // Callback wall time (message + timer handlers on this service thread)
+  float last_cb_ms = 9;
+  float mean_cb_ms = 10;
+  float max_cb_ms = 11;
+
+  // Aggregate from the shortest-period timer (backward compatible).
+  float period_ms = 12;
+  float last_dt_ms = 13;
+  float mean_dt_ms = 14;
+  float max_dt_ms = 15;
+  bool lagging = 16;           // true if any timer is lagging
+  repeated TimerTiming timers = 17;
+}
+
+message MiddlewareStats {
+  int64 timestamp = 1;
+  uint64 dropped_total = 2;
+  uint32 services = 3;
+  uint32 running = 4;
+  bool any_lagging = 5;
+  repeated ServiceTiming services_timing = 6;
+}
