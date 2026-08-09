@@ -116,12 +116,16 @@ def samples_from_log(bag: Path) -> List[Sample]:
             s.route_y = np.asarray(p.route_y, dtype=float)
             s.kappa = np.asarray(p.route_kappa, dtype=float)
             s.route_s = np.arange(len(s.route_x), dtype=float) * step
-            s.turns = [(t.start_m, t.end_m, t.kappa, t.speed_mps, t.sign) for t in p.turns]
+            s.turns = [
+                (t.start_m, t.end_m, t.kappa, t.speed_mps, t.sign) for t in p.turns
+            ]
         out.append(s)
     return out
 
 
-def _pose_track(bag: Path) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+def _pose_track(
+    bag: Path,
+) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     rows = load_topic_messages(bag, "localization/pose")
     if len(rows) < 10:
         return None
@@ -133,7 +137,9 @@ def _pose_track(bag: Path) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray,
     return t, x, y, yaw, v
 
 
-def samples_from_replay(bag: Path, road_map, cfg, min_speed: float, stride: int) -> List[Sample]:
+def samples_from_replay(
+    bag: Path, road_map, cfg, min_speed: float, stride: int
+) -> List[Sample]:
     """Re-run the service's logic on a bag recorded without it.
 
     Where this differs from the device, and it matters when reading the numbers: the service runs on a timer
@@ -143,7 +149,13 @@ def samples_from_replay(bag: Path, road_map, cfg, min_speed: float, stride: int)
     Heading falls back to GPS course when there is no pose; a run with neither cannot be placed at all.
     """
     fixes = [
-        (t, m.latitude, m.longitude, float(getattr(m, "speed", 0.0) or 0.0), float(getattr(m, "bearing", 0.0) or 0.0))
+        (
+            t,
+            m.latitude,
+            m.longitude,
+            float(getattr(m, "speed", 0.0) or 0.0),
+            float(getattr(m, "bearing", 0.0) or 0.0),
+        )
         for t, m, _ in load_topic_messages(bag, "sensors/gps/data")
         if abs(m.latitude) > 1e-9 or abs(m.longitude) > 1e-9
     ]
@@ -183,7 +195,9 @@ def samples_from_replay(bag: Path, road_map, cfg, min_speed: float, stride: int)
             s.route_x = np.asarray(r.x, dtype=float)
             s.route_y = np.asarray(r.y, dtype=float)
             s.kappa = np.asarray(r.kappa, dtype=float)
-            s.turns = [(t.start_m, t.end_m, t.kappa, t.speed_mps, t.sign) for t in r.turns]
+            s.turns = [
+                (t.start_m, t.end_m, t.kappa, t.speed_mps, t.sign) for t in r.turns
+            ]
         out.append(s)
     return out
 
@@ -198,7 +212,9 @@ def driven_heading(bag: Path) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarr
     return t, s_m, yaw
 
 
-def compare_against_driven(bag: Path, samples: Sequence[Sample], ahead_m: float) -> Optional[Dict[str, Any]]:
+def compare_against_driven(
+    bag: Path, samples: Sequence[Sample], ahead_m: float
+) -> Optional[Dict[str, Any]]:
     """Did the road actually do what the map said it would?
 
     The honest test of this service, and the only one that does not need another estimator to be right. For
@@ -243,7 +259,9 @@ def compare_against_driven(bag: Path, samples: Sequence[Sample], ahead_m: float)
         "n": len(rows),
         "err_med": float(np.median(err)),
         "err_p90": float(np.percentile(err, 90)),
-        "phantom_turn": int(np.count_nonzero((np.abs(a[:, 0]) > 20.0) & (np.abs(a[:, 1]) < 10.0))),
+        "phantom_turn": int(
+            np.count_nonzero((np.abs(a[:, 0]) > 20.0) & (np.abs(a[:, 1]) < 10.0))
+        ),
         "sharp": int(np.count_nonzero(sharp)),
         "sharp_but_straight": int(np.count_nonzero(sharp & (np.abs(a[:, 1]) < 20.0))),
     }
@@ -265,9 +283,14 @@ def vision_curvature(bag: Path) -> Optional[Tuple[np.ndarray, np.ndarray]]:
     return t, k
 
 
-def summarise(bag: Path, samples: Sequence[Sample], mode: str, horizon_m: float,
-              vision: Optional[Tuple[np.ndarray, np.ndarray]],
-              driven: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def summarise(
+    bag: Path,
+    samples: Sequence[Sample],
+    mode: str,
+    horizon_m: float,
+    vision: Optional[Tuple[np.ndarray, np.ndarray]],
+    driven: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     n = len(samples)
     matched = [s for s in samples if s.matched]
     row: Dict[str, Any] = {"bag": bag.name, "mode": mode, "n": n, "matched": len(matched)}
@@ -328,34 +351,56 @@ def print_summary(row: Dict[str, Any]) -> None:
     if not row.get("matched"):
         print(f"  {row['n']} samples, none matched to the map")
         return
-    print(f"  samples          {row['matched']} of {row['n']} matched ({100.0 * row['matched'] / max(row['n'], 1):.0f}%)")
-    print(f"  match distance   median {row['match_med']:.1f} m, p95 {row['match_p95']:.1f} m")
-    print(f"  map node spacing median {row['spacing_med']:.0f} m, p90 {row['spacing_p90']:.0f} m"
-          f"   <- the resolution the curvature came from")
+    print(
+        f"  samples          {row['matched']} of {row['n']} matched ({100.0 * row['matched'] / max(row['n'], 1):.0f}%)"
+    )
+    print(
+        f"  match distance   median {row['match_med']:.1f} m, p95 {row['match_p95']:.1f} m"
+    )
+    print(
+        f"  map node spacing median {row['spacing_med']:.0f} m, p90 {row['spacing_p90']:.0f} m"
+        f"   <- the resolution the curvature came from"
+    )
     if np.isfinite(row["kappa_med"]):
         r_med = 1.0 / row["kappa_med"] if row["kappa_med"] > 1e-9 else float("inf")
         r_p95 = 1.0 / row["kappa_p95"] if row["kappa_p95"] > 1e-9 else float("inf")
-        print(f"  |kappa| ahead    median {row['kappa_med']:.5f} 1/m (R {r_med:.0f} m), "
-              f"p95 {row['kappa_p95']:.5f} (R {r_p95:.0f} m)")
-    print(f"  turn sections    on {100.0 * row['turn_frac']:.0f}% of samples"
-          + (f", slowest {row['turn_v_min'] * 3.6:.0f} km/h" if np.isfinite(row["turn_v_min"]) else ""))
+        print(
+            f"  |kappa| ahead    median {row['kappa_med']:.5f} 1/m (R {r_med:.0f} m), "
+            f"p95 {row['kappa_p95']:.5f} (R {r_p95:.0f} m)"
+        )
+    print(
+        f"  turn sections    on {100.0 * row['turn_frac']:.0f}% of samples"
+        + (
+            f", slowest {row['turn_v_min'] * 3.6:.0f} km/h"
+            if np.isfinite(row["turn_v_min"])
+            else ""
+        )
+    )
     if np.isfinite(row.get("build_med", float("nan"))):
         print(f"  build time       median {row['build_med']:.2f} ms")
     if row.get("roads"):
         print("  roads            " + ", ".join(f"{n} ({c})" for n, c in row["roads"]))
     d = row.get("driven")
     if d:
-        print(f"  vs driven road   n={d['n']}, heading change over the next {row.get('horizon', 200):.0f} m "
-              f"off by median {d['err_med']:.0f}°, p90 {d['err_p90']:.0f}°")
+        print(
+            f"  vs driven road   n={d['n']}, heading change over the next {row.get('horizon', 200):.0f} m "
+            f"off by median {d['err_med']:.0f}°, p90 {d['err_p90']:.0f}°"
+        )
         print(f"                   route on the wrong road: {d['phantom_turn']} samples")
-        print(f"                   peak implies R<100 m on {d['sharp']}, of which {d['sharp_but_straight']} "
-              f"barely turn -> drawing kinks, not corners")
+        print(
+            f"                   peak implies R<100 m on {d['sharp']}, of which {d['sharp_but_straight']} "
+            f"barely turn -> drawing kinks, not corners"
+        )
     if "vision_corr" in row:
-        print(f"  vs vision        n={row['vision_n']} corr {row['vision_corr']:+.2f}, "
-              f"map median {row['vision_map_med']:.5f} vs model {row['vision_mdl_med']:.5f} 1/m")
+        print(
+            f"  vs vision        n={row['vision_n']} corr {row['vision_corr']:+.2f}, "
+            f"map median {row['vision_map_med']:.5f} vs model {row['vision_mdl_med']:.5f} 1/m"
+        )
 
 
-def plot(bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: float) -> None:
+def plot(
+    bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: float
+) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -381,13 +426,21 @@ def plot(bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: f
     # was ambiguous, which is exactly where a map speed would have been wrong.
     for s in matched[:: max(1, len(matched) // 150)]:
         if s.route_x.size:
-            ax_map.plot(s.route_x, s.route_y, lw=0.7, color="tab:orange", alpha=0.35, zorder=2)
+            ax_map.plot(
+                s.route_x, s.route_y, lw=0.7, color="tab:orange", alpha=0.35, zorder=2
+            )
 
     ax_map.plot(tx, ty, lw=1.6, color="tab:blue", zorder=3, label="driven (map frame)")
     unm = [s for s in samples if not s.matched]
     if unm:
-        ax_map.scatter([s.x for s in unm], [s.y for s in unm], s=9, color="tab:red", zorder=4,
-                       label=f"unmatched ({len(unm)})")
+        ax_map.scatter(
+            [s.x for s in unm],
+            [s.y for s in unm],
+            s=9,
+            color="tab:red",
+            zorder=4,
+            label=f"unmatched ({len(unm)})",
+        )
 
     # Turn sections as points on the route, coloured by the speed they imply.
     px, py, pv = [], [], []
@@ -399,7 +452,9 @@ def plot(bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: f
                 py.append(s.route_y[i])
                 pv.append(v * 3.6)
     if px:
-        sc = ax_map.scatter(px, py, c=pv, s=14, cmap="viridis_r", vmin=30, vmax=130, zorder=5)
+        sc = ax_map.scatter(
+            px, py, c=pv, s=14, cmap="viridis_r", vmin=30, vmax=130, zorder=5
+        )
         fig.colorbar(sc, ax=ax_map, label="turn speed, km/h", shrink=0.6)
 
     ax_map.set_aspect("equal")
@@ -407,14 +462,18 @@ def plot(bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: f
     ax_map.set_ylim(y0, y1)
     ax_map.set_xlabel("east, m")
     ax_map.set_ylabel("north, m")
-    ax_map.set_title(f"{bag.name} — route ahead from OSM, orange = what the service believed")
+    ax_map.set_title(
+        f"{bag.name} — route ahead from OSM, orange = what the service believed"
+    )
     ax_map.legend(loc="upper right", fontsize=8)
 
     t0 = matched[0].t_ms
     tt = np.asarray([(s.t_ms - t0) / 1000.0 for s in matched])
     kk = np.asarray([s.kappa_ahead(horizon_m) for s in matched])
     dd = np.asarray([s.match_dist_m for s in matched])
-    ax_k.plot(tt, kk, lw=1.0, color="tab:orange", label=f"peak |kappa| within {horizon_m:.0f} m")
+    ax_k.plot(
+        tt, kk, lw=1.0, color="tab:orange", label=f"peak |kappa| within {horizon_m:.0f} m"
+    )
     ax_k.axhline(0.002, color="0.5", ls="--", lw=0.8, label="turn threshold 0.002 1/m")
     ax_k.set_xlabel("time, s")
     ax_k.set_ylabel("|kappa|, 1/m")
@@ -430,19 +489,52 @@ def plot(bag: Path, samples: Sequence[Sample], road_map, out: Path, horizon_m: f
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bags", nargs="+", type=Path)
-    ap.add_argument("--map", type=Path, default=None, help=f"ADASMAP1 file (default: {DEFAULT_MAP} in the repo)")
-    ap.add_argument("--plot", type=Path, default=None, help="write a PNG (single bag only)")
-    ap.add_argument("--horizon-m", type=float, default=200.0, help="how far ahead the summary looks")
-    ap.add_argument("--route-m", type=float, default=2000.0, help="route length built in replay mode")
-    ap.add_argument("--window-m", type=float, default=25.0, help="curvature window in replay mode")
-    ap.add_argument("--min-speed", type=float, default=3.0, help="skip samples slower than this (replay mode)")
-    ap.add_argument("--stride", type=int, default=1, help="use every Nth fix in replay mode")
-    ap.add_argument("--compare-vision", action="store_true", help="correlate against the model's curvature")
-    ap.add_argument("--vs-driven", action="store_true",
-                    help="check the map against the road the car actually drove (needs localization/pose)")
-    ap.add_argument("--force-replay", action="store_true", help="ignore logged map/local and recompute")
+    ap.add_argument(
+        "--map",
+        type=Path,
+        default=None,
+        help=f"ADASMAP1 file (default: {DEFAULT_MAP} in the repo)",
+    )
+    ap.add_argument(
+        "--plot", type=Path, default=None, help="write a PNG (single bag only)"
+    )
+    ap.add_argument(
+        "--horizon-m", type=float, default=200.0, help="how far ahead the summary looks"
+    )
+    ap.add_argument(
+        "--route-m", type=float, default=2000.0, help="route length built in replay mode"
+    )
+    ap.add_argument(
+        "--window-m", type=float, default=25.0, help="curvature window in replay mode"
+    )
+    ap.add_argument(
+        "--min-speed",
+        type=float,
+        default=3.0,
+        help="skip samples slower than this (replay mode)",
+    )
+    ap.add_argument(
+        "--stride", type=int, default=1, help="use every Nth fix in replay mode"
+    )
+    ap.add_argument(
+        "--compare-vision",
+        action="store_true",
+        help="correlate against the model's curvature",
+    )
+    ap.add_argument(
+        "--vs-driven",
+        action="store_true",
+        help="check the map against the road the car actually drove (needs localization/pose)",
+    )
+    ap.add_argument(
+        "--force-replay",
+        action="store_true",
+        help="ignore logged map/local and recompute",
+    )
     args = ap.parse_args()
 
     map_path = args.map
@@ -463,13 +555,22 @@ def main() -> None:
         if MAP_TOPIC in topics and not args.force_replay:
             samples, mode = samples_from_log(bag), "logged"
         else:
-            samples, mode = samples_from_replay(bag, road_map, cfg, args.min_speed, max(1, args.stride)), "replay"
+            samples, mode = (
+                samples_from_replay(
+                    bag, road_map, cfg, args.min_speed, max(1, args.stride)
+                ),
+                "replay",
+            )
         if not samples:
             print(f"\n{bag.name}: no GPS and no map/local — nothing to do")
             continue
 
         vision = vision_curvature(bag) if args.compare_vision else None
-        driven = compare_against_driven(bag, samples, args.horizon_m) if args.vs_driven else None
+        driven = (
+            compare_against_driven(bag, samples, args.horizon_m)
+            if args.vs_driven
+            else None
+        )
         row = summarise(bag, samples, mode, args.horizon_m, vision, driven)
         row["horizon"] = args.horizon_m
         print_summary(row)
@@ -481,10 +582,12 @@ def main() -> None:
     if len(rows) > 1:
         ok = [r for r in rows if r.get("matched")]
         if ok:
-            print(f"\n{len(rows)} bags: matched "
-                  f"{100.0 * sum(r['matched'] for r in ok) / max(sum(r['n'] for r in ok), 1):.0f}% overall, "
-                  f"match distance median {np.median([r['match_med'] for r in ok]):.1f} m, "
-                  f"node spacing median {np.median([r['spacing_med'] for r in ok]):.0f} m")
+            print(
+                f"\n{len(rows)} bags: matched "
+                f"{100.0 * sum(r['matched'] for r in ok) / max(sum(r['n'] for r in ok), 1):.0f}% overall, "
+                f"match distance median {np.median([r['match_med'] for r in ok]):.1f} m, "
+                f"node spacing median {np.median([r['spacing_med'] for r in ok]):.0f} m"
+            )
 
 
 if __name__ == "__main__":

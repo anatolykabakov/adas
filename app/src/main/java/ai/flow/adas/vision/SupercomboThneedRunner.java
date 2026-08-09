@@ -172,7 +172,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
 
         // desire stays zero: there is no lane-change planner here and the model runs without one.
         input[2 * IMG_LEN + DESIRE_LEN] = egoSpeedMps;
-        input[2 * IMG_LEN + DESIRE_LEN + 1] = 0.1f;  // задержка актюатора, как у flowpilot
+        input[2 * IMG_LEN + DESIRE_LEN + 1] = 0.1f;  // actuator delay, as in flowpilot
 
         float ms = nativeExecute(input, output);
         if (ms < 0) {

@@ -187,7 +187,7 @@ CAN**. То есть решается не «догнать полилинию»
 
 ### 2.4 `lagAdjustedCurvature` — сердце этапа
 
-`flowpilot/lateral_mpc.cpp`:
+`lateral/lateral_mpc.cpp`:
 
 ```cpp
 delay      = max(steer_delay_s /* 0.35 */, dt);

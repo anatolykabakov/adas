@@ -139,7 +139,6 @@ def straight_runs(
     return runs
 
 
-
 def corridor_beam(
     graph: Graph,
     geo: Geometry,
@@ -157,7 +156,9 @@ def corridor_beam(
     магистрали. На Юго-Восточной хорде это обрывает прямую через 5.09 км вместо 10.7. Поэтому
     вперёд ведётся несколько вариантов сразу, отбор по накопленному отклонению курса.
     """
-    live: List[Tuple[List[int], float, float]] = [([start], geo.length[start], geo.bend[start])]
+    live: List[Tuple[List[int], float, float]] = [
+        ([start], geo.length[start], geo.bend[start])
+    ]
     done: List[Tuple[List[int], float, float]] = []
     for _ in range(max_steps):
         if not live:
@@ -188,7 +189,9 @@ def corridor_beam(
     return done
 
 
-def follow(graph: Graph, geo: Geometry, de: int, want_turn: float, tol_deg: float) -> List[int]:
+def follow(
+    graph: Graph, geo: Geometry, de: int, want_turn: float, tol_deg: float
+) -> List[int]:
     """Продолжения после ребра de с поворотом, попадающим в допуск."""
     tail = graph.ends(de)[1]
     out = []
@@ -255,13 +258,17 @@ def main() -> int:
     bias = yaw_bias_rps(t, v, w)
     track = mm.build_track(list(t), list(v), list(w - bias))
     chain = track_chain(track)
-    print(f"{args.bag.name}: {track.length_m / 1000:.2f} км, смещение нуля {math.degrees(bias):.3f} °/с")
+    print(
+        f"{args.bag.name}: {track.length_m / 1000:.2f} км, смещение нуля {math.degrees(bias):.3f} °/с"
+    )
     print("цепочка: " + " → ".join(f"{a:+.0f}°/{g:.0f}м" for a, g in chain))
 
     # самая редкая деталь — самый длинный перегон
     anchor_i = int(np.argmax([g for _, g in chain]))
     anchor_len = chain[anchor_i][1]
-    print(f"\nзацепка: перегон {anchor_len:.0f} м перед поворотом {chain[anchor_i][0]:+.0f}°")
+    print(
+        f"\nзацепка: перегон {anchor_len:.0f} м перед поворотом {chain[anchor_i][0]:+.0f}°"
+    )
 
     tol = max(args.dist_tol_rel * anchor_len, 100.0)
 
@@ -307,7 +314,12 @@ def main() -> int:
             ok = True
             for ang, gap in after:
                 opts = walk_gap(
-                    graph, geo, full[-1], gap, max(args.dist_tol_rel * gap, 40.0), args.straight_deg
+                    graph,
+                    geo,
+                    full[-1],
+                    gap,
+                    max(args.dist_tol_rel * gap, 40.0),
+                    args.straight_deg,
                 )
                 if not opts:
                     ok = False
@@ -332,7 +344,9 @@ def main() -> int:
             from mapmatch.rerank_by_chain import gnss_route_error
 
             err = f"{gnss_route_error(road_map, path, xy):7.0f} м"
-        print(f"{i:>2} невязка {cost:6.2f}  ошибка ГНСС {err}  {route_streets(road_map, path)}")
+        print(
+            f"{i:>2} невязка {cost:6.2f}  ошибка ГНСС {err}  {route_streets(road_map, path)}"
+        )
     return 0
 
 

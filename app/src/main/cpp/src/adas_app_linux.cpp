@@ -3,8 +3,8 @@
 #include <thread>
 #include <atomic>
 #include <signal.h>
-#include "adas_app.h"
-#include "utils/logger.h"
+#include "adas/adas_app.h"
+#include "adas/utils/logger.h"
 
 std::atomic<bool> g_shutdown_requested{false};
 std::unique_ptr<AdasApp> g_adas_app{nullptr};

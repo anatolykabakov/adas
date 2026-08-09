@@ -14,10 +14,8 @@ if not PROTO_DIR.is_dir():
     PROTO_DIR = SCRIPT_DIR / "proto"  # legacy fallback
 sys.path.insert(0, str(PROTO_DIR))
 
-import os
-
-os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
-
+# Stubs must come from protoc >= 3.19 (generate_proto_python.sh checks it): older ones make the
+# runtime fall back to its pure-Python parser, which decodes a bag ~300x slower.
 import bag_pb2  # noqa: E402
 import messages_pb2  # noqa: E402
 
@@ -109,5 +107,10 @@ def lateral_actuation_on(health_messages) -> "np.ndarray":
     """
     import numpy as np
 
-    return np.asarray([bool(getattr(m, "lat_actuation_allowed", False)) or bool(getattr(m, "controls_allowed", False))
-                       for _, m in health_messages])
+    return np.asarray(
+        [
+            bool(getattr(m, "lat_actuation_allowed", False))
+            or bool(getattr(m, "controls_allowed", False))
+            for _, m in health_messages
+        ]
+    )

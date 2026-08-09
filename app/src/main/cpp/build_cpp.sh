@@ -532,11 +532,11 @@ main() {
 
     BUILT_LIBRARY=""
     parse_arguments "$@"
-    if [ "$BUILD_TARGET" = "android" ]; then
-        BUILD_DIR="build-android${ADAS_BUILD_DIR_SUFFIX:-}"
-    else
-        BUILD_DIR="build-linux${ADAS_BUILD_DIR_SUFFIX:-}"
-    fi
+    # One build/ root, split by target and build type: build/<target>/<BuildType>, e.g.
+    # build/linux/Release or build/android/Debug. Conan and cmake both write absolute paths into
+    # their caches, so a host build and a container build cannot share a directory — hence the
+    # suffix on the target segment rather than a separate root.
+    BUILD_DIR="build/${BUILD_TARGET}${ADAS_BUILD_DIR_SUFFIX:-}/${BUILD_TYPE}"
     show_build_info
 
     check_dependencies

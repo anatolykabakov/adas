@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "utils/safety_planner.hpp"
+#include "adas/utils/safety_planner.hpp"
 
 using adas::safety::computeSafetyPlan;
 using adas::safety::PlannerInput;

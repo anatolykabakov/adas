@@ -6,19 +6,19 @@
 
 #include <gtest/gtest.h>
 
-#include "adas_app.h"
+#include "adas/adas_app.h"
 #include "messages.pb.h"
-#include "middleware/middleware.hpp"
-#include "services/lane_keep_service.h"
-#include "utils/path_lateral_state.h"
-#include "utils/protobuf_utils.h"
-#include "volkswagen/panda_safety_supervisor.h"
-#include "visionpilot/lateral_planning.hpp"
+#include "adas/middleware/manager.hpp"
+#include "adas/services/lane_keep.h"
+#include "adas/utils/path_lateral_state.h"
+#include "adas/utils/protobuf_utils.h"
+#include "adas/platform/volkswagen/panda_safety_supervisor.h"
+#include "adas/lateral/visionpilot_mpc.hpp"
 
 using adas::estimatePathLateralState;
-using adas::LaneKeepService;
 using adas::PathLateralState;
 using adas::Vec2;
+using adas::services::LaneKeep;
 using visionpilot::build_kappa_schedule;
 using visionpilot::LateralPlanner;
 
@@ -32,9 +32,9 @@ std::vector<Vec2> straightLaneRightOffset(double offset_m)
   return poly;
 }
 
-LaneKeepService::Config mpcConfig()
+LaneKeep::Config mpcConfig()
 {
-  LaneKeepService::Config c;
+  LaneKeep::Config c;
   c.controller = "mpc";
   return c;
 }
@@ -105,10 +105,10 @@ TEST(VisionPilotMpc, LowSpeedModerateCteDoesNotSaturate)
 
 TEST(LaneKeepServiceMpc, LowSpeedClampNearPpLimit)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   const auto poly = straightLaneRightOffset(1.5);
   const auto out = svc.step(1.0, poly);
   ASSERT_EQ(out.status, "ok");
@@ -118,8 +118,8 @@ TEST(LaneKeepServiceMpc, LowSpeedClampNearPpLimit)
 
 TEST(LaneKeepServiceMpc, FrameDtComesFromMessageTimestamps)
 {
-  LaneKeepService::Config c = mpcConfig();
-  LaneKeepService svc(c);
+  LaneKeep::Config c = mpcConfig();
+  LaneKeep svc(c);
 
   auto frame = [](double offset_m, int64_t ts_us) {
     adas::LanePathMsg m;
@@ -130,7 +130,7 @@ TEST(LaneKeepServiceMpc, FrameDtComesFromMessageTimestamps)
   };
 
   auto flip_step_deg = [&](int64_t period_us) {
-    LaneKeepService s(c);
+    LaneKeep s(c);
     int64_t ts = 1'000'000;
     auto prev = s.step(10.0, frame(2.0, ts));
     EXPECT_EQ(prev.status, "ok");
@@ -157,8 +157,8 @@ TEST(LaneKeepServiceMpc, FrameDtComesFromMessageTimestamps)
 
 TEST(LaneKeepServiceMpc, RateLimitBoundsFrameToFrameStep)
 {
-  LaneKeepService::Config c = mpcConfig();
-  LaneKeepService svc(c);
+  LaneKeep::Config c = mpcConfig();
+  LaneKeep svc(c);
 
   const auto o1 = svc.step(10.0, straightLaneRightOffset(0.8));
   ASSERT_EQ(o1.status, "ok");
@@ -175,9 +175,9 @@ TEST(LaneKeepServiceMpc, RateLimitBoundsFrameToFrameStep)
 
 TEST(LaneKeepServiceMpc, KappaYawBlendDefaultsToPathOnly)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   EXPECT_DOUBLE_EQ(c.mpc_kappa_yaw_blend, 0.0);
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
 
   std::vector<Vec2> poly;
   for (int i = 2; i <= 40; ++i) {
@@ -193,11 +193,11 @@ TEST(LaneKeepServiceMpc, KappaYawBlendDefaultsToPathOnly)
   EXPECT_DOUBLE_EQ(out.curvature, lat.kappa);
 }
 
-TEST(LaneKeepService, CamYLeftShiftsPathToVehicleFrame)
+TEST(LaneKeep, CamYLeftShiftsPathToVehicleFrame)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.cam_y_left_m = 0.5;
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
 
   const auto out = svc.step(10.0, straightLaneRightOffset(0.5));
   ASSERT_EQ(out.status, "ok");
@@ -205,11 +205,11 @@ TEST(LaneKeepService, CamYLeftShiftsPathToVehicleFrame)
   EXPECT_NEAR(out.steer_rad, 0.0, 0.05);
 }
 
-TEST(LaneKeepService, CamYLeftZeroLeavesCteUnchanged)
+TEST(LaneKeep, CamYLeftZeroLeavesCteUnchanged)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   EXPECT_DOUBLE_EQ(c.cam_y_left_m, 0.0);
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   const auto out = svc.step(10.0, straightLaneRightOffset(0.5));
   ASSERT_EQ(out.status, "ok");
   EXPECT_NEAR(out.cte_m, -0.5, 0.05);
@@ -217,14 +217,14 @@ TEST(LaneKeepService, CamYLeftZeroLeavesCteUnchanged)
 
 TEST(LaneKeepServicePublish, SlewGuardConfigDefaultActive)
 {
-  LaneKeepService::Config c;
+  LaneKeep::Config c;
   EXPECT_GT(c.steer_slew_limit_deg, 0.0);
   EXPECT_LE(c.steer_slew_limit_deg, 25.0);
 }
 
 TEST(LaneKeepServiceMpc, StraightModerateCteDoesNotRailAtSpeed)
 {
-  LaneKeepService svc(mpcConfig());
+  LaneKeep svc(mpcConfig());
 
   const auto slow = svc.step(4.0, straightLaneRightOffset(0.5));
   ASSERT_EQ(slow.status, "ok");
@@ -239,10 +239,10 @@ TEST(LaneKeepServiceMpc, StraightModerateCteDoesNotRailAtSpeed)
 
 TEST(LaneKeepServiceMpc, RateLimitCeilingHoldsAtLowSpeed)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   const auto o1 = svc.step(1.0, straightLaneRightOffset(0.8));
   ASSERT_EQ(o1.status, "ok");
   const auto o2 = svc.step(1.0, straightLaneRightOffset(-0.8));
@@ -253,9 +253,9 @@ TEST(LaneKeepServiceMpc, RateLimitCeilingHoldsAtLowSpeed)
 
 TEST(LaneKeepServiceFlowpilot, StraightOffsetSteersTowardCenter)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.controller = "fp";
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
 
   adas::LaneKeepOutput out;
   for (int i = 0; i < 8; ++i)
@@ -268,9 +268,9 @@ TEST(LaneKeepServiceFlowpilot, StraightOffsetSteersTowardCenter)
 
 TEST(LaneKeepServiceFlowpilot, ControllerSwitchAcceptsFlowpilot)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.controller = "pp";
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   svc.setController("fp");
   EXPECT_TRUE(svc.useFlowpilot());
   const auto out = svc.step(12.0, straightLaneRightOffset(0.0));
@@ -280,9 +280,9 @@ TEST(LaneKeepServiceFlowpilot, ControllerSwitchAcceptsFlowpilot)
 
 TEST(LaneKeepServiceFlowpilot, CurvedPathCommandsNonZero)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.controller = "fp";
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   std::vector<Vec2> poly;
   for (int i = 2; i <= 40; ++i) {
     const double x = static_cast<double>(i);
@@ -298,9 +298,9 @@ TEST(LaneKeepServiceFlowpilot, CurvedPathCommandsNonZero)
 
 TEST(LaneKeepServiceMpc, LowSpeedGateHoldsZeroAndHasHysteresis)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.controller = "fp";
-  LaneKeepService svc(c);
+  LaneKeep svc(c);
   const auto poly = straightLaneRightOffset(1.0);
 
   const auto creeping = svc.step(0.9, poly);
@@ -321,7 +321,7 @@ TEST(LaneKeepServiceMpc, LowSpeedGateHoldsZeroAndHasHysteresis)
 
 namespace {
 
-class SteerSink : public adas::Service {
+class SteerSink : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "steer_sink"; }
 
@@ -345,16 +345,16 @@ public:
 
 TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.steer_output_enabled = true;
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   c.lane_max_age_s = 0.30;
 
   auto sink = std::make_shared<SteerSink>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated);
-  auto lk = mw.registerService<LaneKeepService>(c);
-  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+  auto lk = mw.registerService<LaneKeep>(c);
+  mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
   // Time comes from the middleware, not from the wall clock. The service used to read
   // `utils::getCurrentTimestamp()` directly and this test used to match it — which meant the gate could only
@@ -396,16 +396,16 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
 
 TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.steer_output_enabled = true;
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   c.lane_max_age_s = 0.0;
 
   auto sink = std::make_shared<SteerSink>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated);
-  mw.registerService<LaneKeepService>(c);
-  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+  mw.registerService<LaneKeep>(c);
+  mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
   mw.setTime(10'000'000);
   const int64_t old_us = 10'000'000 - 5'000'000;
@@ -428,7 +428,7 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
 // 2026_08_04_21_00_18 (left 7 episodes, right 11).
 TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.steer_output_enabled = true;
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
@@ -437,13 +437,13 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
   c.lka_blinker_resume_delay_s = 0.2;
 
   auto sink = std::make_shared<SteerSink>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated);
-  mw.registerService<LaneKeepService>(c);
-  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+  mw.registerService<LaneKeep>(c);
+  mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
-  // Время задаётся явно: в симулированном режиме `now()` возвращает sim_us_, и без setTime часы
-  // стоят на нуле. Прежний вариант спал по настенным часам и задержку возврата не проверял вовсе —
-  // тест проходил через застрявший статус, а не через таймер.
+  // Time is driven explicitly: in simulated mode `now()` returns sim_us_, and without setTime the clock
+  // stands at zero. Sleeping on the wall clock did not exercise the resume delay at all — the test
+  // passed through a stuck status rather than through the timer.
   uint64_t sim_us = 1'000'000;
   auto feed = [&](bool left, bool right) {
     mw.setTime(sim_us);
@@ -477,14 +477,14 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
   // Falling edge: still suppressed until the resume delay elapses.
   feed(false, false);
   EXPECT_FALSE(sink->last_enabled) << "signal just cancelled — the car is still crossing the line";
-  sim_us += 250'000;  // задержка возврата 0.2 с — переступаем её по часам стенда, а не по настенным
+  sim_us += 250'000;  // step past the 0.2 s resume delay on the harness clock
   feed(false, false);
   EXPECT_TRUE(sink->last_enabled) << "delay elapsed — steering again";
 }
 
 TEST(LaneKeepBlinkerGate, CanBeSwitchedOff)
 {
-  LaneKeepService::Config c = mpcConfig();
+  LaneKeep::Config c = mpcConfig();
   c.steer_output_enabled = true;
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
@@ -492,9 +492,9 @@ TEST(LaneKeepBlinkerGate, CanBeSwitchedOff)
   c.lka_suppress_on_blinker = false;
 
   auto sink = std::make_shared<SteerSink>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated);
-  mw.registerService<LaneKeepService>(c);
-  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+  mw.registerService<LaneKeep>(c);
+  mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
   adas::LanePathMsg path;
   path.polyline = straightLaneRightOffset(0.4);
@@ -522,9 +522,9 @@ namespace {
 // panda health published only when the test says so.
 struct AssistRig {
   explicit AssistRig(bool require_assist = true, double max_age_s = 0.5)
-    : sink(std::make_shared<SteerSink>()), mw(adas::Middleware::Mode::Simulated)
+    : sink(std::make_shared<SteerSink>()), mw(adas::middleware::Manager::Mode::Simulated)
   {
-    LaneKeepService::Config c = mpcConfig();
+    LaneKeep::Config c = mpcConfig();
     c.steer_output_enabled = true;
     c.min_control_speed_mps = 0.0;
     c.min_control_speed_hyst_mps = 0.0;
@@ -532,8 +532,8 @@ struct AssistRig {
     c.lka_suppress_on_blinker = false;
     c.lat_require_assist = require_assist;
     c.assist_max_age_s = max_age_s;
-    lk = mw.registerService<LaneKeepService>(c);
-    mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+    lk = mw.registerService<LaneKeep>(c);
+    mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
     mw.setTime(now_us);
   }
 
@@ -541,7 +541,7 @@ struct AssistRig {
   // always-on lateral the panda passes torque while `controls_allowed` is false. The two are published with
   // opposite values in one of the tests below to pin that distinction.
   //
-  // Built through `utils::createHealthMessage`, the same function `PandaService` uses, rather than assembled
+  // Built through `utils::createHealthMessage`, the same function `Panda` uses, rather than assembled
   // by hand. A hand-built message tests the gate against a shape the app never publishes: if the real builder
   // ever stopped setting the topic or the `panda_health` submessage, the subscriber's `has_panda_health()`
   // guard would drop every report and these tests would still pass.
@@ -576,8 +576,8 @@ struct AssistRig {
   }
 
   std::shared_ptr<SteerSink> sink;
-  adas::Middleware mw;
-  std::shared_ptr<LaneKeepService> lk;
+  adas::middleware::Manager mw;
+  std::shared_ptr<LaneKeep> lk;
   int64_t now_us = 10'000'000;
 };
 
@@ -647,8 +647,8 @@ TEST(LaneKeepAssistGate, TheIntegratorDoesNotWindUpWhileTorqueIsWithheld)
 
   const int ungated_5 = resumedTorque(5, false);
   const int ungated_50 = resumedTorque(50, false);
-  EXPECT_GT(std::abs(ungated_50), std::abs(ungated_5))
-      << "control group: without the gate the integrator must wind up, otherwise this test proves nothing";
+  EXPECT_GT(std::abs(ungated_50), std::abs(ungated_5)) << "control group: without the gate the integrator must wind "
+                                                          "up, otherwise this test proves nothing";
   // Measured here: 5 withheld ticks resume at -209 cNm and 50 at -283, i.e. one second of pretending
   // to steer adds 74 cNm the wheel never earned. Gated, both resume at -203.
   EXPECT_GT(std::abs(ungated_50), std::abs(gated_50)) << "and the gate must be what prevents it";
@@ -791,8 +791,8 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
   for (const auto& [name, v] : command)
     if (v)
       on += std::string(on.empty() ? "" : ", ") + name;
-  const size_t count = static_cast<size_t>(std::count_if(command.begin(), command.end(),
-                                                         [](const auto& kv) { return kv.second; }));
+  const size_t count =
+      static_cast<size_t>(std::count_if(command.begin(), command.end(), [](const auto& kv) { return kv.second; }));
   EXPECT_LE(count, 1u) << "enabled together: " << on
                        << " — both change the command for the same reference, so the bag cannot separate them";
 }
@@ -805,7 +805,7 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
 TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
 {
   auto steerAfterSpeedChange = [](bool recompute) {
-    LaneKeepService::Config c = mpcConfig();
+    LaneKeep::Config c = mpcConfig();
     c.controller = "fp";
     c.steer_output_enabled = true;
     c.min_control_speed_mps = 0.0;
@@ -815,8 +815,8 @@ TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
     c.lat_require_assist = false;
     c.lat_recompute_setpoint = recompute;
 
-    adas::Middleware mw(adas::Middleware::Mode::Simulated);
-    auto lk = mw.registerService<LaneKeepService>(c);
+    adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+    auto lk = mw.registerService<LaneKeep>(c);
     int64_t t = 10'000'000;
     mw.setTime(t);
 

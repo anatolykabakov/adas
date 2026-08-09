@@ -228,24 +228,38 @@ def main() -> int:
     rows = []
     for c in cands:
         chain_r = chain_from_polyline(*route_polyline(road_map, c.dir_edges), 20.0, 30.0)
-        cost = align_cost(chain_t, chain_r, args.turn_tol_deg, args.dist_tol_rel, args.skip_penalty)
-        err = gnss_route_error(road_map, c.dir_edges, xy) if xy is not None else float("nan")
+        cost = align_cost(
+            chain_t, chain_r, args.turn_tol_deg, args.dist_tol_rel, args.skip_penalty
+        )
+        err = (
+            gnss_route_error(road_map, c.dir_edges, xy)
+            if xy is not None
+            else float("nan")
+        )
         rows.append((cost, c.cost, err, c))
 
     print(f"\n{'#':>2} {'цепочка':>9} {'профиль':>8} {'ошибка ГНСС':>12}  маршрут")
     by_chain = sorted(rows, key=lambda r: r[0])
     for i, (cost, hcost, err, c) in enumerate(by_chain[:8], 1):
         mark = " ✓" if err < 60.0 else "  "
-        print(f"{i:>2} {cost:>9.2f} {hcost:>8.2f} {err:>10.0f} м{mark} {route_streets(road_map, c.dir_edges)}")
+        print(
+            f"{i:>2} {cost:>9.2f} {hcost:>8.2f} {err:>10.0f} м{mark} {route_streets(road_map, c.dir_edges)}"
+        )
 
     correct = [i for i, r in enumerate(by_chain, 1) if r[2] < 60.0]
     by_head = sorted(rows, key=lambda r: r[1])
     correct_head = [i for i, r in enumerate(by_head, 1) if r[2] < 60.0]
-    print(f"\nправильный маршрут по цепочке: места {correct[:5] or 'нет среди кандидатов'}")
-    print(f"по профилю курса (как сейчас):  места {correct_head[:5] or 'нет среди кандидатов'}")
+    print(
+        f"\nправильный маршрут по цепочке: места {correct[:5] or 'нет среди кандидатов'}"
+    )
+    print(
+        f"по профилю курса (как сейчас):  места {correct_head[:5] or 'нет среди кандидатов'}"
+    )
     if len(by_chain) >= 2 and np.isfinite(by_chain[0][0]):
         m = by_chain[1][0] - by_chain[0][0]
-        print(f"отрыв первого места по цепочке: {m:.2f} ({100 * m / max(by_chain[0][0], 1e-6):.0f} %)")
+        print(
+            f"отрыв первого места по цепочке: {m:.2f} ({100 * m / max(by_chain[0][0], 1e-6):.0f} %)"
+        )
     return 0
 
 

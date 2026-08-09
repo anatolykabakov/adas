@@ -357,17 +357,17 @@ public class SupercomboOnnxRunner implements ModelRunner {
     }
 
     /**
-     * Разбор выхода supercombo.
+     * Parses the supercombo output.
      *
-     * Package-private, а не private, потому что этим же кодом разбирается выход модели 0.9.x из
-     * {@link SupercomboThneedRunner}: секции плана и линий у двух поколений совпадают ПОБИТОВО. Сверено
-     * по их же `driving.h`: `ModelOutputPlanElement` = 5 x XYZ = 15 float (наш PLAN_COLS),
-     * `ModelOutputPlanPrediction` = 15*33*2 + 1 = 991 (наш PLAN_GROUP), `ModelOutputPlans` = 991*5 = 4955
-     * (наш PLAN_END), дальше `ModelOutputLinesXY` — те же 4 линии по 33 пары YZ.
+     * <p>Package-private rather than private because {@link SupercomboThneedRunner} parses the 0.9.x
+     * output with the same code: the plan and lane sections of the two generations match bitwise.
+     * Checked against their `driving.h` — plan element 5 x XYZ = 15 floats (our PLAN_COLS), prediction
+     * 15*33*2 + 1 = 991 (PLAN_GROUP), plans 991*5 = 4955 (PLAN_END), then the same four lines of 33 YZ
+     * pairs.
      *
-     * Расходятся поколения ПОСЛЕ road_edges: 0.9.x добавляет wide_from_device_euler, temporal_pose,
-     * road_transform и action. Поэтому здесь общее только то, что до этой границы, а поза у 0.9.x лежит
-     * по другому смещению и берётся отдельно.
+     * <p>The generations diverge after road_edges, where 0.9.x adds wide_from_device_euler,
+     * temporal_pose, road_transform and action, so only what precedes that boundary is shared and the
+     * 0.9.x pose is read at its own offset.
      */
     static LaneLines parseLanes(float[] out) {
         LaneLines ll = new LaneLines();

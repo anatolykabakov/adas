@@ -37,10 +37,12 @@ def run_pid(err_deg, swa_deg, v_mps, k_p, k_i, k_f, v_floor, dt_s):
     for n in range(err_deg.size):
         e = err_deg[n]
         p = e * k_p
-        f = k_f * swa_deg[n] * (v_mps[n] ** 2 + v_floor**2)
+        f = k_f * swa_deg[n] * (v_mps[n] ** 2 + v_floor ** 2)
         i_new = i_acc + e * k_i * dt_s[n]
         control_try = p + i_new + f
-        if (e >= 0.0 and (control_try <= 1.0 or i_new < 0.0)) or (e <= 0.0 and (control_try >= -1.0 or i_new > 0.0)):
+        if (e >= 0.0 and (control_try <= 1.0 or i_new < 0.0)) or (
+            e <= 0.0 and (control_try >= -1.0 or i_new > 0.0)
+        ):
             i_acc = i_new
         out[n] = np.clip(p + i_acc + f, -1.0, 1.0)
         f_out[n] = f
@@ -48,7 +50,9 @@ def run_pid(err_deg, swa_deg, v_mps, k_p, k_i, k_f, v_floor, dt_s):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bag", type=Path)
     ap.add_argument("--kp", type=float, default=0.6)
     ap.add_argument("--ki", type=float, default=0.2)
@@ -77,11 +81,20 @@ def main() -> None:
 
     keep = v > 6.4
     print(f"=== {args.bag.name} ===  тиков выше 23 км/ч: {keep.sum()}")
-    print(f"сверка: воспроизведённый старый момент против записанного — медиана |Δ| "
-          f"{np.median(np.abs(old[keep] * MAX_TORQUE_CNM - tq[keep])):.1f} cNm\n")
+    print(
+        f"сверка: воспроизведённый старый момент против записанного — медиана |Δ| "
+        f"{np.median(np.abs(old[keep] * MAX_TORQUE_CNM - tq[keep])):.1f} cNm\n"
+    )
 
-    print(f"{'участок':<12} {'n':>6} {'на упоре было':>14} {'станет':>8} {'|момент| мед было':>18} {'станет':>8}")
-    for name, lo, hi in [("R<83", 0, 83), ("83-167", 83, 167), ("167-500", 167, 500), ("R>500", 500, np.inf)]:
+    print(
+        f"{'участок':<12} {'n':>6} {'на упоре было':>14} {'станет':>8} {'|момент| мед было':>18} {'станет':>8}"
+    )
+    for name, lo, hi in [
+        ("R<83", 0, 83),
+        ("83-167", 83, 167),
+        ("167-500", 167, 500),
+        ("R>500", 500, np.inf),
+    ]:
         m = keep & (R >= lo) & (R < hi)
         if m.sum() < 50:
             continue
@@ -97,14 +110,20 @@ def main() -> None:
     st = keep & (np.abs(err) < 1.0) & (np.abs(des) > 2.0)
     for label, f_arr, ctl in (("было", f_old, old), ("станет", f_new, new)):
         share = np.median(np.abs(f_arr[st]) / np.maximum(np.abs(ctl[st]), 1e-6))
-        print(f"  {label:>6}: доля упреждения в команде {100 * share:5.1f} %  "
-              f"(остальное набирает интегратор)")
+        print(
+            f"  {label:>6}: доля упреждения в команде {100 * share:5.1f} %  "
+            f"(остальное набирает интегратор)"
+        )
 
-    print("\nна сколько раньше приходит момент — вход в дугу (кривизна растёт, |ошибка| ещё < 2°):")
+    print(
+        "\nна сколько раньше приходит момент — вход в дугу (кривизна растёт, |ошибка| ещё < 2°):"
+    )
     entry = keep & (np.abs(err) < 2.0) & (R < 500)
     if entry.sum() > 100:
-        print(f"  медиана |момента| на входе: было {np.median(np.abs(old[entry])) * MAX_TORQUE_CNM:.0f} cNm, "
-              f"станет {np.median(np.abs(new[entry])) * MAX_TORQUE_CNM:.0f} cNm")
+        print(
+            f"  медиана |момента| на входе: было {np.median(np.abs(old[entry])) * MAX_TORQUE_CNM:.0f} cNm, "
+            f"станет {np.median(np.abs(new[entry])) * MAX_TORQUE_CNM:.0f} cNm"
+        )
 
 
 if __name__ == "__main__":

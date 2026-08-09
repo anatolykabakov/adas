@@ -91,17 +91,11 @@ public class CameraHandler {
 
     private static final int SCALE_FACTOR = 2;
     /**
-     * Кадров в секунду, которых просим у камеры. Было 20, устройство отдавало 22.7 (то есть точного
-     * диапазона (20,20) у него нет и камера бежит свободно).
+     * Frames per second requested from the camera.
      *
-     * Почему это важно для темпа зрения: конвейер обрабатывает кадр за 59 мс медианой (подготовка 9 +
-     * инференс 45.5), а период камеры был 44 мс. Закончив счёт, конвейер обнаруживает, что следующий
-     * кадр придёт только через 29 мс, и темп квантуется по периоду камеры — ровно половина камерного,
-     * 11.3 Гц (замерено: 2.02 кадра камеры на один обработанный, бег 2026_08_04_21_00_18). При 30 к/с
-     * квант становится 33 мс и ожидание падает до ~7 мс.
-     *
-     * Потолок при любой частоте камеры — время работы конвейера, ~15 Гц; 20 Гц апстрима требуют
-     * уложить подготовку с инференсом в один период камеры.
+     * <p>The vision rate is quantised by the camera period: when a cycle takes longer than one period,
+     * the pipeline takes every second frame. Measured at 20 fps on run 2026_08_04_21_00_18 — 2.02
+     * camera frames per processed one, 11.3 Hz. At 30 fps the quantum is 33 ms instead of 44.
      */
     private static final int TARGET_FPS = 30;
 
@@ -549,21 +543,15 @@ public class CameraHandler {
     }
 
     /**
-     * Прямоугольник замера экспозиции, накрывающий дорогу.
+     * Auto-exposure metering rectangle covering the road, so exposure is not computed against the sky.
      *
-     * Единственная настройка камеры, которая есть у flowpilot и которой не было у нас: экспозиция считалась
-     * по всему кадру вместе с небом, дорога систематически недоэкспонирована, и AE удлиняла выдержку — а с
-     * плавающим диапазоном частоты это роняло камеру (см. {@link #pickTargetFpsRange}).
+     * <p>Not a literal port of flowpilot's: they size the rectangle from the frame (1280x720), but
+     * `CONTROL_AE_REGIONS` is in active-array coordinates, and on a 4000x3000 sensor their rectangle
+     * would land in the top-left corner — the sky. Here the frame's aspect-ratio crop within the active
+     * array is found first, and their fractions are taken inside it: 0.4..0.6 across, 0.5..0.7 down.
      *
-     * Порт НЕ дословный, и в этом суть. flowpilot считает прямоугольник от размера кадра
-     * (`W = Camera.frameSize[0]`, 1280x720), а `CONTROL_AE_REGIONS` задаётся в координатах активной области
-     * сенсора. На сенсоре 4000x3000 их прямоугольник попал бы в левый верхний угол, то есть ровно в небо —
-     * туда, откуда мы экспозицию и уводим. Здесь отображение делается честно: сначала находится вырез, из
-     * которого сенсор формирует наш кадр с его соотношением сторон, затем внутри выреза берётся та же доля,
-     * что у них — по горизонтали 0.4..0.6, по вертикали 0.5..0.7, то есть центр чуть ниже горизонта.
-     *
-     * Система координат зависит от коррекции дисторсии: при DISTORTION_CORRECTION_MODE_OFF это
-     * pre-correction активная область, иначе обычная. Мы дисторсию выключаем, поэтому предпочитается
+     * <p>The coordinate system depends on distortion correction: with DISTORTION_CORRECTION_MODE_OFF it
+     * is the pre-correction active array. We disable distortion, so that one is preferred
      * pre-correction.
      */
     private MeteringRectangle[] roadMeteringRegions(CameraCharacteristics chars, int frameWidth, int frameHeight) {
@@ -581,8 +569,7 @@ public class CameraHandler {
             return null;
         }
 
-        // Вырез, из которого сенсор делает кадр нашего соотношения сторон: по одной оси берётся всё, по
-        // другой — центрированная часть. Без этого шага прямоугольник уезжает вверх на всю разницу форматов.
+        // The crop the sensor takes to produce our aspect ratio: one axis in full, the other centred.
         float wantAspect = (float) frameWidth / (float) frameHeight;
         float arrayAspect = (float) array.width() / (float) array.height();
         int cropW = array.width();
@@ -606,24 +593,13 @@ public class CameraHandler {
     }
 
     /**
-     * Диапазон частоты кадров для AE.
+     * Picks the AE frame-rate range: highest achievable upper bound first, then the highest lower bound
+     * among equals — a high lower bound is what stops auto-exposure from dropping the rate for exposure.
+     * So [30,30] beats [15,30] beats [10,10].
      *
-     * Здесь было две ошибки подряд, и вторая хуже первой.
-     *
-     * Сначала брался любой диапазон, ПОКРЫВАЮЩИЙ цель: при отсутствии [30,30] подходил [15,30], а нижняя
-     * граница 15 разрешает автоэкспозиции ронять частоту вдвое ради выдержки. На вечернем заезде
-     * 2026_08_07_19_04_05 это дало интервал 67 мс (14.9 Гц) при работе конвейера 52 мс.
-     *
-     * Тогда стал предпочитаться ФИКСИРОВАННЫЙ диапазон — и это оказалось хуже. На заезде
-     * 2026_08_08_10_47_41 интервал встал ровно на 100 мс с модой на 100: единственный фиксированный
-     * диапазон у этого телефона оказался низким, и правило прибило камеру к 10 fps. Темп упал 13.5 -> 10.06
-     * Гц, а шаг уставки на дугах вырос 0.49 -> 0.91 градуса. Фиксированность сама по себе бесполезна, если
-     * фиксирует на низкой частоте.
-     *
-     * Правильный порядок предпочтений: сначала максимальная ДОСТИЖИМАЯ частота (верхняя граница), и уже
-     * среди равных по верхней — максимальная нижняя, потому что высокая нижняя граница и есть то, что
-     * мешает AE ронять частоту. То есть [30,30] лучше [15,30], а [15,30] лучше [10,10] — последнее правило
-     * и было нарушено.
+     * <p>Both halves are needed. Preferring any range that merely covers the target let [15,30] through
+     * and the camera ran at 67 ms (2026_08_07_19_04_05); preferring a fixed range pinned it to the only
+     * fixed range this phone offers, 10 fps, and the rate fell to 10.06 Hz (2026_08_08_10_47_41).
      */
     private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int targetFps) {
         Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
@@ -642,11 +618,8 @@ public class CameraHandler {
             if (upper <= 0) {
                 continue;
             }
-            // Диапазон, чья НИЖНЯЯ граница выше цели, целевой темп выдать не может — он навяжет
-            // свой. Например [60,60] на телефоне с 60-герцовым превью: по верхней границе он даёт
-            // ничью с [30,30], а по нижней выигрывает, и камера уходит на 60 Гц. Это удвоило бы
-            // работу потока камеры ради конвейера, который столько не съест, и вдвое урезало бы
-            // выдержку — ровно та беда со светом, от которой это правило и написано.
+            // A range whose lower bound exceeds the target cannot deliver the target rate — it forces
+            // its own. [60,60] ties [30,30] on the capped upper bound and would win on the lower one.
             if (r.getLower() > targetFps) {
                 continue;
             }
@@ -671,10 +644,8 @@ public class CameraHandler {
     }
 
     private void startSession() {
-        // Экспозиция и реальная длительность кадра раз в ~5 с. Это то, чем доказывается механизм: если после
-        // области замера выдержка падает, а длительность кадра встаёт на 1/fps — значит камеру уронила
-        // именно автоэкспозиция по небу, а не что-то другое. Без этих строк вечерний заезд снова оставил бы
-        // только «камера отдаёт 15 Гц» без причины.
+        // Exposure and actual frame duration every ~5 s: if exposure falls and frame duration settles on
+        // 1/fps after the metering region is set, the rate was being dropped by auto-exposure.
         CameraCaptureSession.CaptureCallback listener = new CameraCaptureSession.CaptureCallback() {
             private long lastLogNs = 0;
 

@@ -1,6 +1,6 @@
-#include "adas_app.h"
+#include "adas/adas_app.h"
 
-#include "utils/logger.h"
+#include "adas/utils/logger.h"
 
 AdasApp::AdasApp() : mode_(Mode::RealTime), running_(false) {}
 
@@ -78,47 +78,48 @@ void AdasApp::setupRealtimeServices()
   LOGI("Setting up realtime services (lane_keep=%d localization=%d camera_calib=%d)...", f.enable_lane_keep ? 1 : 0,
        f.enable_localization ? 1 : 0, f.enable_camera_calib ? 1 : 0);
 
-  middleware_ = std::make_shared<adas::Middleware>(adas::Middleware::Mode::RealTime);
+  middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime);
 
   if (cfg_.panda.usb_fd != -1 && f.enable_panda)
-    panda_service_ = middleware_->registerService<PandaService>(cfg_.panda);
+    panda_service_ = middleware_->registerService<adas::services::Panda>(cfg_.panda);
 
   if (f.enable_zmq_bridge)
-    zmq_bridge_service_ = middleware_->registerService<ZmqBridgeService>(cfg_.zmq_bridge);
+    zmq_bridge_service_ = middleware_->registerService<adas::services::ZmqBridge>(cfg_.zmq_bridge);
 
-  topic_convert_service_ = middleware_->registerService<adas::TopicConvertService>(cfg_.topic_convert);
+  topic_convert_service_ = middleware_->registerService<adas::services::TopicConvert>(cfg_.topic_convert);
 
   if (f.enable_localization && f.enable_imu_calib)
-    imu_calib_service_ = middleware_->registerService<adas::ImuCalibService>(cfg_.imu_calib);
+    imu_calib_service_ = middleware_->registerService<adas::services::ImuCalib>(cfg_.imu_calib);
 
   if (f.enable_lane_keep) {
     auto lk = cfg_.lane_keep;
     lk.steer_output_enabled = true;
-    lane_keep_service_ = middleware_->registerService<adas::LaneKeepService>(lk);
-    LOGI("LaneKeepService controller=%s max_steer=%.1f° ratio=%.1f max_tq=%.0f pp=%.2f/[%.1f,%.1f] pid=%.2f/%.2f/%.5f",
+    lane_keep_service_ = middleware_->registerService<adas::services::LaneKeep>(lk);
+    LOGI("adas::services::LaneKeep controller=%s max_steer=%.1f° ratio=%.1f max_tq=%.0f pp=%.2f/[%.1f,%.1f] "
+         "pid=%.2f/%.2f/%.5f",
          lk.controller.c_str(), lk.max_steer_deg, lk.steer_ratio, lk.max_torque_cnm, lk.pp_k_dd, lk.pp_ld_min,
          lk.pp_ld_max, lk.pid_kp, lk.pid_ki, lk.pid_kf);
   }
 
   if (f.enable_long_plan)
-    long_plan_service_ = middleware_->registerService<adas::LongPlanService>(cfg_.long_plan);
+    long_plan_service_ = middleware_->registerService<adas::services::LongPlan>(cfg_.long_plan);
 
   if (f.enable_safety_warn)
-    safety_warn_service_ = middleware_->registerService<adas::SafetyWarnService>(cfg_.safety_warn);
+    safety_warn_service_ = middleware_->registerService<adas::services::SafetyWarn>(cfg_.safety_warn);
 
   if (f.enable_traffic_sign)
-    traffic_sign_service_ = middleware_->registerService<adas::TrafficSignService>(cfg_.traffic_sign);
+    traffic_sign_service_ = middleware_->registerService<adas::services::TrafficSign>(cfg_.traffic_sign);
 
   if (f.enable_localization)
-    localization_service_ = middleware_->registerService<adas::LocalizationService>(cfg_.localization);
+    localization_service_ = middleware_->registerService<adas::services::Localization>(cfg_.localization);
 
   if (f.enable_camera_calib)
-    camera_calib_service_ = middleware_->registerService<adas::CameraCalibService>(cfg_.camera_calib);
+    camera_calib_service_ = middleware_->registerService<adas::services::CameraCalib>(cfg_.camera_calib);
 
   if (f.enable_map_data)
-    map_data_service_ = middleware_->registerService<adas::MapDataService>(cfg_.map_data);
+    map_data_service_ = middleware_->registerService<adas::services::MapData>(cfg_.map_data);
 
-  middleware_->registerService<adas::MiddlewareStatsService>();
+  middleware_->registerService<adas::services::MiddlewareStats>();
 
   LOGI("Realtime services setup completed (%zu services)", middleware_->getServiceCount());
 }
@@ -128,18 +129,18 @@ void AdasApp::setupSimulatedServices()
   auto lk = cfg_.lane_keep;
   lk.steer_output_enabled = true;
 
-  middleware_ = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated);
-  lane_keep_service_ = middleware_->registerService<adas::LaneKeepService>(lk);
-  localization_service_ = middleware_->registerService<adas::LocalizationService>(cfg_.localization);
-  camera_calib_service_ = middleware_->registerService<adas::CameraCalibService>(cfg_.camera_calib);
-  imu_calib_service_ = middleware_->registerService<adas::ImuCalibService>(cfg_.imu_calib);
+  middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
+  lane_keep_service_ = middleware_->registerService<adas::services::LaneKeep>(lk);
+  localization_service_ = middleware_->registerService<adas::services::Localization>(cfg_.localization);
+  camera_calib_service_ = middleware_->registerService<adas::services::CameraCalib>(cfg_.camera_calib);
+  imu_calib_service_ = middleware_->registerService<adas::services::ImuCalib>(cfg_.imu_calib);
 
   if (sim_topic_convert_)
-    topic_convert_service_ = middleware_->registerService<adas::TopicConvertService>(cfg_.topic_convert);
+    topic_convert_service_ = middleware_->registerService<adas::services::TopicConvert>(cfg_.topic_convert);
 
   if (cfg_.feature_flags.enable_safety_warn)
-    safety_warn_service_ = middleware_->registerService<adas::SafetyWarnService>(cfg_.safety_warn);
-  internal_subscriber_ = middleware_->registerService<adas::InternalSubscriber>();
+    safety_warn_service_ = middleware_->registerService<adas::services::SafetyWarn>(cfg_.safety_warn);
+  internal_subscriber_ = middleware_->registerService<adas::services::InternalSubscriber>();
   LOGI("Simulated AdasApp services ready (%zu)", middleware_->getServiceCount());
 }
 

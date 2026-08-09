@@ -60,14 +60,26 @@ def _cache_path(audio: Path, model_name: str, vad: bool) -> Path:
     return audio.with_suffix(f".{model_name}{'.vad' if vad else ''}.json")
 
 
-def transcribe(path: Path, model_name: str, language: str, threads: int, vad: bool, vad_threshold: float):
+def transcribe(
+    path: Path,
+    model_name: str,
+    language: str,
+    threads: int,
+    vad: bool,
+    vad_threshold: float,
+):
     """Распознавание с кэшем рядом со звуком: medium без VAD считает 22-минутный заезд десятками
     минут, а меняется обычно разбор, а не распознавание."""
     cache = _cache_path(path, model_name, vad)
     if cache.exists():
         raw = json.loads(cache.read_text(encoding="utf-8"))
         segs = [
-            _S(s["start"], s["end"], s["text"], [_W(w["start"], w["end"], w["word"]) for w in s["words"]])
+            _S(
+                s["start"],
+                s["end"],
+                s["text"],
+                [_W(w["start"], w["end"], w["word"]) for w in s["words"]],
+            )
             for s in raw["segments"]
         ]
         print(f"# транскрипт из кэша {cache.name}")
@@ -75,7 +87,9 @@ def transcribe(path: Path, model_name: str, language: str, threads: int, vad: bo
 
     from faster_whisper import WhisperModel
 
-    model = WhisperModel(model_name, device="cpu", compute_type="int8", cpu_threads=threads)
+    model = WhisperModel(
+        model_name, device="cpu", compute_type="int8", cpu_threads=threads
+    )
     segments, info = model.transcribe(
         str(path),
         language=language,
@@ -84,7 +98,9 @@ def transcribe(path: Path, model_name: str, language: str, threads: int, vad: bo
         # одну. Речь в машине тише дорожного шума, детектор считает её тишиной. Без VAD дороже по
         # времени, зато ничего не теряется.
         vad_filter=vad,
-        vad_parameters={"min_silence_duration_ms": 700, "threshold": vad_threshold} if vad else None,
+        vad_parameters={"min_silence_duration_ms": 700, "threshold": vad_threshold}
+        if vad
+        else None,
         beam_size=5,
         condition_on_previous_text=False,
         # Пословные метки — то, ради чего всё: пометка должна попадать на свою секунду, а не на
@@ -101,7 +117,10 @@ def transcribe(path: Path, model_name: str, language: str, threads: int, vad: bo
                         "start": sg.start,
                         "end": sg.end,
                         "text": sg.text,
-                        "words": [{"start": w.start, "end": w.end, "word": w.word} for w in (sg.words or [])],
+                        "words": [
+                            {"start": w.start, "end": w.end, "word": w.word}
+                            for w in (sg.words or [])
+                        ],
                     }
                     for sg in segs
                 ],
@@ -123,12 +142,16 @@ def group_notes(
     """
     words = []
     for seg in segments:
-        for w in (seg.words or []):
+        for w in seg.words or []:
             words.append(w)
     if not words:
         return []
 
-    starts = [i for i, w in enumerate(words) if any(k in w.word.strip().lower() for k in keywords)]
+    starts = [
+        i
+        for i, w in enumerate(words)
+        if any(k in w.word.strip().lower() for k in keywords)
+    ]
     notes: List[Tuple[float, float, str]] = []
     for n, i in enumerate(starts):
         stop = starts[n + 1] if n + 1 < len(starts) else len(words)
@@ -144,15 +167,32 @@ def group_notes(
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bag", type=Path)
-    ap.add_argument("--model", default="small", help="small хватает для коротких фраз; medium точнее и втрое дольше")
+    ap.add_argument(
+        "--model",
+        default="small",
+        help="small хватает для коротких фраз; medium точнее и втрое дольше",
+    )
     ap.add_argument("--language", default="ru")
     ap.add_argument("--threads", type=int, default=8)
     ap.add_argument("--keyword", action="append", default=None, help="можно повторять")
-    ap.add_argument("--join-gap", type=float, default=2.0, help="пауза, до которой речь считается одной пометкой")
-    ap.add_argument("--all", action="store_true", help="печатать весь транскрипт, а не только пометки")
-    ap.add_argument("--vad", action="store_true", help="включить детектор речи — быстрее, но теряет тихую речь")
+    ap.add_argument(
+        "--join-gap",
+        type=float,
+        default=2.0,
+        help="пауза, до которой речь считается одной пометкой",
+    )
+    ap.add_argument(
+        "--all", action="store_true", help="печатать весь транскрипт, а не только пометки"
+    )
+    ap.add_argument(
+        "--vad",
+        action="store_true",
+        help="включить детектор речи — быстрее, но теряет тихую речь",
+    )
     ap.add_argument("--vad-threshold", type=float, default=0.25)
     args = ap.parse_args()
 
@@ -160,8 +200,12 @@ def main() -> None:
     keywords = tuple(k.lower() for k in (args.keyword or DEFAULT_KEYWORDS))
 
     print(f"# {audio.name}, старт записи t={t0_ms} мс (шкала бага)")
-    segments, info = transcribe(audio, args.model, args.language, args.threads, args.vad, args.vad_threshold)
-    print(f"# распознано сегментов: {len(segments)}, длительность {info.duration:.0f} с\n")
+    segments, info = transcribe(
+        audio, args.model, args.language, args.threads, args.vad, args.vad_threshold
+    )
+    print(
+        f"# распознано сегментов: {len(segments)}, длительность {info.duration:.0f} с\n"
+    )
 
     if args.all:
         for s in segments:

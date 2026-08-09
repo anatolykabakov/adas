@@ -160,7 +160,11 @@ class BagWindow:
                 # `vis.bag_io.lateral_actuation_on`.
                 session,
                 "panda/health",
-                lambda p: (1.0 if (getattr(p, "lat_actuation_allowed", False) or p.controls_allowed) else 0.0,),
+                lambda p: (
+                    1.0
+                    if (getattr(p, "lat_actuation_allowed", False) or p.controls_allowed)
+                    else 0.0,
+                ),
             )
         )
         lanes = load_topic_messages(session, "vision/lanes")

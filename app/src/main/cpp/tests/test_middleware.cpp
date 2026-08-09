@@ -10,9 +10,9 @@
 #include <zmq.hpp>
 
 #include "messages.pb.h"
-#include "middleware/middleware.hpp"
-#include "services/zmq_bridge_service.h"
-#include "utils/logger.h"
+#include "adas/middleware/manager.hpp"
+#include "adas/services/zmq_bridge.h"
+#include "adas/utils/logger.h"
 
 namespace {
 
@@ -21,7 +21,7 @@ struct Ping {
   std::string payload;
 };
 
-class PubService : public adas::Service {
+class PubService : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "pub"; }
 
@@ -34,7 +34,7 @@ public:
   }
 };
 
-class SubService : public adas::Service {
+class SubService : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "sub"; }
 
@@ -64,7 +64,7 @@ private:
   std::string last_payload_;
 };
 
-class TimerService : public adas::Service {
+class TimerService : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "timer"; }
 
@@ -90,8 +90,8 @@ TEST(MiddlewareTest, StartStopRealtime)
 {
   auto pub = std::make_shared<PubService>();
   auto sub = std::make_shared<SubService>();
-  auto mgr =
-      std::make_shared<adas::Middleware>(adas::Middleware::Mode::RealTime, std::vector<adas::ServicePtr>{pub, sub});
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime,
+                                                         std::vector<adas::middleware::ServicePtr>{pub, sub});
 
   EXPECT_EQ(2u, mgr->startAll());
   EXPECT_TRUE(mgr->isRunning(pub));
@@ -112,7 +112,8 @@ TEST(MiddlewareTest, StartStopRealtime)
 TEST(MiddlewareTest, TimersRealtime)
 {
   auto svc = std::make_shared<TimerService>();
-  auto mgr = std::make_shared<adas::Middleware>(adas::Middleware::Mode::RealTime, std::vector<adas::ServicePtr>{svc});
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime,
+                                                         std::vector<adas::middleware::ServicePtr>{svc});
   ASSERT_EQ(1u, mgr->startAll());
   std::this_thread::sleep_for(std::chrono::milliseconds(55));
   EXPECT_GE(svc->ticks(), 3);
@@ -123,8 +124,8 @@ TEST(MiddlewareTest, SimulatedStep)
 {
   auto pub = std::make_shared<PubService>();
   auto sub = std::make_shared<SubService>();
-  auto mgr =
-      std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated, std::vector<adas::ServicePtr>{pub, sub});
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated,
+                                                         std::vector<adas::middleware::ServicePtr>{pub, sub});
 
   mgr->setTime(0);
   pub->publishPing(1, "sim");
@@ -137,7 +138,8 @@ TEST(MiddlewareTest, SimulatedStep)
 TEST(MiddlewareTest, SimulatedTimers)
 {
   auto svc = std::make_shared<TimerService>();
-  auto mgr = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated, std::vector<adas::ServicePtr>{svc});
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated,
+                                                         std::vector<adas::middleware::ServicePtr>{svc});
 
   mgr->setTime(0);
   mgr->step();
@@ -157,7 +159,7 @@ TEST(MiddlewareTest, InternalTopicPublishing)
     uint32_t address = 0;
   };
 
-  class Publisher : public adas::Service {
+  class Publisher : public adas::middleware::Service {
   public:
     void configure() override {}
     void send()
@@ -168,7 +170,7 @@ TEST(MiddlewareTest, InternalTopicPublishing)
     }
   };
 
-  class Consumer : public adas::Service {
+  class Consumer : public adas::middleware::Service {
   public:
     void configure() override
     {
@@ -183,8 +185,8 @@ TEST(MiddlewareTest, InternalTopicPublishing)
 
   auto pub = std::make_shared<Publisher>();
   auto cons = std::make_shared<Consumer>();
-  auto mgr =
-      std::make_shared<adas::Middleware>(adas::Middleware::Mode::RealTime, std::vector<adas::ServicePtr>{pub, cons});
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime,
+                                                         std::vector<adas::middleware::ServicePtr>{pub, cons});
   mgr->startAll();
   pub->send();
   for (int i = 0; i < 50 && cons->n_ == 0; ++i)
@@ -196,7 +198,7 @@ TEST(MiddlewareTest, InternalTopicPublishing)
 
 TEST(MiddlewareTest, RegisterService)
 {
-  auto mw = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated);
+  auto mw = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
   auto pub = mw->registerService<PubService>();
   auto sub = mw->registerService<SubService>();
   EXPECT_EQ(2u, mw->getServiceCount());
@@ -210,7 +212,7 @@ TEST(MiddlewareTest, RegisterService)
 
 TEST(MiddlewareTest, BoundedSubscriptionDropsOldest)
 {
-  class SlowSub : public adas::Service {
+  class SlowSub : public adas::middleware::Service {
   public:
     void configure() override
     {
@@ -221,7 +223,7 @@ TEST(MiddlewareTest, BoundedSubscriptionDropsOldest)
     std::vector<int> ids_;
   };
 
-  auto mw = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated);
+  auto mw = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
   auto pub = mw->registerService<PubService>();
   auto sub = mw->registerService<SlowSub>();
 
@@ -238,7 +240,7 @@ TEST(MiddlewareTest, BoundedSubscriptionDropsOldest)
 
 TEST(MiddlewareTest, SnapshotStatsTracksTimers)
 {
-  auto mw = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated);
+  auto mw = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
   auto svc = mw->registerService<TimerService>();
 
   for (int64_t t_us = 0; t_us <= 50'000; t_us += 10'000) {
@@ -267,8 +269,8 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
   const std::string ep_in = "tcp://127.0.0.1:5591";
   const std::string ep_out = "tcp://127.0.0.1:5592";
 
-  auto mw = std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated);
-  mw->registerService<ZmqBridgeService>(ZmqBridgeService::Config{ep_in, ep_out});
+  auto mw = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
+  mw->registerService<adas::services::ZmqBridge>(adas::services::ZmqBridge::Config{ep_in, ep_out});
 
   zmq::context_t ctx{1};
   zmq::socket_t sub{ctx, ZMQ_SUB};
@@ -307,7 +309,7 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
 
 namespace {
 
-class KnobService : public adas::Service {
+class KnobService : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "knobs"; }
 
@@ -334,7 +336,7 @@ public:
 TEST(MiddlewareParams, SetByNameLandsOnTheServiceThread)
 {
   auto svc = std::make_shared<KnobService>();
-  adas::Middleware mw(adas::Middleware::Mode::RealTime, {svc});
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::RealTime, {svc});
 
   EXPECT_EQ(1u, mw.setParameter("gain", "2.5"));
   EXPECT_DOUBLE_EQ(1.0, svc->gain) << "must not apply on a foreign thread";
@@ -360,7 +362,7 @@ TEST(MiddlewareParams, SetByNameLandsOnTheServiceThread)
 TEST(MiddlewareParams, UnknownNameAndBadValueAreRejected)
 {
   auto svc = std::make_shared<KnobService>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated, {svc});
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated, {svc});
 
   EXPECT_EQ(0u, mw.setParameter("no_such", "1.0"));
   EXPECT_FALSE(mw.setParameter("knobs", "no_such", "1.0"));
@@ -378,7 +380,7 @@ TEST(MiddlewareParams, OneNameCanLiveInSeveralServices)
 {
   auto a = std::make_shared<KnobService>();
   auto b = std::make_shared<KnobService>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated, {a, b});
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated, {a, b});
 
   EXPECT_EQ(2u, mw.setParameter("gain", "7.0"));
   mw.step();
@@ -392,7 +394,7 @@ TEST(MiddlewareParams, OneNameCanLiveInSeveralServices)
 
 TEST(MiddlewareParams, DuplicateRegistrationIsRefused)
 {
-  class Twice : public adas::Service {
+  class Twice : public adas::middleware::Service {
   public:
     std::string_view getName() const override { return "twice"; }
     void configure() override
@@ -405,7 +407,7 @@ TEST(MiddlewareParams, DuplicateRegistrationIsRefused)
   };
 
   auto svc = std::make_shared<Twice>();
-  adas::Middleware mw(adas::Middleware::Mode::Simulated, {svc});
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated, {svc});
   EXPECT_TRUE(svc->first);
   EXPECT_FALSE(svc->second) << "duplicate name must be rejected or one field silently wins";
 }

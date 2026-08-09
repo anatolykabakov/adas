@@ -66,7 +66,9 @@ def route_heading(road_map, dir_edges: List[int]) -> Tuple[np.ndarray, np.ndarra
     return s[:-1], head - head[0]
 
 
-def window_profile(s: np.ndarray, head: np.ndarray, win_m: float, total_m: float) -> np.ndarray:
+def window_profile(
+    s: np.ndarray, head: np.ndarray, win_m: float, total_m: float
+) -> np.ndarray:
     """Приращение курса на каждом окне длиной win_m."""
     grid = np.arange(0.0, total_m + win_m, win_m)
     h = np.interp(grid, s, head)
@@ -135,7 +137,9 @@ def main() -> int:
     truth = viterbi_match(road_map, graph, xy) if xy is not None else []
     if not truth:
         raise SystemExit("не удалось построить эталон")
-    print(f"эталон: {len(truth)} рёбер, {sum(road_map.edge(d >> 1).length_m for d in truth) / 1000:.2f} км")
+    print(
+        f"эталон: {len(truth)} рёбер, {sum(road_map.edge(d >> 1).length_m for d in truth) / 1000:.2f} км"
+    )
 
     t0 = time.time()
     run = load_run(args.bag)
@@ -149,10 +153,15 @@ def main() -> int:
     print(f"кандидатов поиска: {len(cands)} за {time.time() - t0:.1f} с")
 
     truth_score = compare((ts, th), route_heading(road_map, truth), args.window_m)
-    rows = [(compare((ts, th), route_heading(road_map, c.dir_edges), args.window_m), c) for c in cands]
+    rows = [
+        (compare((ts, th), route_heading(road_map, c.dir_edges), args.window_m), c)
+        for c in cands
+    ]
     rows.sort(key=lambda r: r[0])
 
-    print(f"\nокно {args.window_m:.0f} м, метрика — медианное расхождение приращений курса")
+    print(
+        f"\nокно {args.window_m:.0f} м, метрика — медианное расхождение приращений курса"
+    )
     print(f"{'эталон':>10}: {truth_score:6.2f}°")
     for i, (score, c) in enumerate(rows[:8], 1):
         print(f"{i:>10}: {score:6.2f}°  {route_streets(road_map, c.dir_edges)}")

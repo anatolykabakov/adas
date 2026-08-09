@@ -13,9 +13,20 @@ Latency (same as latency.py) — look under ``latency/`` in PlotJuggler:
   latency/lane_keep/vision_to_publish_ms
 Do not use controls/steer for e2e (chassis republish with stale vision_ts).
 
+Lateral planner — everything the chain decided per frame is under
+``control/lane_keep_debug/``: the lane it believed in (``lane_width_m``, ``lane_offset_m``,
+``lane_anchored``), both controllers' internals, ``desired_swa_deg`` vs ``actual_swa_deg``,
+``slew_clipped``, and the ``p_*`` parameters in force. Next to it, ``vision/lanes/width_y20``
+and ``vision/lanes/near_present`` (0 none, 1 left, 2 right, 3 both) say what the detector
+handed over.
+
+``incidents/mark`` is a spike at every place the operator dictated a complaint (from the
+session transcription) — the anchors for a 20-minute plot. The texts are printed on export.
+
 Usage:
   python3 vis/export_to_plotjuggler.py /path/to/adas_bags/2026_07_18_09_45_15 -o /tmp/out
   # writes /tmp/out/2026_07_18_09_45_15.csv
+  python3 vis/export_to_plotjuggler.py <bag> -o /tmp/out --only control,vision,vehicle
   plotjuggler /tmp/out/2026_07_18_09_45_15.csv
 """
 
@@ -191,6 +202,35 @@ class Collector:
                     if r["_prefix"] == prefix:
                         r["_wall_ms"] = int(r["_wall_ms"]) + delta
 
+    def write_split_csv(self, out_dir: Path, name: str) -> None:
+        """One dense CSV per topic — no empty cells, so nothing reads as a zero."""
+        if not self.rows:
+            return
+        self._align_outlier_clocks()
+        t0 = min(int(r["_wall_ms"]) for r in self.rows)
+        by_prefix: dict = {}
+        for r in self.rows:
+            by_prefix.setdefault(r.get("_prefix", "misc"), []).append(r)
+        out_dir = out_dir / name
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for prefix, rows in sorted(by_prefix.items()):
+            fields = ["timestamp"]
+            for row in rows:
+                fields.extend(k for k in row if k not in fields and not k.startswith("_"))
+            fields[1:] = sorted(fields[1:], key=self._column_rank)
+            for r in rows:
+                r["timestamp"] = (int(r["_wall_ms"]) - t0) / 1000.0
+            rows.sort(key=lambda r: r["timestamp"])
+            path = out_dir / (prefix.replace("/", "__") + ".csv")
+            with path.open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(
+                    f, fieldnames=fields, extrasaction="ignore", restval=""
+                )
+                w.writeheader()
+                w.writerows(rows)
+            print(f"{path}  ({len(rows)} rows, {len(fields)} cols)")
+        print("Load these into one PlotJuggler session: every cell is filled.")
+
     def write_csv(self, path: Path) -> None:
         if not self.rows:
             return
@@ -333,6 +373,9 @@ def process_gps_data(m: Any, wall_ms: int) -> tuple[int, dict]:
     )
 
 
+LANE_PRESENT_PROB = 0.3
+
+
 def _lane_y_at(lane: Any, x_pts: list, x_query: float) -> Optional[float]:
     ys = list(lane.y)
     if not ys or not x_pts or len(ys) != len(x_pts):
@@ -380,12 +423,17 @@ def process_lanes(m: Any, wall_ms: int) -> tuple[int, dict]:
             y = _lane_y_at(lane, x_pts, xq)
             if y is not None:
                 out[f"vision/lanes/{name}/{tag}"] = y
-    # mid path from near lanes
+    # mid path and width from the near lanes — the pair the lateral planner reacts to
     if len(m.lanes) >= 3:
         yl = _lane_y_at(m.lanes[1], x_pts, 20.0)
         yr = _lane_y_at(m.lanes[2], x_pts, 20.0)
         if yl is not None and yr is not None:
             out["vision/lanes/mid_y20"] = 0.5 * (yl + yr)
+            out["vision/lanes/width_y20"] = abs(yr - yl)
+        near_l = m.lanes[1].prob >= LANE_PRESENT_PROB
+        near_r = m.lanes[2].prob >= LANE_PRESENT_PROB
+        # 0 none, 1 left only, 2 right only, 3 both — the state the centre line breaks on
+        out["vision/lanes/near_present"] = int(near_l) + 2 * int(near_r)
     return data_ms, out
 
 
@@ -443,6 +491,80 @@ def process_lane_keep(m: Any, wall_ms: int) -> tuple[int, dict]:
         out["latency/lane_keep/capture_to_publish_ms"] = float(lat_cap)
     if lat_v is not None:
         out["latency/lane_keep/vision_to_publish_ms"] = float(lat_v)
+    return data_ms, out
+
+
+LK_CONTROLLERS = {"pp": 1, "mpc": 2, "fp": 3}
+LK_STATUS = {"ok": 0, "low_speed": 1, "blinker": 2, "no_polyline": 3, "no_lanes": 4}
+
+
+def process_lane_keep_debug(m: Any, wall_ms: int) -> tuple[int, dict]:
+    """``control/lane_keep_debug`` — everything the lateral chain decided this frame.
+
+    The stream carries what the shipped signals cannot answer: the lane the planner
+    believed in (width, offset, anchored), both controllers' internals, the command
+    before and after clamping, and the parameters in force — so a run can be compared
+    with another without guessing what the config was.
+    """
+    data_ms = int(getattr(m, "publish_ts_ms", 0) or 0) or _data_ms(m, wall_ms)
+    out = vals(
+        "control/lane_keep_debug",
+        # Coded, not a flag: this firmware reports "fp", so an is-it-mpc bit reads as
+        # "neither" and hides which controller's internals are the live ones.
+        controller_code=LK_CONTROLLERS.get(str(getattr(m, "controller", "")), 0),
+        status_code=LK_STATUS.get(str(getattr(m, "status", "")), 9),
+        has_target=int(m.has_target),
+        speed_mps=m.speed_mps,
+        n_points=m.n_points,
+        cam_y_left_m=m.cam_y_left_m,
+        # what the planner thought the lane was
+        lane_anchored=int(m.lane_anchored),
+        lane_width_m=m.lane_width_m,
+        lane_offset_m=m.lane_offset_m,
+        center_force_m=m.center_force_m,
+        # pure pursuit
+        pp_lookahead_m=m.pp_lookahead_m,
+        pp_target_x=m.pp_target_x,
+        pp_target_y=m.pp_target_y,
+        pp_curvature=m.pp_curvature,
+        pp_steer_raw_rad=m.pp_steer_raw_rad,
+        # mpc
+        mpc_cte_m=m.mpc_cte_m,
+        mpc_epsi_rad=m.mpc_epsi_rad,
+        mpc_kappa_path=m.mpc_kappa_path,
+        mpc_kappa_yaw=m.mpc_kappa_yaw,
+        mpc_kappa_used=m.mpc_kappa_used,
+        mpc_dkappa_ds=m.mpc_dkappa_ds,
+        mpc_delta_vp_rad=m.mpc_delta_vp_rad,
+        mpc_delta_clamped_rad=m.mpc_delta_clamped_rad,
+        mpc_max_steer_rad=m.mpc_max_steer_rad,
+        # command and what came back from the rack
+        steer_rad=m.steer_rad,
+        steer_norm=m.steer_norm,
+        slew_clipped=int(m.slew_clipped),
+        max_steer_rad=m.max_steer_rad,
+        desired_swa_deg=m.desired_swa_deg,
+        actual_swa_deg=m.actual_swa_deg,
+        angle_error_deg=m.angle_error_deg,
+        torque_cnm=m.torque_cnm,
+        steer_output_enabled=int(m.steer_output_enabled),
+        assist_allowed=int(getattr(m, "assist_allowed", False)),
+        assist_known=int(getattr(m, "assist_known", False)),
+        frame_dt_ms=m.frame_dt_ms,
+        # parameters in force, so two runs can be compared
+        p_k_dd=m.p_k_dd,
+        p_ld_min=m.p_ld_min,
+        p_ld_max=m.p_ld_max,
+        p_ld_curv_gain=m.p_ld_curv_gain,
+        p_max_steer_deg=m.p_max_steer_deg,
+        p_max_torque_cnm=getattr(m, "p_max_torque_cnm", None),
+        p_mpc_epsi_gain=m.p_mpc_epsi_gain,
+        p_mpc_ff_scale=m.p_mpc_ff_scale,
+        p_mpc_kappa_yaw_blend=m.p_mpc_kappa_yaw_blend,
+        p_lane_blend_scale=m.p_lane_blend_scale,
+        p_camera_offset_m=m.p_camera_offset_m,
+        p_center_force_gain=m.p_center_force_gain,
+    )
     return data_ms, out
 
 
@@ -658,6 +780,13 @@ STREAMS: list[tuple[str, str, str, str, Callable]] = [
     ),
     ("can", "rx", "can/rx", "can/rx", process_can),
     ("control", "lane_keep", "control/lane_keep", "control/lane_keep", process_lane_keep),
+    (
+        "control",
+        "lane_keep_debug",
+        "control/lane_keep_debug",
+        "control/lane_keep_debug",
+        process_lane_keep_debug,
+    ),
     ("controls", "steer", "controls/steer", "controls/steer", process_steer),
     (
         "localization",
@@ -691,11 +820,17 @@ STREAMS: list[tuple[str, str, str, str, Callable]] = [
 ]
 
 
-def collect(player: AndroidBagPlayer, collector: Collector) -> None:
+def collect(
+    player: AndroidBagPlayer, collector: Collector, only: Optional[set] = None
+) -> None:
     gps_origin: list = [None, None]
 
     for source, stream, topic, prefix, process in STREAMS:
         if topic not in player.topics:
+            continue
+        # A 22-minute run is a 0.5 GB CSV with everything in it; a filter makes the
+        # export usable when only the lateral chain is under the microscope.
+        if only is not None and source not in only:
             continue
         for wall_ms, msg in player.single_type_generator_with_ts(topic):
             if msg is None:
@@ -704,18 +839,64 @@ def collect(player: AndroidBagPlayer, collector: Collector) -> None:
             collector.add(source, stream, prefix, wall_ms, data_ms, extra)
 
     topic = "sensors/gps/location"
-    if topic in player.topics:
+    if topic in player.topics and (only is None or "gps" in only):
         for wall_ms, msg in player.single_type_generator_with_ts(topic):
             if msg is None:
                 continue
             data_ms, extra = process_gps_location(msg, wall_ms, gps_origin)
             collector.add("gps", "location", "gps/location", wall_ms, data_ms, extra)
 
+    collect_incidents(player, collector)  # marks are always exported
+
+
+def collect_incidents(player: AndroidBagPlayer, collector: Collector) -> None:
+    """Marks the operator dictated during the drive, from the session transcription.
+
+    Without them a 22-minute plot has no anchors: the complaint is the only record of
+    what "it drove wrong" meant, and it is spoken, not logged.
+    """
+    from vis.incidents import load as load_incidents
+
+    marks = load_incidents(player.session_dir)
+    if not marks:
+        return
+    print(f"\nIncidents dictated in this run: {len(marks)}")
+    for i, inc in enumerate(marks, 1):
+        t0, t1 = int(round(inc.t_ms)), int(round(inc.t_end_ms))
+        # A pulse the width of the phrase, not one sample: a single point in a series of
+        # a quarter-million rows is invisible at full-run zoom. ``count`` is a staircase,
+        # readable even when the pulses are too narrow to see.
+        for t, mark, count in (
+            (t0 - 1, 0, i - 1),
+            (t0, 1, i),
+            (t1, 1, i),
+            (t1 + 1, 0, i),
+        ):
+            collector.add(
+                "incidents",
+                "mark",
+                "incidents",
+                t,
+                t,
+                {"incidents/mark": mark, "incidents/count": count},
+            )
+        print(f"  {i:3d}  t={t0}  {inc.text}")
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("bag", type=Path, help="ADAS bag session dir (or .zip/.tar.gz)")
     ap.add_argument("-o", type=Path, required=True, help="output directory for CSV")
+    ap.add_argument(
+        "--split",
+        action="store_true",
+        help="one dense CSV per topic instead of a single sparse one",
+    )
+    ap.add_argument(
+        "--only",
+        help="comma-separated sources to export, e.g. control,vision,vehicle "
+        f"(of {', '.join(SOURCE_ORDER)})",
+    )
     args = ap.parse_args()
 
     bag = args.bag.resolve()
@@ -728,14 +909,18 @@ def main() -> int:
             print(f"No topics in {bag}", file=sys.stderr)
             return 1
         collector = Collector()
-        collect(player, collector)
+        only = set(args.only.split(",")) if args.only else None
+        collect(player, collector, only)
         if not collector.rows:
             print(f"No rows exported from {bag}", file=sys.stderr)
             return 1
         collector.print_summary()
         collector.print_stats()
-        out = args.o.resolve() / f"{player.session_dir.name}.csv"
-        collector.write_csv(out)
+        if args.split:
+            collector.write_split_csv(args.o.resolve(), player.session_dir.name)
+        else:
+            out = args.o.resolve() / f"{player.session_dir.name}.csv"
+            collector.write_csv(out)
     return 0
 
 

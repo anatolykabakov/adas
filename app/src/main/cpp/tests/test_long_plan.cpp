@@ -5,12 +5,12 @@
 
 #include <json/json.h>
 
-#include "adas_app.h"
+#include "adas/adas_app.h"
 
 #include <gtest/gtest.h>
 
-#include "utils/curvature_preview.h"
-#include "utils/long_planner.hpp"
+#include "adas/utils/curvature_preview.h"
+#include "adas/utils/long_planner.hpp"
 
 using adas::curvatureSpeedLimit;
 using adas::maxCurvatureAhead;

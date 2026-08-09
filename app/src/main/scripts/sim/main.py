@@ -15,7 +15,8 @@ Lane source:
 
 Usage:
   cd app/src/main/scripts && python3 -m sim.main --controller fp --lanes supercombo --show
-  python3 -m sim.main --controller fp --lanes gt --overlay --out-dir run_gt --max-frames 300
+  python3 -m sim.main --controller fp --lanes gt --overlay --max-frames 300
+  python3 -m sim.main --controller fp --save-every 30 --out-dir run_gt   # + frames to look at
 """
 
 from __future__ import annotations
@@ -158,8 +159,10 @@ class MetaDriveSimulator:
             self.camera_params.intrinsics,
             self.camera_params.extrinsics,
         )
-        np.savetxt(self.out_dir / "intrinsics.txt", self.camera_params.intrinsics)
-        np.savetxt(self.out_dir / "extrinsics.txt", self.camera_params.extrinsics)
+        # Camera metadata belongs with the dumped frames it describes; without them it has no reader.
+        if args.save_every > 0:
+            np.savetxt(self.out_dir / "intrinsics.txt", self.camera_params.intrinsics)
+            np.savetxt(self.out_dir / "extrinsics.txt", self.camera_params.extrinsics)
 
         self.observation_parser = ObservationParser(self.env)
         self.observation_parser.set_camera_mount(
@@ -543,7 +546,10 @@ class MetaDriveSimulator:
                         if key in (ord("q"), 27):
                             break
 
-                    if self.frame % self.args.save_every == 0:
+                    if (
+                        self.args.save_every > 0
+                        and self.frame % self.args.save_every == 0
+                    ):
                         save_data(
                             camera_image,
                             obs_data,
@@ -659,7 +665,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--log-csv", default="lane_keep.csv", help="CSV log filename (in out-dir)"
     )
-    p.add_argument("--save-every", type=int, default=30, help="Save frame every N steps")
+    # Off by default: the dump — a JPEG plus four lane-line text files per saved frame — has no
+    # reader. `sim.eval` scores against ground-truth cross-track error, and nothing else opens these
+    # files, so 672 KB per run was being written for nobody. Kept as an option because looking at the
+    # frames is still the fastest way to see why a simulated run went wrong.
+    p.add_argument(
+        "--save-every",
+        type=int,
+        default=0,
+        help="Save a frame every N steps into --out-dir; 0 disables saving",
+    )
     p.add_argument(
         "--print-every", type=int, default=30, help="Print status every N steps"
     )

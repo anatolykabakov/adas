@@ -239,7 +239,7 @@ Without correct SWA/pressed LatPID and driver override on MQB work incorrectly.
 
 ## Stage 7. LaneKeep: planner → steering angle → torque
 
-**Code:** `lane_keep_service.cpp`, `flowpilot/lateral_mpc.cpp`, `utils/vehicle_model.h`,
+**Code:** `lane_keep_service.cpp`, `lateral/lateral_mpc.cpp`, `utils/vehicle_model.h`,
 `pure_pursuit.cpp`, `lat_control_pid.h`
 
 Controller choice — `vehicle.lane_keep_controller` in `config.json`:

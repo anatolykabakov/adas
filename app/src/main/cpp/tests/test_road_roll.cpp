@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/road_roll_estimator.h"
+#include "adas/utils/road_roll_estimator.h"
 
 // Road bank matters because `paramsd` cannot separate a banked road from an understeering car without it.
 // Every number below comes from `bag_road_roll.py` on runs 2026_08_04_21_00_18 and 2026_08_06_00_36_42:

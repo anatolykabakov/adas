@@ -14,10 +14,9 @@ build/
 *.dex
 
 # Native C++ (Conan / CMake)
-# One pattern for all build dirs: build-linux, build-android, build-docker,
-# build-docker-tests and any custom ones — conan/cmake write absolute paths into cache,
-# so each environment needs its own directory.
-app/src/main/cpp/build*/
+# One build root, split inside by target and build type: build/<target>/<BuildType>.
+# Conan and cmake write absolute paths into their caches, so nothing under it is portable.
+app/src/main/cpp/build/
 app/src/main/cpp/CMakeUserPresets.json
 app/src/main/cpp/CMakePresets.json
 app/src/main/cpp/conan_toolchain.cmake

@@ -122,7 +122,9 @@ def main() -> int:
     ap.add_argument("--beam", type=int, default=3000)
     ap.add_argument("--tol-deg", type=float, default=4.0)
     ap.add_argument("--skip-start-m", type=float, default=300.0)
-    ap.add_argument("--length-m", type=float, default=6000.0, help="сколько пути сопоставлять")
+    ap.add_argument(
+        "--length-m", type=float, default=6000.0, help="сколько пути сопоставлять"
+    )
     args = ap.parse_args()
 
     road_map = mm.RoadMap()
@@ -147,7 +149,9 @@ def main() -> int:
     for i, (cost, path) in enumerate(found[:8], 1):
         err = gnss_route_error(road_map, path, xy) if xy is not None else float("nan")
         mark = " ✓" if err < 80 else "  "
-        print(f"{i:>2} стоимость {cost:7.1f}  ошибка ГНСС {err:7.0f} м{mark} {route_streets(road_map, path)}")
+        print(
+            f"{i:>2} стоимость {cost:7.1f}  ошибка ГНСС {err:7.0f} м{mark} {route_streets(road_map, path)}"
+        )
 
     if xy is not None and found:
         best_err = min(gnss_route_error(road_map, p, xy) for _, p in found)

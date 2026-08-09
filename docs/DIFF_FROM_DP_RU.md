@@ -198,7 +198,7 @@ def roll_compensation(self, roll, u):
 У них выбирают **контроллер момента**: `pid`, `indi`, `lqr`, `torque`. У нас выбирают **планировщик**: `pp`
 (pure pursuit), `mpc` (visionpilot), `fp` (порт flowpilot MPC), а контроллер момента всегда один — угловой
 PID. И сам MPC у них сгенерирован acados (`lateral_mpc_lib`), у нас написан руками
-(`flowpilot/lateral_mpc.cpp`).
+(`lateral/lateral_mpc.cpp`).
 
 ---
 

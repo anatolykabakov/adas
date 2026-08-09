@@ -150,41 +150,22 @@ public final class AdasConfig {
     }
 
     /**
-     * Which supercombo to run ({@code vision.model_runner}): {@code onnx}, {@code thneed} or
-     * {@code compare}.
+     * Which supercombo to run ({@code vision.model_runner}): {@code onnx} or {@code thneed}.
      *
      * <p>{@code thneed} is the flowpilot 0.9.x model on the GPU — 15.9 ms against 44.7 for ours, which
-     * is what lets the pipeline hold 30 Hz ({@code docs/VISION_RATE.md}). {@code compare} drives on
-     * ONNX and shadows thneed into the bag, which is how that model's lane accuracy gets measured.
-     *
-     * <p>Anything unrecognised falls back to {@code onnx}, the only path we can vouch for.
+     * is what lets the pipeline hold 30 Hz ({@code docs/VISION_RATE.md}). Anything unrecognised falls
+     * back to {@code onnx}.
      */
     public static String modelRunner(Context context) {
         try {
             JSONObject vision = root(context).optJSONObject("vision");
             String v = vision == null ? null : vision.optString("model_runner", "onnx");
-            if ("thneed".equalsIgnoreCase(v)) {
-                return "thneed";
-            }
-            return "compare".equalsIgnoreCase(v) ? "compare" : "onnx";
+            return "thneed".equalsIgnoreCase(v) ? "thneed" : "onnx";
         } catch (Exception e) {
             return "onnx";
         }
     }
 
-    /**
-     * In {@code compare} mode, how often the shadow model runs ({@code vision.shadow_every_n},
-     * default 3). Rationale and the measured contention numbers are in {@link
-     * ai.flow.adas.vision.ShadowCompareRunner}.
-     */
-    public static int shadowEveryN(Context context) {
-        try {
-            JSONObject vision = root(context).optJSONObject("vision");
-            return vision == null ? 3 : Math.max(1, vision.optInt("shadow_every_n", 3));
-        } catch (Exception e) {
-            return 3;
-        }
-    }
 
     /**
      * Let NNAPI compute supercombo in half precision ({@code vision.nnapi_fp16}).

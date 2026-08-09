@@ -3,17 +3,17 @@
 
 #include <variant>
 
-#include "adas_app.h"
-#include "mapmatch/fit.h"
-#include "mapmatch/geo.h"
-#include "mapmatch/road_map.h"
-#include "mapmatch/road_route.h"
-#include "mapmatch/search.h"
-#include "mapmatch/track.h"
-#include "mapmatch/window_search.h"
-#include "visionpilot/lateral_planning.hpp"
-#include "volkswagen/carcontroller.h"
-#include "volkswagen/values.h"
+#include "adas/adas_app.h"
+#include "adas/mapmatch/fit.h"
+#include "adas/mapmatch/geo.h"
+#include "adas/mapmatch/road_map.h"
+#include "adas/mapmatch/road_route.h"
+#include "adas/mapmatch/search.h"
+#include "adas/mapmatch/track.h"
+#include "adas/mapmatch/window_search.h"
+#include "adas/lateral/visionpilot_mpc.hpp"
+#include "adas/platform/volkswagen/carcontroller.h"
+#include "adas/platform/volkswagen/values.h"
 
 namespace py = pybind11;
 
@@ -59,8 +59,8 @@ PYBIND11_MODULE(core, m)
       .def_readonly("dir_edges", &adas::mapmatch::WindowRoute::dir_edges)
       .def_readonly("cost", &adas::mapmatch::WindowRoute::cost);
 
-  mm.def("search_by_windows", &adas::mapmatch::searchByWindows, py::arg("road_map"),
-         py::arg("window_deg"), py::arg("config") = adas::mapmatch::WindowSearchConfig{});
+  mm.def("search_by_windows", &adas::mapmatch::searchByWindows, py::arg("road_map"), py::arg("window_deg"),
+         py::arg("config") = adas::mapmatch::WindowSearchConfig{});
 
   py::class_<adas::mapmatch::LocalFrame>(mm, "LocalFrame")
       .def(py::init([](double lat0, double lon0) {
@@ -231,9 +231,10 @@ PYBIND11_MODULE(core, m)
       .def_readonly("sign", &adas::mapmatch::TurnSection::sign)
       .def("__repr__", [](const adas::mapmatch::TurnSection& t) {
         return "<TurnSection " + std::to_string(static_cast<int>(t.start_m)) + ".." +
-               std::to_string(static_cast<int>(t.end_m)) + " m, R=" +
-               std::to_string(static_cast<int>(t.kappa > 1e-9 ? 1.0 / t.kappa : 0.0)) + " m, v=" +
-               std::to_string(static_cast<int>(t.speed_mps * 3.6)) + " km/h, " + (t.sign > 0 ? "left>" : "right>");
+               std::to_string(static_cast<int>(t.end_m)) +
+               " m, R=" + std::to_string(static_cast<int>(t.kappa > 1e-9 ? 1.0 / t.kappa : 0.0)) +
+               " m, v=" + std::to_string(static_cast<int>(t.speed_mps * 3.6)) + " km/h, " +
+               (t.sign > 0 ? "left>" : "right>");
       });
 
   py::class_<adas::mapmatch::RouteAhead>(mm, "RouteAhead")

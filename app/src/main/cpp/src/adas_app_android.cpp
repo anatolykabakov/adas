@@ -3,11 +3,11 @@
 #include <memory>
 #include <string>
 
-#include "adas_app.h"
+#include "adas/adas_app.h"
 #include <json/json.h>
 
-#include "utils/logger.h"
-#include "utils/yuv_warp.h"
+#include "adas/utils/logger.h"
+#include "adas/utils/yuv_warp.h"
 
 static std::unique_ptr<AdasApp> adas_app;
 

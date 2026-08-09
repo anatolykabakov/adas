@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
-#include "panda/health.h"
-#include "volkswagen/mqb_car_state_decoder.h"
-#include "volkswagen/panda_safety_supervisor.h"
+#include "adas/panda/health.h"
+#include "adas/platform/volkswagen/mqb_car_state_decoder.h"
+#include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
 using volkswagen::cruiseAvailableFromTsk;
 using volkswagen::cruiseEngagedFromTsk;
@@ -145,8 +145,13 @@ TEST(AlwaysOnLateral, TheAlternativeExperienceMatchesWhatWorkedOnThisFirmware)
 TEST(AlwaysOnLateral, TheSupervisorDefaultsToTheConservativeValue)
 {
   volkswagen::PandaSafetySupervisor s;
-  EXPECT_EQ(s.alternativeExperience(), volkswagen::MqbSafetyConstants::kAltExpDisableDisengageOnGas)
-      << "the ALKA bit must not appear without the flag that also opens the gate";
+  EXPECT_EQ(s.alternativeExperience(), volkswagen::MqbSafetyConstants::kAltExpDisableDisengageOnGas) << "the ALKA bit "
+                                                                                                        "must not "
+                                                                                                        "appear "
+                                                                                                        "without the "
+                                                                                                        "flag that "
+                                                                                                        "also opens "
+                                                                                                        "the gate";
   s.setAlternativeExperience(17);
   EXPECT_EQ(s.alternativeExperience(), 17);
 }
@@ -202,11 +207,10 @@ TEST(AlwaysOnLateral, TheGateTruthTable)
   EXPECT_FALSE(lateralActuationAllowed(false, true, cs));
   cs.cruiseAvailable = true;
 
-  // Передача ещё не приходила: Getriebe_11 читается как 0, и «не задний ход» формально верно, а по
-  // сути неизвестно. Между стартом приложения и первым кадром машина может стоять на задней.
+  // Gear not seen yet: Getriebe_11 reads as 0, so "not reverse" is formally true but substantially
+  // unknown — between app start and the first frame the car may be in reverse.
   cs.gearKnown = false;
-  EXPECT_FALSE(lateralActuationAllowed(false, true, cs))
-      << "unknown gear must not open lateral actuation";
+  EXPECT_FALSE(lateralActuationAllowed(false, true, cs)) << "unknown gear must not open lateral actuation";
   EXPECT_TRUE(lateralActuationAllowed(true, true, cs)) << "panda already allows control — honour it";
   cs.gearKnown = true;
 
@@ -218,7 +222,7 @@ TEST(AlwaysOnLateral, TheGateTruthTable)
         c.cruiseAvailable = avail;
         c.gearReverse = rev;
         c.gearKnown = true;
-        EXPECT_TRUE(lateralActuationAllowed(true, on, c))
-            << "controls_allowed must imply actuation-allowed — `vis.bag_io.lateral_actuation_on` ORs on it";
+        EXPECT_TRUE(lateralActuationAllowed(true, on, c)) << "controls_allowed must imply actuation-allowed — "
+                                                             "`vis.bag_io.lateral_actuation_on` ORs on it";
       }
 }

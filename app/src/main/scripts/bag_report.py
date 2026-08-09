@@ -59,7 +59,9 @@ def sec_rate(d):
     dt = np.diff(src)
     dt = dt[(dt > 0) & (dt < 500)]
     print("\n== темп зрения ==")
-    print(f"  интервал кадров: медиана {np.median(dt):.1f} мс, p95 {_pct(dt, 95):.1f}  -> {1000/np.median(dt):.2f} Гц")
+    print(
+        f"  интервал кадров: медиана {np.median(dt):.1f} мс, p95 {_pct(dt, 95):.1f}  -> {1000/np.median(dt):.2f} Гц"
+    )
     inf = d["lanes_infer_ms"]
     inf = inf[inf > 0]
     if inf.size:
@@ -73,7 +75,9 @@ def sec_step(d):
     t, des, R = d["ctrl_t"], d["ctrl_des_swa"], d["ctrl_R"]
     err = np.abs(d["ctrl_err"])
     print("\n== шаг уставки и ошибка слежения ==")
-    print(f"  {'участок':<18} {'n':>7} {'|ош| мед':>9} {'|ош| p90':>9} {'шаг мед':>9} {'шаг>упора':>11}")
+    print(
+        f"  {'участок':<18} {'n':>7} {'|ош| мед':>9} {'|ош| p90':>9} {'шаг мед':>9} {'шаг>упора':>11}"
+    )
     # Только между соседними тиками: разрыв дал бы сумму нескольких шагов.
     ok_pair = m[1:] & m[:-1] & (np.diff(t) <= 150)
     step = np.abs(np.diff(des))
@@ -98,16 +102,22 @@ def sec_torque(d):
     cap = d.get("ctrl_max_torque")
     if cap is None or cap.size != tq.size or not (cap > 0).any():
         cap = np.full(tq.shape, FALLBACK_MAX_TORQUE_CNM)
-        cap_note = f"{FALLBACK_MAX_TORQUE_CNM:.0f} (константа: баг не несёт p_max_torque_cnm)"
+        cap_note = (
+            f"{FALLBACK_MAX_TORQUE_CNM:.0f} (константа: баг не несёт p_max_torque_cnm)"
+        )
     else:
         cap = np.where(cap > 0, cap, FALLBACK_MAX_TORQUE_CNM)
         cap_note = f"{np.median(cap):.0f} (из бага)"
     rail = tq >= 0.995 * cap
     print("\n== момент: где упирается в потолок панды ==")
     print(f"  потолок: {cap_note}")
-    print(f"  всего на упоре: {100*np.mean(rail[m]):.1f} % тиков "
-          f"(маска: v > 23 км/ч, есть цель, без поворотника)")
-    print(f"  {'участок':<18} {'n':>7} {'на упоре':>10} {'|Nm| мед':>9} {'попер.уск мед':>14} {'|ош| мед':>9}")
+    print(
+        f"  всего на упоре: {100*np.mean(rail[m]):.1f} % тиков "
+        f"(маска: v > 23 км/ч, есть цель, без поворотника)"
+    )
+    print(
+        f"  {'участок':<18} {'n':>7} {'на упоре':>10} {'|Nm| мед':>9} {'попер.уск мед':>14} {'|ош| мед':>9}"
+    )
     err = np.abs(d["ctrl_err"])
     for label, lo, hi in ARCS:
         sub = m & (R >= lo) & (R < hi)
@@ -119,8 +129,10 @@ def sec_torque(d):
         )
     if rail[m].any():
         r = m & rail
-        print(f"  на упоре: попер. ускорение мед {np.median(la[r]):.2f} м/с² (p95 {_pct(la[r],95):.2f}) — "
-              f"если это мало, момент уходит не на удержание в дуге, а на проворот руля")
+        print(
+            f"  на упоре: попер. ускорение мед {np.median(la[r]):.2f} м/с² (p95 {_pct(la[r],95):.2f}) — "
+            f"если это мало, момент уходит не на удержание в дуге, а на проворот руля"
+        )
 
 
 def sec_lanes(d):
@@ -128,18 +140,27 @@ def sec_lanes(d):
         return
     p, s = d["lanes_prob"], d["lanes_ystd"]
     print("\n== уверенность разметки (свои линии) ==")
-    print(f"  вероятность: левая мед {np.median(p[:,1]):.2f}, правая мед {np.median(p[:,2]):.2f}")
-    print(f"  σ: левая мед {np.nanmedian(s[:,1]):.2f}, правая мед {np.nanmedian(s[:,2]):.2f}")
+    print(
+        f"  вероятность: левая мед {np.median(p[:,1]):.2f}, правая мед {np.median(p[:,2]):.2f}"
+    )
+    print(
+        f"  σ: левая мед {np.nanmedian(s[:,1]):.2f}, правая мед {np.nanmedian(s[:,2]):.2f}"
+    )
     both_low = (p[:, 1] < 0.3) & (p[:, 2] < 0.3)
     print(f"  обе линии ниже 0.3: {100*np.mean(both_low):.1f} % кадров")
     st = d["ctrl_status"]
     if st.size:
         vals, cnt = np.unique(st, return_counts=True)
-        shown = ", ".join(f"{v.decode() or '(пусто)'}={c}" for v, c in sorted(zip(vals, cnt), key=lambda x: -x[1])[:5])
+        shown = ", ".join(
+            f"{v.decode() or '(пусто)'}={c}"
+            for v, c in sorted(zip(vals, cnt), key=lambda x: -x[1])[:5]
+        )
         print(f"  статусы управления: {shown}")
         lost = int(np.count_nonzero(both_low))
         if lost and b"lines_unsure" not in vals:
-            print(f"  ВНИМАНИЕ: {lost} кадров без обеих линий, а состояния для этого нет (задача #40)")
+            print(
+                f"  ВНИМАНИЕ: {lost} кадров без обеих линий, а состояния для этого нет (задача #40)"
+            )
 
 
 def sec_pose(d):
@@ -158,12 +179,16 @@ def sec_pose(d):
     slope = float(np.sum(mv * wv) / np.sum(wv * wv))
     corr = float(np.corrcoef(mv, wv)[0, 1])
     print("\n== поза модели против колёс ==")
-    print(f"  продольная: наклон {slope:.3f} (1.000 = масштаб верный), корреляция {corr:.3f}")
+    print(
+        f"  продольная: наклон {slope:.3f} (1.000 = масштаб верный), корреляция {corr:.3f}"
+    )
     mw = d["odom_rot"][ok, 2][fast]
     cw = d["chassis_yaw_rate"][idx[ok]][fast]
     if np.std(cw) > 1e-6:
         s2 = float(np.sum(mw * cw) / np.sum(cw * cw))
-        print(f"  рыскание:   наклон {s2:.3f}, корреляция {float(np.corrcoef(mw, cw)[0,1]):.3f}")
+        print(
+            f"  рыскание:   наклон {s2:.3f}, корреляция {float(np.corrcoef(mw, cw)[0,1]):.3f}"
+        )
 
 
 def sec_notes(d, bag: Path, model: str):
@@ -176,8 +201,10 @@ def sec_notes(d, bag: Path, model: str):
         return
     cache = vn._cache_path(audio, model, False)
     if not cache.exists():
-        print(f"\n== голосовые пометки ==\n  транскрипта нет; посчитать: "
-              f"python3 bag_voice_notes.py {bag} --model {model}")
+        print(
+            f"\n== голосовые пометки ==\n  транскрипта нет; посчитать: "
+            f"python3 bag_voice_notes.py {bag} --model {model}"
+        )
         return
     segs, _ = vn.transcribe(audio, model, "ru", 8, False, 0.25)
     notes = vn.group_notes(segs, vn.DEFAULT_KEYWORDS, 1.5)
@@ -211,19 +238,29 @@ SECTIONS = {
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bags", nargs="+", type=Path)
-    ap.add_argument("--only", default=None, help="через запятую: " + ",".join(SECTIONS) + ",notes")
+    ap.add_argument(
+        "--only", default=None, help="через запятую: " + ",".join(SECTIONS) + ",notes"
+    )
     ap.add_argument("--refresh", action="store_true", help="пересобрать кэш")
     ap.add_argument("--notes-model", default="medium")
     args = ap.parse_args()
 
-    want = [s.strip() for s in args.only.split(",")] if args.only else list(SECTIONS) + ["notes"]
+    want = (
+        [s.strip() for s in args.only.split(",")]
+        if args.only
+        else list(SECTIONS) + ["notes"]
+    )
 
     for bag in args.bags:
         d = bag_cache.load(bag, refresh=args.refresh)
         dur = (d["ctrl_t"][-1] - d["ctrl_t"][0]) / 60000.0 if d["ctrl_t"].size else 0.0
-        print(f"\n########  {bag.name}  ({dur:.1f} мин, тиков управления {d['ctrl_t'].size})")
+        print(
+            f"\n########  {bag.name}  ({dur:.1f} мин, тиков управления {d['ctrl_t'].size})"
+        )
         for key in want:
             if key in SECTIONS:
                 SECTIONS[key](d)

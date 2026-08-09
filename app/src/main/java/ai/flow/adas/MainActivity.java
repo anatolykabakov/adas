@@ -316,16 +316,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Пересборка конвейера зрения под выбранную модель — прямо на ходу, без перезапуска.
+     * Rebuilds the vision pipeline for the selected model, live and without a restart.
      *
-     * Не на UI-потоке: инициализация ONNX занимает сотни миллисекунд, а thneed грузит 50 МБ модели,
-     * и на главном потоке это был бы ANR. Пока идёт пересборка, камера кадры никуда не отдаёт —
-     * {@link CameraHandler#setVisionPipeline} с null; разметка на эту паузу пропадает, и поперечное
-     * управление на ней просто не получает цели. Поэтому переключать стоит на прямой, а не в дуге.
+     * <p>Off the UI thread: ONNX init takes hundreds of milliseconds and thneed loads a 50 MB model,
+     * which would be an ANR on the main thread. While it rebuilds the camera delivers to nobody, so
+     * lateral control has no target for that moment — switch on a straight, not in a bend.
      */
     private void rebuildVisionPipeline() {
         final String choice = RuntimeParams.normalizeModelRunner(params.modelRunner);
-        Toast.makeText(this, "Модель → " + choice.toUpperCase() + ", пересборка…",
+        Toast.makeText(this, "Model -> " + choice.toUpperCase() + ", rebuilding...",
                 Toast.LENGTH_SHORT).show();
         visionRebuild.execute(() -> {
             VisionPipeline old = visionPipeline;
@@ -340,13 +339,13 @@ public class MainActivity extends AppCompatActivity {
                 cameraHandler.setVisionPipeline(fresh);
                 runOnUiThread(() -> {
                     applyParamsToVision();
-                    Toast.makeText(this, "Модель: " + choice.toUpperCase(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Model: " + choice.toUpperCase(), Toast.LENGTH_SHORT).show();
                 });
                 Log.i(LOG_TAG, "VisionPipeline rebuilt: " + choice);
             } catch (Exception e) {
-                Log.e(LOG_TAG, "не удалось пересобрать конвейер зрения", e);
+                Log.e(LOG_TAG, "vision pipeline rebuild failed", e);
                 runOnUiThread(() -> Toast.makeText(this,
-                        "Модель не переключилась: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                        "Model switch failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         });
     }
@@ -511,8 +510,8 @@ public class MainActivity extends AppCompatActivity {
             }
             laneOverlay.setHcaStatus(status);
         }
-        // Скорость с шины — вход модели 0.9.x. Идёт на 100 Гц, много чаще кадров, поэтому просто
-        // обновляем последнее значение; кадру достаётся то, что было на момент инференса.
+        // CAN speed, an input of the 0.9.x model. Arrives at 100 Hz, far more often than frames, so the
+        // latest value is simply kept and the frame gets whatever it was at inference time.
         if (message.hasCarState() && visionPipeline != null) {
             visionPipeline.setEgoSpeed(message.getCarState().getVEgo());
         }
@@ -623,7 +622,7 @@ public class MainActivity extends AppCompatActivity {
             perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
             perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
             perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
-            // Микрофон — для звука рядом с багом; отказ не мешает ничему, кроме звука.
+            // Microphone, for the audio recorded alongside the bag; a refusal costs only the audio.
             perms.add(Manifest.permission.RECORD_AUDIO);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 perms.add(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS);

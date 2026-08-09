@@ -80,7 +80,9 @@ class Graph:
         return None
 
 
-def snap_sequence(road_map, xy: np.ndarray, max_dist_m: float, min_hits: int) -> List[int]:
+def snap_sequence(
+    road_map, xy: np.ndarray, max_dist_m: float, min_hits: int
+) -> List[int]:
     """Последовательность рёбер, к которым устойчиво липнут точки ГНСС."""
     raw: List[int] = []
     for p in xy:
@@ -129,13 +131,14 @@ def route_length(road_map, route: List[int]) -> float:
     return float(sum(road_map.edge(de >> 1).length_m for de in route))
 
 
-def build(bag: Path, road_map, graph: Graph, max_dist_m: float = 25.0) -> Optional[List[int]]:
+def build(
+    bag: Path, road_map, graph: Graph, max_dist_m: float = 25.0
+) -> Optional[List[int]]:
     xy = gnss_in_map_frame(bag, road_map)
     if xy is None:
         return None
     anchors = snap_sequence(road_map, xy, max_dist_m, min_hits=2)
     return stitch(graph, anchors, gap_limit_m=1500.0)
-
 
 
 def viterbi_match(

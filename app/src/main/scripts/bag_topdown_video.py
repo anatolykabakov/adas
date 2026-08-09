@@ -27,19 +27,23 @@ from proto import bag_pb2
 from vis.bag_io import fix_topic, lateral_actuation_on, parse_payload
 
 HCA_01 = 0x126
-CAR_L, CAR_W, REAR_OVERHANG = 4.26, 1.80, 0.90     # Golf 7, задняя ось в начале координат
-ARC_LEN_M = 25.0                                    # длина дуги команды
+CAR_L, CAR_W, REAR_OVERHANG = 4.26, 1.80, 0.90  # Golf 7, задняя ось в начале координат
+ARC_LEN_M = 25.0  # длина дуги команды
 PAST_S, FUTURE_S = 8.0, 6.0
-MARGIN_M = 3.0                                      # запас вокруг линий разметки
+MARGIN_M = 3.0  # запас вокруг линий разметки
 
 
 def bits(data: bytes, start: int, length: int) -> int:
     """Little-endian, как `set_bits` в volkswagen/mqbcan.cpp."""
-    return sum(1 << i for i in range(length) if data[(start + i) // 8] >> ((start + i) % 8) & 1)
+    return sum(
+        1 << i for i in range(length) if data[(start + i) // 8] >> ((start + i) % 8) & 1
+    )
 
 
 def col(rows: list, name: str, default: float = 0.0) -> np.ndarray:
-    return np.asarray([float(getattr(r[1], name, default) or default) for r in rows], dtype=np.float64)
+    return np.asarray(
+        [float(getattr(r[1], name, default) or default) for r in rows], dtype=np.float64
+    )
 
 
 def seq(obj: Any, name: str) -> np.ndarray:
@@ -57,7 +61,9 @@ class Bag:
     def __init__(self, path: Path):
         self.path = path
 
-    def read(self, topic: str, t0: Optional[float] = None, t1: Optional[float] = None) -> list:
+    def read(
+        self, topic: str, t0: Optional[float] = None, t1: Optional[float] = None
+    ) -> list:
         d = self.path / fix_topic(topic)
         if not d.is_dir():
             return []
@@ -156,15 +162,17 @@ class Scene:
 
     @property
     def panel(self) -> str:
-        return "\n".join([
-            f"t={self.t_s:7.2f} с   v={self.v:5.1f} м/с ({self.v * 3.6:5.1f} км/ч)",
-            f"ассист: {'ВКЛ' if self.assist else 'выкл'}   момент: запрос {self.tq_req:+5.0f} → "
-            f"шина {self.tq_bus:+5.0f} cNm",
-            f"руль: задан {self.swa_des:+6.2f}°  факт {self.swa_act:+6.2f}°  "
-            f"ошибка {self.swa_des - self.swa_act:+6.2f}°",
-            f"κ {self.kappa:+.5f} 1/м   CTE {self.cte:+5.2f} м   {self.status}",
-            f"смешивание {self.blend:.2f}   доверие σ: Л {self.conf[0]:.2f} / П {self.conf[1]:.2f}",
-        ])
+        return "\n".join(
+            [
+                f"t={self.t_s:7.2f} с   v={self.v:5.1f} м/с ({self.v * 3.6:5.1f} км/ч)",
+                f"ассист: {'ВКЛ' if self.assist else 'выкл'}   момент: запрос {self.tq_req:+5.0f} → "
+                f"шина {self.tq_bus:+5.0f} cNm",
+                f"руль: задан {self.swa_des:+6.2f}°  факт {self.swa_act:+6.2f}°  "
+                f"ошибка {self.swa_des - self.swa_act:+6.2f}°",
+                f"κ {self.kappa:+.5f} 1/м   CTE {self.cte:+5.2f} м   {self.status}",
+                f"смешивание {self.blend:.2f}   доверие σ: Л {self.conf[0]:.2f} / П {self.conf[1]:.2f}",
+            ]
+        )
 
 
 class Scenes:
@@ -196,10 +204,12 @@ class Scenes:
     def __len__(self) -> int:
         return len(self.lanes)
 
-    NEAR_M = 20.0        # ближняя зона, по которой измеряется нормальная ширина коридора
-    BAND_FACTOR = 3.0    # во сколько раз шире неё считать разметку ещё разметкой
+    NEAR_M = 20.0  # ближняя зона, по которой измеряется нормальная ширина коридора
+    BAND_FACTOR = 3.0  # во сколько раз шире неё считать разметку ещё разметкой
 
-    def extent(self, margin_m: float = MARGIN_M, ahead_m: float = 40.0) -> tuple[float, float, float, float]:
+    def extent(
+        self, margin_m: float = MARGIN_M, ahead_m: float = 40.0
+    ) -> tuple[float, float, float, float]:
         """Границы кадра по линиям разметки за весь клип плюс запас.
 
         Считается один раз по всему клипу, а не на каждом кадре: иначе масштаб дёргался бы и глазом
@@ -231,12 +241,21 @@ class Scenes:
 
         x_all, y_all = np.concatenate(xs), np.concatenate(ys)
         near = x_all <= self.NEAR_M
-        band = self.BAND_FACTOR * float(np.median(np.abs(y_all[near]))) if near.any() else 5.0
+        band = (
+            self.BAND_FACTOR * float(np.median(np.abs(y_all[near])))
+            if near.any()
+            else 5.0
+        )
         keep = (np.abs(y_all) <= max(band, 2.0)) & (x_all <= ahead_m)
         if not keep.any():
             keep = near
         y_k = y_all[keep]
-        return (-margin_m, ahead_m, float(y_k.min()) - margin_m, float(y_k.max()) + margin_m)
+        return (
+            -margin_m,
+            ahead_m,
+            float(y_k.min()) - margin_m,
+            float(y_k.max()) + margin_m,
+        )
 
     def __iter__(self) -> Iterator[Scene]:
         for t, ll in self.lanes:
@@ -285,9 +304,13 @@ class Scenes:
             c = 1.0
             if stds[k].size:
                 med = pf._median_std(stds[k], xs, self.std_range)  # noqa: SLF001
-                c = pf._std_confidence(med, pf.DEFAULT_LANE_STD_GOOD_M, pf.DEFAULT_LANE_STD_BAD_M)  # noqa: SLF001
+                c = pf._std_confidence(
+                    med, pf.DEFAULT_LANE_STD_GOOD_M, pf.DEFAULT_LANE_STD_BAD_M
+                )  # noqa: SLF001
             conf.append(c)
-            w.append(pf._soft_lane_prob(probs[k], pf.DEFAULT_MIN_LANE_PROB) * c)  # noqa: SLF001
+            w.append(
+                pf._soft_lane_prob(probs[k], pf.DEFAULT_MIN_LANE_PROB) * c
+            )  # noqa: SLF001
         s.conf = (conf[0], conf[1])
 
         if ys[1].size == xs.size:
@@ -302,14 +325,24 @@ class Scenes:
         if s.left is not None and s.right is not None and (w[0] > 0 or w[1] > 0):
             # Центр восстанавливается от каждой линии независимо и взвешивается доверием — поэтому
             # потеря одной линии его не рвёт.
-            width = np.clip(np.abs(ys[2] - ys[1]), pf.DEFAULT_LANE_WIDTH_MIN_M, pf.DEFAULT_LANE_WIDTH_MAX_M)
-            c = (w[0] * (ys[1] + 0.5 * width) + w[1] * (ys[2] - 0.5 * width)) / (w[0] + w[1] + 1e-6)
+            width = np.clip(
+                np.abs(ys[2] - ys[1]),
+                pf.DEFAULT_LANE_WIDTH_MIN_M,
+                pf.DEFAULT_LANE_WIDTH_MAX_M,
+            )
+            c = (w[0] * (ys[1] + 0.5 * width) + w[1] * (ys[2] - 0.5 * width)) / (
+                w[0] + w[1] + 1e-6
+            )
             s.center = np.column_stack([xs, c])
 
         ref = pf.lane_lines_to_path(
-            plan_x if plan_x.size else None, plan_y if plan_y.size else None, xs,
-            [y if y.size else None for y in ys], probs,
-            lane_blend_scale=s.blend, lane_stds=[d if d.size else None for d in stds],
+            plan_x if plan_x.size else None,
+            plan_y if plan_y.size else None,
+            xs,
+            [y if y.size else None for y in ys],
+            probs,
+            lane_blend_scale=s.blend,
+            lane_stds=[d if d.size else None for d in stds],
             lane_std_range_m=self.std_range,
         )
         if ref is not None:
@@ -350,6 +383,7 @@ class View:
 
     def __init__(self, extent: tuple[float, float, float, float], max_px: int = 1600):
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
 
@@ -359,7 +393,9 @@ class View:
         # Масштаб один на обе оси, иначе дуга перестанет быть дугой. Ограничен сверху, чтобы дальняя
         # разметка не раздувала файл до неприличия.
         self.px_per_m = min(max_px / span_x, max_px / span_y, 30.0)
-        self.w = 2 * int(round(span_x * self.px_per_m / 2))     # чётные размеры: их любит кодек
+        self.w = 2 * int(
+            round(span_x * self.px_per_m / 2)
+        )  # чётные размеры: их любит кодек
         self.h = 2 * int(round(span_y * self.px_per_m / 2))
         self.fig = plt.figure(figsize=(self.w / 100.0, self.h / 100.0), dpi=100)
         self.ax = self.fig.add_axes([0, 0, 1, 1])
@@ -386,23 +422,74 @@ class View:
             ax.axvline(g, color=self.GRID, lw=0.6, zorder=0)
 
         # Линии разметки: прозрачность несёт доверие к σ — обнулённую линию почти не видно.
-        for pts, conf, name in ((s.left, s.conf[0], "линии модели"), (s.right, s.conf[1], None)):
-            ax.plot(*self.xy(pts), color="#4fc3f7", lw=2.0, alpha=0.20 + 0.80 * conf, zorder=3, label=name)
+        for pts, conf, name in (
+            (s.left, s.conf[0], "линии модели"),
+            (s.right, s.conf[1], None),
+        ):
+            ax.plot(
+                *self.xy(pts),
+                color="#4fc3f7",
+                lw=2.0,
+                alpha=0.20 + 0.80 * conf,
+                zorder=3,
+                label=name,
+            )
         for attr, colour, lw, ls, z, name in self.LAYERS:
-            ax.plot(*self.xy(getattr(s, attr)), color=colour, lw=lw, ls=ls, zorder=z, label=name)
+            ax.plot(
+                *self.xy(getattr(s, attr)),
+                color=colour,
+                lw=lw,
+                ls=ls,
+                zorder=z,
+                label=name,
+            )
         # Маркерами: на прямой будущая траектория ложится ровно на опору, а расхождение этих двух и есть
         # предмет осмотра.
-        ax.plot(*self.xy(s.future), color="#ffffff", lw=1.2, ls="--", marker="o", markersize=2.2,
-                markevery=6, markeredgecolor="none", zorder=6, label="локализация: будущее")
+        ax.plot(
+            *self.xy(s.future),
+            color="#ffffff",
+            lw=1.2,
+            ls="--",
+            marker="o",
+            markersize=2.2,
+            markevery=6,
+            markeredgecolor="none",
+            zorder=6,
+            label="локализация: будущее",
+        )
 
-        ax.add_patch(Rectangle((-REAR_OVERHANG, -CAR_W / 2.0), CAR_L, CAR_W,
-                               facecolor="#43a047" if s.assist else "#616161",
-                               edgecolor=self.FG, lw=1.2, alpha=0.85, zorder=7))
-        ax.text(0.012, 0.988, s.panel, transform=ax.transAxes, va="top", ha="left", family="monospace",
-                fontsize=7.2, color=self.FG,
-                bbox=dict(facecolor="#0b0d11", edgecolor=self.GRID, alpha=0.85, pad=4))
-        ax.legend(loc="lower right", fontsize=7, framealpha=0.85, facecolor="#0b0d11",
-                  edgecolor=self.GRID, labelcolor=self.FG)
+        ax.add_patch(
+            Rectangle(
+                (-REAR_OVERHANG, -CAR_W / 2.0),
+                CAR_L,
+                CAR_W,
+                facecolor="#43a047" if s.assist else "#616161",
+                edgecolor=self.FG,
+                lw=1.2,
+                alpha=0.85,
+                zorder=7,
+            )
+        )
+        ax.text(
+            0.012,
+            0.988,
+            s.panel,
+            transform=ax.transAxes,
+            va="top",
+            ha="left",
+            family="monospace",
+            fontsize=7.2,
+            color=self.FG,
+            bbox=dict(facecolor="#0b0d11", edgecolor=self.GRID, alpha=0.85, pad=4),
+        )
+        ax.legend(
+            loc="lower right",
+            fontsize=7,
+            framealpha=0.85,
+            facecolor="#0b0d11",
+            edgecolor=self.GRID,
+            labelcolor=self.FG,
+        )
 
         self.fig.canvas.draw()
         return np.asarray(self.fig.canvas.buffer_rgba())[:, :, :3]
@@ -430,7 +517,9 @@ class Writer:
         self.cv2, self.fps, self.size = cv2, fps, size
         for codec, ext in self.CODECS:
             self.path = path.with_suffix(ext)
-            self.w = cv2.VideoWriter(str(self.path), cv2.VideoWriter_fourcc(*codec), fps, size)
+            self.w = cv2.VideoWriter(
+                str(self.path), cv2.VideoWriter_fourcc(*codec), fps, size
+            )
             if self.w.isOpened():
                 self.codec = codec
                 return
@@ -449,7 +538,9 @@ class Writer:
         if n == 0:
             raise SystemExit(f"{self.path}: записалось 0 кадров — файл непригоден")
         if name == "FMP4":
-            raise SystemExit(f"{self.path}: кодек записался тегом FMP4, плееры его не примут")
+            raise SystemExit(
+                f"{self.path}: кодек записался тегом FMP4, плееры его не примут"
+            )
         return n
 
 
@@ -478,25 +569,42 @@ def list_assist(bag: Bag) -> None:
         if not on[lo] or h_t[hi - 1] - h_t[lo] < 4000:
             continue
         sel = (d_t >= h_t[lo]) & (d_t <= h_t[hi - 1])
-        rows.append(((h_t[lo] - t0) / 1000.0, (h_t[hi - 1] - h_t[lo]) / 1000.0,
-                     float(np.median(d_v[sel])) if sel.any() else 0.0,
-                     float(d_k[sel].max()) if sel.any() else 0.0))
+        rows.append(
+            (
+                (h_t[lo] - t0) / 1000.0,
+                (h_t[hi - 1] - h_t[lo]) / 1000.0,
+                float(np.median(d_v[sel])) if sel.any() else 0.0,
+                float(d_k[sel].max()) if sel.any() else 0.0,
+            )
+        )
 
-    print(f"интервалов длиннее 4 с: {len(rows)}\n  --start   длит.   скорость   макс |κ|   радиус")
+    print(
+        f"интервалов длиннее 4 с: {len(rows)}\n  --start   длит.   скорость   макс |κ|   радиус"
+    )
     for st, dur, v, k in sorted(rows, key=lambda r: -r[3])[:15]:
-        print(f"  {st:8.1f}  {dur:5.1f} с  {v:5.1f} м/с   {k:.5f}   "
-              f"{f'{1.0 / k:.0f} м' if k > 1e-6 else 'прямая'}")
+        print(
+            f"  {st:8.1f}  {dur:5.1f} с  {v:5.1f} м/с   {k:.5f}   "
+            f"{f'{1.0 / k:.0f} м' if k > 1e-6 else 'прямая'}"
+        )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bag", type=Path)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--start", type=float, default=0.0, help="секунд от начала бага")
     ap.add_argument("--duration", type=float, default=30.0)
-    ap.add_argument("--margin", type=float, default=MARGIN_M,
-                    help="запас вокруг линий разметки с каждой стороны, м")
-    ap.add_argument("--ahead", type=float, default=40.0, help="насколько смотреть вперёд, м")
+    ap.add_argument(
+        "--margin",
+        type=float,
+        default=MARGIN_M,
+        help="запас вокруг линий разметки с каждой стороны, м",
+    )
+    ap.add_argument(
+        "--ahead", type=float, default=40.0, help="насколько смотреть вперёд, м"
+    )
     ap.add_argument("--fps", type=float, default=12.0)
     ap.add_argument("--std-range", type=float, default=pf.DEFAULT_LANE_STD_RANGE_M)
     ap.add_argument("--list-assist", action="store_true")
@@ -508,14 +616,18 @@ def main() -> int:
         return 0
 
     scenes = Scenes(bag, args.start, args.duration, args.std_range)
-    print(f"{args.bag.name}: {args.start:.0f}…{args.start + args.duration:.0f} с, кадров {len(scenes)}")
+    print(
+        f"{args.bag.name}: {args.start:.0f}…{args.start + args.duration:.0f} с, кадров {len(scenes)}"
+    )
     if not len(scenes):
         raise SystemExit("в окне нет кадров модели — проверь --start")
 
     extent = scenes.extent(args.margin, args.ahead)
     view = View(extent)
-    print(f"  окно {extent[1] - extent[0]:.0f}×{extent[3] - extent[2]:.0f} м "
-          f"({view.w}×{view.h} px, {view.px_per_m:.1f} px/м)")
+    print(
+        f"  окно {extent[1] - extent[0]:.0f}×{extent[3] - extent[2]:.0f} м "
+        f"({view.w}×{view.h} px, {view.px_per_m:.1f} px/м)"
+    )
     out = args.out or (args.bag / f"topdown_{int(args.start)}s_{int(args.duration)}s.mp4")
     writer = Writer(out, args.fps, (view.w, view.h))
 
@@ -525,8 +637,10 @@ def main() -> int:
         n_assist += s.assist
     n = writer.close()
     view.close()
-    print(f"готово: {writer.path} ({writer.codec}, {n} кадров, "
-          f"{writer.path.stat().st_size / 1e6:.1f} МБ)")
+    print(
+        f"готово: {writer.path} ({writer.codec}, {n} кадров, "
+        f"{writer.path.stat().st_size / 1e6:.1f} МБ)"
+    )
     print(f"  ассист был включён в {100 * n_assist / max(len(scenes), 1):.0f}% кадров")
     return 0
 

@@ -1,10 +1,10 @@
-#include "utils/topic_convert.h"
+#include "adas/utils/topic_convert.h"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include "utils/adas_topics.h"
+#include "adas/utils/adas_topics.h"
 
 namespace adas {
 namespace {
@@ -56,8 +56,8 @@ double medianLaneStd(const ai::flow::adas::LanePolyline& lane, const ai::flow::a
 {
   std::vector<double> stds;
   const int n = std::min(lane.y_std_size(), ll.x_size());
-  // Зажим снизу, а не подмена умолчанием: раньше узкое заданное окно (например 4 м) молча
-  // превращалось в самое широкое, 5-40 м, то есть в противоположность тому, что просили.
+  // Clamped from below rather than replaced by the default: a narrow configured window (say 4 m) used
+  // to become the widest one, 5-40 m, the opposite of what was asked for.
   const double x_max = std::max(range_m, 10.0);
   for (int i = 0; i < n; ++i) {
     const double x = ll.x(i);

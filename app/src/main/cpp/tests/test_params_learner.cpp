@@ -3,13 +3,13 @@
 
 #include <gtest/gtest.h>
 
-#include "adas_app.h"
-#include "middleware/middleware.hpp"
-#include "services/lane_keep_service.h"
-#include "services/localization_service.h"
-#include "utils/params_learner.h"
+#include "adas/adas_app.h"
+#include "adas/middleware/manager.hpp"
+#include "adas/services/lane_keep.h"
+#include "adas/services/localization.h"
+#include "adas/utils/params_learner.h"
 
-using adas::LaneKeepService;
+using adas::services::LaneKeep;
 
 // The portable part of upstream's `paramsd`: learn tyre stiffness, steer ratio and the steering bias from
 // steering angle, speed and yaw rate. It exists because one constant cannot represent the thing it stands
@@ -226,11 +226,11 @@ TEST(ParamsLearner, ThePredictionIsTheControllersOwnModel)
 
 TEST(LearnedParams, TheControllerKeepsItsConstantsUntilBothFlagsAgree)
 {
-  LaneKeepService::Config cfg;
+  LaneKeep::Config cfg;
   cfg.tire_stiffness_factor = 0.64;
   cfg.steer_ratio = 15.7;
   cfg.use_learned_params = false;
-  LaneKeepService svc(cfg);
+  LaneKeep svc(cfg);
 
   // An estimate arrives, and it is a valid one. With the consumer flag off nothing may move.
   svc.setLearnedParams(true, 1.20, 16.4, 0.7);
@@ -242,11 +242,11 @@ TEST(LearnedParams, TheControllerKeepsItsConstantsUntilBothFlagsAgree)
 
 TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
 {
-  LaneKeepService::Config cfg;
+  LaneKeep::Config cfg;
   cfg.tire_stiffness_factor = 0.64;
   cfg.steer_ratio = 15.7;
   cfg.use_learned_params = true;
-  LaneKeepService svc(cfg);
+  LaneKeep svc(cfg);
 
   // Before anything is learned the configured values are in force — not zeros, and not the learner's
   // initial guess arriving as if it were knowledge.
@@ -270,9 +270,9 @@ TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
 
 TEST(LearnedParams, NonsenseIsRefusedEvenWhenItArrivesFlaggedValid)
 {
-  LaneKeepService::Config cfg;
+  LaneKeep::Config cfg;
   cfg.use_learned_params = true;
-  LaneKeepService svc(cfg);
+  LaneKeep svc(cfg);
   svc.setLearnedParams(true, 0.0, 16.4, 0.0);  // stiffness zero: slipFactor would divide by it
   EXPECT_FALSE(svc.usingLearnedParams());
   svc.setLearnedParams(true, 0.8, 0.0, 0.0);  // ratio zero: the command would be identically zero
@@ -352,11 +352,11 @@ TEST(LearnedParams, RunningTheObserverCannotTouchTheCommand)
 {
   // The claim that lets the observer ship on. With the consumer flag off the controller must not subscribe
   // to the estimate at all, so no arriving value — valid, invalid or absurd — can reach a command.
-  LaneKeepService::Config cfg;
+  LaneKeep::Config cfg;
   cfg.tire_stiffness_factor = 0.64;
   cfg.steer_ratio = 15.7;
   cfg.use_learned_params = false;
-  LaneKeepService svc(cfg);
+  LaneKeep svc(cfg);
 
   for (const double tsf : {0.05, 0.2, 1.0, 4.9}) {
     svc.setLearnedParams(true, tsf, 12.5, 9.0);
@@ -391,7 +391,7 @@ TEST(ShippedConfig, TheLearnerStartsFromTheParametersTheControllerUses)
 
 namespace {
 
-class ChassisPublisher : public adas::Service {
+class ChassisPublisher : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "chassis_pub"; }
   void configure() override {}
@@ -402,16 +402,16 @@ public:
 
 TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
 {
-  adas::LocalizationService::Config cfg;
+  adas::services::Localization::Config cfg;
   cfg.learn_vehicle_params = true;
   cfg.params.steer_sign = -1.0;   // this car: positive CAN angle is a left turn
   cfg.params.use_roll = false;    // as shipped
   const double truth_tsf = 0.45;  // deliberately far from the 0.64 the learner starts at
 
   auto pub = std::make_shared<ChassisPublisher>();
-  auto loc = std::make_shared<adas::LocalizationService>(cfg);
-  auto mgr =
-      std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated, std::vector<adas::ServicePtr>{pub, loc});
+  auto loc = std::make_shared<adas::services::Localization>(cfg);
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated,
+                                                         std::vector<adas::middleware::ServicePtr>{pub, loc});
   mgr->setTime(0);
 
   // Steady corners from a car whose stiffness is 0.45, alternating direction, at several speeds.
@@ -450,13 +450,13 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
 
 TEST(LearnedParams, WithTheObserverOffNothingIsPublished)
 {
-  adas::LocalizationService::Config cfg;
+  adas::services::Localization::Config cfg;
   cfg.learn_vehicle_params = false;
 
   auto pub = std::make_shared<ChassisPublisher>();
-  auto loc = std::make_shared<adas::LocalizationService>(cfg);
-  auto mgr =
-      std::make_shared<adas::Middleware>(adas::Middleware::Mode::Simulated, std::vector<adas::ServicePtr>{pub, loc});
+  auto loc = std::make_shared<adas::services::Localization>(cfg);
+  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated,
+                                                         std::vector<adas::middleware::ServicePtr>{pub, loc});
   mgr->setTime(0);
 
   for (int i = 0; i < 500; ++i) {

@@ -250,16 +250,6 @@ public class ProtoUtils {
 
     public static Messages.ZMQMessage createLaneLinesMessage(
             ai.flow.adas.vision.LaneLines ll, boolean includeModelOut) {
-        return createLaneLinesMessage(ll, includeModelOut, "vision/lanes");
-    }
-
-    /**
-     * Same message into an arbitrary topic, used by the shadow model comparison. A separate topic
-     * rather than a flag inside the message, because every existing consumer reads by directory name
-     * and a new topic simply does not exist for them.
-     */
-    public static Messages.ZMQMessage createLaneLinesMessage(
-            ai.flow.adas.vision.LaneLines ll, boolean includeModelOut, String topic) {
         if (ll == null) {
             return null;
         }
@@ -338,7 +328,7 @@ public class ProtoUtils {
 
         return Messages.ZMQMessage.newBuilder()
             .setTimestamp(ll.timestampMs)
-            .setTopic(topic)
+            .setTopic("vision/lanes")
             .setLaneLines(lanesBuilder.build())
             .build();
     }

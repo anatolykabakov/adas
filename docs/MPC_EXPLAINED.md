@@ -1,6 +1,6 @@
 # How lane-keep MPC works — in plain terms
 
-> Analysis of lateral controller **VisionPilot MPC** (`app/src/main/cpp/src/visionpilot/lateral_planning.cpp`)
+> Analysis of lateral controller **VisionPilot MPC** (`app/src/main/cpp/src/lateral/lateral_planning.cpp`)
 > on real data from run `adas_logs/2026_07_30_10_52_16` (controller = `mpc`, ~636 s clean
 > autopilot @ 11 Hz). Here we explain **why it drives well on straights and poorly in arcs.**
 
@@ -136,7 +136,7 @@ Correct lever — **κ estimate quality**, not feedback gains:
 ---
 
 ### Files
-- MPC core: `app/src/main/cpp/src/visionpilot/lateral_planning.cpp`
+- MPC core: `app/src/main/cpp/src/lateral/lateral_planning.cpp`
 - orchestration + debug publish: `app/src/main/cpp/src/services/lane_keep_service.cpp`
 - CTE/epsi/κ estimate (poly fit): `app/src/main/cpp/src/utils/path_lateral_state.cpp`
 - tuning config: `app/src/main/assets/config.json` (`vehicle` block)

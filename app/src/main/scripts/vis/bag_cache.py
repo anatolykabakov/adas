@@ -1,8 +1,9 @@
-"""Кэш заезда в виде плоских numpy-таблиц: 95 с на разбор, 0.3 с из кэша.
+"""Кэш заезда в виде плоских numpy-таблиц: 4 с на разбор часового заезда, 0.1 с из кэша.
 
 Кэшируются не сообщения, а величины, которыми пользуются разборы: время, скорость, углы, момент,
 кривизна, вероятности и σ линий, поза. Сырой выход модели (`model_out`, 6504 float на кадр) НЕ
-кэшируется — это 37 из 55 секунд разбора, а нужен он только при перепроверке самой модели.
+кэшируется — он нужен только при перепроверке самой модели, а разворачивание его в python-список
+стоит дороже всего остального разбора вместе взятого.
 
 Инвалидация по содержимому каталога: список .bin с размерами и временем правки плюс версия схемы.
 Молчаливо устаревший кэш хуже отсутствующего, потому что выглядит как свежий результат.
@@ -19,7 +20,9 @@ import numpy as np
 from . import bag_io
 
 # Поднимать при ЛЮБОМ изменении набора или смысла столбцов.
-SCHEMA_VERSION = 4
+# v5: заготовки protobuf пересобраны, в них появилось поле p_max_torque_cnm — в кэшах v4
+# столбец ctrl_max_torque заполнен нулями из getattr-заглушки.
+SCHEMA_VERSION = 5
 
 CACHE_NAME = f".bagcache_v{SCHEMA_VERSION}.npz"
 
@@ -40,7 +43,11 @@ def _col(msgs, fn, dtype=float):
 
 
 def _times(msgs):
-    return np.array([m[0] for m in msgs], dtype=np.int64) if msgs else np.zeros(0, dtype=np.int64)
+    return (
+        np.array([m[0] for m in msgs], dtype=np.int64)
+        if msgs
+        else np.zeros(0, dtype=np.int64)
+    )
 
 
 def _radius(kappa):
@@ -68,7 +75,9 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     # Действующий потолок момента из самого бага: зашитая константа врала бы после правки конфига.
     out["ctrl_max_torque"] = _col(dbg, lambda d: int(getattr(d, "p_max_torque_cnm", 0)))
     # Строки в npz живут только как массив объектов; храним как массив байтовых строк.
-    out["ctrl_status"] = np.array([d[1].status for d in dbg], dtype="S24") if dbg else np.zeros(0, "S24")
+    out["ctrl_status"] = (
+        np.array([d[1].status for d in dbg], dtype="S24") if dbg else np.zeros(0, "S24")
+    )
     out["ctrl_err"] = out["ctrl_des_swa"] - out["ctrl_act_swa"]
     out["ctrl_R"] = _radius(out["ctrl_kappa"])
     out["ctrl_lat_acc"] = out["ctrl_v"] ** 2 * np.abs(out["ctrl_kappa"])
@@ -78,7 +87,9 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     out["chassis_v"] = _col(ch, lambda c: c.v_ego)
     out["chassis_yaw_rate"] = _col(ch, lambda c: c.yaw_rate)
     out["chassis_swa"] = _col(ch, lambda c: c.steering_angle_deg)
-    out["chassis_blinker"] = _col(ch, lambda c: bool(c.left_blinker or c.right_blinker), dtype=bool)
+    out["chassis_blinker"] = _col(
+        ch, lambda c: bool(c.left_blinker or c.right_blinker), dtype=bool
+    )
 
     ln = bag_io.load_topic_messages(bag, "vision/lanes")
     out["lanes_t"] = _times(ln)
@@ -87,11 +98,19 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     out["lanes_frame_id"] = _col(ln, lambda l: l.frame_id, dtype=np.int64)
     # Четыре линии: 0 и 3 — соседние полосы, 1 и 2 — свои. Порядок сохраняется как есть.
     out["lanes_prob"] = (
-        np.array([[p.prob for p in l[1].lanes] for l in ln], dtype=float) if ln else np.zeros((0, 4))
+        np.array([[p.prob for p in l[1].lanes] for l in ln], dtype=float)
+        if ln
+        else np.zeros((0, 4))
     )
     out["lanes_ystd"] = (
         np.array(
-            [[(np.median(list(p.y_std)) if len(p.y_std) else np.nan) for p in l[1].lanes] for l in ln],
+            [
+                [
+                    (np.median(list(p.y_std)) if len(p.y_std) else np.nan)
+                    for p in l[1].lanes
+                ]
+                for l in ln
+            ],
             dtype=float,
         )
         if ln
@@ -103,9 +122,13 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     out["odom_trans"] = (
         np.array([list(o[1].trans) for o in od], dtype=float) if od else np.zeros((0, 3))
     )
-    out["odom_rot"] = np.array([list(o[1].rot) for o in od], dtype=float) if od else np.zeros((0, 3))
+    out["odom_rot"] = (
+        np.array([list(o[1].rot) for o in od], dtype=float) if od else np.zeros((0, 3))
+    )
     out["odom_rot_std"] = (
-        np.array([list(o[1].rot_std) for o in od], dtype=float) if od else np.zeros((0, 3))
+        np.array([list(o[1].rot_std) for o in od], dtype=float)
+        if od
+        else np.zeros((0, 3))
     )
 
     stm = bag_io.load_topic_messages(bag, "controls/steer")
@@ -140,7 +163,9 @@ def load(bag: Path, refresh: bool = False, quiet: bool = False) -> Dict[str, np.
     return data
 
 
-def nearest_index(src_t: np.ndarray, dst_t: np.ndarray, max_dt_ms: int = 50) -> np.ndarray:
+def nearest_index(
+    src_t: np.ndarray, dst_t: np.ndarray, max_dt_ms: int = 50
+) -> np.ndarray:
     """Для каждого src_t индекс ближайшего dst_t, либо −1 если ближе max_dt_ms ничего нет."""
     if dst_t.size == 0 or src_t.size == 0:
         return np.full(src_t.shape, -1, dtype=np.int64)
@@ -150,7 +175,9 @@ def nearest_index(src_t: np.ndarray, dst_t: np.ndarray, max_dt_ms: int = 50) -> 
     return np.where(np.abs(dst_t[pick] - src_t) <= max_dt_ms, pick, -1)
 
 
-def blinker_mask(d: Dict[str, np.ndarray], t: np.ndarray, pad_ms: int = 2000) -> np.ndarray:
+def blinker_mask(
+    d: Dict[str, np.ndarray], t: np.ndarray, pad_ms: int = 2000
+) -> np.ndarray:
     """Тики рядом с включённым поворотником, расширенные на 2 с: водитель начинает уводить машину
     раньше, чем щёлкает рычаг, и продолжает после того, как тот выключился сам."""
     ct, on = d["chassis_t"], d["chassis_blinker"]

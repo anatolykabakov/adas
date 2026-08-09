@@ -15,7 +15,7 @@ public final class ModelCalibWarp {
     /** openpilot / flowpilot medmodel intrinsics. */
     private static final float MED_FL = 910.0f;
     private static final float MED_CY = 47.6f;
-    /** `SBIGMODEL_FL` у flowpilot: вдвое короче medmodel, то есть вдвое шире поле. */
+    /** flowpilot's `SBIGMODEL_FL`: half the medmodel focal length, so twice the field of view. */
     private static final float SBIG_FL = 455.0f;
 
     /** view_from_device: device (x forward, y right, z down) → camera view. */
@@ -68,19 +68,17 @@ public final class ModelCalibWarp {
     }
 
     /**
-     * @param bigModel геометрия «широкой» модели вместо medmodel.
+     * @param bigModel use the wide model geometry instead of medmodel.
      *
-     * Поколение 0.9.x берёт два изображения — узкое и широкое. У flowpilot на телефоне, где камера одна,
-     * во второй вход идёт ТОТ ЖЕ кадр, но свёрнутый другой модельной матрицей: `sbigmodel_intrinsics`
-     * вместо `medmodel_intrinsics` (`Preprocess.getWrapMatrix`, флаг `big_model`). Интринсики камеры при
-     * этом одни и те же — различаются только модельные.
+     * <p>The 0.9.x generation takes two images, narrow and wide. With one camera, flowpilot feeds the
+     * same frame to the second input warped by `sbigmodel_intrinsics` instead of `medmodel_intrinsics`
+     * — camera intrinsics are unchanged, only the model ones differ. Values from their
+     * `transformations/Model.java`: `SBIGMODEL_FL = 455` against `MEDMODEL_FL = 910`, and
+     * `cy = 0.5 * (256 + MEDMODEL_CY) = 151.8`.
      *
-     * Числа из `common/.../transformations/Model.java`: `SBIGMODEL_FL = 455` против `MEDMODEL_FL = 910`,
-     * то есть вдвое короче фокус и вдвое шире поле, а `cy = 0.5 * (256 + MEDMODEL_CY) = 151.8`.
-     *
-     * Чего это НЕ даёт: настоящего широкого поля. Кадр не содержит того, что вне узкого обзора, поэтому
-     * периферия «широкого» входа — экстраполяция за краем исходника. Модель обучалась на настоящей
-     * широкой камере. Это и есть главный неизмеренный риск всего пути, см. docs/VISION_RATE.md §5.
+     * <p>This does not produce a real wide field: the frame holds nothing outside the narrow view, so
+     * the periphery of the wide input is extrapolation past the source edge while the model was trained
+     * on a real wide camera. The main unmeasured risk of this path — docs/VISION_RATE.md §5.
      */
     public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
                                      float fx, float fy, float cx, float cy, boolean bigModel) {

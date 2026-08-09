@@ -44,16 +44,13 @@ public final class RuntimeParams {
     public String supercomboAsset = "supercombo.onnx";
 
     /**
-     * Vision model: {@code onnx}, {@code thneed} or {@code compare}. Same key as
+     * Vision model: {@code onnx} or {@code thneed}. Same key as
      * {@link AdasConfig#modelRunner} reads, so the settings switch and the native side cannot disagree.
      */
     public String modelRunner = "onnx";
 
     public static String normalizeModelRunner(String v) {
-        if ("thneed".equalsIgnoreCase(v)) {
-            return "thneed";
-        }
-        return "compare".equalsIgnoreCase(v) ? "compare" : "onnx";
+        return "thneed".equalsIgnoreCase(v) ? "thneed" : "onnx";
     }
 
     public static String normalizeController(String ctrl) {
@@ -160,7 +157,7 @@ public final class RuntimeParams {
         }
         logging.put("record_camera_images", recordCameraImages);
 
-        // Only our own field: comment_* and shadow_every_n live alongside and must survive.
+        // Only our own field: the comment_* keys live alongside and must survive.
         JSONObject vision = root.optJSONObject("vision");
         if (vision == null) {
             vision = new JSONObject();

@@ -195,9 +195,9 @@ fixes: it is the optimistic case for position.
 
 | file | role |
 |---|---|
-| `cpp/include/mapmatch/road_route.h`, `cpp/src/mapmatch/road_route.cpp` | match, walk, resample, curvature, sections |
-| `cpp/include/mapmatch/dir_edge.h` | directed-edge helpers, shared with `mapmatch/search.cpp` |
-| `cpp/include/services/map_data_service.h`, `cpp/src/services/map_data_service.cpp` | the service: inputs, anchoring, publishing |
+| `cpp/include/adas/mapmatch/road_route.h`, `cpp/src/mapmatch/road_route.cpp` | match, walk, resample, curvature, sections |
+| `cpp/include/adas/mapmatch/dir_edge.h` | directed-edge helpers, shared with `mapmatch/search.cpp` |
+| `cpp/include/adas/services/map_data_service.h`, `cpp/src/services/map_data_service.cpp` | the service: inputs, anchoring, publishing |
 | `proto/map_data.proto` | `MapLocalState` — what lands in the bag |
 | `cpp/tests/test_road_route.cpp`, `cpp/tests/test_map_data_service.cpp` | the maths, and the wiring |
 | `scripts/bag_map_data.py` | run analysis, logged or replayed |

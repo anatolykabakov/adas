@@ -7,8 +7,8 @@
 #include <string>
 #include <mutex>
 #include <zmq.hpp>
-#include "utils/logger.h"
-#include "adas_app.h"
+#include "adas/utils/logger.h"
+#include "adas/adas_app.h"
 
 #include "test_utils.h"
 

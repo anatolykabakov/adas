@@ -6,14 +6,14 @@
 #include <gtest/gtest.h>
 #include <json/json.h>
 
-#include "adas_app.h"
-#include "utils/adas_config.h"
-#include "utils/lat_control_pid.h"
-#include "services/topic_convert_service.h"
-#include "utils/topic_convert.h"
-#include "utils/pure_pursuit.h"
-#include "volkswagen/carcontroller.h"
-#include "volkswagen/values.h"
+#include "adas/adas_app.h"
+#include "adas/utils/adas_config.h"
+#include "adas/utils/lat_control_pid.h"
+#include "adas/services/topic_convert.h"
+#include "adas/utils/topic_convert.h"
+#include "adas/lateral/pp.h"
+#include "adas/platform/volkswagen/carcontroller.h"
+#include "adas/platform/volkswagen/values.h"
 
 using adas::LatControlPid;
 using adas::PidController;
@@ -59,7 +59,7 @@ TEST(LatControlPid, InactiveResets)
 
 TEST(LatControlPid, FeedforwardUsesVSquared)
 {
-  // Пол выключен явно: проверяется, что форма упреждения осталась прежней, SWA * v².
+  // Floor explicitly off: checks that the feedforward shape is unchanged, SWA * v squared.
   LatControlPid lat(0.0, 0.0, 0.001, 50.0, 0.0);
 
   auto r = lat.update(true, 10.0, 10.0, 10.0, false);
@@ -73,18 +73,18 @@ TEST(LatControlPid, FeedforwardFloorAddsSpeedIndependentDemand)
   const double floor_mps = 10.0;
   LatControlPid lat(0.0, 0.0, 0.001, 50.0, floor_mps);
 
-  // При нулевой скорости член v² даёт ровно ноль, и без пола упреждение отсутствовало бы совсем —
-  // именно поэтому на медленной тугой дуге момент рос только после появления ошибки.
+  // At zero speed the v-squared term is exactly zero: without a floor there would be no feedforward at
+  // all, which is why torque on a slow tight arc only rose after an error had appeared.
   auto slow = lat.update(true, 10.0, 10.0, 0.0, false);
   EXPECT_NEAR(slow.f, 0.001 * 10.0 * floor_mps * floor_mps, 1e-9);
   EXPECT_GT(slow.f, 0.0);
 
-  // На скорости пола вклад ровно удваивается: два члена сравнялись.
+  // At the floor speed the contribution doubles: the two terms are equal.
   lat.reset();
   auto at_floor = lat.update(true, 1.0, 1.0, floor_mps, false);
   EXPECT_NEAR(at_floor.f, 2.0 * 0.001 * 1.0 * floor_mps * floor_mps, 1e-9);
 
-  // На трассе пол становится поправкой, а не главным членом: при 25 м/с он добавляет 16 %.
+  // On the highway the floor is a correction, not the main term: at 25 m/s it adds 16 %.
   lat.reset();
   auto fast = lat.update(true, 1.0, 1.0, 25.0, false);
   EXPECT_NEAR(fast.f, 0.001 * 1.0 * (625.0 + 100.0), 1e-9);
@@ -93,9 +93,8 @@ TEST(LatControlPid, FeedforwardFloorAddsSpeedIndependentDemand)
 
 TEST(LatControlPid, FeedforwardMatchesMeasuredDemandAcrossSpeeds)
 {
-  // Числа взяты из подгонки по трём заездам: нужный коэффициент при SWA на установившихся участках,
-  // с вычтенным вкладом P. Проверяется, что штатные значения воспроизводят замер, а не то, что
-  // формула вообще что-то считает. Допуск 35 % — разброс между самими заездами того же порядка.
+  // Numbers from the fit over three drives: the required coefficient on SWA over steady-state frames
+  // with the proportional term subtracted. The 35 % tolerance is the spread between the drives.
   struct Point {
     double v_mps;
     double measured_norm_per_deg;
@@ -107,19 +106,19 @@ TEST(LatControlPid, FeedforwardMatchesMeasuredDemandAcrossSpeeds)
     lat.reset();
     auto r = lat.update(true, 1.0, 1.0, pt.v_mps, false);
     const double rel = std::abs(r.f - pt.measured_norm_per_deg) / pt.measured_norm_per_deg;
-    EXPECT_LT(rel, 0.35) << "v = " << pt.v_mps << " м/с: упреждение " << r.f << ", замер "
+    EXPECT_LT(rel, 0.35) << "v = " << pt.v_mps << " m/s: feedforward " << r.f << ", measured "
                          << pt.measured_norm_per_deg;
   }
 }
 
 TEST(AdasConfigLoad, CameraYawRateSourceIsOffAndInvertible)
 {
-  // Регрессия на пункт 1 ревью: рыскание камеры имеет противоположный знак (корреляция -0.994), и
-  // при включённом источнике оно проходило ворота EKF в 85.7 % тиков. Проверяется и то, что источник
-  // выключен в поставляемом конфиге, и то, что разворот знака вообще доходит из конфига до фильтра —
-  // раньше поле существовало, но `adas_config.cpp` его не читал, поэтому оно навсегда оставалось false.
-  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") +
-                           "/adas_cam_yaw_test.json";
+  // Regression for review item 1: the camera yaw rate has the opposite sign (correlation -0.994) and,
+  // with the source enabled, passed the EKF gate in 85.7 % of ticks. Checks both that the source is off
+  // in the shipped config and that the sign flip reaches the filter at all — the field existed but
+  // `adas_config.cpp` never read it, so it stayed false forever.
+  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_cam_yaw_test."
+                                                                                                 "json";
   {
     std::ofstream f(path);
     f << R"({"localization": {"use_camera_odometry": true, "invert_cam_yaw_rate": true}})";
@@ -144,11 +143,10 @@ TEST(AdasConfigLoad, CameraYawRateSourceIsOffAndInvertible)
 
 TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
 {
-  // Проводка отдельного ключа проверяется отдельно: гейн и пол задаются в разных местах, и молча
-  // потерянный пол выглядел бы точно как прежнее поведение — упреждение просто снова стало бы слабым
-  // на медленных дугах, без единой ошибки в логе.
-  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") +
-                           "/adas_ff_floor_test.json";
+  // The floor is wired separately from the gain, and a silently dropped floor would look exactly like
+  // the old behaviour: a weak feedforward on slow arcs, with nothing in the log.
+  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_ff_floor_test."
+                                                                                                 "json";
   {
     std::ofstream f(path);
     f << R"({"vehicle": {"lat_pid_kf": 0.00021, "lat_pid_ff_floor_mps": 7.5}})";
@@ -163,8 +161,7 @@ TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
 
 TEST(AdasConfigLoad, FeedforwardDefaultsAreTheMeasuredOnes)
 {
-  // Конфига на устройстве может не быть вовсе — тогда работают значения из заголовка, и они обязаны
-  // совпадать с тем, что подогнано по заездам, а не остаться прежними 0.00006.
+  // With no config on the device the header defaults apply, and they must match the fitted values.
   AdasApp::Config cfg;
   EXPECT_NEAR(cfg.lane_keep.pid_kf, 0.00015, 1e-12);
   EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, adas::kFeedforwardFloorMps, 1e-12);
@@ -172,8 +169,8 @@ TEST(AdasConfigLoad, FeedforwardDefaultsAreTheMeasuredOnes)
 
 TEST(LatControlPid, OldGainUnderdeliveredAtEverySpeed)
 {
-  // Регрессионный тест на причину правки, а не на её форму: прежние 0.00006 без пола давали
-  // многократный недобор на всех скоростях, и именно это выражалось в «недокруте» на дугах.
+  // Regression on the reason for the change: 0.00006 without a floor under-delivered several-fold at
+  // every speed, which is what showed up as under-steer on arcs.
   LatControlPid old_pid(0.0, 0.0, 0.00006, 50.0, 0.0);
   LatControlPid now(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
 
@@ -557,9 +554,9 @@ TEST(AdasConfigFile, ShippedJsonReachesTheTopicConvertKnobs)
 
 TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
 {
-  adas::TopicConvertService::Config cfg;
+  adas::services::TopicConvert::Config cfg;
   cfg.path_lane_blend_scale = 0.6;
-  adas::TopicConvertService svc(cfg);
+  adas::services::TopicConvert svc(cfg);
   EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 0.6);
 
   svc.setLaneBlendScale(1.0);

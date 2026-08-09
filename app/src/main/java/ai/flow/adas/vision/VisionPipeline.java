@@ -84,12 +84,6 @@ public class VisionPipeline {
             } catch (Throwable e) {
                 android.util.Log.e("VisionPipeline", "thneed unavailable — falling back to ONNX", e);
             }
-        } else if ("compare".equals(choice)) {
-            try {
-                return new ShadowCompareRunner(context);
-            } catch (Throwable e) {
-                android.util.Log.e("VisionPipeline", "shadow compare unavailable — falling back to ONNX", e);
-            }
         }
         return new SupercomboOnnxRunner(context);
     }

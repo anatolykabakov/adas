@@ -1,5 +1,5 @@
-#include "panda/panda.h"
-#include "panda/panda_comms.h"
+#include "adas/panda/panda.h"
+#include "adas/panda/panda_comms.h"
 
 #include <unistd.h>
 
@@ -10,7 +10,7 @@
 #include <optional>
 #include <tuple>
 
-#include "utils/logger.h"
+#include "adas/utils/logger.h"
 
 Panda::Panda(std::string serial, uint32_t bus_offset) : bus_offset(bus_offset)
 {

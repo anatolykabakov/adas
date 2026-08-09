@@ -5,23 +5,23 @@ add_library(
   adas_app_common
   STATIC
   adas_app.cpp
-  services/zmq_bridge_service.cpp
-  services/panda_service.cpp
-  services/lane_keep_service.cpp
-  services/long_plan_service.cpp
-  services/safety_warn_service.cpp
-  services/traffic_sign_service.cpp
-  services/localization_service.cpp
-  services/camera_calib_service.cpp
-  services/topic_convert_service.cpp
-  services/imu_calib_service.cpp
+  services/zmq_bridge.cpp
+  services/panda.cpp
+  services/lane_keep.cpp
+  services/long_plan.cpp
+  services/safety_warn.cpp
+  services/traffic_sign.cpp
+  services/localization.cpp
+  services/camera_calib.cpp
+  services/topic_convert.cpp
+  services/imu_calib.cpp
   services/internal_subscriber.cpp
-  services/middleware_stats_service.cpp
-  volkswagen/mqbcan.cpp
-  volkswagen/carcontroller.cpp
-  volkswagen/mqb_car_state_decoder.cpp
-  volkswagen/panda_safety_supervisor.cpp
-  services/map_data_service.cpp
+  services/middleware_stats.cpp
+  platform/volkswagen/mqbcan.cpp
+  platform/volkswagen/carcontroller.cpp
+  platform/volkswagen/mqb_car_state_decoder.cpp
+  platform/volkswagen/panda_safety_supervisor.cpp
+  services/map_data.cpp
   mapmatch/track.cpp
   mapmatch/road_map.cpp
   mapmatch/road_route.cpp
@@ -30,10 +30,10 @@ add_library(
   mapmatch/window_search.cpp
   utils/protobuf_utils.cpp
   utils/can_parser.cc
-  utils/pure_pursuit.cpp
+  lateral/pp.cpp
   utils/path_lateral_state.cpp
-  visionpilot/lateral_planning.cpp
-  flowpilot/lateral_mpc.cpp
+  lateral/visionpilot_mpc.cpp
+  lateral/flowpilot_mpc.cpp
   utils/vehicle_ekf.cpp
   utils/online_localizer.cpp
   utils/vanishing_point_calib.cpp
@@ -86,29 +86,24 @@ if(BUILD_FOR_ANDROID)
     PRIVATE -O3
   )
 
-  # Раннер thneed — отдельная библиотека, а не часть основной.
-  #
-  # Отдельная намеренно: это исполнение ЧУЖОЙ модели на GPU через OpenCL, включается флагом
-  # `vision.model_runner` и на дороге не проверено. Если она не загрузится или упадёт при инициализации,
-  # приложение обязано продолжать работать на ONNX — а линковка в общую .so такой возможности не
-  # оставляет. Java грузит её через System.loadLibrary в try/catch.
-  #
-  # OpenCL берётся через dlopen в рантайме: Android его официально не экспортирует, линковаться на
-  # libOpenCL.so нельзя. Отсюда же зависимость только от dl/log/android.
-  add_library(thneedrunner SHARED ../thneed/thneed_runner.cpp ../thneed/json11.cpp)
+  add_library(thneedrunner SHARED thneed/thneed_runner.cpp thneed/json11.cpp)
   target_include_directories(
     thneedrunner
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../thneed
+    PRIVATE ${PROJECT_SOURCE_DIR}/include
   )
   target_link_libraries(
     thneedrunner
-    PRIVATE dl
-            log
-            android
+    PRIVATE
+      dl
+      log
+      android
   )
   target_compile_options(
     thneedrunner
-    PRIVATE -O3 -Wno-unused-variable -Wno-unused-function
+    PRIVATE
+      -O3
+      -Wno-unused-variable
+      -Wno-unused-function
   )
 else()
   add_executable(

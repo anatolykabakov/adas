@@ -104,13 +104,42 @@ import _path  # noqa: F401
 # openpilot's model time grid. The first LAT_MPC_N+1 entries are what `dPathPoints` is sampled on, and
 # hard-coding them beats importing openpilot: this must keep working when their tree is not on the path.
 T_IDXS = [
-    0.0, 0.00976562, 0.0390625, 0.08789062, 0.15625, 0.24414062, 0.3515625, 0.47851562,
-    0.625, 0.79101562, 0.9765625, 1.18164062, 1.40625, 1.65039062, 1.9140625, 2.19726562,
-    2.5, 2.82226562, 3.1640625, 3.52539062, 3.90625, 4.30664062, 4.7265625, 5.16601562,
-    5.625, 6.10351562, 6.6015625, 7.11914062, 7.65625, 8.21289062, 8.7890625, 9.38476562, 10.0,
+    0.0,
+    0.00976562,
+    0.0390625,
+    0.08789062,
+    0.15625,
+    0.24414062,
+    0.3515625,
+    0.47851562,
+    0.625,
+    0.79101562,
+    0.9765625,
+    1.18164062,
+    1.40625,
+    1.65039062,
+    1.9140625,
+    2.19726562,
+    2.5,
+    2.82226562,
+    3.1640625,
+    3.52539062,
+    3.90625,
+    4.30664062,
+    4.7265625,
+    5.16601562,
+    5.625,
+    6.10351562,
+    6.6015625,
+    7.11914062,
+    7.65625,
+    8.21289062,
+    8.7890625,
+    9.38476562,
+    10.0,
 ]
 LAT_MPC_N = 16
-LIMITER_DT_S = 0.020          # STEER_STEP = 2 on a 10 ms timer
+LIMITER_DT_S = 0.020  # STEER_STEP = 2 on a 10 ms timer
 ALIGN_TOL_MS = 30.0
 
 
@@ -123,8 +152,14 @@ def route_dirs(paths: list[Path]) -> list[Path]:
         if any(c.is_dir() and c.name.isdigit() for c in p.iterdir()):
             out.append(p)
         else:
-            out.extend(sorted(c for c in p.iterdir() if c.is_dir() and
-                              any(g.is_dir() and g.name.isdigit() for g in c.iterdir())))
+            out.extend(
+                sorted(
+                    c
+                    for c in p.iterdir()
+                    if c.is_dir()
+                    and any(g.is_dir() and g.name.isdigit() for g in c.iterdir())
+                )
+            )
     return out
 
 
@@ -145,7 +180,7 @@ def read_segment(f: Path, capnp_log):
     step = 1 << 18
     for k in range(0, len(raw), step):
         try:
-            data += d.decompress(raw[k:k + step])
+            data += d.decompress(raw[k : k + step])
         except (OSError, EOFError):
             lost = True
             break
@@ -160,7 +195,9 @@ def read_segment(f: Path, capnp_log):
     except Exception:
         note = "capnp обрезан"
     if lost:
-        note = (note + ", " if note else "") + f"bz2 битый, взято {len(data) / 1e6:.1f} МБ"
+        note = (
+            note + ", " if note else ""
+        ) + f"bz2 битый, взято {len(data) / 1e6:.1f} МБ"
     return evts, note
 
 
@@ -209,28 +246,62 @@ def load_route(route: Path, max_segments: int | None, want_model: bool):
                 # `steeringTorque` is the driver's torque and it is not decoration either: it widens the
                 # limiter's clamp by STEER_DRIVER_ALLOWANCE, so leaving it at zero would make our limited
                 # stream tighter than the one the car actually produced.
-                events.append((t, "car", (float(cs.vEgo), float(cs.steeringAngleDeg), bool(cs.steeringPressed),
-                                          float(cs.yawRate) if hasattr(cs, "yawRate") else 0.0,
-                                          float(cs.steeringTorque))))
+                events.append(
+                    (
+                        t,
+                        "car",
+                        (
+                            float(cs.vEgo),
+                            float(cs.steeringAngleDeg),
+                            bool(cs.steeringPressed),
+                            float(cs.yawRate) if hasattr(cs, "yawRate") else 0.0,
+                            float(cs.steeringTorque),
+                        ),
+                    )
+                )
             elif w == "lateralPlan" and not want_model:
                 lp = evt.lateralPlan
-                events.append((t, "plan", (np.asarray(list(lp.dPathPoints), dtype=np.float64),
-                                           np.asarray(list(lp.psis), dtype=np.float64),
-                                           np.asarray(list(lp.curvatures), dtype=np.float64))))
+                events.append(
+                    (
+                        t,
+                        "plan",
+                        (
+                            np.asarray(list(lp.dPathPoints), dtype=np.float64),
+                            np.asarray(list(lp.psis), dtype=np.float64),
+                            np.asarray(list(lp.curvatures), dtype=np.float64),
+                        ),
+                    )
+                )
             elif w == "modelV2" and want_model:
                 mv = evt.modelV2
-                events.append((t, "model", {
-                    "x": np.asarray(list(mv.laneLines[1].x), dtype=np.float64),
-                    "lanes": [np.asarray(list(ln.y), dtype=np.float64) for ln in mv.laneLines],
-                    "probs": np.asarray(list(mv.laneLineProbs), dtype=np.float64),
-                    "stds": np.asarray(list(mv.laneLineStds), dtype=np.float64),
-                    "edges": [np.asarray(list(e.y), dtype=np.float64) for e in mv.roadEdges],
-                    "plan_x": np.asarray(list(mv.position.x), dtype=np.float64),
-                    "plan_y": np.asarray(list(mv.position.y), dtype=np.float64),
-                    "plan_z": np.asarray(list(mv.position.z), dtype=np.float64),
-                    "plan_yaw": np.asarray(list(mv.orientation.z), dtype=np.float64),
-                    "plan_yaw_rate": np.asarray(list(mv.orientationRate.z), dtype=np.float64),
-                }))
+                events.append(
+                    (
+                        t,
+                        "model",
+                        {
+                            "x": np.asarray(list(mv.laneLines[1].x), dtype=np.float64),
+                            "lanes": [
+                                np.asarray(list(ln.y), dtype=np.float64)
+                                for ln in mv.laneLines
+                            ],
+                            "probs": np.asarray(list(mv.laneLineProbs), dtype=np.float64),
+                            "stds": np.asarray(list(mv.laneLineStds), dtype=np.float64),
+                            "edges": [
+                                np.asarray(list(e.y), dtype=np.float64)
+                                for e in mv.roadEdges
+                            ],
+                            "plan_x": np.asarray(list(mv.position.x), dtype=np.float64),
+                            "plan_y": np.asarray(list(mv.position.y), dtype=np.float64),
+                            "plan_z": np.asarray(list(mv.position.z), dtype=np.float64),
+                            "plan_yaw": np.asarray(
+                                list(mv.orientation.z), dtype=np.float64
+                            ),
+                            "plan_yaw_rate": np.asarray(
+                                list(mv.orientationRate.z), dtype=np.float64
+                            ),
+                        },
+                    )
+                )
             elif w == "controlsState":
                 # Their planner's own output. Kept separate from `carControl` because it is the one lateral
                 # quantity of theirs that stays physical at low speed — see the module docstring.
@@ -240,10 +311,23 @@ def load_route(route: Path, max_segments: int | None, want_model: bool):
                 out = cc.actuatorsOutput
                 # `steerOutputCan` is the limited value in cNm. Falling back to `steer · STEER_MAX` only
                 # matters for logs old enough to lack the field.
-                applied = float(out.steerOutputCan) if hasattr(out, "steerOutputCan") \
+                applied = (
+                    float(out.steerOutputCan)
+                    if hasattr(out, "steerOutputCan")
                     else float(out.steer) * 300.0
-                events.append((t, "cmd", (float(cc.actuators.steeringAngleDeg), float(cc.actuators.steer),
-                                          applied, bool(cc.latActive))))
+                )
+                events.append(
+                    (
+                        t,
+                        "cmd",
+                        (
+                            float(cc.actuators.steeringAngleDeg),
+                            float(cc.actuators.steer),
+                            applied,
+                            bool(cc.latActive),
+                        ),
+                    )
+                )
     events.sort(key=lambda e: e[0])
     return events, car_params, len(segs), damaged
 
@@ -259,25 +343,44 @@ def build_app(core, cfg_veh, cp, args):
     wheelbase = cp["wheelbase"] if cp else 2.62
     model_mode = args.reference == "model"
     app = core.AdasApp(wheelbase, -1.8, 0.5, 1.10, topic_convert=model_mode)
-    app.set_lane_keep_controller(args.controller or cfg_veh.get("lane_keep_controller", "fp"))
+    app.set_lane_keep_controller(
+        args.controller or cfg_veh.get("lane_keep_controller", "fp")
+    )
     app.set_lane_keep_max_steer_deg(float(cfg_veh.get("max_steer_deg", 20.0)))
-    app.set_lane_keep_steer_slew_limit_deg(float(cfg_veh.get("steer_slew_limit_deg", 8.0)))
-    app.set_lane_keep_vehicle_model(bool(cfg_veh.get("lat_use_vehicle_model", True)),
-                                    args.stiffness if args.stiffness is not None
-                                    else float(cfg_veh.get("tire_stiffness_factor", 0.64)))
+    app.set_lane_keep_steer_slew_limit_deg(
+        float(cfg_veh.get("steer_slew_limit_deg", 8.0))
+    )
+    app.set_lane_keep_vehicle_model(
+        bool(cfg_veh.get("lat_use_vehicle_model", True)),
+        args.stiffness
+        if args.stiffness is not None
+        else float(cfg_veh.get("tire_stiffness_factor", 0.64)),
+    )
     app.set_lane_keep_fp_steer_delay_s(float(cfg_veh.get("fp_steer_delay_s", 0.35)))
     app.set_lane_keep_recompute_setpoint(bool(args.recompute_setpoint))
     if args.no_integrator:
         # See "the one unfairness" in the module docstring: with no feedback path our integrator winds up on
         # an error it cannot influence, so only ki = 0 compares controllers rather than replay artefacts.
-        app.set_lane_keep_pid_gains(float(cfg_veh.get("pid_kp", 0.6)), 0.0, float(cfg_veh.get("pid_kf", 6e-5)))
-    ratio = args.steer_ratio if args.steer_ratio else (cp["steer_ratio"] if cp else float(cfg_veh["steer_ratio"]))
+        app.set_lane_keep_pid_gains(
+            float(cfg_veh.get("pid_kp", 0.6)), 0.0, float(cfg_veh.get("pid_kf", 6e-5))
+        )
+    ratio = (
+        args.steer_ratio
+        if args.steer_ratio
+        else (cp["steer_ratio"] if cp else float(cfg_veh["steer_ratio"]))
+    )
     app.set_param("steer_ratio", ratio)
 
     if model_mode:
         # Our own fusion runs here, so it must run with shipped numbers — the same trap as above, one stage up.
-        for k in ("path_lane_blend_scale", "path_camera_offset_m", "center_force_gain",
-                  "lane_std_good_m", "lane_std_bad_m", "lane_std_range_m"):
+        for k in (
+            "path_lane_blend_scale",
+            "path_camera_offset_m",
+            "center_force_gain",
+            "lane_std_good_m",
+            "lane_std_bad_m",
+            "lane_std_range_m",
+        ):
             if k in cfg_veh:
                 app.set_param(k, float(cfg_veh[k]))
         app.set_param("cam_y_left_m", float(cfg_veh.get("cam_y_left_m", 0.0)))
@@ -337,11 +440,15 @@ def replay(core, events, cp, args, cfg_veh):
             xs = np.asarray(T_IDXS[:n]) * max(v_ego, 0.1)
             poly = [(float(x), float(y)) for x, y in zip(xs, dpath[:n])]
             plan_yaw = [float(p) for p in psis[:n]] if len(psis) >= n else []
-            plan_yaw_rate = [float(c) * max(v_ego, 0.1) for c in curvs[:n]] if len(curvs) >= n else []
+            plan_yaw_rate = (
+                [float(c) * max(v_ego, 0.1) for c in curvs[:n]] if len(curvs) >= n else []
+            )
             app.publish_lanes(ts_us, poly, n_ref, poly, plan_yaw, plan_yaw_rate, True)
             n_ref += 1
         elif kind == "model":
-            app.publish_lane_lines(lane_lines_message(lanes_pb2, payload, ts_us // 1000, n_ref))
+            app.publish_lane_lines(
+                lane_lines_message(lanes_pb2, payload, ts_us // 1000, n_ref)
+            )
             n_ref += 1
         elif kind == "cmd":
             theirs.append((t - t0, *payload))
@@ -359,13 +466,25 @@ def replay(core, events, cp, args, cfg_veh):
                 else:
                     last_curv = last_swa = float("nan")
             elif isinstance(msg, core.SteerCommand):
-                ours.append((ts_us / 1000.0, last_swa, float(msg.torque_cnm),
-                             1.0 if msg.enabled else 0.0, v_ego, driver_tq, last_curv))
+                ours.append(
+                    (
+                        ts_us / 1000.0,
+                        last_swa,
+                        float(msg.torque_cnm),
+                        1.0 if msg.enabled else 0.0,
+                        v_ego,
+                        driver_tq,
+                        last_curv,
+                    )
+                )
     app.stop()
-    return (np.asarray(ours, dtype=np.float64) if ours else np.zeros((0, 7)),
-            np.asarray(theirs, dtype=np.float64) if theirs else np.zeros((0, 5)),
-            np.asarray(their_curv, dtype=np.float64) if their_curv else np.zeros((0, 2)),
-            ratio, n_ref)
+    return (
+        np.asarray(ours, dtype=np.float64) if ours else np.zeros((0, 7)),
+        np.asarray(theirs, dtype=np.float64) if theirs else np.zeros((0, 5)),
+        np.asarray(their_curv, dtype=np.float64) if their_curv else np.zeros((0, 2)),
+        ratio,
+        n_ref,
+    )
 
 
 def limited_stream(core, O):
@@ -386,7 +505,11 @@ def limited_stream(core, O):
         want = int(round(O[i, 2])) if O[i, 3] > 0.5 else 0
         # Not lat_active means apply_steer = 0 *and* the ramp restarts from zero on re-engagement, because
         # `apply_steer_last_` is assigned unconditionally. That reset is a real part of the behaviour.
-        last = core.apply_driver_steer_torque_limits(want, O[i, 5], last) if O[i, 3] > 0.5 else 0
+        last = (
+            core.apply_driver_steer_torque_limits(want, O[i, 5], last)
+            if O[i, 3] > 0.5
+            else 0
+        )
         out[k] = (grid[k], last, O[i, 3], O[i, 4])
     return out
 
@@ -411,52 +534,104 @@ def report_torque(title, ours, theirs):
     o, c = signed(ours, theirs)
     d = o - theirs
     print(f"\n{title} (знак: корр {c:+.3f}), n={len(o)}")
-    print(f"  |их|  медиана {np.median(np.abs(theirs)):6.0f}   p90 {np.percentile(np.abs(theirs), 90):6.0f}"
-          f"   в упоре 300: {100 * np.mean(np.abs(theirs) >= 299):5.1f}%")
-    print(f"  |наш| медиана {np.median(np.abs(o)):6.0f}   p90 {np.percentile(np.abs(o), 90):6.0f}"
-          f"   в упоре 300: {100 * np.mean(np.abs(o) >= 299):5.1f}%")
-    print(f"  расхождение: медиана {np.median(d):+.0f}, ск.кв {np.std(d):.0f}, "
-          f"p90 |·| {np.percentile(np.abs(d), 90):.0f} cNm, наклон наш/их {np.polyfit(theirs, o, 1)[0]:.3f}")
+    print(
+        f"  |их|  медиана {np.median(np.abs(theirs)):6.0f}   p90 {np.percentile(np.abs(theirs), 90):6.0f}"
+        f"   в упоре 300: {100 * np.mean(np.abs(theirs) >= 299):5.1f}%"
+    )
+    print(
+        f"  |наш| медиана {np.median(np.abs(o)):6.0f}   p90 {np.percentile(np.abs(o), 90):6.0f}"
+        f"   в упоре 300: {100 * np.mean(np.abs(o) >= 299):5.1f}%"
+    )
+    print(
+        f"  расхождение: медиана {np.median(d):+.0f}, ск.кв {np.std(d):.0f}, "
+        f"p90 |·| {np.percentile(np.abs(d), 90):.0f} cNm, наклон наш/их {np.polyfit(theirs, o, 1)[0]:.3f}"
+    )
     return d
 
 
 def report_angle(oa_raw, ta, vv):
     oa, ca = signed(oa_raw, ta)
     da = oa - ta
-    print(f"\nуставной угол руля на одном и том же пути, n={len(oa)} (знак: корр {ca:+.3f}):")
-    print(f"  |их|  медиана {np.median(np.abs(ta)):6.2f}°  p90 {np.percentile(np.abs(ta), 90):6.2f}°")
-    print(f"  |наш| медиана {np.median(np.abs(oa)):6.2f}°  p90 {np.percentile(np.abs(oa), 90):6.2f}°")
+    print(
+        f"\nуставной угол руля на одном и том же пути, n={len(oa)} (знак: корр {ca:+.3f}):"
+    )
+    print(
+        f"  |их|  медиана {np.median(np.abs(ta)):6.2f}°  p90 {np.percentile(np.abs(ta), 90):6.2f}°"
+    )
+    print(
+        f"  |наш| медиана {np.median(np.abs(oa)):6.2f}°  p90 {np.percentile(np.abs(oa), 90):6.2f}°"
+    )
     print(f"  наш = {np.polyfit(ta, oa, 1)[0]:.3f} x их, корр {abs(ca):.3f}")
-    print(f"  расхождение: медиана {np.median(da):+.2f}°, ск.кв {np.std(da):.2f}°, "
-          f"p90 |·| {np.percentile(np.abs(da), 90):.2f}°")
-    print(f"  доля кадров с расхождением больше 1.67° (порога, за которым наш PID сразу в упоре): "
-          f"{100 * np.mean(np.abs(da) > 1.667):.0f}%")
-    print("\n  по скорости:      n   |их| мед   |наш| мед   наклон наш/их   расхожд. ск.кв")
+    print(
+        f"  расхождение: медиана {np.median(da):+.2f}°, ск.кв {np.std(da):.2f}°, "
+        f"p90 |·| {np.percentile(np.abs(da), 90):.2f}°"
+    )
+    print(
+        f"  доля кадров с расхождением больше 1.67° (порога, за которым наш PID сразу в упоре): "
+        f"{100 * np.mean(np.abs(da) > 1.667):.0f}%"
+    )
+    print(
+        "\n  по скорости:      n   |их| мед   |наш| мед   наклон наш/их   расхожд. ск.кв"
+    )
     for lo, hi in ((0, 5), (5, 10), (10, 15), (15, 20), (20, 30)):
         s_ = (vv >= lo) & (vv < hi)
         if s_.sum() < 50:
             continue
         note = "  ← сетка x = t·v вырождена, эталон короче машины" if hi <= 5 else ""
-        print(f"    {lo:2d}-{hi:2d} м/с {s_.sum():7d}   {np.median(np.abs(ta[s_])):6.2f}°   "
-              f"{np.median(np.abs(oa[s_])):6.2f}°        {np.polyfit(ta[s_], oa[s_], 1)[0]:5.2f}         "
-              f"{np.std(da[s_]):6.2f}°{note}")
+        print(
+            f"    {lo:2d}-{hi:2d} м/с {s_.sum():7d}   {np.median(np.abs(ta[s_])):6.2f}°   "
+            f"{np.median(np.abs(oa[s_])):6.2f}°        {np.polyfit(ta[s_], oa[s_], 1)[0]:5.2f}         "
+            f"{np.std(da[s_]):6.2f}°{note}"
+        )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("routes", type=Path, nargs="+", help="route dirs, or one parent holding them")
-    ap.add_argument("--segments", type=int, default=6, help="how many minute-segments per route (0 = all)")
-    ap.add_argument("--reference", choices=("plan", "model"), default="plan",
-                    help="plan: their finished dPathPoints. model: their modelV2 through our lane fusion")
-    ap.add_argument("--controller", default=None, help="override lane_keep controller (fp | pp)")
-    ap.add_argument("--steer-ratio", type=float, default=None, help="override, e.g. their learned 16.12")
-    ap.add_argument("--stiffness", type=float, default=None, help="tire_stiffness_factor override")
-    ap.add_argument("--min-speed", type=float, default=5.0,
-                    help="speed gate; what it removes is reported, not silently dropped")
-    ap.add_argument("--recompute-setpoint", action="store_true",
-                    help="recompute the setpoint between frames as upstream does at 100 Hz (lat_recompute_setpoint)")
-    ap.add_argument("--no-integrator", action="store_true",
-                    help="run our PID with ki=0 — the only fair way to compare torque in an open-loop replay")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "routes", type=Path, nargs="+", help="route dirs, or one parent holding them"
+    )
+    ap.add_argument(
+        "--segments",
+        type=int,
+        default=6,
+        help="how many minute-segments per route (0 = all)",
+    )
+    ap.add_argument(
+        "--reference",
+        choices=("plan", "model"),
+        default="plan",
+        help="plan: their finished dPathPoints. model: their modelV2 through our lane fusion",
+    )
+    ap.add_argument(
+        "--controller", default=None, help="override lane_keep controller (fp | pp)"
+    )
+    ap.add_argument(
+        "--steer-ratio",
+        type=float,
+        default=None,
+        help="override, e.g. their learned 16.12",
+    )
+    ap.add_argument(
+        "--stiffness", type=float, default=None, help="tire_stiffness_factor override"
+    )
+    ap.add_argument(
+        "--min-speed",
+        type=float,
+        default=5.0,
+        help="speed gate; what it removes is reported, not silently dropped",
+    )
+    ap.add_argument(
+        "--recompute-setpoint",
+        action="store_true",
+        help="recompute the setpoint between frames as upstream does at 100 Hz (lat_recompute_setpoint)",
+    )
+    ap.add_argument(
+        "--no-integrator",
+        action="store_true",
+        help="run our PID with ki=0 — the only fair way to compare torque in an open-loop replay",
+    )
     args = ap.parse_args()
 
     from pyadas import core
@@ -465,20 +640,40 @@ def main() -> int:
     if not routes:
         print("не нашёл ни одного маршрута (каталог с нумерованными сегментами)")
         return 1
-    cfg = json.loads((Path(__file__).resolve().parents[1] / "assets" / "config.json").read_text())
+    cfg = json.loads(
+        (Path(__file__).resolve().parents[1] / "assets" / "config.json").read_text()
+    )
     veh = cfg["vehicle"]
-    print(f"маршрутов: {len(routes)}, эталон: {args.reference}, "
-          f"контроллер {args.controller or veh.get('lane_keep_controller')}, "
-          f"жёсткость {args.stiffness if args.stiffness is not None else veh.get('tire_stiffness_factor')}, "
-          f"интеграл {'ВЫКЛ (честный момент)' if args.no_integrator else 'вкл (момент смещён открытым контуром)'}, "
-          f"пересчёт уставки между кадрами {'ВКЛ' if args.recompute_setpoint else 'выкл'}")
+    print(
+        f"маршрутов: {len(routes)}, эталон: {args.reference}, "
+        f"контроллер {args.controller or veh.get('lane_keep_controller')}, "
+        f"жёсткость {args.stiffness if args.stiffness is not None else veh.get('tire_stiffness_factor')}, "
+        f"интеграл {'ВЫКЛ (честный момент)' if args.no_integrator else 'вкл (момент смещён открытым контуром)'}, "
+        f"пересчёт уставки между кадрами {'ВКЛ' if args.recompute_setpoint else 'выкл'}"
+    )
 
-    pool = {k: [] for k in ("pre_o", "pre_t", "post_o", "post_t",
-                            "ang_o", "ang_t", "ang_v", "curv_o", "curv_t")}
+    pool = {
+        k: []
+        for k in (
+            "pre_o",
+            "pre_t",
+            "post_o",
+            "post_t",
+            "ang_o",
+            "ang_t",
+            "ang_v",
+            "curv_o",
+            "curv_t",
+        )
+    }
     per_route = []
-    angle_ceiling = float(veh.get("max_steer_deg", 20.0)) * (args.steer_ratio or float(veh["steer_ratio"]))
+    angle_ceiling = float(veh.get("max_steer_deg", 20.0)) * (
+        args.steer_ratio or float(veh["steer_ratio"])
+    )
     for route in routes:
-        events, cp, n_seg, damaged = load_route(route, args.segments or None, args.reference == "model")
+        events, cp, n_seg, damaged = load_route(
+            route, args.segments or None, args.reference == "model"
+        )
         for d in damaged:
             print(f"  {route.name} / {d}")
         if not events:
@@ -511,14 +706,26 @@ def main() -> int:
 
         # Angle: only where their setpoint is one our planner could have produced at all.
         am = m & np.isfinite(O[:, 1]) & (np.abs(T[i, 1]) <= angle_ceiling)
-        drops["angle_wild"] = int((m & np.isfinite(O[:, 1]) & (np.abs(T[i, 1]) > angle_ceiling)).sum())
+        drops["angle_wild"] = int(
+            (m & np.isfinite(O[:, 1]) & (np.abs(T[i, 1]) > angle_ceiling)).sum()
+        )
 
-        per_route.append({
-            "name": route.name, "segs": n_seg, "refs": n_ref, "ours": len(O),
-            "matched": int(m.sum()), "matched_post": int(lm.sum()), "matched_curv": int(cm.sum()),
-            "matched_ang": int(am.sum()), "fast_share": 100.0 * float(np.mean(fast)),
-            "car": cp["fingerprint"] if cp else "?", "ratio": ratio, **drops,
-        })
+        per_route.append(
+            {
+                "name": route.name,
+                "segs": n_seg,
+                "refs": n_ref,
+                "ours": len(O),
+                "matched": int(m.sum()),
+                "matched_post": int(lm.sum()),
+                "matched_curv": int(cm.sum()),
+                "matched_ang": int(am.sum()),
+                "fast_share": 100.0 * float(np.mean(fast)),
+                "car": cp["fingerprint"] if cp else "?",
+                "ratio": ratio,
+                **drops,
+            }
+        )
         if m.sum() >= 50:
             pool["pre_o"].append(O[m, 2])
             pool["pre_t"].append(T[i[m], 2] * core.STEER_MAX)
@@ -538,15 +745,21 @@ def main() -> int:
         return 1
 
     print("\nпо маршрутам:")
-    print("  маршрут                                сегм  наших   v>гейта   сопост.  кривизна  угол  "
-          "после огр.    отброшено: медл / выкл / дикий угол")
+    print(
+        "  маршрут                                сегм  наших   v>гейта   сопост.  кривизна  угол  "
+        "после огр.    отброшено: медл / выкл / дикий угол"
+    )
     for r in per_route:
-        print(f"  {r['name']:38s} {r['segs']:4d} {r['ours']:6d} {r['fast_share']:8.0f}% {r['matched']:9d} "
-              f"{r['matched_curv']:9d} {r['matched_ang']:5d} {r['matched_post']:11d}    "
-              f"{r['slow']:6d} / {r['off']:5d} / {r['angle_wild']:5d}")
+        print(
+            f"  {r['name']:38s} {r['segs']:4d} {r['ours']:6d} {r['fast_share']:8.0f}% {r['matched']:9d} "
+            f"{r['matched_curv']:9d} {r['matched_ang']:5d} {r['matched_post']:11d}    "
+            f"{r['slow']:6d} / {r['off']:5d} / {r['angle_wild']:5d}"
+        )
     cars = {r["car"] for r in per_route}
-    print(f"  машина: {', '.join(sorted(cars))}, передаточное {per_route[0]['ratio']:.2f}, "
-          f"потолок уставного угла для сравнения {angle_ceiling:.0f}°")
+    print(
+        f"  машина: {', '.join(sorted(cars))}, передаточное {per_route[0]['ratio']:.2f}, "
+        f"потолок уставного угла для сравнения {angle_ceiling:.0f}°"
+    )
 
     P = {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in pool.items()}
     if len(P["pre_o"]) < 200:
@@ -556,24 +769,43 @@ def main() -> int:
     if len(P["curv_o"]) >= 200:
         co, cc = signed(P["curv_o"], P["curv_t"])
         dc = co - P["curv_t"]
-        print(f"\nкривизна, 1/м — выход планировщика до любой модели машины, n={len(co)} "
-              f"(знак: корр {cc:+.3f})")
-        print(f"  |их|  медиана {np.median(np.abs(P['curv_t'])):.5f}  p90 {np.percentile(np.abs(P['curv_t']), 90):.5f}")
-        print(f"  |наш| медиана {np.median(np.abs(co)):.5f}  p90 {np.percentile(np.abs(co), 90):.5f}")
-        print(f"  наш = {np.polyfit(P['curv_t'], co, 1)[0]:.3f} x их, корр {abs(cc):.3f}, "
-              f"расхождение ск.кв {np.std(dc):.5f}")
+        print(
+            f"\nкривизна, 1/м — выход планировщика до любой модели машины, n={len(co)} "
+            f"(знак: корр {cc:+.3f})"
+        )
+        print(
+            f"  |их|  медиана {np.median(np.abs(P['curv_t'])):.5f}  p90 {np.percentile(np.abs(P['curv_t']), 90):.5f}"
+        )
+        print(
+            f"  |наш| медиана {np.median(np.abs(co)):.5f}  p90 {np.percentile(np.abs(co), 90):.5f}"
+        )
+        print(
+            f"  наш = {np.polyfit(P['curv_t'], co, 1)[0]:.3f} x их, корр {abs(cc):.3f}, "
+            f"расхождение ск.кв {np.std(dc):.5f}"
+        )
 
     if not args.no_integrator:
-        print("\nвнимание: интеграл включён, а контур разомкнут — момент ниже завышен нашим виндапом.")
-        print("           честное сравнение момента: --no-integrator (угол и кривизна выше от этого не зависят)")
+        print(
+            "\nвнимание: интеграл включён, а контур разомкнут — момент ниже завышен нашим виндапом."
+        )
+        print(
+            "           честное сравнение момента: --no-integrator (угол и кривизна выше от этого не зависят)"
+        )
     d_pre = report_torque("момент ДО ограничителя, cNm", P["pre_o"], P["pre_t"])
     if len(P["post_o"]) >= 200:
-        d_post = report_torque("момент ПОСЛЕ ограничителя, cNm — то, что доходит до рейки",
-                               P["post_o"], P["post_t"])
-        print(f"\n  ограничитель меняет вывод: ск.кв расхождения {np.std(d_pre):.0f} → {np.std(d_post):.0f} cNm, "
-              f"p90 |·| {np.percentile(np.abs(d_pre), 90):.0f} → {np.percentile(np.abs(d_post), 90):.0f}")
-        print("  (сравнение только до ограничителя льстит обеим сторонам — темповый предел срезает "
-              "и запрос, и расхождение)")
+        d_post = report_torque(
+            "момент ПОСЛЕ ограничителя, cNm — то, что доходит до рейки",
+            P["post_o"],
+            P["post_t"],
+        )
+        print(
+            f"\n  ограничитель меняет вывод: ск.кв расхождения {np.std(d_pre):.0f} → {np.std(d_post):.0f} cNm, "
+            f"p90 |·| {np.percentile(np.abs(d_pre), 90):.0f} → {np.percentile(np.abs(d_post), 90):.0f}"
+        )
+        print(
+            "  (сравнение только до ограничителя льстит обеим сторонам — темповый предел срезает "
+            "и запрос, и расхождение)"
+        )
     else:
         print("\nпосле ограничителя сопоставить не удалось — мало кадров")
 
@@ -584,9 +816,11 @@ def main() -> int:
         s_ = (np.abs(P["pre_t"]) >= lo) & (np.abs(P["pre_t"]) < hi)
         if s_.sum() < 30:
             continue
-        print(f"  {lo:3d}-{hi:4d} {s_.sum():8d}      {np.median(np.abs(o_pre[s_])):6.0f}         "
-              f"{np.std(d_pre[s_]):7.0f}          {100 * np.mean(np.abs(P['pre_t'][s_]) >= 299):4.0f}% / "
-              f"{100 * np.mean(np.abs(o_pre[s_]) >= 299):4.0f}%")
+        print(
+            f"  {lo:3d}-{hi:4d} {s_.sum():8d}      {np.median(np.abs(o_pre[s_])):6.0f}         "
+            f"{np.std(d_pre[s_]):7.0f}          {100 * np.mean(np.abs(P['pre_t'][s_]) >= 299):4.0f}% / "
+            f"{100 * np.mean(np.abs(o_pre[s_]) >= 299):4.0f}%"
+        )
 
     # The planner half decides whether the torque comparison above means anything — a controller fed a
     # different setpoint will disagree no matter how faithfully it was ported.

@@ -58,7 +58,11 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     out["gnss_lon"] = lon
 
     bt = bl = br = np.zeros(0)
-    rows = load_topic_messages(bag, "vehicle/state") if "vehicle/state" in list_topics(bag) else []
+    rows = (
+        load_topic_messages(bag, "vehicle/state")
+        if "vehicle/state" in list_topics(bag)
+        else []
+    )
     if rows:
         bt = np.array([r[0] for r in rows], dtype=float) / 1000.0
         bl = np.array([bool(r[1].left_blinker) for r in rows])

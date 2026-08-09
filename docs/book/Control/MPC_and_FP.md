@@ -10,8 +10,8 @@ Pure Pursuit picks **one** $\delta$ that hits a look-ahead point.
 
 Appendix with real-arc forensics: `docs/MPC_EXPLAINED.md`.
 
-* VisionPilot `mpc`: `visionpilot/lateral_planning.cpp` ($N{=}20$, path-domain $ds$).
-* flowpilot `fp`: `flowpilot/lateral_mpc.cpp` ($N{=}16$, time grid → 2.5 s).
+* VisionPilot `mpc`: `lateral/lateral_planning.cpp` ($N{=}20$, path-domain $ds$).
+* flowpilot `fp`: `lateral/lateral_mpc.cpp` ($N{=}16$, time grid → 2.5 s).
 * Path fusion (lanes↔plan): `laneLinesToPath` / `core/path_fusion.py`.
 
 ## State symbols
@@ -396,7 +396,7 @@ Expect: `blend=0` follows the cutting plan; `blend=1` sits on lane mid ($≈0$);
 
 ## `fp` model (flowpilot time-domain MPC)
 
-Road default (`lane_keep_controller=fp`). Code: `flowpilot/lateral_mpc.cpp`,
+Road default (`lane_keep_controller=fp`). Code: `lateral/lateral_mpc.cpp`,
 wired in `LaneKeepService::stepFlowpilot`.
 
 Opposite of VisionPilot's **path-domain** $\delta$-MPC:

@@ -35,7 +35,7 @@ import _path  # noqa: F401
 from vis.bag_io import load_topic_messages
 
 HCA_01 = 0x126
-DRIVER_ALLOWANCE = 80.0     # volkswagen::CarControllerParams::STEER_DRIVER_ALLOWANCE
+DRIVER_ALLOWANCE = 80.0  # volkswagen::CarControllerParams::STEER_DRIVER_ALLOWANCE
 
 
 def bit_field(data: bytes, start: int, length: int) -> int:
@@ -62,8 +62,11 @@ def load_hca(bag: Path):
             tq.append((-1 if bit_field(d, 31, 1) else 1) * bit_field(d, 16, 14))
             on.append(bool(bit_field(d, 34, 1)))
     o = np.argsort(np.asarray(t, dtype=np.float64))
-    return (np.asarray(t, dtype=np.float64)[o], np.asarray(tq, dtype=np.float64)[o],
-            np.asarray(on, dtype=bool)[o])
+    return (
+        np.asarray(t, dtype=np.float64)[o],
+        np.asarray(tq, dtype=np.float64)[o],
+        np.asarray(on, dtype=bool)[o],
+    )
 
 
 def nearest(t_ref, t_src, v_src, max_dt_ms=60.0):
@@ -88,15 +91,24 @@ def episodes(mask, t, min_ms):
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("bag", type=Path)
     ap.add_argument("--out", type=Path, default=Path("/tmp/override_plots"))
-    ap.add_argument("--top", type=int, default=6, help="how many episodes to plot, worst |CTE| first")
-    ap.add_argument("--min-ms", type=float, default=300.0, help="shortest override worth plotting")
-    ap.add_argument("--pad", type=float, default=3.0, help="seconds of context on each side")
+    ap.add_argument(
+        "--top", type=int, default=6, help="how many episodes to plot, worst |CTE| first"
+    )
+    ap.add_argument(
+        "--min-ms", type=float, default=300.0, help="shortest override worth plotting"
+    )
+    ap.add_argument(
+        "--pad", type=float, default=3.0, help="seconds of context on each side"
+    )
     args = ap.parse_args()
 
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -105,13 +117,17 @@ def main() -> int:
         print("нет control/lane_keep_debug")
         return 1
     t = np.asarray([r[0] for r in dbg], dtype=np.float64)
-    f = lambda n: np.asarray([float(getattr(r[1], n, 0.0)) for r in dbg], dtype=np.float64)
+    f = lambda n: np.asarray(
+        [float(getattr(r[1], n, 0.0)) for r in dbg], dtype=np.float64
+    )
     des, act, err = f("desired_swa_deg"), f("actual_swa_deg"), f("angle_error_deg")
     cte, req_tq, v = f("mpc_cte_m"), f("torque_cnm"), f("speed_mps")
 
     st = load_topic_messages(args.bag, "vehicle/state")
     t_st = np.asarray([r[0] for r in st], dtype=np.float64)
-    drv = np.asarray([float(getattr(r[1], "steering_torque", 0.0)) for r in st], dtype=np.float64)
+    drv = np.asarray(
+        [float(getattr(r[1], "steering_torque", 0.0)) for r in st], dtype=np.float64
+    )
     o = np.argsort(t_st)
     t_st, drv = t_st[o], drv[o]
 
@@ -124,15 +140,20 @@ def main() -> int:
     over = assist & (np.abs(drv_at) > DRIVER_ALLOWANCE) & (v > 5)
     eps = episodes(over, t, args.min_ms)
     print(f"кадров с включённым ассистом: {assist.sum()} из {len(t)}")
-    print(f"перехватов водителем при включённом ассисте (>{DRIVER_ALLOWANCE:.0f} и >{args.min_ms:.0f} мс): {len(eps)}")
+    print(
+        f"перехватов водителем при включённом ассисте (>{DRIVER_ALLOWANCE:.0f} и >{args.min_ms:.0f} мс): {len(eps)}"
+    )
     if not eps:
         return 0
 
     total_ms = sum(t[e] - t[s] for s, e in eps)
-    print(f"суммарно {total_ms / 1000:.1f} с, это {100 * total_ms / max(t[assist][-1] - t[assist][0], 1):.1f}% "
-          f"времени с включённым ассистом")
+    print(
+        f"суммарно {total_ms / 1000:.1f} с, это {100 * total_ms / max(t[assist][-1] - t[assist][0], 1):.1f}% "
+        f"времени с включённым ассистом"
+    )
+
     def peak_abs_cte(se):
-        seg = np.abs(cte[se[0]:se[1] + 1])
+        seg = np.abs(cte[se[0] : se[1] + 1])
         seg = seg[np.isfinite(seg)]
         return float(seg.max()) if seg.size else 0.0
 
@@ -140,19 +161,26 @@ def main() -> int:
 
     args.out.mkdir(parents=True, exist_ok=True)
     print(f"\nхудшие {min(args.top, len(ranked))} по пиковому |CTE|:")
-    for k, (s, e) in enumerate(ranked[:args.top]):
+    for k, (s, e) in enumerate(ranked[: args.top]):
         lo, hi = t[s] - args.pad * 1000, t[e] + args.pad * 1000
         w = (t >= lo) & (t <= hi)
         tt = (t[w] - t[s]) / 1000.0
-        peak_cte = float(np.nanmax(np.abs(cte[s:e + 1])))
-        peak_err = float(np.nanmax(np.abs(err[s:e + 1])))
-        print(f"  #{k + 1}: t={t[s] / 1000:.1f} с, длительность {(t[e] - t[s]) / 1000:.1f} с, "
-              f"v={np.median(v[s:e + 1]):.1f} м/с, пик |CTE| {peak_cte:.2f} м, пик |ошибка угла| {peak_err:.1f}°, "
-              f"момент водителя до {np.max(np.abs(drv_at[s:e + 1])):.0f}, ассист до {np.max(np.abs(ap_at[s:e + 1])):.0f} cNm")
+        peak_cte = float(np.nanmax(np.abs(cte[s : e + 1])))
+        peak_err = float(np.nanmax(np.abs(err[s : e + 1])))
+        print(
+            f"  #{k + 1}: t={t[s] / 1000:.1f} с, длительность {(t[e] - t[s]) / 1000:.1f} с, "
+            f"v={np.median(v[s:e + 1]):.1f} м/с, пик |CTE| {peak_cte:.2f} м, пик |ошибка угла| {peak_err:.1f}°, "
+            f"момент водителя до {np.max(np.abs(drv_at[s:e + 1])):.0f}, ассист до {np.max(np.abs(ap_at[s:e + 1])):.0f} cNm"
+        )
 
         fig, axes = plt.subplots(4, 1, figsize=(11, 9), sharex=True)
-        span = lambda ax: ax.axvspan(0.0, (t[e] - t[s]) / 1000.0, color="0.85", zorder=0,
-                                     label="водитель держит руль")
+        span = lambda ax: ax.axvspan(
+            0.0,
+            (t[e] - t[s]) / 1000.0,
+            color="0.85",
+            zorder=0,
+            label="водитель держит руль",
+        )
 
         ax = axes[0]
         span(ax)
@@ -160,12 +188,21 @@ def main() -> int:
         ax.axhline(0, color="0.6", lw=0.8)
         ax.set_ylabel("CTE, м")
         ax.legend(loc="upper right", fontsize=8)
-        ax.set_title(f"{args.bag.name}: перехват #{k + 1}, ассист включён, v≈{np.median(v[s:e + 1]):.0f} м/с")
+        ax.set_title(
+            f"{args.bag.name}: перехват #{k + 1}, ассист включён, v≈{np.median(v[s:e + 1]):.0f} м/с"
+        )
 
         ax = axes[1]
         span(ax)
         ax.plot(tt, ap_at[w], color="tab:blue", lw=1.6, label="ассист на шине, cNm")
-        ax.plot(tt, req_tq[w], color="tab:blue", lw=1.0, ls=":", label="запрошено контроллером, cNm")
+        ax.plot(
+            tt,
+            req_tq[w],
+            color="tab:blue",
+            lw=1.0,
+            ls=":",
+            label="запрошено контроллером, cNm",
+        )
         ax.plot(tt, drv_at[w], color="tab:orange", lw=1.6, label="момент водителя, cNm")
         for lim in (300, -300):
             ax.axhline(lim, color="0.7", lw=0.8, ls="--")
@@ -183,7 +220,9 @@ def main() -> int:
 
         ax = axes[3]
         span(ax)
-        ax.plot(tt, err[w], color="tab:purple", lw=1.6, label="ошибка угла (задан − факт)")
+        ax.plot(
+            tt, err[w], color="tab:purple", lw=1.6, label="ошибка угла (задан − факт)"
+        )
         ax.axhline(0, color="0.6", lw=0.8)
         ax.set_ylabel("ошибка, °")
         ax.set_xlabel("время от начала перехвата, с")

@@ -1,9 +1,10 @@
-#include "services/internal_subscriber.h"
+#include "adas/services/internal_subscriber.h"
 
 #include "messages.pb.h"
-#include "utils/proto_convert.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
+namespace services {
 
 void InternalSubscriber::configure()
 {
@@ -47,4 +48,5 @@ std::vector<HostOutMsg> InternalSubscriber::popMessages()
   return out;
 }
 
+}  // namespace services
 }  // namespace adas

@@ -10,8 +10,8 @@ Pure Pursuit выбирает **один** $\delta$, попадающий в т�
 
 Приложение с разбором настоящих дуг: `docs/MPC_EXPLAINED.md`.
 
-* VisionPilot `mpc`: `visionpilot/lateral_planning.cpp` ($N{=}20$, шаг по пути $ds$).
-* flowpilot `fp`: `flowpilot/lateral_mpc.cpp` ($N{=}16$, сетка по времени → 2.5 с).
+* VisionPilot `mpc`: `lateral/lateral_planning.cpp` ($N{=}20$, шаг по пути $ds$).
+* flowpilot `fp`: `lateral/lateral_mpc.cpp` ($N{=}16$, сетка по времени → 2.5 с).
 * Слияние пути (разметка ↔ план): `laneLinesToPath` / `core/path_fusion.py`.
 
 ## Обозначения состояния
@@ -396,7 +396,7 @@ for scale in (0.0, 0.6, 1.0):
 
 ## Модель `fp` (MPC flowpilot в области времени)
 
-По умолчанию на дороге (`lane_keep_controller=fp`). Код: `flowpilot/lateral_mpc.cpp`,
+По умолчанию на дороге (`lane_keep_controller=fp`). Код: `lateral/lateral_mpc.cpp`,
 подключение в `LaneKeepService::stepFlowpilot`.
 
 Противоположность $\delta$-MPC VisionPilot в **области пути**:

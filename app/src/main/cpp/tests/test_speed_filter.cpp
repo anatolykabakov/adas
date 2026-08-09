@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "utils/speed_filter.h"
+#include "adas/utils/speed_filter.h"
 
 // The decoder used to publish `a_ego` as a finite difference of the wheel-speed average over the CAN
 // interval. Measured on run 2026_08_06_00_36_42 above 5 m/s that gave p5/p95 of ±3.8 m/s², extremes of
