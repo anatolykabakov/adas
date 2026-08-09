@@ -15,6 +15,8 @@ public final class ModelCalibWarp {
     /** openpilot / flowpilot medmodel intrinsics. */
     private static final float MED_FL = 910.0f;
     private static final float MED_CY = 47.6f;
+    /** `SBIGMODEL_FL` у flowpilot: вдвое короче medmodel, то есть вдвое шире поле. */
+    private static final float SBIG_FL = 455.0f;
 
     /** view_from_device: device (x forward, y right, z down) → camera view. */
     private static final float[] VIEW_FROM_DEVICE = {
@@ -62,14 +64,36 @@ public final class ModelCalibWarp {
      */
     public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
                                      float fx, float fy, float cx, float cy) {
+        return warpMatrix(rollRad, pitchRad, yawRad, fx, fy, cx, cy, false);
+    }
+
+    /**
+     * @param bigModel геометрия «широкой» модели вместо medmodel.
+     *
+     * Поколение 0.9.x берёт два изображения — узкое и широкое. У flowpilot на телефоне, где камера одна,
+     * во второй вход идёт ТОТ ЖЕ кадр, но свёрнутый другой модельной матрицей: `sbigmodel_intrinsics`
+     * вместо `medmodel_intrinsics` (`Preprocess.getWrapMatrix`, флаг `big_model`). Интринсики камеры при
+     * этом одни и те же — различаются только модельные.
+     *
+     * Числа из `common/.../transformations/Model.java`: `SBIGMODEL_FL = 455` против `MEDMODEL_FL = 910`,
+     * то есть вдвое короче фокус и вдвое шире поле, а `cy = 0.5 * (256 + MEDMODEL_CY) = 151.8`.
+     *
+     * Чего это НЕ даёт: настоящего широкого поля. Кадр не содержит того, что вне узкого обзора, поэтому
+     * периферия «широкого» входа — экстраполяция за краем исходника. Модель обучалась на настоящей
+     * широкой камере. Это и есть главный неизмеренный риск всего пути, см. docs/VISION_RATE.md §5.
+     */
+    public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
+                                     float fx, float fy, float cx, float cy, boolean bigModel) {
         float[] K = {
                 fx, 0, cx,
                 0, fy, cy,
                 0, 0, 1
         };
+        final float mfl = bigModel ? SBIG_FL : MED_FL;
+        final float mcy = bigModel ? 0.5f * (MODEL_H + MED_CY) : MED_CY;
         float[] medK = {
-                MED_FL, 0, 0.5f * MODEL_W,
-                0, MED_FL, MED_CY,
+                mfl, 0, 0.5f * MODEL_W,
+                0, mfl, mcy,
                 0, 0, 1
         };
         float[] medFromCalib = mul3(medK, VIEW_FROM_DEVICE);
@@ -83,11 +107,17 @@ public final class ModelCalibWarp {
     /** Same as {@link #warpMatrix} with degrees. */
     public static float[] warpMatrixDeg(float rollDeg, float pitchDeg, float yawDeg,
                                         float fx, float fy, float cx, float cy) {
+        return warpMatrixDeg(rollDeg, pitchDeg, yawDeg, fx, fy, cx, cy, false);
+    }
+
+    /** Same as {@link #warpMatrix} with degrees, with the wide-model variant. */
+    public static float[] warpMatrixDeg(float rollDeg, float pitchDeg, float yawDeg,
+                                        float fx, float fy, float cx, float cy, boolean bigModel) {
         return warpMatrix(
                 Math.toRadians(rollDeg),
                 Math.toRadians(pitchDeg),
                 Math.toRadians(yawDeg),
-                fx, fy, cx, cy);
+                fx, fy, cx, cy, bigModel);
     }
 
     /**

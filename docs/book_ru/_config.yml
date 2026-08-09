@@ -1,0 +1,44 @@
+# Jupyter Book — русская версия курса. Английский оригинал: docs/book/
+#
+# Два дерева источников, а не gettext. Причина прагматическая: .po-файлы плохо подходят для прозы,
+# насыщённой формулами, таблицами и кодом, а расхождение перевода с оригиналом лечится не форматом,
+# а проверкой — docs/book/sync_translation.py следит, чтобы структура глав и сам код в примерах
+# совпадали побайтово. Переводится проза, код не переводится никогда.
+title: Алгоритмы ADAS на телефоне
+author: Atom ADAS / конспект студенческого курса
+logo: logo.svg
+
+parse:
+  myst_enable_extensions:
+    - dollarmath
+    - amsmath
+    - colon_fence
+    - deflist
+    - html_admonition
+    - html_image
+    - linkify
+    - replacements
+    - smartquotes
+    - substitution
+    - tasklist
+
+html:
+  home_page_in_navbar: false
+  use_edit_page_button: false
+  use_repository_button: false
+  use_issues_button: false
+  extra_footer: >
+    Вдохновлено курсом
+    <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a>
+    (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+sphinx:
+  config:
+    html_show_copyright: false
+    language: ru
+    myst_dmath_double_inline: true
+    html_static_path: ['_static']
+    html_css_files: ['lang-switch.css']
+    html_js_files: ['lang-switch.js']
+
+exclude_patterns: ['_build']

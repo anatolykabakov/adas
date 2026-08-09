@@ -21,10 +21,13 @@ add_library(
   volkswagen/carcontroller.cpp
   volkswagen/mqb_car_state_decoder.cpp
   volkswagen/panda_safety_supervisor.cpp
+  services/map_data_service.cpp
   mapmatch/track.cpp
   mapmatch/road_map.cpp
+  mapmatch/road_route.cpp
   mapmatch/fit.cpp
   mapmatch/search.cpp
+  mapmatch/window_search.cpp
   utils/protobuf_utils.cpp
   utils/can_parser.cc
   utils/pure_pursuit.cpp
@@ -81,6 +84,31 @@ if(BUILD_FOR_ANDROID)
   target_compile_options(
     adas_app_android
     PRIVATE -O3
+  )
+
+  # Раннер thneed — отдельная библиотека, а не часть основной.
+  #
+  # Отдельная намеренно: это исполнение ЧУЖОЙ модели на GPU через OpenCL, включается флагом
+  # `vision.model_runner` и на дороге не проверено. Если она не загрузится или упадёт при инициализации,
+  # приложение обязано продолжать работать на ONNX — а линковка в общую .so такой возможности не
+  # оставляет. Java грузит её через System.loadLibrary в try/catch.
+  #
+  # OpenCL берётся через dlopen в рантайме: Android его официально не экспортирует, линковаться на
+  # libOpenCL.so нельзя. Отсюда же зависимость только от dl/log/android.
+  add_library(thneedrunner SHARED ../thneed/thneed_runner.cpp ../thneed/json11.cpp)
+  target_include_directories(
+    thneedrunner
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../thneed
+  )
+  target_link_libraries(
+    thneedrunner
+    PRIVATE dl
+            log
+            android
+  )
+  target_compile_options(
+    thneedrunner
+    PRIVATE -O3 -Wno-unused-variable -Wno-unused-function
   )
 else()
   add_executable(

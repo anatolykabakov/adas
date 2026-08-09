@@ -95,6 +95,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setBool(nodes, "long_plan", f.enable_long_plan);
   setBool(nodes, "safety_warn", f.enable_safety_warn);
   setBool(nodes, "traffic_sign", f.enable_traffic_sign);
+  setBool(nodes, "map_data", f.enable_map_data);
 
   const bool had_imu_key = nodes.isObject() && nodes.isMember("imu_calib");
   setBool(nodes, "imu_calib", f.enable_imu_calib);
@@ -111,6 +112,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "path_camera_offset_m", cfg.topic_convert.path_camera_offset_m);
   setDouble(veh, "lane_std_good_m", cfg.topic_convert.lane_std_good_m);
   setDouble(veh, "lane_std_bad_m", cfg.topic_convert.lane_std_bad_m);
+  setDouble(veh, "lane_std_range_m", cfg.topic_convert.lane_std_range_m);
   setDouble(veh, "lane_width_min_m", cfg.topic_convert.lane_width_min_m);
   setDouble(veh, "lane_width_max_m", cfg.topic_convert.lane_width_max_m);
   setDouble(veh, "center_force_gain", cfg.topic_convert.center_force_gain);
@@ -126,6 +128,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "lat_pid_kp", cfg.lane_keep.pid_kp);
   setDouble(veh, "lat_pid_ki", cfg.lane_keep.pid_ki);
   setDouble(veh, "lat_pid_kf", cfg.lane_keep.pid_kf);
+  setDouble(veh, "lat_pid_ff_floor_mps", cfg.lane_keep.pid_ff_floor_mps);
   setDouble(veh, "steer_sign", cfg.lane_keep.steer_sign);
   setString(veh, "lane_keep_controller", cfg.lane_keep.controller);
   if (cfg.lane_keep.controller == "flowpilot")
@@ -158,9 +161,19 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "vision_nominal_dt_s", cfg.lane_keep.vision_nominal_dt_s);
   setBool(veh, "lat_use_vehicle_model", cfg.lane_keep.lat_use_vehicle_model);
   setDouble(veh, "tire_stiffness_factor", cfg.lane_keep.tire_stiffness_factor);
+  setBool(veh, "use_learned_params", cfg.lane_keep.use_learned_params);
+  setDouble(veh, "wheel_speed_factor", cfg.panda.speed_filter.wheel_speed_factor);
+  setDouble(veh, "speed_accel_process_noise", cfg.panda.speed_filter.accel_process_noise);
+  setDouble(veh, "speed_measurement_noise", cfg.panda.speed_filter.speed_measurement_noise);
   setDouble(veh, "fp_steer_delay_s", cfg.lane_keep.fp_steer_delay_s);
   setDouble(veh, "min_control_speed_mps", cfg.lane_keep.min_control_speed_mps);
   setDouble(veh, "lane_max_age_s", cfg.lane_keep.lane_max_age_s);
+  setBool(veh, "lka_suppress_on_blinker", cfg.lane_keep.lka_suppress_on_blinker);
+  setDouble(veh, "lka_blinker_resume_delay_s", cfg.lane_keep.lka_blinker_resume_delay_s);
+  setBool(veh, "lat_recompute_setpoint", cfg.lane_keep.lat_recompute_setpoint);
+  setBool(veh, "lat_require_assist", cfg.lane_keep.lat_require_assist);
+  setBool(veh, "lat_always_on", cfg.panda.lat_always_on);
+  setDouble(veh, "assist_max_age_s", cfg.lane_keep.assist_max_age_s);
   setDouble(veh, "min_control_speed_hyst_mps", cfg.lane_keep.min_control_speed_hyst_mps);
   if (cfg.lane_keep.controller != "mpc" && cfg.lane_keep.controller != "fp")
     cfg.lane_keep.controller = "pp";
@@ -179,6 +192,10 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(lp, "curv_preview_s", cfg.long_plan.curv_preview_s);
   setDouble(lp, "curv_min_speed_ms", cfg.long_plan.curv_min_speed_ms);
   setDouble(lp, "curv_v_floor_ms", cfg.long_plan.curv_v_floor_ms);
+  setDouble(lp, "a_coast_ms2", cfg.long_plan.a_coast_ms2);
+  setDouble(lp, "lead_max_offset_m", cfg.long_plan.lead_max_offset_m);
+  setDouble(lp, "lead_min_speed_ms", cfg.long_plan.lead_min_speed_ms);
+  setBool(lp, "plan_v_enabled", cfg.long_plan.plan_v_enabled);
 
   const Json::Value& warn = root["safety_warn"];
   auto& planner = cfg.safety_warn.planner;
@@ -197,6 +214,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(warn, "ldw_min_outward_rate_ms", planner.ldw_min_outward_rate_ms);
   setBool(warn, "ldw_suppress_on_driver_steer", planner.ldw_suppress_on_driver_steer);
   setBool(warn, "ldw_suppress_on_blinker", planner.ldw_suppress_on_blinker);
+  setBool(warn, "ldw_suppress_on_lat_active", planner.ldw_suppress_on_lat_active);
   if (warn.isObject() && warn.isMember("warn_set_frames") && warn["warn_set_frames"].isNumeric())
     cfg.safety_warn.warn_set_frames = warn["warn_set_frames"].asInt();
   if (warn.isObject() && warn.isMember("warn_hold_frames") && warn["warn_hold_frames"].isNumeric())
@@ -222,9 +240,67 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(K, "cx", cfg.camera_calib.cx);
   setDouble(K, "cy", cfg.camera_calib.cy);
 
+  // Localization measurement sources. Each is a separate key so a run can be made to answer "what would
+  // the pose do without this sensor" — the experiment that finally quantified the yaw-rate defect.
+  const Json::Value& loc = root["localization"];
+  auto& src = cfg.localization.sources;
+  setBool(loc, "use_gps_position", src.gps_position);
+  setBool(loc, "use_gps_course", src.gps_course);
+  setBool(loc, "use_gps_velocity", src.gps_velocity);
+  setBool(loc, "use_imu_yaw_rate", src.imu_yaw_rate);
+  setBool(loc, "use_chassis_yaw_rate", src.chassis_yaw_rate);
+  setBool(loc, "use_camera_odometry", src.camera_odometry);
+  setBool(loc, "invert_cam_yaw_rate", cfg.localization.invert_cam_yaw_rate);
+  setBool(loc, "use_bicycle_model", src.bicycle_model);
+  setDouble(loc, "gps_noise_pos", cfg.localization.gps_noise_pos);
+  auto& rr = cfg.localization.road_roll;
+  setDouble(loc, "road_roll_body_deg_per_g", rr.body_roll_deg_per_g);
+  setDouble(loc, "road_roll_tau_s", rr.tau_s);
+  setDouble(loc, "road_roll_min_speed_ms", rr.min_speed_ms);
+  setDouble(loc, "gps_update_interval", cfg.localization.gps_update_interval);
+
+  // The learner must start from, and be bounded around, exactly the model the controller uses. Reading the
+  // vehicle block here rather than giving the learner its own copy of `wheelbase_m` and `steer_ratio` is
+  // deliberate: two sources for the same constant is how a "learned" parameter ends up meaning something
+  // slightly different from the parameter it replaces, which is worse than a hand-tuned number because it
+  // looks principled.
+  auto& pl = cfg.localization.params;
+  pl.vehicle.wheelbase_m = cfg.localization.wheelbase_m;
+  pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
+  pl.stiffness_init = cfg.lane_keep.tire_stiffness_factor;
+  pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
+  pl.steer_sign = cfg.lane_keep.steer_sign;
+  setBool(loc, "learn_vehicle_params", cfg.localization.learn_vehicle_params);
+  setDouble(loc, "params_stiffness_process_std", pl.stiffness_process_std);
+  setDouble(loc, "params_steer_ratio_process_std", pl.steer_ratio_process_std);
+  setDouble(loc, "params_min_speed_ms", pl.min_speed_ms);
+  setDouble(loc, "params_max_lateral_jerk", pl.max_lateral_jerk);
+  setDouble(loc, "params_max_roll_std_deg", pl.max_roll_std_deg);
+  setBool(loc, "params_use_roll", pl.use_roll);
+
   const Json::Value& zmq = root["zmq"];
   setString(zmq, "endpoint_in", cfg.zmq_bridge.endpoint_in);
   setString(zmq, "endpoint_out", cfg.zmq_bridge.endpoint_out);
+
+  // OSM curvature ahead. The thresholds are dragonpilot's and are exposed because the only way to know
+  // whether 0.002 1/m and 2.6 m/s² are right for this map is to vary them over a recorded run.
+  const Json::Value& map = root["map"];
+  setString(map, "path", cfg.map_data.map_path);
+  setDouble(map, "update_hz", cfg.map_data.update_hz);
+  setDouble(map, "local_map_period_s", cfg.map_data.local_map_period_s);
+  setDouble(map, "local_map_radius_m", cfg.map_data.local_map_radius_m);
+  setDouble(map, "min_speed_mps", cfg.map_data.min_speed_mps);
+  setDouble(map, "max_pose_gap_m", cfg.map_data.max_pose_gap_m);
+  setDouble(map, "max_fix_age_s", cfg.map_data.max_fix_age_s);
+  auto& rt = cfg.map_data.route;
+  setDouble(map, "horizon_m", rt.horizon_m);
+  setDouble(map, "max_match_dist_m", rt.max_match_dist_m);
+  setDouble(map, "max_match_heading_deg", rt.max_match_heading_deg);
+  setDouble(map, "step_m", rt.step_m);
+  setDouble(map, "window_m", rt.window_m);
+  setDouble(map, "turn_kappa", rt.turn_kappa);
+  setDouble(map, "max_lat_acc", rt.max_lat_acc);
+  setDouble(map, "min_section_m", rt.min_section_m);
 
   LOGI("AdasApp::Config %s: lane_keep=%d ctrl=%s loc=%d cam=%d imu=%d wb=%.3f "
        "max_steer=%.1f° max_tq=%.0f pid=%.2f/%.2f/%.5f P/Y=%.1f/%.1f h=%.2f",

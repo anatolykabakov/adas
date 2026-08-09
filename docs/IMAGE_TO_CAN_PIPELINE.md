@@ -9,6 +9,10 @@ Configuration this chain describes:
   angle-PID → HCA torque. All three available controllers are covered below;
 - target vehicle = VW Golf 7 MQB.
 
+Mechanism-level walkthrough of the **lateral** half of this chain, in Russian, with the measured numbers and
+the three places a command dies silently: [`LATERAL_CHAIN_RU.md`](LATERAL_CHAIN_RU.md). This file stays the
+topology map — where the messages go; that one explains why each step is shaped the way it is.
+
 Related overviews: root [`README.md`](../README.md),
 [`vision/README.md`](../app/src/main/java/ai/flow/adas/vision/README.md),
 [`cpp/README.md`](../app/src/main/cpp/README.md), applicability limits —

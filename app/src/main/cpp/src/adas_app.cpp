@@ -115,6 +115,9 @@ void AdasApp::setupRealtimeServices()
   if (f.enable_camera_calib)
     camera_calib_service_ = middleware_->registerService<adas::CameraCalibService>(cfg_.camera_calib);
 
+  if (f.enable_map_data)
+    map_data_service_ = middleware_->registerService<adas::MapDataService>(cfg_.map_data);
+
   middleware_->registerService<adas::MiddlewareStatsService>();
 
   LOGI("Realtime services setup completed (%zu services)", middleware_->getServiceCount());
@@ -281,6 +284,14 @@ void AdasApp::setLaneKeepFpSteerDelayS(double seconds) { setParam("fp_steer_dela
 void AdasApp::setLaneKeepFpSteeringRateWeight(double weight) { setParam("fp_steering_rate_weight", weight); }
 
 void AdasApp::setLaneKeepCamYLeftM(double m) { setParam("cam_y_left_m", m); }
+
+void AdasApp::setLaneKeepPidGains(double kp, double ki, double kf)
+{
+  if (lane_keep_service_)
+    lane_keep_service_->setPidGains(kp, ki, kf);
+}
+
+void AdasApp::setLaneKeepRecomputeSetpoint(bool on) { setParam("lat_recompute_setpoint", on); }
 
 void AdasApp::setLaneBlendScale(double scale) { setParam("path_lane_blend_scale", scale); }
 

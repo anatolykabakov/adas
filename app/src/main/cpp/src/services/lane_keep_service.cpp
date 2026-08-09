@@ -9,7 +9,14 @@
 namespace adas {
 namespace {
 
-int64_t nowUs() { return utils::getCurrentTimestamp() * 1000; }
+// Deliberately gone: this used to be `utils::getCurrentTimestamp() * 1000`, i.e. the wall clock read from
+// inside a service. The middleware owns time — `Service::now()` returns the simulated clock under
+// `Middleware::Mode::Simulated` and the wall clock under RealTime — and a service that reaches around it
+// cannot be replayed at all. Reaching around it made three things silently wrong off-vehicle: the path was
+// always "stale" (age = wall clock minus the replay's own timestamps, hours), so every command was cleared;
+// the angle PID's rate came from wall-clock deltas rather than the replay cadence; and the blinker
+// suppression timer ran on a different clock from the messages it was gating. Found by pushing a recorded
+// dragonpilot route through `AdasApp` — see `app/src/main/scripts/rlog_lat_diff.py`.
 
 constexpr double kMinFrameDtS = 0.02;
 constexpr double kMaxFrameDtS = 0.5;
@@ -21,7 +28,7 @@ LaneKeepService::LaneKeepService(Config p)
   : config_(std::move(p))
   , pp_(config_.pp_k_dd, config_.wheelbase_m, config_.pp_shift, config_.pp_ld_min, config_.pp_ld_max,
         config_.pp_ld_curv_gain)
-  , lat_(config_.pid_kp, config_.pid_ki, config_.pid_kf, 50.0)
+  , lat_(config_.pid_kp, config_.pid_ki, config_.pid_kf, 50.0, config_.pid_ff_floor_mps)
   , max_steer_rad_(config_.max_steer_deg * M_PI / 180.0)
   , max_torque_cnm_(config_.max_torque_cnm)
   , steer_ratio_(std::max(config_.steer_ratio, 1e-3))
@@ -40,6 +47,35 @@ void LaneKeepService::configure()
 {
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
   subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onLanes(m); });
+  if (config_.use_learned_params) {
+    // По ZMQMessage, а не по структуре LocalizationPose: на этот топик публикуется именно сообщение
+    // (localization_service.cpp: publish(kLocalizationPose, zmq)), а middleware разбирает подписки по
+    // typeid и молча роняет несовпадение. С подпиской на структуру обработчик не вызывался ни разу —
+    // выученные параметры оставались невидимыми, а в лог на каждом тике шины падала ошибка типа.
+    subscribe<ai::flow::adas::ZMQMessage>(topics::kLocalizationPose,
+                                          [this](const ai::flow::adas::ZMQMessage& m) {
+      if (!m.has_localization_pose())
+        return;
+      const auto& p = m.localization_pose();
+      setLearnedParams(p.learned_params_valid(), p.learned_stiffness_factor(), p.learned_steer_ratio(),
+                       p.learned_angle_offset_deg());
+    });
+  }
+  // Subscribed unconditionally, not under `lat_require_assist`: with the gate off the reported
+  // `assist_allowed` is still what separates actuated frames from the rest in offline analysis, and
+  // that separation is the point.
+  subscribe<ai::flow::adas::ZMQMessage>(topics::kPandaHealth, [this](const ai::flow::adas::ZMQMessage& m) {
+    if (!m.has_panda_health())
+      return;
+    // `lat_actuation_allowed`, not `controls_allowed`. With always-on lateral the panda passes HCA torque
+    // while `controls_allowed` is false, so gating on it would withdraw the command in exactly the frames
+    // where the assist finally works — 64.3 % of a drive, measured on dragonpilot's own recordings.
+    // `PandaService` computes the answer once; bags recorded before that field existed carry false, which
+    // makes this the one place old recordings cannot be replayed through this gate.
+    assist_allowed_ = m.panda_health().lat_actuation_allowed();
+    assist_ts_us_ = static_cast<int64_t>(now());
+    have_assist_ = true;
+  });
   registerParameters();
   LOGI("LaneKeepService: controller=%s  ratio=%.1f  cam_y_left=%.3f  → %s / %s", config_.controller.c_str(),
        steer_ratio_, config_.cam_y_left_m, topics::kLaneKeep, topics::kSteerCommand);
@@ -86,6 +122,11 @@ void LaneKeepService::registerParameters()
       "fp_steering_rate_weight", [this](const double& v) { setFpSteeringRateWeight(v); },
       [this] { return config_.fp_steering_rate_weight; });
   registerParameter<double>("lane_max_age_s", config_.lane_max_age_s);
+  registerParameter<bool>("lka_suppress_on_blinker", config_.lka_suppress_on_blinker);
+  registerParameter<double>("lka_blinker_resume_delay_s", config_.lka_blinker_resume_delay_s);
+  registerParameter<bool>("lat_recompute_setpoint", config_.lat_recompute_setpoint);
+  registerParameter<bool>("lat_require_assist", config_.lat_require_assist);
+  registerParameter<double>("assist_max_age_s", config_.assist_max_age_s);
 }
 
 void LaneKeepService::reset()
@@ -106,8 +147,67 @@ void LaneKeepService::reset()
   have_pub_prev_ = false;
   last_frame_ts_us_ = 0;
   ref_stale_ = false;
+  blinker_off_us_ = 0;
+  blinker_off_armed_ = false;
+  blinker_suppressed_ = false;
+  assist_allowed_ = false;
+  assist_ts_us_ = 0;
+  have_assist_ = false;
+  assist_absent_logged_ = false;
   frame_dt_s_ = config_.vision_nominal_dt_s;
   last_chassis_ts_us_ = 0;
+}
+
+bool LaneKeepService::recomputeSetpoint(LaneKeepOutput& out)
+{
+  if (!useFlowpilot() || !have_chassis_ || !have_desired_)
+    return false;
+  const auto k = fp_mpc_.curvatureAtSpeed(chassis_.speed_mps, frame_dt_s_);
+  if (!k)
+    return false;
+
+  const double Lf = config_.mpc_Lf > 1e-3 ? config_.mpc_Lf : config_.wheelbase_m;
+  double steer = -steerFromCurvature(*k, chassis_.speed_mps, Lf, slipFactorOrZero());
+  const double lim = mpcMaxSteerRad(chassis_.speed_mps);
+  if (lim > 1e-6)
+    steer = std::clamp(steer, -lim, lim);
+  // The slew guard is per call, and at 100 Hz that is seven times more headroom per frame than the
+  // once-per-frame path had. Left as is rather than rescaled because 8 degrees of *road wheel* is a sanity
+  // bound, not a shaping filter: it is about 125 degrees at the steering wheel and never binds in normal
+  // driving. If it starts binding, the interesting question is what produced the jump, not the ceiling.
+  if (config_.steer_slew_limit_deg > 1e-9 && have_mpc_prev_) {
+    const double ceil = config_.steer_slew_limit_deg * M_PI / 180.0;
+    steer = last_mpc_steer_rad_ + std::clamp(steer - last_mpc_steer_rad_, -ceil, ceil);
+  }
+  last_mpc_steer_rad_ = steer;
+  have_mpc_prev_ = true;
+
+  desired_swa_deg_ = steer_sign_ * (steer * 180.0 / M_PI) * effectiveSteerRatio() + effectiveAngleOffsetDeg();
+  // Written into the caller's `out`, not into `last_`: `updateTorqueFromAngle` copies `last_` before this
+  // runs and assigns it back afterwards, so touching `last_` here would be silently discarded — and the bag
+  // would report the once-per-frame setpoint while the PID chased the recomputed one. That is exactly the
+  // class of defect this session has been removing, so it is worth the parameter.
+  out.steer_rad = steer;
+  out.curvature = *k;
+  out.dbg.mpc_kappa_used = *k;
+  out.dbg.mpc_max_steer_rad = lim;
+  out.dbg.mpc_delta_clamped_rad = steer;
+  return true;
+}
+
+bool LaneKeepService::assistPresent(int64_t now_us, bool& known) const
+{
+  if (!have_assist_) {
+    known = false;
+    return true;
+  }
+  const double age_s = static_cast<double>(now_us - assist_ts_us_) * 1e-6;
+  if (config_.assist_max_age_s > 0.0 && age_s > config_.assist_max_age_s) {
+    known = false;
+    return false;
+  }
+  known = true;
+  return assist_allowed_;
 }
 
 void LaneKeepService::setController(std::string controller)
@@ -209,7 +309,7 @@ double LaneKeepService::slipFactorOrZero() const
     return 0.0;
   VehicleModelParams p;
   p.wheelbase_m = config_.wheelbase_m;
-  p.tire_stiffness_factor = config_.tire_stiffness_factor;
+  p.tire_stiffness_factor = effectiveStiffnessFactor();
   return slipFactor(p);
 }
 
@@ -274,7 +374,10 @@ void LaneKeepService::onLanes(const LanePathMsg& msg)
   }
 
   if (out.has_target && out.status == "ok") {
-    desired_swa_deg_ = steer_sign_ * (out.steer_rad * 180.0 / M_PI) * steer_ratio_;
+    // The learned angle offset is where the steering column actually reads zero, so it is added to the
+    // commanded angle rather than subtracted: the learner solved `delta = (SWA - offset) / ratio`, and this
+    // is that relation run the other way.
+    desired_swa_deg_ = steer_sign_ * (out.steer_rad * 180.0 / M_PI) * effectiveSteerRatio() + effectiveAngleOffsetDeg();
     have_desired_ = true;
   } else {
     have_desired_ = false;
@@ -300,12 +403,20 @@ void LaneKeepService::updateTorqueFromAngle()
   LaneKeepOutput out = last_;
   out.chassis_ts_us = have_chassis_ ? chassis_.timestamp_us : out.chassis_ts_us;
 
-  const int64_t now_us = nowUs();
+  const int64_t now_us = static_cast<int64_t>(now());
   if (last_pid_us_ > 0) {
     const double dt = std::clamp(static_cast<double>(now_us - last_pid_us_) * 1e-6, 0.005, 0.2);
     lat_.setRate(1.0 / dt);
   }
   last_pid_us_ = now_us;
+
+  // Before the gates, because a recomputed setpoint is what they should be gating on, and after the rate
+  // update so `frame_dt_s_` is the one this tick used. Only touches `desired_swa_deg_` — the reference path
+  // itself still comes once per vision frame, which is the same split upstream has between its 20 Hz plan
+  // and its 100 Hz setpoint. So this does not smooth the frame boundary; it smooths the interval between
+  // boundaries, and only through speed.
+  if (config_.lat_recompute_setpoint)
+    recomputeSetpoint(out);
 
   if (config_.lane_max_age_s > 0.0 && out.capture_ts_us > 0 && out.status == "ok") {
     const double age_s = static_cast<double>(now_us - out.capture_ts_us) * 1e-6;
@@ -321,7 +432,75 @@ void LaneKeepService::updateTorqueFromAngle()
     }
   }
 
-  const bool active = steer_output_enabled_ && have_desired_ && have_chassis_ && out.has_target && out.status == "ok";
+  // Turn signal: hand the wheel back. Checked after the staleness gate so whichever fired first is
+  // what the status reports.
+  // The state machine must run on every tick, including ticks where the status is already "blinker"
+  // — otherwise the falling-edge timer never starts and the resume delay is measured from the wrong
+  // moment. Only the status assignment is conditional.
+  if (config_.lka_suppress_on_blinker && have_chassis_) {
+    const bool on = chassis_.left_blinker || chassis_.right_blinker;
+    // Отдельный флаг «таймер взведён», а не ноль в метке времени: ноль — законная метка. В
+    // симулированном времени часы начинаются с нуля, и таймер отпускания не взводился никогда, то
+    // есть задержка возврата в стенде не работала вообще.
+    if (on) {
+      blinker_off_armed_ = false;
+    } else if (!blinker_off_armed_ && blinker_suppressed_) {
+      blinker_off_us_ = now_us;  // falling edge — start the resume timer
+      blinker_off_armed_ = true;
+    }
+    const double since_off_s =
+        blinker_off_armed_ ? static_cast<double>(now_us - blinker_off_us_) * 1e-6 : 0.0;
+    const bool hold = blinker_off_armed_ && since_off_s < std::max(0.0, config_.lka_blinker_resume_delay_s);
+    if (on || hold) {
+      if (out.status == "ok")
+        out.status = "blinker";
+      if (!blinker_suppressed_) {
+        LOGI("LaneKeep: turn signal (%s) — wheel handed back", chassis_.left_blinker ? "left" : "right");
+        blinker_suppressed_ = true;
+      }
+    } else {
+      // Статус снимается симметрично установке, как это делает гейт актюации ниже. `out` — копия
+      // `last_`, а этот код крутится по тикам шины, то есть в несколько раз чаще кадров зрения:
+      // без снятия статус «blinker» доживал бы до следующего кадра, а если кадры прекратятся —
+      // держался бы бесконечно, оставляя команду нулевой уже после того, как в лог написано
+      // «steering again».
+      if (out.status == "blinker")
+        out.status = "ok";
+      if (blinker_suppressed_) {
+        LOGI("LaneKeep: turn signal off for %.1f s — steering again", since_off_s);
+        blinker_suppressed_ = false;
+        blinker_off_armed_ = false;
+      }
+    }
+  }
+
+  // Whether the rack is actually being given torque. Checked last of the three gates so that our own
+  // withdrawals — a stale reference, a turn signal — report first: if we chose not to steer, whether the
+  // assist was there is moot. `dbg.assist_allowed` carries the answer regardless of what the status says,
+  // which is what offline analysis needs.
+  bool assist_known = false;
+  const bool assist = assistPresent(now_us, assist_known);
+  out.dbg.assist_allowed = assist_known && assist;
+  out.dbg.assist_known = assist_known;
+  if (config_.lat_require_assist) {
+    // Cleared as well as set: `out` is a copy of the previous tick, and between vision frames this runs
+    // ~7 times, so escalate-only would hold the status for a whole frame after the assist returned.
+    if (!assist && out.status == "ok")
+      out.status = "no_assist";
+    else if (assist && out.status == "no_assist")
+      out.status = "ok";
+    if (!assist && !assist_absent_logged_) {
+      LOGW("LaneKeep: panda is not passing torque (controls_allowed=%d, known=%d) — command cleared, PID reset",
+           static_cast<int>(assist_allowed_), static_cast<int>(assist_known));
+      assist_absent_logged_ = true;
+    } else if (assist && assist_absent_logged_) {
+      LOGI("LaneKeep: torque reaching the rack again");
+      assist_absent_logged_ = false;
+    }
+  }
+
+  const bool active = steer_output_enabled_ && have_desired_ && have_chassis_ && out.has_target &&
+                      out.status == "ok" && (!config_.lat_require_assist || assist);
   const auto lat =
       lat_.update(active, desired_swa_deg_, chassis_.steering_angle_deg, chassis_.speed_mps, chassis_.steering_pressed);
 
@@ -335,7 +514,7 @@ void LaneKeepService::updateTorqueFromAngle()
 
 void LaneKeepService::publishLaneKeep(const LaneKeepOutput& out)
 {
-  const int64_t publish_ms = nowUs() / 1000;
+  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
   const int64_t capture_ms = out.capture_ts_us / 1000;
   const int64_t vision_ms = out.vision_ts_us / 1000;
   const int64_t chassis_ms = out.chassis_ts_us / 1000;
@@ -368,7 +547,7 @@ void LaneKeepService::publishLaneKeep(const LaneKeepOutput& out)
 
 void LaneKeepService::publishLaneKeepDebug(const LaneKeepOutput& out)
 {
-  const int64_t publish_ms = nowUs() / 1000;
+  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
 
   ai::flow::adas::ZMQMessage zmq;
   zmq.set_timestamp(publish_ms);
@@ -408,6 +587,8 @@ void LaneKeepService::publishLaneKeepDebug(const LaneKeepOutput& out)
   d->set_angle_error_deg(out.angle_error_deg);
   d->set_torque_cnm(static_cast<int>(std::lround(out.steer_norm * max_torque_cnm_)));
   d->set_steer_output_enabled(out.dbg.steer_output_enabled);
+  d->set_assist_allowed(out.dbg.assist_allowed);
+  d->set_assist_known(out.dbg.assist_known);
   d->set_frame_dt_ms(frame_dt_s_ * 1000.0);
 
   d->set_p_k_dd(config_.pp_k_dd);
@@ -415,6 +596,7 @@ void LaneKeepService::publishLaneKeepDebug(const LaneKeepOutput& out)
   d->set_p_ld_max(config_.pp_ld_max);
   d->set_p_ld_curv_gain(config_.pp_ld_curv_gain);
   d->set_p_max_steer_deg(config_.max_steer_deg);
+  d->set_p_max_torque_cnm(static_cast<int>(std::lround(max_torque_cnm_)));
   d->set_p_mpc_epsi_gain(config_.mpc_epsi_gain);
   d->set_p_mpc_ff_scale(config_.mpc_ff_scale);
   d->set_p_mpc_kappa_yaw_blend(config_.mpc_kappa_yaw_blend);
@@ -437,7 +619,7 @@ void LaneKeepService::publishLaneKeepDebug(const LaneKeepOutput& out)
 
 void LaneKeepService::publishSteer(const LaneKeepOutput& out)
 {
-  const int64_t publish_ms = nowUs() / 1000;
+  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
   const int64_t capture_ms = out.capture_ts_us / 1000;
   const int64_t vision_ms = out.vision_ts_us / 1000;
   const int64_t chassis_ms = out.chassis_ts_us / 1000;

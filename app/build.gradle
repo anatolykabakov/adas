@@ -27,7 +27,32 @@ tasks.register('syncSupercomboModel', Copy) {
     }
 }
 
-tasks.named('preBuild').configure { dependsOn('syncSupercomboModel', 'syncTrafficYoloModel') }
+// OSM road map for the `map_data` service (docs/MAP_CURVATURE.md). Built by
+// scripts/mapmatch/osm_graph.py; 4.9 MB, ~3.3 MB once the APK compresses it.
+// Override: ./gradlew assembleDebug -ProadMap=/path/to.admap
+def roadMapSrc = file(findProperty('roadMap') ?: "${rootProject.projectDir}/maps/Moscow.osm.admap")
+def roadMapDst = file("${projectDir}/src/main/assets/Moscow.osm.admap")
+
+tasks.register('syncRoadMap', Copy) {
+    description = 'Copy maps/Moscow.osm.admap → assets/Moscow.osm.admap for APK'
+    onlyIf {
+        if (!roadMapSrc.isFile()) {
+            logger.warn("road map missing: ${roadMapSrc} — keeping existing assets/Moscow.osm.admap " +
+                    "(map_data node will stay idle without it)")
+            return false
+        }
+        return true
+    }
+    from roadMapSrc
+    into roadMapDst.parentFile
+    rename { 'Moscow.osm.admap' }
+    outputs.file(roadMapDst)
+    doFirst {
+        logger.lifecycle("Packaging road map: ${roadMapSrc} → ${roadMapDst}")
+    }
+}
+
+tasks.named('preBuild').configure { dependsOn('syncSupercomboModel', 'syncTrafficYoloModel', 'syncRoadMap') }
 
 def trafficYoloSrc = file(findProperty('trafficYoloModel')
         ?: "${rootProject.projectDir}/models/yolov8n_traffic_256.onnx")

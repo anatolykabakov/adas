@@ -36,7 +36,11 @@ struct SafetyPlannerConfig {
   double aeb_ttc_s = 1.4;
   double fcw_decel_ms2 = 3.5;
   double aeb_decel_ms2 = 5.5;
-  double warn_min_speed_ms = 3.0;
+  /** Below this FCW/AEB stay silent. Measured on run 2026_08_04_21_00_18: all five FCW/AEB episodes
+   *  happened at 2.7…8.5 m/s in stop-and-go, where closing on a stopped car at 4 m/s from 9 m needs
+   *  under 1 m/s² — arithmetically a "threat", practically noise. The trade-off is deliberate: city
+   *  rear-end warnings below 29 km/h are given up to stop crying wolf. */
+  double warn_min_speed_ms = 8.0;
   double min_closing_speed_ms = 0.5;
   double lead_prob_thresh = 0.5;
   double lead_max_offset_m = 2.0;
@@ -47,6 +51,11 @@ struct SafetyPlannerConfig {
   double ldw_min_speed_ms = 12.5;
   double ldw_min_outward_rate_ms = 0.05;
   bool ldw_suppress_on_driver_steer = true;
+  /** Suppress LDW while we are steering ourselves. LDW exists to warn a drifting *driver*; when the
+   *  assist holds the lane, its own tracking error is not a departure. On run 2026_08_04_21_00_18
+   *  82 % of LDW frames had lateral control engaged and the driver steering in only 6 %, at |cte|
+   *  0.54 m median — i.e. the assistant was warning about itself. Upstream gates LDW the same way. */
+  bool ldw_suppress_on_lat_active = true;
   bool ldw_suppress_on_blinker = true;
   bool ldw_require_lane_lines = true;
 
@@ -74,6 +83,8 @@ struct PlannerInput {
   double ego_speed_ms = 0.0;
   CipoState cipo{};
   bool driver_steering = false;
+  /** Our own lateral command is active (fresh `controls/steer` with enabled = true). */
+  bool lat_active = false;
   bool left_blinker = false;
   bool right_blinker = false;
 };
@@ -154,6 +165,7 @@ inline SafetyPlan computeSafetyPlan(const SafetyPlannerConfig& cfg, const Planne
 
   const bool ldw_allowed = input.lateral.valid && input.ego_speed_ms >= cfg.ldw_min_speed_ms &&
                            !(cfg.ldw_suppress_on_driver_steer && input.driver_steering) &&
+                           !(cfg.ldw_suppress_on_lat_active && input.lat_active) &&
                            (!cfg.ldw_require_lane_lines || input.lateral.lane_anchored);
   if (ldw_allowed) {
     const double cte = input.lateral.cte_m;

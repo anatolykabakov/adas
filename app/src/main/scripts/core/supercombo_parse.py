@@ -198,11 +198,21 @@ def parse_supercombo(out: np.ndarray) -> SupercomboOut:
         lanes.append(LaneXYZ(name=name, y=y, z=z, prob=prob, y_std=y_std))
 
     # --- road edges ---
+    # Same two-half layout as the lanes: 132 floats of means (2 x 33 x y,z), then 132 of log-sigmas.
+    # The sigmas went unread here and in the Java parser until 2026-08-06, which is why bags could
+    # not answer whether the edges are usable as a fallback on single-line stretches.
     edge_raw = res[LANE_PROB_END:ROAD_END]
+    n_edge_mean = 132
     edges: List[LaneXYZ] = []
     for i, name in enumerate(("edgeLeft", "edgeRight")):
         y, z = _yz_from_block(edge_raw[i * 66 : (i + 1) * 66])
-        edges.append(LaneXYZ(name=name, y=y, z=z, prob=1.0))
+        y_std = None
+        if edge_raw.size >= 2 * n_edge_mean:
+            ystd, _ = _yz_from_block(
+                edge_raw[n_edge_mean + i * 66 : n_edge_mean + (i + 1) * 66]
+            )
+            y_std = np.exp(ystd)
+        edges.append(LaneXYZ(name=name, y=y, z=z, prob=1.0, y_std=y_std))
 
     return SupercomboOut(plan=plan, lanes=lanes, edges=edges)
 

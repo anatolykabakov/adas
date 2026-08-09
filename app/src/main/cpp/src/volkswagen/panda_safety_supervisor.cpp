@@ -60,9 +60,12 @@ std::optional<health_t> PandaSafetySupervisor::tick(Panda& panda, health_t healt
       const uint8_t chv = std::get<2>(*vers);
       LOGI("Panda packet versions health=%u can=%u can_health=%u (host expects health=%u can_health=%u)", hv, cv, chv,
            HEALTH_PACKET_VERSION, CAN_HEALTH_PACKET_VERSION);
-      if (hv != HEALTH_PACKET_VERSION) {
-        LOGE("Panda health packet version mismatch fw=%u host=%u — fields will be wrong; refusing set_safety storm", hv,
-             HEALTH_PACKET_VERSION);
+      // v11 is not a mismatch: `Panda::get_state` reads the v11 layout when the firmware speaks it, and
+      // that is the version dragonpilot's panda declares. Reporting it as "fields will be wrong" sent
+      // whoever debugged the assist gate looking in the wrong place.
+      if (hv != HEALTH_PACKET_VERSION && hv != HEALTH_PACKET_VERSION_V11) {
+        LOGE("Panda health packet version %u is neither %u nor %u — fields will be wrong", hv,
+             HEALTH_PACKET_VERSION, HEALTH_PACKET_VERSION_V11);
       }
     }
     LOGI("Panda init V=%u ign_hw=%d ign=%d harness=%u safety_now=%u faults=0x%x", health.voltage_pkt,
@@ -74,9 +77,10 @@ std::optional<health_t> PandaSafetySupervisor::tick(Panda& panda, health_t healt
     if (s.safety_mode_pkt != C::kNoOutput) {
       panda.set_safety_model(C::kNoOutput, 0);
     }
-    panda.set_alternative_experience(C::kAltExpDisableDisengageOnGas, 0);
+    panda.set_alternative_experience(alt_exp_, 0);
     alt_exp_configured_ = true;
-    LOGI("Panda alt_exp DISABLE_DISENGAGE_ON_GAS set (before VW safety)");
+    LOGI("Panda alt_exp=%u set before VW safety (disengage_on_gas=%d alka=%d)", alt_exp_,
+         (alt_exp_ & C::kAltExpDisableDisengageOnGas) ? 1 : 0, (alt_exp_ & C::kAltExpAlka) ? 1 : 0);
 
     if (ignition) {
       panda.set_safety_model(want, param);
@@ -112,7 +116,7 @@ std::optional<health_t> PandaSafetySupervisor::tick(Panda& panda, health_t healt
           if (s.safety_mode_pkt != C::kNoOutput) {
             panda.set_safety_model(C::kNoOutput, 0);
           }
-          panda.set_alternative_experience(C::kAltExpDisableDisengageOnGas, 0);
+          panda.set_alternative_experience(alt_exp_, 0);
           alt_exp_configured_ = true;
         }
         LOGW("Panda safety drifted to %u — re-set %u (harness=%u faults=0x%x)", s.safety_mode_pkt, want,

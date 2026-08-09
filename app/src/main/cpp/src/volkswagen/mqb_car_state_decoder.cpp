@@ -35,6 +35,9 @@ CarStateView MqbCarStateDecoder::toCarStateView() const
   cs.ldwStock = ldw_stock_;
   cs.graStock = gra_stock_;
   cs.cruiseEngaged = state_.cruise_engaged();
+  cs.cruiseAvailable = state_.cruise_available();
+  cs.gearReverse = gearIsReverse(state_.gear());
+  cs.gearKnown = state_.gear() != 0;
   cs.gasPressed = state_.gas_pressed();
   cs.brakePressed = state_.brake_pressed();
   return cs;
@@ -74,16 +77,13 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame)
 
         const double v_raw = (fl_ms + fr_ms + rl_ms + rr_ms) * 0.25;
         const int64_t now = utils::getCurrentTimestamp();
-        float a_ego = state_.a_ego();
-        if (prev_v_ts_ms_ > 0 && now > prev_v_ts_ms_) {
-          a_ego = static_cast<float>((v_raw - prev_v_ego_) / ((now - prev_v_ts_ms_) * 1e-3));
-        }
-        prev_v_ego_ = v_raw;
+        const double dt_s = prev_v_ts_ms_ > 0 && now > prev_v_ts_ms_ ? (now - prev_v_ts_ms_) * 1e-3 : 0.0;
         prev_v_ts_ms_ = now;
+        speed_filter_.update(v_raw, dt_s);
 
         state_.set_v_ego_raw(static_cast<float>(v_raw));
-        state_.set_v_ego(static_cast<float>(v_raw));
-        state_.set_a_ego(a_ego);
+        state_.set_v_ego(static_cast<float>(speed_filter_.speed()));
+        state_.set_a_ego(static_cast<float>(speed_filter_.accel()));
         state_.set_standstill(v_raw < 0.05);
         dirty_ = true;
       }

@@ -155,7 +155,12 @@ class BagWindow:
         )
         self.panda = rel(
             _series(
-                session, "panda/health", lambda p: (1.0 if p.controls_allowed else 0.0,)
+                # OR, not `controls_allowed` alone: with `lat_always_on` the panda passes torque while
+                # `controls_allowed` is false, and `assistAllowed` is a superset of it — see
+                # `vis.bag_io.lateral_actuation_on`.
+                session,
+                "panda/health",
+                lambda p: (1.0 if (getattr(p, "lat_actuation_allowed", False) or p.controls_allowed) else 0.0,),
             )
         )
         lanes = load_topic_messages(session, "vision/lanes")

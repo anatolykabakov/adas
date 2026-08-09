@@ -93,3 +93,21 @@ def iter_aligned(
             row[name] = hit[1] if hit else None
             row[f"{name}_t"] = hit[0] if hit else None
         yield row
+
+
+def lateral_actuation_on(health_messages) -> "np.ndarray":
+    """Per-message flag: was lateral torque actually reaching the rack?
+
+    Not simply `controls_allowed`. With always-on lateral (`lat_always_on`) the panda passes HCA frames while
+    `controls_allowed` is false — dragonpilot did exactly that in 64.3 % of a drive on this car — so a filter
+    keyed on `controls_allowed` would drop precisely the frames where the assist was working. That is the same
+    mistake, inverted, that made every lateral number in `docs/BACKLOG.md` wrong before 2026-08-06.
+
+    The OR needs no per-bag heuristic and is exact in both regimes, because `PandaService::assistAllowed`
+    returns true whenever `controls_allowed` is true: so `lat_actuation_allowed` is a superset of it on bags
+    that have the field, and false everywhere on bags recorded before it existed.
+    """
+    import numpy as np
+
+    return np.asarray([bool(getattr(m, "lat_actuation_allowed", False)) or bool(getattr(m, "controls_allowed", False))
+                       for _, m in health_messages])

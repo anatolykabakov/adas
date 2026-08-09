@@ -250,6 +250,16 @@ public class ProtoUtils {
 
     public static Messages.ZMQMessage createLaneLinesMessage(
             ai.flow.adas.vision.LaneLines ll, boolean includeModelOut) {
+        return createLaneLinesMessage(ll, includeModelOut, "vision/lanes");
+    }
+
+    /**
+     * Same message into an arbitrary topic, used by the shadow model comparison. A separate topic
+     * rather than a flag inside the message, because every existing consumer reads by directory name
+     * and a new topic simply does not exist for them.
+     */
+    public static Messages.ZMQMessage createLaneLinesMessage(
+            ai.flow.adas.vision.LaneLines ll, boolean includeModelOut, String topic) {
         if (ll == null) {
             return null;
         }
@@ -259,7 +269,10 @@ public class ProtoUtils {
             .setFrameId(ll.frameId)
             .setCaptureTsMs(ll.captureTimestampMs > 0 ? ll.captureTimestampMs : ll.timestampMs)
             .setInferTsMs(ll.inferTimestampMs)
-            .setInferDurationMs(ll.inferDurationMs);
+            .setInferDurationMs(ll.inferDurationMs)
+            .setSubmitTsMs(ll.submitTimestampMs)
+            .setPickupTsMs(ll.pickupTimestampMs)
+            .setFramesDropped(ll.framesDropped);
 
         for (float x : ai.flow.adas.vision.LaneLines.X_IDXS) {
             lanesBuilder.addX(x);
@@ -284,6 +297,12 @@ public class ProtoUtils {
             }
             for (float z : ll.edgesZ[i]) {
                 poly.addZ(z);
+            }
+            // Edge sigma, recorded from 2026-08-06 on. Needed before road edges can be used as the
+            // fallback for single-line stretches: flowpilot gates them on sigma, and until now ours
+            // were parsed by nobody, so bags could not say whether the edges are trustworthy.
+            for (float std : ll.edgesYStd[i]) {
+                poly.addYStd(std);
             }
             lanesBuilder.addEdges(poly.build());
         }
@@ -319,7 +338,7 @@ public class ProtoUtils {
 
         return Messages.ZMQMessage.newBuilder()
             .setTimestamp(ll.timestampMs)
-            .setTopic("vision/lanes")
+            .setTopic(topic)
             .setLaneLines(lanesBuilder.build())
             .build();
     }

@@ -3,27 +3,15 @@
 #include "middleware/middleware.hpp"
 #include "messages.pb.h"
 #include "utils/adas_topics.h"
-#include "utils/curvature_preview.h"
+#include "utils/long_planner.hpp"
 
 namespace adas {
 
 class LongPlanService : public Service {
 public:
-  struct Config {
-    double lead_prob_thresh = 0.5;
-    double t_follow = 1.5;
-    double min_gap_m = 4.0;
-    double a_max = 1.2;
-    double a_min = -2.5;
-    double kp_gap = 0.35;
-    double kp_v = 0.4;
-
-    bool curv_enabled = true;
-    double curv_a_lat_max = 1.8;
-    double curv_preview_s = 4.0;
-    double curv_min_speed_ms = 8.0;
-    double curv_v_floor_ms = 8.0;
-  };
+  /** The rules live in `utils/long_planner.hpp` so they can be tested without a middleware
+   *  instance; this service only collects inputs, calls them, and publishes. */
+  using Config = longplan::Config;
 
   LongPlanService() : LongPlanService(Config{}) {}
   explicit LongPlanService(Config config) : config_(std::move(config)) {}

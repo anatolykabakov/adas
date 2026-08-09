@@ -56,7 +56,8 @@ app/src/main/
 ├── java/ai/flow/adas/      UI, camera, ONNX (supercombo + YOLO), ZMQ bridge, bag recording
 │   └── vision/             calibration warp, model output parsing, overlay
 ├── cpp/                    AdasApp: all control and processing
-│   ├── services/           lane_keep, panda, topic_convert, localization, camera_calib, …
+│   ├── services/           lane_keep, panda, topic_convert, localization, camera_calib, map_data, …
+│   ├── mapmatch/           OSM road graph: localization, curvature ahead
 │   ├── flowpilot/          flowpilot lateral planner port
 │   ├── visionpilot/        alternative spatial MPC
 │   └── utils/              vehicle model, PID, pure pursuit, calibrations
@@ -175,6 +176,7 @@ What this test proves and what it does not (ideal reference, different vehicle) 
 [`docs/SIM_CONTROLLER_TEST.md`](docs/SIM_CONTROLLER_TEST.md).
 
 ### Visual inspection
+
 
 Same tracks, same 90 ms step and same reference as `sim.eval` — with a window:
 

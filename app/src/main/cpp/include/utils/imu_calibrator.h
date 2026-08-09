@@ -28,10 +28,28 @@ public:
   bool ready() const { return has_prior_ || orientation_locked_; }
   const Vec3& bias() const { return bias_; }
   const Mat3& rotation() const { return R_; }
+
+  /** Lateral specific force in the vehicle frame (x forward, y right, z down) for the last sample, i.e.
+   *  the accelerometer's y component after calibration. This is what `RoadRollEstimator` needs; it is only
+   *  meaningful once a heading exists, which is what `hasHeading` reports. */
+  double lastLatAccel() const { return last_lat_accel_; }
+  bool hasHeading() const { return has_prior_; }
   int orient_samples() const { return static_cast<int>(accel_buf_.size()); }
   int bias_samples() const { return static_cast<int>(gyro_buf_.size()); }
 
   static Mat3 rotationFromGravity(const Vec3& accel);
+
+  /** Roll and pitch from gravity, heading kept from `heading_ref`.
+   *
+   *  Gravity fixes two of the three angles and says nothing about the third: any rotation about the
+   *  gravity axis leaves the measured vector unchanged. `rotationFromGravity` resolves that freedom by
+   *  taking the minimal rotation, which is fine for yaw rate — only the z component is read, and gravity
+   *  fixes z — and wrong for anything lateral, because the resulting y axis points nowhere in particular.
+   *
+   *  So the standstill lock keeps the heading it already had (from the mount prior) and replaces only what
+   *  gravity actually measured. Without this the lock silently destroys the heading, and the lateral
+   *  specific force published alongside the yaw rate would be a mixture of longitudinal and lateral. */
+  static Mat3 rotationFromGravityKeepingHeading(const Vec3& accel, const Mat3& heading_ref);
   static Mat3 rotationFromGravity(double ax, double ay, double az) { return rotationFromGravity(Vec3(ax, ay, az)); }
   static Mat3 rotationFromMountRpy(double roll_deg, double pitch_deg, double yaw_deg);
 
@@ -52,6 +70,7 @@ private:
   Vec3 bias_ = Vec3::Zero();
   Mat3 R_ = Mat3::Identity();
 
+  double last_lat_accel_ = 0.0;
   std::vector<Vec3> accel_buf_;
   std::vector<Vec3> gyro_buf_;
 

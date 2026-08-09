@@ -347,7 +347,9 @@ TEST(MiddlewareParams, SetByNameLandsOnTheServiceThread)
   EXPECT_EQ(1u, mw.setParameter("mode", "fp"));
   EXPECT_EQ(1u, mw.setParameter("on", "true"));
   EXPECT_EQ(1u, mw.setParameter("clamped", "3.0"));
-  for (int i = 0; i < 200 && svc->mode != "fp"; ++i)
+  // Wait for all three, not just the first: parked values may be applied in separate passes, so
+  // watching one of them says nothing about the others.
+  for (int i = 0; i < 200 && !(svc->mode == "fp" && svc->on && svc->clamped == 1.0); ++i)
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   EXPECT_EQ("fp", svc->mode);
   EXPECT_TRUE(svc->on);

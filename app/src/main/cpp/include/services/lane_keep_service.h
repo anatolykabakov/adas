@@ -54,6 +54,11 @@ struct LaneKeepOutput {
     int torque_cnm = 0;
     bool steer_output_enabled = false;
 
+    /** Whether the rack was actually being given torque, as reported by the panda safety layer. */
+    bool assist_allowed = false;
+    /** False when no panda has reported yet, or when its last report has aged out. */
+    bool assist_known = false;
+
     bool lane_anchored = false;
     double lane_width_m = 0.0;
     double lane_offset_m = 0.0;
@@ -82,7 +87,10 @@ public:
     double steer_ratio = 15.7;
     double pid_kp = 0.6;
     double pid_ki = 0.2;
-    double pid_kf = 0.00006;
+    // Fitted over three drives; the previous 0.00006 under-delivered 4-8x at every speed.
+    // See kFeedforwardFloorMps in utils/lat_control_pid.h.
+    double pid_kf = 0.00015;
+    double pid_ff_floor_mps = kFeedforwardFloorMps;
     bool steer_output_enabled = false;
     double steer_sign = -1.0;
     double mpc_Lf = 2.67;
@@ -122,6 +130,19 @@ public:
 
     double tire_stiffness_factor = 0.64;
 
+    /** Take `tire_stiffness_factor`, `steer_ratio` and the steering bias from `localization/pose` — the
+     *  online estimate from `utils/params_learner.h` — instead of from this config.
+     *
+     *  Separate from `localization.learn_vehicle_params` on purpose. The learner can run and publish for a
+     *  whole drive while the controller keeps using the constants; that is how the learned value earns the
+     *  right to be used, by being logged next to the number it would replace. One flag for both would mean
+     *  the first drive that tests the estimator is also the first drive that trusts it.
+     *
+     *  Even when on, the estimate is only taken while `learned_params_valid` holds — the learner's own
+     *  gate on sample count and uncertainty — and the configured value is used until then and again
+     *  immediately if validity is lost. */
+    bool use_learned_params = false;
+
     double fp_steer_delay_s = 0.35;
 
     double min_control_speed_mps = 1.5;
@@ -131,6 +152,52 @@ public:
     double vision_nominal_dt_s = 0.09;
 
     double lane_max_age_s = 0.30;
+    /** Hand the wheel back while a turn signal is on: the driver is changing lanes and we have no
+     *  lane-change planner (no `DesireHelper`), so holding the current lane fights them.
+     *
+     *  Signal source is `Gateway_72` (`0x3DB`), decoded into `ChassisSample::left/right_blinker`.
+     *  Verified present on run 2026_08_04_21_00_18: left on 2.4 % of the run (7 episodes), right
+     *  4.1 % (11 episodes) — the frame really arrives, so this gate is not dead code.
+     *
+     *  Deliberately *not* keyed on `steering_pressed`: that flag fired 520 times in 23.5 min with a
+     *  median episode of 30 ms, so suppressing on it would drop the assist every few seconds. Small
+     *  driver inputs are already handled by the panda's STEER_DRIVER_ALLOWANCE and by the PID
+     *  integrator unwind. */
+    bool lka_suppress_on_blinker = true;
+    /** Keep the wheel handed back for this long after the signal cancels. Blinkers self-cancel when
+     *  the wheel returns, i.e. mid-manoeuvre, so re-engaging on the falling edge would grab the wheel
+     *  while the car is still crossing the line. */
+    double lka_blinker_resume_delay_s = 1.0;
+
+    /** Recompute the setpoint between vision frames instead of holding the last one.
+     *
+     *  Upstream calls `get_lag_adjusted_curvature` and `LaC.update` at 100 Hz on a plan that refreshes at
+     *  20 Hz (`controlsd.py:730`); we solved once per frame and held the answer for 78 ms. Measured on their
+     *  log against ours: median setpoint step 0.0067° per 10 ms there, 0.107° here, p99 **2.48°** and 3.78° at
+     *  5–12 m/s. The rack does 200 cNm/s, so a step is a request it cannot follow and the response reads as
+     *  lag — which is where the differential replay put the remaining disagreement, at 10–15 m/s.
+     *
+     *  Nothing is re-solved: only the two terms the speed enters, `psi/(v·delay)` and the curvature-rate
+     *  ceiling. `fp` only — `pp` and `mpc` keep the once-per-frame setpoint, which is worth knowing when
+     *  comparing controllers with this on. */
+    bool lat_recompute_setpoint = false;
+
+    /** Gate the angle PID on whether the rack is actually receiving torque.
+     *
+     *  Without this the loop cannot tell a followed command from a discarded one. On run
+     *  2026_08_06_18_27_12 the panda withheld torque 70.7 % of the time — the stock VW cruise drops
+     *  below ~30 km/h and on brake, and `controls_allowed` for MQB follows `TSK_06.TSK_Status ∈
+     *  {3,4,5}` — while `steer_output_enabled` stayed true, the debug topic claimed the system was
+     *  steering, and the integrator wound up against an error it could not influence. Upstream resets
+     *  the controller whenever `not active` (`latcontrol_pid.py`); this is that gate.
+     *
+     *  Reporting matters as much as the reset: `dbg.assist_allowed` is what lets offline analysis stop
+     *  averaging actuated and non-actuated frames together, which is what every lateral number in
+     *  `docs/BACKLOG.md` did before this existed. */
+    bool lat_require_assist = true;
+    /** How long a panda report stays usable. `panda/health` publishes at 10 Hz, so this is five
+     *  periods — long enough not to flap, short enough that a dead panda closes the gate. */
+    double assist_max_age_s = 0.5;
   };
 
   LaneKeepService() : LaneKeepService(Config{}) {}
@@ -197,6 +264,36 @@ public:
 
   void setFpSteeringRateWeight(double w) { config_.fp_steering_rate_weight = std::max(0.0, w); }
 
+  /** Hand the controller the online estimate. `valid` is the learner's own gate; when it is false the
+   *  configured constants are used, so losing validity mid-drive walks the parameters back rather than
+   *  freezing them at whatever the estimator last believed. */
+  void setLearnedParams(bool valid, double tire_stiffness_factor, double steer_ratio, double angle_offset_deg)
+  {
+    learned_valid_ = valid && tire_stiffness_factor > 0.05 && steer_ratio > 1.0;
+    if (learned_valid_) {
+      learned_stiffness_ = tire_stiffness_factor;
+      learned_steer_ratio_ = steer_ratio;
+      learned_angle_offset_deg_ = angle_offset_deg;
+    }
+  }
+
+  /** The parameters actually in force this tick, config or learned. Public because the debug message
+   *  publishes them: a bag that does not say which stiffness produced a command cannot be used to judge
+   *  the switch. */
+  double effectiveStiffnessFactor() const
+  {
+    return (config_.use_learned_params && learned_valid_) ? learned_stiffness_ : config_.tire_stiffness_factor;
+  }
+  double effectiveSteerRatio() const
+  {
+    return (config_.use_learned_params && learned_valid_) ? learned_steer_ratio_ : steer_ratio_;
+  }
+  double effectiveAngleOffsetDeg() const
+  {
+    return (config_.use_learned_params && learned_valid_) ? learned_angle_offset_deg_ : 0.0;
+  }
+  bool usingLearnedParams() const { return config_.use_learned_params && learned_valid_; }
+
   void setFpSteerDelayS(double s) { config_.fp_steer_delay_s = std::max(0.05, s); }
   void setCamYLeftM(double m) { config_.cam_y_left_m = m; }
   void setPidGains(double kp, double ki, double kf) { lat_.setGains(kp, ki, kf); }
@@ -216,6 +313,21 @@ private:
   void updateFrameDt(const LanePathMsg& msg);
 
   void updateChassisDt(const ChassisSample& msg);
+
+  /** Whether torque is reaching the rack right now, and whether we know.
+   *
+   *  The two answers when we do not know are deliberately different. Having never heard from a panda
+   *  means there is no panda in the loop — a bag replay, the Python bindings, a bench run — and gating
+   *  there would silence the command in every offline harness we measure with. Having heard from one
+   *  and then losing it means we are on the car and the device stopped talking, in which case it is
+   *  not passing torque either. So: never seen, gate open; seen and aged out, gate closed. */
+  bool assistPresent(int64_t now_us, bool& known) const;
+
+  /** The `fp` curvature → steering-wheel angle chain, run again at the current speed. Reproduces exactly
+   *  what `stepFlowpilot` does after the solve — vehicle model, the speed-dependent angle ceiling, the slew
+   *  guard — because a recompute that skipped any of them would command something the once-per-frame path
+   *  never would. Returns false when there is nothing to recompute from. */
+  bool recomputeSetpoint(LaneKeepOutput& out);
 
   double emaAlpha(double alpha_at_nominal) const;
 
@@ -238,6 +350,10 @@ private:
   double max_steer_rad_ = 8.0 * M_PI / 180.0;
   double max_torque_cnm_ = 300.0;
   double steer_ratio_ = 15.7;
+  bool learned_valid_ = false;
+  double learned_stiffness_ = 0.64;
+  double learned_steer_ratio_ = 15.7;
+  double learned_angle_offset_deg_ = 0.0;
   double steer_sign_ = -1.0;
   bool steer_output_enabled_ = false;
 
@@ -251,6 +367,15 @@ private:
   double last_pub_steer_rad_ = 0.0;
   bool have_pub_prev_ = false;
   bool ref_stale_ = false;
+  /** When a turn signal last went off; suppression persists for `lka_blinker_resume_delay_s`. */
+  int64_t blinker_off_us_ = 0;
+  bool blinker_off_armed_ = false;
+  bool blinker_suppressed_ = false;
+  /** Last `panda/health`: whether the safety layer allowed control, and when it said so. */
+  bool assist_allowed_ = false;
+  int64_t assist_ts_us_ = 0;
+  bool have_assist_ = false;
+  bool assist_absent_logged_ = false;
   int pub_gap_frames_ = 0;
   int64_t last_frame_ts_us_ = 0;
   double frame_dt_s_ = 0.09;

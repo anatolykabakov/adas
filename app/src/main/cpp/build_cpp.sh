@@ -456,6 +456,18 @@ copy_to_jnilibs() {
     fi
     cp -f "$BUILT_LIBRARY" "$JNI_LIBS_DIR/libadas_app_android.so"
 
+    # Раннер thneed — отдельная библиотека и НЕ обязательная. Она грузится только когда
+    # vision.model_runner = "thneed", и Java ловит отказ загрузки. Поэтому её отсутствие не ошибка:
+    # предупреждаем и идём дальше, иначе сборка ломалась бы у всех, кому этот путь не нужен.
+    local thneed_lib
+    thneed_lib=$(find "$CPP_DIR/$BUILD_DIR" -name "libthneedrunner.so" -print -quit 2>/dev/null)
+    if [ -n "$thneed_lib" ] && [ -f "$thneed_lib" ]; then
+        cp -f "$thneed_lib" "$JNI_LIBS_DIR/libthneedrunner.so"
+        print_status "  thneed runner -> $JNI_LIBS_DIR/libthneedrunner.so"
+    else
+        print_warning "libthneedrunner.so not built — the thneed model runner will be unavailable"
+    fi
+
     print_success "jniLibs ready -> $JNI_LIBS_DIR"
     ls -la "$JNI_LIBS_DIR"
 }
@@ -481,6 +493,37 @@ show_build_info() {
     echo
 }
 
+# The shipped config is JSON with long prose comments, and a missing comma between two of them is an
+# easy edit to make. `AdasApp::Config::loadFromFile` reacts by logging one line and falling back to
+# built-in defaults — on the phone that means the drive silently runs on the wrong parameters. Cheaper
+# to fail here. (It happened twice on 2026-08-06 alone.)
+check_shipped_config() {
+    local cfg
+    cfg="$(dirname "$0")/../assets/config.json"
+    [ -f "$cfg" ] || return 0
+    if ! python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$cfg" 2>/tmp/adas_cfg_err; then
+        print_error "assets/config.json is not valid JSON — the app would silently use defaults:"
+        cat /tmp/adas_cfg_err >&2
+        exit 1
+    fi
+    print_success "assets/config.json parses"
+}
+
+# The course is read by people who copy the snippets, so a block that raises is worse than no block.
+# Cheap to check here; skipped silently when numpy is absent (the C++ build does not need it).
+check_book_snippets() {
+    local checker
+    checker="$(dirname "$0")/../../../../docs/book/check_snippets.py"
+    [ -f "$checker" ] || return 0
+    python3 -c "import numpy" 2>/dev/null || return 0
+    if ! python3 "$checker" >/tmp/adas_book_snippets 2>&1; then
+        print_error "a python block in docs/book does not run:"
+        tail -20 /tmp/adas_book_snippets >&2
+        exit 1
+    fi
+    print_success "$(tail -1 /tmp/adas_book_snippets)"
+}
+
 main() {
     echo "=========================================="
     echo "  ADAS C++ build (Conan)"
@@ -497,6 +540,8 @@ main() {
     show_build_info
 
     check_dependencies
+    check_shipped_config
+    check_book_snippets
     clean_build
     build_cpp_library
     copy_to_jnilibs

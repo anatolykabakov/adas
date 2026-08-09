@@ -45,4 +45,15 @@ message LaneLines {
     float lead_prob = 19;           // max leadsV3 presence
     float plan_v0 = 20;             // PLAN velocity x[0]
     bool lead_valid = 21;           // prob ≥ threshold (see ModelLongParse)
+
+    // Where the time before inference actually goes. Needed twice: to attribute the ~20 ms the loop
+    // spends waiting for a frame, and to tell camera starvation from slow inference in the daytime
+    // stalls (reference older than 300 ms in 15.9 % of run 2026_08_04_21_00_18, one 75 s hole).
+    // Without these three, `capture_ts_ms` is the earliest thing we know and the camera→app path is
+    // invisible: a frame that arrives 40 ms late and one that waits 40 ms in the queue look the same.
+    int64 submit_ts_ms = 22;        // frame handed to VisionPipeline.submitYuv
+    int64 pickup_ts_ms = 23;        // inference thread took it out of the 1-slot buffer
+    // Frames overwritten in that 1-slot buffer since the previous processed frame, i.e. captures
+    // thrown away because inference was still running. Zero means the pipeline kept up.
+    int32 frames_dropped = 24;
 }

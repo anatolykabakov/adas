@@ -7,9 +7,13 @@
 #include "mapmatch/fit.h"
 #include "mapmatch/geo.h"
 #include "mapmatch/road_map.h"
+#include "mapmatch/road_route.h"
 #include "mapmatch/search.h"
 #include "mapmatch/track.h"
+#include "mapmatch/window_search.h"
 #include "visionpilot/lateral_planning.hpp"
+#include "volkswagen/carcontroller.h"
+#include "volkswagen/values.h"
 
 namespace py = pybind11;
 
@@ -25,7 +29,38 @@ PYBIND11_MODULE(core, m)
   m.def("set_mpc_cte_gain_base", &visionpilot::set_cte_gain_base, py::arg("base"));
   m.def("set_mpc_cte_gain_floor", &visionpilot::set_cte_gain_floor, py::arg("floor"));
 
+  // The MQB torque limiter, exposed because a replay has no panda in the loop and the command that reaches
+  // the rack is the limited one. Comparing our unlimited torque against upstream's `actuatorsOutput` is not
+  // a comparison — the rate limit alone turns a requested 300 into a median 187 applied. Exposed rather
+  // than reimplemented in the harness: a second copy of the asymmetric up/down logic would be a second
+  // thing to keep correct.
+  m.def("apply_driver_steer_torque_limits", &volkswagen::applyDriverSteerTorqueLimits, py::arg("apply_torque"),
+        py::arg("driver_torque"), py::arg("apply_steer_last"));
+  m.attr("STEER_MAX") = volkswagen::CarControllerParams::STEER_MAX;
+  m.attr("STEER_STEP") = volkswagen::CarControllerParams::STEER_STEP;
+
   py::module_ mm = m.def_submodule("mapmatch");
+
+  py::class_<adas::mapmatch::WindowSearchConfig>(mm, "WindowSearchConfig")
+      .def(py::init<>())
+      .def_readwrite("window_m", &adas::mapmatch::WindowSearchConfig::window_m)
+      .def_readwrite("tol_deg", &adas::mapmatch::WindowSearchConfig::tol_deg)
+      .def_readwrite("clip_deg", &adas::mapmatch::WindowSearchConfig::clip_deg)
+      .def_readwrite("beam", &adas::mapmatch::WindowSearchConfig::beam)
+      .def_readwrite("per_edge", &adas::mapmatch::WindowSearchConfig::per_edge)
+      .def_readwrite("cell_m", &adas::mapmatch::WindowSearchConfig::cell_m)
+      .def_readwrite("per_cell", &adas::mapmatch::WindowSearchConfig::per_cell)
+      .def_readwrite("defer_deg", &adas::mapmatch::WindowSearchConfig::defer_deg)
+      .def_readwrite("defer_beam", &adas::mapmatch::WindowSearchConfig::defer_beam)
+      .def_readwrite("max_expand", &adas::mapmatch::WindowSearchConfig::max_expand)
+      .def_readwrite("verbose", &adas::mapmatch::WindowSearchConfig::verbose);
+
+  py::class_<adas::mapmatch::WindowRoute>(mm, "WindowRoute")
+      .def_readonly("dir_edges", &adas::mapmatch::WindowRoute::dir_edges)
+      .def_readonly("cost", &adas::mapmatch::WindowRoute::cost);
+
+  mm.def("search_by_windows", &adas::mapmatch::searchByWindows, py::arg("road_map"),
+         py::arg("window_deg"), py::arg("config") = adas::mapmatch::WindowSearchConfig{});
 
   py::class_<adas::mapmatch::LocalFrame>(mm, "LocalFrame")
       .def(py::init([](double lat0, double lon0) {
@@ -168,6 +203,63 @@ PYBIND11_MODULE(core, m)
             return std::make_tuple(ei, d, ei == 0xFFFFFFFFu ? std::string{} : self.edgeName(ei));
           },
           py::arg("x"), py::arg("y"), py::arg("search_m") = 200.0);
+
+  // Route ahead and its curvature — the same code the on-device `map_data` service runs, exposed so a
+  // recorded run can be replayed through it offline (`app/src/main/scripts/bag_map_data.py`). Runs that were
+  // driven before the service existed have GPS in the bag, so they can be analysed too.
+  py::class_<adas::mapmatch::RouteConfig>(mm, "RouteConfig")
+      .def(py::init<>())
+      .def_readwrite("horizon_m", &adas::mapmatch::RouteConfig::horizon_m)
+      .def_readwrite("match_search_m", &adas::mapmatch::RouteConfig::match_search_m)
+      .def_readwrite("max_match_dist_m", &adas::mapmatch::RouteConfig::max_match_dist_m)
+      .def_readwrite("max_match_heading_deg", &adas::mapmatch::RouteConfig::max_match_heading_deg)
+      .def_readwrite("heading_weight_m_per_rad", &adas::mapmatch::RouteConfig::heading_weight_m_per_rad)
+      .def_readwrite("step_m", &adas::mapmatch::RouteConfig::step_m)
+      .def_readwrite("window_m", &adas::mapmatch::RouteConfig::window_m)
+      .def_readwrite("turn_kappa", &adas::mapmatch::RouteConfig::turn_kappa)
+      .def_readwrite("max_lat_acc", &adas::mapmatch::RouteConfig::max_lat_acc)
+      .def_readwrite("min_section_m", &adas::mapmatch::RouteConfig::min_section_m)
+      .def_readwrite("max_curv_deviation", &adas::mapmatch::RouteConfig::max_curv_deviation)
+      .def_readwrite("max_curv_split_arc_deg", &adas::mapmatch::RouteConfig::max_curv_split_arc_deg)
+      .def_readwrite("straight_max_deg", &adas::mapmatch::RouteConfig::straight_max_deg);
+
+  py::class_<adas::mapmatch::TurnSection>(mm, "TurnSection")
+      .def_readonly("start_m", &adas::mapmatch::TurnSection::start_m)
+      .def_readonly("end_m", &adas::mapmatch::TurnSection::end_m)
+      .def_readonly("kappa", &adas::mapmatch::TurnSection::kappa)
+      .def_readonly("speed_mps", &adas::mapmatch::TurnSection::speed_mps)
+      .def_readonly("sign", &adas::mapmatch::TurnSection::sign)
+      .def("__repr__", [](const adas::mapmatch::TurnSection& t) {
+        return "<TurnSection " + std::to_string(static_cast<int>(t.start_m)) + ".." +
+               std::to_string(static_cast<int>(t.end_m)) + " m, R=" +
+               std::to_string(static_cast<int>(t.kappa > 1e-9 ? 1.0 / t.kappa : 0.0)) + " m, v=" +
+               std::to_string(static_cast<int>(t.speed_mps * 3.6)) + " km/h, " + (t.sign > 0 ? "left>" : "right>");
+      });
+
+  py::class_<adas::mapmatch::RouteAhead>(mm, "RouteAhead")
+      .def_readonly("matched", &adas::mapmatch::RouteAhead::matched)
+      .def_readonly("match_dist_m", &adas::mapmatch::RouteAhead::match_dist_m)
+      .def_readonly("heading_delta_rad", &adas::mapmatch::RouteAhead::heading_delta_rad)
+      .def_readonly("road_name", &adas::mapmatch::RouteAhead::road_name)
+      .def_readonly("x_m", &adas::mapmatch::RouteAhead::x_m)
+      .def_readonly("y_m", &adas::mapmatch::RouteAhead::y_m)
+      .def_readonly("dir_edges", &adas::mapmatch::RouteAhead::dir_edges)
+      .def_readonly("s_m", &adas::mapmatch::RouteAhead::s_m)
+      .def_readonly("x", &adas::mapmatch::RouteAhead::x_m_pts)
+      .def_readonly("y", &adas::mapmatch::RouteAhead::y_m_pts)
+      .def_readonly("kappa", &adas::mapmatch::RouteAhead::kappa)
+      .def_readonly("turns", &adas::mapmatch::RouteAhead::turns)
+      .def_readonly("length_m", &adas::mapmatch::RouteAhead::length_m)
+      .def_readonly("node_spacing_m", &adas::mapmatch::RouteAhead::node_spacing_m);
+
+  mm.def("build_route_ahead", &adas::mapmatch::buildRouteAhead, py::arg("map"), py::arg("x"), py::arg("y"),
+         py::arg("yaw_rad"), py::arg("cfg") = adas::mapmatch::RouteConfig{});
+
+  mm.def(
+      "curvature_along",
+      [](const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& query_s,
+         double window_m) { return adas::mapmatch::curvatureAlong(x, y, query_s, window_m); },
+      py::arg("x"), py::arg("y"), py::arg("query_s"), py::arg("window_m") = 25.0);
 
   py::class_<adas::mapmatch::FitConfig>(mm, "FitConfig")
       .def(py::init<>())
@@ -314,6 +406,16 @@ PYBIND11_MODULE(core, m)
       .def_readonly("status", &adas::LaneKeepOutput::status)
       .def_readonly("controller", &adas::LaneKeepOutput::controller);
 
+  // The actuation command: what CarController would have been handed. `torque_cnm` is signed cNm before the
+  // MQB rate/driver limiter, `enabled` is the app's own lateral gate.
+  py::class_<ai::flow::adas::SteerCommand>(m, "SteerCommand")
+      .def_property_readonly("torque_cnm", &ai::flow::adas::SteerCommand::torque_cnm)
+      .def_property_readonly("enabled", &ai::flow::adas::SteerCommand::enabled)
+      .def_property_readonly("capture_ts_ms", &ai::flow::adas::SteerCommand::capture_ts_ms)
+      .def_property_readonly("vision_ts_ms", &ai::flow::adas::SteerCommand::vision_ts_ms)
+      .def_property_readonly("chassis_ts_ms", &ai::flow::adas::SteerCommand::chassis_ts_ms)
+      .def_property_readonly("publish_ts_ms", &ai::flow::adas::SteerCommand::publish_ts_ms);
+
   py::class_<ai::flow::adas::SafetyWarnState>(m, "SafetyWarnState")
       .def_property_readonly("timestamp", &ai::flow::adas::SafetyWarnState::timestamp)
       .def_property_readonly("accel_ms2", &ai::flow::adas::SafetyWarnState::accel_ms2)
@@ -389,6 +491,8 @@ PYBIND11_MODULE(core, m)
       .def("set_lane_keep_fp_steer_delay_s", &AdasApp::setLaneKeepFpSteerDelayS, py::arg("seconds"))
       .def("set_lane_keep_fp_steering_rate_weight", &AdasApp::setLaneKeepFpSteeringRateWeight, py::arg("weight"))
       .def("set_lane_keep_cam_y_left_m", &AdasApp::setLaneKeepCamYLeftM, py::arg("m"))
+      .def("set_lane_keep_pid_gains", &AdasApp::setLaneKeepPidGains, py::arg("kp"), py::arg("ki"), py::arg("kf"))
+      .def("set_lane_keep_recompute_setpoint", &AdasApp::setLaneKeepRecomputeSetpoint, py::arg("on"))
       .def("set_param", static_cast<bool (AdasApp::*)(const std::string&, double)>(&AdasApp::setParam), py::arg("name"),
            py::arg("value"))
       .def("set_param_str", static_cast<bool (AdasApp::*)(const std::string&, const std::string&)>(&AdasApp::setParam),
@@ -397,15 +501,22 @@ PYBIND11_MODULE(core, m)
       .def("update_params", &AdasApp::updateParams, py::arg("params"))
       .def(
           "publish_chassis",
-          [](AdasApp& self, int64_t timestamp_us, double speed_mps, double steer_rad, double yaw_rate) {
+          // `steering_angle_deg` and `steering_pressed` are not decoration: the angle PID closes its loop on
+          // the measured steering-wheel angle and hands over to the driver on `steering_pressed`. A replay
+          // that leaves them at zero exercises the planner and silently bypasses the controller.
+          [](AdasApp& self, int64_t timestamp_us, double speed_mps, double steer_rad, double yaw_rate,
+             double steering_angle_deg, bool steering_pressed) {
             adas::ChassisSample c;
             c.timestamp_us = timestamp_us;
             c.speed_mps = speed_mps;
             c.steer_rad = steer_rad;
             c.yaw_rate = yaw_rate;
+            c.steering_angle_deg = steering_angle_deg;
+            c.steering_pressed = steering_pressed;
             self.publishChassis(c);
           },
-          py::arg("timestamp_us"), py::arg("speed_mps"), py::arg("steer_rad") = 0.0, py::arg("yaw_rate") = 0.0)
+          py::arg("timestamp_us"), py::arg("speed_mps"), py::arg("steer_rad") = 0.0, py::arg("yaw_rate") = 0.0,
+          py::arg("steering_angle_deg") = 0.0, py::arg("steering_pressed") = false)
       .def(
           "publish_lanes",
           [](AdasApp& self, int64_t timestamp_us, const std::vector<std::pair<double, double>>& poly, int frame_id,

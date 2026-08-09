@@ -8,7 +8,7 @@ Pure Pursuit picks **one** $\delta$ that hits a look-ahead point.
 | `mpc` | VisionPilot path-MPC (best for learning cost / $\kappa$) |
 | `fp` | stock-like time-domain MPC (**road default**) |
 
-Appendix with real-arc forensics: [`MPC_EXPLAINED.md`](../../MPC_EXPLAINED.md).
+Appendix with real-arc forensics: `docs/MPC_EXPLAINED.md`.
 
 * VisionPilot `mpc`: `visionpilot/lateral_planning.cpp` ($N{=}20$, path-domain $ds$).
 * flowpilot `fp`: `flowpilot/lateral_mpc.cpp` ($N{=}16$, time grid → 2.5 s).
@@ -573,6 +573,87 @@ Re-solve with measured `frame_dt` (not fixed 0.05). Angle-PID on the phone runs 
 `vehicle/state` (~100 Hz after CAN RX 10 ms); planner rate stays vision-limited (~12.5 Hz).
 
 ---
+
+## Where the horizon does not help
+
+A horizon fixes the information limit of Pure Pursuit — it reads the whole path instead of one point. It does
+not fix everything, and the three things it cannot fix were each measured rather than argued.
+
+### 1. A steady offset is nearly free in the cost function
+
+`fp` resets its state every frame: $x_0 = [0, 0, 0, \dot\psi]$. The car is, by definition, exactly on its own
+reference at node 0. So the only way a persistent offset can be penalised is through the *later* nodes — and
+that is where the time grid works against you.
+
+```python
+V = 15.0
+print(f"{'node':>5} {'t, s':>7} {'distance, m':>12} {'lateral reach, m':>17}")
+for i in (0, 1, 2, 3, 4, 6, 8, 12, 16):
+    t = t_node(i)
+    d = V * t
+    # How far sideways can the car physically move by then, at a generous 3 m/s^2 of lateral accel?
+    reach = 0.5 * 3.0 * t * t
+    print(f"{i:>5} {t:>7.3f} {d:>12.2f} {reach:>17.3f}")
+```
+
+Read the reach column. Over the first four nodes the car cannot move sideways by more than a few
+centimetres, whatever the steering does — so a 0.35 m offset at those nodes is not a cost the optimiser can
+act on, it is a constant. The nodes where lateral motion is possible are far enough ahead that a curvature
+error dominates them.
+
+Measured consequence: the car sat **0.35 m inside its own reference** on arcs. And this is not a weight to
+tune — closed-loop sweeps confirmed that neither `fp_steering_rate_weight` (150 against 800) nor
+`fp_steer_delay_s` (0.23 against 0.35) changes it. What removes a steady offset is an integral term, which
+this formulation does not have, or a reference that is already shifted, which is what
+lane blending, a few sections above does.
+
+### 2. Lengthening the horizon does not help either
+
+The obvious response is "use flowpilot's N = 32 instead of our 16". Checked, and it does not follow, because
+the grid is quadratic:
+
+```python
+first_second = sum(1 for i in range(N_FP + 1) if t_node(i) <= 1.0)
+print(f"our N=16: {first_second} of {N_FP + 1} nodes inside the first second, horizon {t_node(N_FP):.2f} s")
+first_second_32 = sum(1 for i in range(33) if 10.0 * (i / 32.0) ** 2 <= 1.0)
+print(f"N=32    : {first_second_32} of 33 nodes inside the first second, horizon "
+      f"{10.0 * (32 / 32.0) ** 2:.2f} s")
+print("\nThe near zone is already as densely sampled as theirs. Doubling N adds far nodes, which at equal")
+print("weights dilutes the near zone that actually matters, and costs about 4x more to solve because we")
+print("use gradient descent rather than acados.")
+```
+
+### 3. The plan it optimises has its own bias
+
+MPC minimises distance to a reference. If the reference is wrong, it tracks the wrong thing perfectly. On
+arcs the model plan sits **+0.32 / −0.35 m** from the lane centre, and an attempt to remove that with a
+single curvature coefficient failed in an instructive way:
+
+* parameterised as a constant distance ($50.2\kappa$) it was unstable within one run — 20.2 below 12 m/s
+  against 77.2 above;
+* the correct parameterisation is a *time* lookahead, $\tfrac{1}{2}\kappa(vT)^2$, and $T$ is indeed stable
+  against speed: 0.71–1.03 s;
+* but not reproducible **between** runs: 0.84 s on one, 0.56 s on another, because the two runs had
+  different learned camera yaw (+1.12° against +0.24°), which changes the input warp, so the network sees a
+  different image and outputs a different plan.
+
+So the coefficient cannot be baked in: on another calibration it adds its own offset. That is why lane
+blending — which needs no tunable number — became the main lever instead.
+
+### 4. And when torque saturates, none of this matters
+
+On the measured right arcs, torque sat at the ±300 cNm HCA ceiling in **65 % of frames** (76 % on an earlier
+run, 80 % within one 12.3-second episode at R = 130 m). While saturated there is no feedback at all: the
+optimiser's output changes and the rack does not. The remedy is to request less curvature, not to solve
+harder.
+
+```{admonition} What to take from this section
+:class: tip
+Each limit above is a different kind. One is structural (no integral term), one is a non-result (the horizon
+is long enough), one is upstream (the plan's own bias, coupled to calibration), and one is physical (the
+actuator). Diagnosing which one you are looking at is most of the work, and none of them is found by
+sweeping weights.
+```
 
 ## Phone knobs
 

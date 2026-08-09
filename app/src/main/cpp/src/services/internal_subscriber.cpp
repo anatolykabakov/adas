@@ -22,6 +22,11 @@ void InternalSubscriber::configure()
       return;
     out_.emplace_back(cameraCalibFromProto(m.camera_calib(), m.timestamp() * 1000));
   });
+  subscribe<ai::flow::adas::ZMQMessage>(topics::kSteerCommand, [this](const ai::flow::adas::ZMQMessage& m) {
+    if (!m.has_steer_command())
+      return;
+    out_.emplace_back(m.steer_command());
+  });
   subscribe<ai::flow::adas::ZMQMessage>(topics::kSafetyWarn, [this](const ai::flow::adas::ZMQMessage& m) {
     if (!m.has_safety_warn())
       return;

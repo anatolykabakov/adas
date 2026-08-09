@@ -12,6 +12,12 @@ add_executable(
   test_vp_lane_keep.cpp
   test_safety_warn.cpp
   test_long_plan.cpp
+  test_vehicle_ekf.cpp
+  test_speed_filter.cpp
+  test_road_roll.cpp
+  test_params_learner.cpp
+  test_road_route.cpp
+  test_map_data_service.cpp
 )
 
 target_include_directories(
@@ -21,10 +27,14 @@ target_include_directories(
 )
 
 set(_adas_shipped_config "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/config.json")
+# The map is a repo file, not an asset: the service tests skip themselves when it is absent so a
+# checkout without it still builds and runs green.
+set(_adas_test_map "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../maps/Moscow.osm.admap")
 target_compile_definitions(
   adas_tests
   PRIVATE GTEST_HAS_TR1_TUPLE=0
           ADAS_SHIPPED_CONFIG_JSON="${_adas_shipped_config}"
+          ADAS_TEST_MAP_FILE="${_adas_test_map}"
 )
 
 target_link_libraries(

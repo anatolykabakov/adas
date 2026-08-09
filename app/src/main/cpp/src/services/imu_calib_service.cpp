@@ -70,6 +70,8 @@ void ImuCalibService::publishYaw(int64_t timestamp_us, double yaw_rate)
 {
   last_.timestamp_us = timestamp_us;
   last_.yaw_rate = yaw_rate;
+  last_.lat_accel = calib_.lastLatAccel();
+  last_.lat_accel_valid = calib_.hasHeading();
   last_.valid = true;
   publish(topics::kImuYaw, last_);
 }

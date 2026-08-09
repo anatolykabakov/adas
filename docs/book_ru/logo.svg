@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
+  <rect width="320" height="80" fill="#1a1a1a"/>
+  <text x="24" y="48" font-family="DejaVu Sans, sans-serif" font-size="28" fill="#f0f0f0">Phone ADAS</text>
+  <circle cx="280" cy="40" r="18" fill="none" stroke="#6cf" stroke-width="3"/>
+  <path d="M268 40 L280 28 L292 40" fill="none" stroke="#6cf" stroke-width="3"/>
+</svg>

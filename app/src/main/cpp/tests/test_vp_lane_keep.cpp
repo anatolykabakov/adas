@@ -1,13 +1,18 @@
 #include <cmath>
+#include <fstream>
 #include <vector>
+
+#include <json/json.h>
 
 #include <gtest/gtest.h>
 
+#include "adas_app.h"
 #include "messages.pb.h"
 #include "middleware/middleware.hpp"
 #include "services/lane_keep_service.h"
 #include "utils/path_lateral_state.h"
 #include "utils/protobuf_utils.h"
+#include "volkswagen/panda_safety_supervisor.h"
 #include "visionpilot/lateral_planning.hpp"
 
 using adas::estimatePathLateralState;
@@ -351,7 +356,13 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
   auto lk = mw.registerService<LaneKeepService>(c);
   mw.registerService(std::static_pointer_cast<adas::Service>(sink));
 
-  const int64_t now_us = utils::getCurrentTimestamp() * 1000;
+  // Time comes from the middleware, not from the wall clock. The service used to read
+  // `utils::getCurrentTimestamp()` directly and this test used to match it — which meant the gate could only
+  // ever be tested against real time, and a bag replay through `AdasApp` saw every path as hours stale and
+  // cleared every command. Driving the clock here is both the honest test and the thing that makes replays
+  // possible; `mw.setTime` is the only source of "now" either side of the fix.
+  int64_t now_us = 10'000'000;
+  mw.setTime(now_us);
 
   auto feed = [&](int64_t capture_us) {
     adas::LanePathMsg path;
@@ -376,7 +387,10 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
   EXPECT_FALSE(sink->last_enabled) << "must not steer on a stale path";
   EXPECT_EQ(0, sink->last_torque);
 
-  feed(utils::getCurrentTimestamp() * 1000);
+  // Advance the clock the way a real run would, then feed a fresh frame.
+  now_us += 100'000;
+  mw.setTime(now_us);
+  feed(now_us);
   EXPECT_TRUE(sink->last_enabled);
 }
 
@@ -393,7 +407,8 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
   mw.registerService<LaneKeepService>(c);
   mw.registerService(std::static_pointer_cast<adas::Service>(sink));
 
-  const int64_t old_us = utils::getCurrentTimestamp() * 1000 - 5'000'000;
+  mw.setTime(10'000'000);
+  const int64_t old_us = 10'000'000 - 5'000'000;
   adas::LanePathMsg path;
   path.polyline = straightLaneRightOffset(0.4);
   path.capture_ts_us = old_us;
@@ -406,4 +421,435 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
   mw.step();
 
   EXPECT_TRUE(sink->last_enabled) << "with gate off, prior behavior";
+}
+
+// Turn signal hands the wheel back: we have no lane-change planner, so holding the current lane
+// while the driver crosses the line fights them. Signal presence verified on run
+// 2026_08_04_21_00_18 (left 7 episodes, right 11).
+TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
+{
+  LaneKeepService::Config c = mpcConfig();
+  c.steer_output_enabled = true;
+  c.min_control_speed_mps = 0.0;
+  c.min_control_speed_hyst_mps = 0.0;
+  c.lane_max_age_s = 0.0;  // staleness gate off — this test is about the blinker only
+  c.lka_suppress_on_blinker = true;
+  c.lka_blinker_resume_delay_s = 0.2;
+
+  auto sink = std::make_shared<SteerSink>();
+  adas::Middleware mw(adas::Middleware::Mode::Simulated);
+  mw.registerService<LaneKeepService>(c);
+  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+
+  // Время задаётся явно: в симулированном режиме `now()` возвращает sim_us_, и без setTime часы
+  // стоят на нуле. Прежний вариант спал по настенным часам и задержку возврата не проверял вовсе —
+  // тест проходил через застрявший статус, а не через таймер.
+  uint64_t sim_us = 1'000'000;
+  auto feed = [&](bool left, bool right) {
+    mw.setTime(sim_us);
+    adas::LanePathMsg path;
+    path.polyline = straightLaneRightOffset(0.4);
+    const int64_t ts = static_cast<int64_t>(sim_us);
+    path.capture_ts_us = ts;
+    path.timestamp_us = ts;
+    mw.publish(adas::topics::kVisionPath, path);
+
+    adas::ChassisSample ch;
+    ch.timestamp_us = ts;
+    ch.speed_mps = 14.0;
+    ch.left_blinker = left;
+    ch.right_blinker = right;
+    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.step();
+  };
+
+  feed(false, false);
+  ASSERT_GT(sink->count, 0);
+  EXPECT_TRUE(sink->last_enabled) << "no signal — we steer";
+
+  feed(true, false);
+  EXPECT_FALSE(sink->last_enabled) << "left signal on — wheel handed back";
+  EXPECT_EQ(0, sink->last_torque);
+
+  feed(false, true);
+  EXPECT_FALSE(sink->last_enabled) << "right signal on — same";
+
+  // Falling edge: still suppressed until the resume delay elapses.
+  feed(false, false);
+  EXPECT_FALSE(sink->last_enabled) << "signal just cancelled — the car is still crossing the line";
+  sim_us += 250'000;  // задержка возврата 0.2 с — переступаем её по часам стенда, а не по настенным
+  feed(false, false);
+  EXPECT_TRUE(sink->last_enabled) << "delay elapsed — steering again";
+}
+
+TEST(LaneKeepBlinkerGate, CanBeSwitchedOff)
+{
+  LaneKeepService::Config c = mpcConfig();
+  c.steer_output_enabled = true;
+  c.min_control_speed_mps = 0.0;
+  c.min_control_speed_hyst_mps = 0.0;
+  c.lane_max_age_s = 0.0;
+  c.lka_suppress_on_blinker = false;
+
+  auto sink = std::make_shared<SteerSink>();
+  adas::Middleware mw(adas::Middleware::Mode::Simulated);
+  mw.registerService<LaneKeepService>(c);
+  mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+
+  adas::LanePathMsg path;
+  path.polyline = straightLaneRightOffset(0.4);
+  const int64_t ts = utils::getCurrentTimestamp() * 1000;
+  path.capture_ts_us = ts;
+  path.timestamp_us = ts;
+  mw.publish(adas::topics::kVisionPath, path);
+  adas::ChassisSample ch;
+  ch.timestamp_us = ts;
+  ch.speed_mps = 14.0;
+  ch.left_blinker = true;
+  mw.publish(adas::topics::kVehicleChassis, ch);
+  mw.step();
+
+  EXPECT_TRUE(sink->last_enabled);
+}
+
+// The assist gate. On run 2026_08_06_18_27_12 the panda withheld torque 70.7 % of the time and nothing
+// in the stack said so: `steer_output_enabled` stayed true, the debug topic claimed we were steering,
+// and the integrator wound up against an error it could not influence. Where the angle error exceeded
+// 5°, the assist was actually present in 12.9 % of frames — the error *was* the missing assist.
+namespace {
+
+// One rig for all the assist tests: fixed straight path with a standing offset, a clock we drive, and
+// panda health published only when the test says so.
+struct AssistRig {
+  explicit AssistRig(bool require_assist = true, double max_age_s = 0.5)
+    : sink(std::make_shared<SteerSink>()), mw(adas::Middleware::Mode::Simulated)
+  {
+    LaneKeepService::Config c = mpcConfig();
+    c.steer_output_enabled = true;
+    c.min_control_speed_mps = 0.0;
+    c.min_control_speed_hyst_mps = 0.0;
+    c.lane_max_age_s = 0.0;  // staleness gate off — these tests are about actuation only
+    c.lka_suppress_on_blinker = false;
+    c.lat_require_assist = require_assist;
+    c.assist_max_age_s = max_age_s;
+    lk = mw.registerService<LaneKeepService>(c);
+    mw.registerService(std::static_pointer_cast<adas::Service>(sink));
+    mw.setTime(now_us);
+  }
+
+  // `lat_actuation_allowed` is what the gate reads, and it is deliberately not `controls_allowed`: with
+  // always-on lateral the panda passes torque while `controls_allowed` is false. The two are published with
+  // opposite values in one of the tests below to pin that distinction.
+  //
+  // Built through `utils::createHealthMessage`, the same function `PandaService` uses, rather than assembled
+  // by hand. A hand-built message tests the gate against a shape the app never publishes: if the real builder
+  // ever stopped setting the topic or the `panda_health` submessage, the subscriber's `has_panda_health()`
+  // guard would drop every report and these tests would still pass.
+  void health(bool lat_allowed, bool controls_allowed_field = false)
+  {
+    health_t raw{};
+    raw.controls_allowed_pkt = controls_allowed_field ? 1 : 0;
+    raw.safety_mode_pkt = volkswagen::MqbSafetyConstants::kVolkswagen;
+    auto zmq = utils::createHealthMessage(raw);
+    zmq.mutable_panda_health()->set_lat_actuation_allowed(lat_allowed);
+    mw.publish(adas::topics::kPandaHealth, zmq);
+  }
+
+  // One vision frame plus one chassis sample, 20 ms of simulated time apart from the previous call so
+  // the PID sees a constant rate.
+  void tick()
+  {
+    now_us += 20'000;
+    mw.setTime(now_us);
+    adas::LanePathMsg path;
+    path.polyline = straightLaneRightOffset(0.4);
+    path.capture_ts_us = now_us;
+    path.timestamp_us = now_us;
+    mw.publish(adas::topics::kVisionPath, path);
+
+    adas::ChassisSample ch;
+    ch.timestamp_us = now_us;
+    ch.speed_mps = 14.0;
+    ch.steering_angle_deg = 0.0;
+    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.step();
+  }
+
+  std::shared_ptr<SteerSink> sink;
+  adas::Middleware mw;
+  std::shared_ptr<LaneKeepService> lk;
+  int64_t now_us = 10'000'000;
+};
+
+}  // namespace
+
+// Having never heard from a panda must not gate: that is a bag replay, the Python bindings or a bench
+// run, and closing the gate there would silence the command in every offline harness we measure with.
+TEST(LaneKeepAssistGate, NoPandaReportMeansNoGate)
+{
+  AssistRig r;
+  r.tick();
+  ASSERT_GT(r.sink->count, 0) << "controls/steer not published at all";
+  EXPECT_TRUE(r.sink->last_enabled) << "no panda in the loop — the offline harness must still steer";
+  EXPECT_FALSE(r.lk->last().dbg.assist_known) << "and it must say it does not know";
+  EXPECT_FALSE(r.lk->last().dbg.assist_allowed);
+}
+
+TEST(LaneKeepAssistGate, WithheldTorqueClearsTheCommandAndComesBack)
+{
+  AssistRig r;
+  r.health(true);
+  r.tick();
+  ASSERT_TRUE(r.sink->last_enabled) << "assist present — we steer";
+  EXPECT_TRUE(r.lk->last().dbg.assist_known);
+  EXPECT_TRUE(r.lk->last().dbg.assist_allowed);
+
+  r.health(false);
+  r.tick();
+  EXPECT_FALSE(r.sink->last_enabled) << "panda is not passing torque — do not pretend to steer";
+  EXPECT_EQ(0, r.sink->last_torque);
+  EXPECT_EQ("no_assist", r.lk->last().status);
+  EXPECT_FALSE(r.lk->last().dbg.assist_allowed);
+  EXPECT_TRUE(r.lk->last().dbg.assist_known) << "absent is not the same as unknown";
+
+  r.health(true);
+  r.tick();
+  EXPECT_TRUE(r.sink->last_enabled) << "assist back — steering again";
+  EXPECT_EQ("ok", r.lk->last().status) << "the status must clear, not only be set";
+}
+
+// The defect this task exists for. Two rigs see the same standing error and resume on the same tick
+// spacing; they differ only in how long the torque was withheld beforehand. With the integrator reset
+// the first resumed command is identical in both. Without it, the longer withholding accumulates and
+// the wheel gets a step it never earned.
+//
+// The `require_assist = false` half is the control group, and it is what keeps this from being a test
+// that passes for the wrong reason: it reproduces the pre-fix behaviour in the same file and shows the
+// resumed command really does grow with the time spent withheld.
+TEST(LaneKeepAssistGate, TheIntegratorDoesNotWindUpWhileTorqueIsWithheld)
+{
+  auto resumedTorque = [](int withheld_ticks, bool require_assist) {
+    AssistRig r(require_assist);
+    r.health(false);
+    for (int i = 0; i < withheld_ticks; ++i)
+      r.tick();
+    if (require_assist)
+      EXPECT_EQ(0, r.sink->last_torque) << "nothing should be commanded while the torque is withheld";
+    r.health(true);
+    r.tick();
+    return r.sink->last_torque;
+  };
+
+  const int gated_5 = resumedTorque(5, true);
+  const int gated_50 = resumedTorque(50, true);
+  EXPECT_NE(0, gated_5) << "the comparison is vacuous if the resumed command is zero";
+  EXPECT_EQ(gated_5, gated_50) << "torque on resumption grew with the time spent withheld — windup";
+
+  const int ungated_5 = resumedTorque(5, false);
+  const int ungated_50 = resumedTorque(50, false);
+  EXPECT_GT(std::abs(ungated_50), std::abs(ungated_5))
+      << "control group: without the gate the integrator must wind up, otherwise this test proves nothing";
+  // Measured here: 5 withheld ticks resume at -209 cNm and 50 at -283, i.e. one second of pretending
+  // to steer adds 74 cNm the wheel never earned. Gated, both resume at -203.
+  EXPECT_GT(std::abs(ungated_50), std::abs(gated_50)) << "and the gate must be what prevents it";
+}
+
+// A panda that stops reporting is a panda that is not passing torque either, so an aged-out report
+// closes the gate — unlike never having heard from one at all.
+TEST(LaneKeepAssistGate, AnAgedOutReportClosesTheGate)
+{
+  AssistRig r(/*require_assist=*/true, /*max_age_s=*/0.2);
+  r.health(true);
+  r.tick();
+  ASSERT_TRUE(r.sink->last_enabled);
+
+  for (int i = 0; i < 20; ++i)  // 400 ms of ticks with no further health message
+    r.tick();
+  EXPECT_FALSE(r.sink->last_enabled) << "the last panda report aged out";
+  EXPECT_FALSE(r.lk->last().dbg.assist_known);
+
+  r.health(true);
+  r.tick();
+  EXPECT_TRUE(r.sink->last_enabled) << "a fresh report reopens it";
+}
+
+// The knob is only worth having if the shipped config turns it on: the whole point is that no future
+// measurement quietly mixes actuated and non-actuated frames again.
+TEST(ShippedConfig, TheAssistGateIsOn)
+{
+  bool ok = false;
+  const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
+  ASSERT_TRUE(ok);
+  EXPECT_TRUE(cfg.lane_keep.lat_require_assist);
+  EXPECT_GT(cfg.lane_keep.assist_max_age_s, 0.2) << "below a couple of panda periods the gate would flap";
+  EXPECT_LE(cfg.lane_keep.assist_max_age_s, 1.0);
+}
+
+// The gate must follow actuation, not `controls_allowed`. Always-on lateral (ALKA) makes the panda pass HCA
+// torque with `controls_allowed` false — dragonpilot did exactly that in 64.3 % of a drive on this car — so a
+// gate keyed on `controls_allowed` would withdraw the command precisely when the assist starts working.
+TEST(LaneKeepAssistGate, FollowsActuationRatherThanControlsAllowed)
+{
+  AssistRig r;
+  r.health(/*lat_allowed=*/true, /*controls_allowed_field=*/false);
+  r.tick();
+  EXPECT_TRUE(r.sink->last_enabled) << "torque reaches the rack — steer, whatever controls_allowed says";
+  EXPECT_TRUE(r.lk->last().dbg.assist_allowed);
+
+  r.health(/*lat_allowed=*/false, /*controls_allowed_field=*/true);
+  r.tick();
+  EXPECT_FALSE(r.sink->last_enabled) << "controls_allowed alone must not reopen the gate";
+}
+
+// Reporting and gating are separate on purpose: with the gate off the recorded flag is still what lets
+// offline analysis stop averaging actuated and non-actuated frames together.
+TEST(LaneKeepAssistGate, CanBeSwitchedOffAndStillReports)
+{
+  AssistRig r(/*require_assist=*/false);
+  r.health(false);
+  r.tick();
+  EXPECT_TRUE(r.sink->last_enabled) << "gate off — prior behavior";
+  EXPECT_TRUE(r.lk->last().dbg.assist_known);
+  EXPECT_FALSE(r.lk->last().dbg.assist_allowed) << "but the truth is still recorded";
+}
+
+// Recomputing the setpoint between vision frames. The property that makes it safe to call at any rate is
+// that `lagAdjustedCurvature` clamps against the *plan's* own kappa0, not against the previous output — so
+// repeated calls at one speed cannot ratchet the command away. If that ever changes, this test fails and the
+// 100 Hz call site becomes a slow drift generator.
+TEST(SetpointRecompute, RepeatedCallsAtOneSpeedDoNotRatchet)
+{
+  adas::flowpilot::LateralMpc mpc;
+  EXPECT_FALSE(mpc.curvatureAtSpeed(14.0, 0.05).has_value()) << "nothing solved yet — nothing to recompute";
+
+  std::vector<Vec2> curve;
+  for (int i = 2; i <= 40; ++i) {
+    const double x = static_cast<double>(i);
+    curve.emplace_back(x, 0.004 * x * x);
+  }
+  const auto sol = mpc.update(14.0, 0.0, 2.67, curve, {}, {}, {}, 0.05);
+  ASSERT_TRUE(sol.ok);
+
+  const auto first = mpc.curvatureAtSpeed(14.0, 0.05);
+  ASSERT_TRUE(first.has_value());
+  for (int i = 0; i < 50; ++i) {
+    const auto again = mpc.curvatureAtSpeed(14.0, 0.05);
+    ASSERT_TRUE(again.has_value());
+    EXPECT_DOUBLE_EQ(*again, *first) << "call " << i;
+  }
+  EXPECT_NEAR(*first, sol.desired_curvature, 1e-12) << "same speed as the solve must reproduce the solve";
+}
+
+TEST(SetpointRecompute, SpeedIsWhatMovesIt)
+{
+  adas::flowpilot::LateralMpc mpc;
+  std::vector<Vec2> curve;
+  for (int i = 2; i <= 40; ++i) {
+    const double x = static_cast<double>(i);
+    curve.emplace_back(x, 0.004 * x * x);
+  }
+  ASSERT_TRUE(mpc.update(14.0, 0.0, 2.67, curve, {}, {}, {}, 0.05).ok);
+
+  const auto at14 = mpc.curvatureAtSpeed(14.0, 0.05);
+  const auto at20 = mpc.curvatureAtSpeed(20.0, 0.05);
+  ASSERT_TRUE(at14 && at20);
+  EXPECT_NE(*at14, *at20) << "the whole point is that the setpoint follows the current speed between frames";
+
+  mpc.reset();
+  EXPECT_FALSE(mpc.curvatureAtSpeed(14.0, 0.05).has_value()) << "reset must forget the trajectory";
+}
+
+// Which flags may share a drive — revised 2026-08-07 after measurement contradicted the first version.
+//
+// The rule was "at most one of {lat_always_on, lat_recompute_setpoint, use_learned_params, nnapi_fp16}".
+// Two things falsified it:
+//
+//   * `lat_always_on` stopped being a variable. It was answered on run 2026_08_07_19_04_05 — alt_exp 17,
+//     tx_blocked flat at zero, assist presence 2.6 -> 79.1 % at 5-8 m/s — and is the baseline now. A rule that
+//     counts the baseline as a change blocks every future drive;
+//   * `nnapi_fp16` cannot be tested alone. Measured on that drive: pipeline work 52 ms against a 67 ms camera
+//     interval with 94 % of cycles dropping nothing, i.e. camera-bound. Fixing the camera to 33 ms leaves 52 ms
+//     of work, so we would still take every second frame — 15 Hz, a null result. Only fp16 brings work to
+//     ~32 ms, under one camera period. The camera fix and fp16 are one change with two halves, like
+//     `lat_always_on` and the ALKA bit before them.
+//
+// What survives is the constraint that actually matters: two changes may share a drive only if each leaves an
+// independent trace in the bag. `interval_ms` and `infer_ms` separate the camera from fp16; a setpoint that
+// moves between vision frames separates the recompute from both. What has no independent trace is a second
+// change to the *command given the same reference*, so that set stays exclusive.
+TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
+{
+  bool ok = false;
+  const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
+  ASSERT_TRUE(ok);
+
+  const std::vector<std::pair<const char*, bool>> command = {
+      {"lat_recompute_setpoint", cfg.lane_keep.lat_recompute_setpoint},
+      {"use_learned_params", cfg.lane_keep.use_learned_params},
+  };
+  std::string on;
+  for (const auto& [name, v] : command)
+    if (v)
+      on += std::string(on.empty() ? "" : ", ") + name;
+  const size_t count = static_cast<size_t>(std::count_if(command.begin(), command.end(),
+                                                         [](const auto& kv) { return kv.second; }));
+  EXPECT_LE(count, 1u) << "enabled together: " << on
+                       << " — both change the command for the same reference, so the bag cannot separate them";
+}
+
+// What the bag reports must be what the PID chased. The first version of the recompute wrote its result into
+// `last_`, which `updateTorqueFromAngle` had already copied and then assigned back — so the command changed
+// while `control/lane_keep_debug` kept showing the once-per-frame setpoint. Silent, and exactly the kind of
+// mismatch that made earlier lateral analysis wrong. Here the speed changes between vision frames, which is
+// the only input the recompute consumes.
+TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
+{
+  auto steerAfterSpeedChange = [](bool recompute) {
+    LaneKeepService::Config c = mpcConfig();
+    c.controller = "fp";
+    c.steer_output_enabled = true;
+    c.min_control_speed_mps = 0.0;
+    c.min_control_speed_hyst_mps = 0.0;
+    c.lane_max_age_s = 0.0;
+    c.lka_suppress_on_blinker = false;
+    c.lat_require_assist = false;
+    c.lat_recompute_setpoint = recompute;
+
+    adas::Middleware mw(adas::Middleware::Mode::Simulated);
+    auto lk = mw.registerService<LaneKeepService>(c);
+    int64_t t = 10'000'000;
+    mw.setTime(t);
+
+    std::vector<Vec2> curve;
+    for (int i = 2; i <= 40; ++i) {
+      const double x = static_cast<double>(i);
+      curve.emplace_back(x, 0.004 * x * x);
+    }
+    adas::LanePathMsg path;
+    path.polyline = curve;
+    path.capture_ts_us = t;
+    path.timestamp_us = t;
+    mw.publish(adas::topics::kVisionPath, path);
+    adas::ChassisSample ch;
+    ch.timestamp_us = t;
+    ch.speed_mps = 12.0;
+    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.step();
+    const double at_frame = lk->last().steer_rad;
+
+    // No new vision frame — only the speed moves, which is what upstream's 100 Hz recompute reacts to.
+    t += 20'000;
+    mw.setTime(t);
+    ch.timestamp_us = t;
+    ch.speed_mps = 24.0;
+    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.step();
+    return std::make_pair(at_frame, lk->last().steer_rad);
+  };
+
+  const auto off = steerAfterSpeedChange(false);
+  EXPECT_DOUBLE_EQ(off.first, off.second) << "with the recompute off the setpoint is held, as it always was";
+
+  const auto on = steerAfterSpeedChange(true);
+  EXPECT_NE(on.first, on.second) << "with it on the reported setpoint must move, not just the internal one";
 }

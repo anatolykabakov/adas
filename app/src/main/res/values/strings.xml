@@ -13,6 +13,10 @@
     <string name="params_section_pp">Lane keep</string>
     <string name="params_lk_controller">Controller</string>
     <string name="params_section_logging">Logging</string>
+    <string name="params_section_vision">Vision model</string>
+    <string name="params_model_runner">Model</string>
+    <string name="params_model_onnx">ONNX</string>
+    <string name="params_model_thneed">THNEED</string>
     <string name="params_record_images">Write camera frames to bag</string>
     <string name="params_lk_pp">PP</string>
     <string name="params_lk_mpc">MPC</string>

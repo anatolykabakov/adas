@@ -84,6 +84,12 @@ def vision_stats(session: Path) -> Tuple[List[float], List[float]]:
     e2e: List[float] = []
     prep: List[float] = []
     capture_ts: List[int] = []
+    # Frame arrival breakdown — present from 2026-08-06 bags on; older bags leave these empty.
+    delivery: List[float] = []  # capture -> submitYuv: camera and ISP path
+    queue: List[
+        float
+    ] = []  # submitYuv -> inference pickup: waiting on the previous frame
+    dropped: List[float] = []  # captures overwritten in the 1-slot buffer
 
     for _, payload, zmq in load_topic_messages(session, "vision/lanes"):
         if payload is None:
@@ -102,11 +108,35 @@ def vision_stats(session: Path) -> Tuple[List[float], List[float]]:
                 if dur > 0 and dt >= dur:
                     prep.append(dt - dur)
 
+        submit = int(getattr(payload, "submit_ts_ms", 0) or 0)
+        pickup = int(getattr(payload, "pickup_ts_ms", 0) or 0)
+        if capture > 0 and submit >= capture and submit - capture <= MAX_DT_MS:
+            delivery.append(float(submit - capture))
+        if submit > 0 and pickup >= submit and pickup - submit <= MAX_DT_MS:
+            queue.append(float(pickup - submit))
+        if submit > 0:
+            dropped.append(float(getattr(payload, "frames_dropped", 0) or 0))
+
     print("=== vision/lanes ===")
     summarize("infer_ms (session.run)", infer_dur)
     summarize("prep_ms (e2e − infer)", prep)
     summarize("e2e_ms (infer_ts − capture)", e2e)
     summarize("interval_ms (capture→capture)", _intervals(capture_ts))
+    if delivery:
+        summarize("delivery_ms (capture→submitYuv)", delivery)
+        summarize("queue_ms (submitYuv→pickup)", queue)
+        n = len(dropped)
+        kept = sum(1 for d in dropped if d == 0)
+        import statistics
+
+        print(
+            f"frames_dropped: {statistics.mean(dropped):.2f} per processed frame, "
+            f"{100.0 * kept / n:.0f} % of cycles dropped nothing  (n={n})"
+        )
+        print(
+            "  many drops + short delivery = inference too slow; "
+            "few drops + long delivery = camera arriving late"
+        )
     hz = _hz(capture_ts)
     if hz is not None:
         print(f"rate: {hz:.2f} Hz  (n={len(capture_ts)})")

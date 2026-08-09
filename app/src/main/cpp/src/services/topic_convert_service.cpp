@@ -14,6 +14,7 @@ TopicConvertService::TopicConvertService(Config config) : config_(config), steer
   path_cfg_.camera_offset_m = config.path_camera_offset_m;
   path_cfg_.lane_std_good_m = config.lane_std_good_m;
   path_cfg_.lane_std_bad_m = config.lane_std_bad_m;
+  path_cfg_.lane_std_range_m = config.lane_std_range_m;
   path_cfg_.lane_width_min_m = config.lane_width_min_m;
   path_cfg_.lane_width_max_m = config.lane_width_max_m;
   path_cfg_.cam_y_left_m = config.cam_y_left_m;
@@ -80,6 +81,13 @@ void TopicConvertService::registerParameters()
         config_.lane_std_bad_m = v;
       },
       [this] { return path_cfg_.lane_std_bad_m; });
+  registerParameter<double>(
+      "lane_std_range_m",
+      [this](const double& v) {
+        path_cfg_.lane_std_range_m = v;
+        config_.lane_std_range_m = v;
+      },
+      [this] { return path_cfg_.lane_std_range_m; });
   registerParameter<double>(
       "cam_y_left_m",
       [this](const double& v) {

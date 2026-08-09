@@ -16,6 +16,8 @@ public:
 
     double lane_std_good_m = 0.2;
     double lane_std_bad_m = 0.8;
+    /** Range the σ summary covers — see `LanePathConfig::lane_std_range_m` for the measurement. */
+    double lane_std_range_m = 20.0;
 
     double path_camera_offset_m = 0.08;
 

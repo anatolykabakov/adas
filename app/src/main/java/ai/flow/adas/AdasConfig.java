@@ -16,6 +16,7 @@ public final class AdasConfig {
     private static final String TAG = "AdasConfig";
     public static final String ASSET = "config.json";
     private static final String DEFAULT_MODEL = "supercombo.onnx";
+    private static final String DEFAULT_MAP = "Moscow.osm.admap";
 
     private AdasConfig() {}
 
@@ -120,6 +121,97 @@ public final class AdasConfig {
 
     public static boolean phoneStatsEnabled(Context context) {
         return nodeBool(context, "phone_stats", true);
+    }
+
+    /** {@code nodes.map_data} — road curvature ahead from the OSM map. Off by default; see
+     *  {@code docs/MAP_CURVATURE.md}. Gates unpacking the 4.9 MB map asset as well as the C++ service. */
+    public static boolean mapDataEnabled(Context context) {
+        return nodeBool(context, "map_data", false);
+    }
+
+    /**
+     * Asset name of the road map, from {@code map.path}.
+     *
+     * <p>The same key the C++ side reads, so the two cannot drift: Java unpacks whatever it names and hands
+     * back the absolute path, and {@code nativeStart} overrides the configured value with it.
+     */
+    public static String mapAsset(Context context) {
+        try {
+            JSONObject map = root(context).optJSONObject("map");
+            String name = map == null ? null : map.optString("path", DEFAULT_MAP);
+            if (name == null || name.isEmpty()) {
+                name = DEFAULT_MAP;
+            }
+            return name;
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to read map.path, using " + DEFAULT_MAP, e);
+            return DEFAULT_MAP;
+        }
+    }
+
+    /**
+     * Which supercombo to run ({@code vision.model_runner}): {@code onnx}, {@code thneed} or
+     * {@code compare}.
+     *
+     * <p>{@code thneed} is the flowpilot 0.9.x model on the GPU — 15.9 ms against 44.7 for ours, which
+     * is what lets the pipeline hold 30 Hz ({@code docs/VISION_RATE.md}). {@code compare} drives on
+     * ONNX and shadows thneed into the bag, which is how that model's lane accuracy gets measured.
+     *
+     * <p>Anything unrecognised falls back to {@code onnx}, the only path we can vouch for.
+     */
+    public static String modelRunner(Context context) {
+        try {
+            JSONObject vision = root(context).optJSONObject("vision");
+            String v = vision == null ? null : vision.optString("model_runner", "onnx");
+            if ("thneed".equalsIgnoreCase(v)) {
+                return "thneed";
+            }
+            return "compare".equalsIgnoreCase(v) ? "compare" : "onnx";
+        } catch (Exception e) {
+            return "onnx";
+        }
+    }
+
+    /**
+     * In {@code compare} mode, how often the shadow model runs ({@code vision.shadow_every_n},
+     * default 3). Rationale and the measured contention numbers are in {@link
+     * ai.flow.adas.vision.ShadowCompareRunner}.
+     */
+    public static int shadowEveryN(Context context) {
+        try {
+            JSONObject vision = root(context).optJSONObject("vision");
+            return vision == null ? 3 : Math.max(1, vision.optInt("shadow_every_n", 3));
+        } catch (Exception e) {
+            return 3;
+        }
+    }
+
+    /**
+     * Let NNAPI compute supercombo in half precision ({@code vision.nnapi_fp16}).
+     *
+     * <p>Worth roughly 15-20 ms of the 45.6 ms inference on this SoC, which would take the vision
+     * loop from 13.2 Hz to about 20 Hz — the single largest remaining pipeline lever, since
+     * everything else in the cycle adds up to 26 ms with no slack.
+     *
+     * <p>Checked offline before wiring, on 200 frames of run 2026_08_06_00_36_42 where both lane
+     * lines are visible ({@code bag_fp16_ab.py}). Converting the whole model to fp16 — a stricter
+     * test than NNAPI, which keeps a float32 graph and is merely allowed to relax precision per node
+     * — moved the lane centre by 0.027 m and the plan offset by 0.037 m in aggregate, while line
+     * probabilities went up (right line 0.37 to 0.82) and the sigma tail shrank (p90 0.69 to 0.33).
+     * So not a degradation. What it is not free of: per-frame disagreement of 0.05 m median and
+     * 0.20 m p95 on the lane centre.
+     *
+     * <p><b>Default off on purpose.</b> The pending sigma-threshold experiment
+     * ({@code lane_std_bad_m} 1.5 to 2.0) also moves the lateral chain, and two changes in one drive
+     * cannot be separated. Enable it as its own single-variable run.
+     */
+    public static boolean nnapiFp16(Context context) {
+        try {
+            JSONObject vision = root(context).optJSONObject("vision");
+            return vision != null && vision.optBoolean("nnapi_fp16", false);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean nodeBool(Context context, String key, boolean def) {

@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package ai.flow.adas;
+
+option java_outer_classname = "MapDataOuter";
+
+// Road curvature ahead from the OSM graph — see mapmatch/road_route.h and services/map_data_service.h.
+// This is the logging half of the service: everything needed to redraw, offline, what the car believed the
+// road ahead looked like at that moment. Geometry is float and in the map frame (metres east/north from the
+// map anchor), because a run is an hour long and the bag pays for every field.
+
+message MapTurnSection {
+  float start_m = 1;      // distance along the route from the car
+  float end_m = 2;
+  float kappa = 3;        // peak |curvature| in the section, 1/m
+  float speed_mps = 4;    // sqrt(max_lat_acc / kappa)
+  int32 sign = 5;         // +1 left, -1 right
+}
+
+// One road centreline near the car. Sent only on the slow cadence (see has_local_map).
+message MapEdge {
+  string name = 1;
+  repeated float x = 2 [packed = true];
+  repeated float y = 3 [packed = true];
+}
+
+message MapLocalState {
+  int64 timestamp = 1;
+
+  bool map_loaded = 2;
+  // False when nothing on the graph is close enough or aligned enough — the reason everything below is
+  // empty. Distinguishing "no map" from "map but no match" is the whole point of having both flags.
+  bool matched = 3;
+
+  // Where the service thinks the car is. lat/lon is the fix the position is anchored to; map_x/map_y is the
+  // dead-reckoned position in the map frame, which is what route_x/route_y are relative to.
+  double lat = 4;
+  double lon = 5;
+  double map_x = 6;
+  double map_y = 7;
+  double yaw = 8;             // ENU heading, rad, 0 = east
+  float speed_mps = 9;
+
+  float match_dist_m = 10;    // perpendicular distance to the matched centreline
+  float heading_delta_deg = 11;
+  string road_name = 12;
+
+  // Route ahead, resampled every route_step_m from the snapped position, in map-frame metres.
+  float route_step_m = 13;
+  repeated float route_x = 14 [packed = true];
+  repeated float route_y = 15 [packed = true];
+  repeated float route_kappa = 16 [packed = true];  // 1/m, positive left
+  float route_length_m = 17;
+
+  repeated MapTurnSection turns = 18;
+
+  // The dragonpilot `liveMapData` equivalent: the turn we are in, and the next one ahead.
+  bool turn_speed_valid = 19;
+  float turn_speed_mps = 20;
+  float turn_speed_end_m = 21;
+  int32 turn_speed_sign = 22;
+  bool next_turn_valid = 23;
+  float next_turn_speed_mps = 24;
+  float next_turn_distance_m = 25;
+
+  // Surrounding graph, attached every local_map_period_s rather than on every message — it is ~40x the size
+  // of the route and does not change between ticks.
+  bool has_local_map = 26;
+  float local_map_radius_m = 27;
+  repeated MapEdge local_edges = 28;
+
+  float build_ms = 29;
+  // Median spacing of the map nodes this route was built from — the resolution the curvature came from.
+  // 200 m here means the road ahead is three straight lines in the map, whatever route_kappa says.
+  float route_node_spacing_m = 31;
+  // How far the pose-dead-reckoned position had drifted from the previous GPS fix when this one arrived.
+  // Large values mean the route is being built at the wrong place; small values do not prove it is right.
+  float pose_gps_gap_m = 30;
+}

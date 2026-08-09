@@ -13,6 +13,7 @@
 #include "services/internal_subscriber.h"
 #include "services/lane_keep_service.h"
 #include "services/localization_service.h"
+#include "services/map_data_service.h"
 #include "services/long_plan_service.h"
 #include "services/safety_warn_service.h"
 #include "services/traffic_sign_service.h"
@@ -36,6 +37,10 @@ public:
     bool enable_long_plan = true;
     bool enable_safety_warn = true;
     bool enable_traffic_sign = true;
+    /** On in the shipped `config.json`, off in this default. Not an oversight: this default is what runs when
+     *  the config fails to load, and starting a service on a failed load is how you end up debugging a node
+     *  nobody asked for. Nothing downstream consumes its output — see `services/map_data_service.h`. */
+    bool enable_map_data = false;
   };
 
   struct Config {
@@ -51,6 +56,7 @@ public:
     adas::LongPlanService::Config long_plan{};
     adas::SafetyWarnService::Config safety_warn{};
     adas::TrafficSignService::Config traffic_sign{};
+    adas::MapDataService::Config map_data{};
 
     static Config forSimulated(double wheelbase_m = 2.636, double pitch_deg = 0.0, double yaw_deg = 0.0,
                                double camera_height_m = 1.22);
@@ -115,10 +121,16 @@ public:
   void setLaneKeepFpSteerDelayS(double seconds);
   void setLaneKeepFpSteeringRateWeight(double weight);
   void setLaneKeepCamYLeftM(double m);
+  /** Angle PID gains. Needed by `rlog_lat_diff.py`: an open-loop replay drives our integrator with an error
+   *  our command cannot influence, so the only way to compare instantaneous controller response against
+   *  upstream's logged output is to run ours with `ki = 0`. */
+  void setLaneKeepPidGains(double kp, double ki, double kf);
+  void setLaneKeepRecomputeSetpoint(bool on);
   void setLaneBlendScale(double scale);
 
   adas::LaneKeepService* laneKeep() { return lane_keep_service_.get(); }
   adas::LocalizationService* localization() { return localization_service_.get(); }
+  adas::MapDataService* mapData() { return map_data_service_.get(); }
   adas::CameraCalibService* cameraCalib() { return camera_calib_service_.get(); }
   adas::ImuCalibService* imuCalib() { return imu_calib_service_.get(); }
   adas::InternalSubscriber& subscriber() { return *internal_subscriber_; }
@@ -143,6 +155,7 @@ private:
   std::shared_ptr<adas::SafetyWarnService> safety_warn_service_;
   std::shared_ptr<adas::TrafficSignService> traffic_sign_service_;
   std::shared_ptr<adas::LocalizationService> localization_service_;
+  std::shared_ptr<adas::MapDataService> map_data_service_;
   std::shared_ptr<adas::CameraCalibService> camera_calib_service_;
   std::shared_ptr<adas::ImuCalibService> imu_calib_service_;
   std::shared_ptr<adas::InternalSubscriber> internal_subscriber_;

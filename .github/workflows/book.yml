@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'docs/book/**'
+      - 'docs/book_ru/**'
+      - 'docs/build_book.sh'
       - '.github/workflows/book.yml'
   workflow_dispatch:
 
@@ -24,11 +26,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r docs/book/requirements.txt
 
-      - name: Build the book
-        run: jupyter-book build docs/book/
+      # Builds both languages into docs/_site: English at the root, Russian under /ru. The script also
+      # runs the snippet and translation-sync checks, so a chapter whose examples do not run, or a Russian
+      # page whose code has drifted from the English one, fails the deploy instead of shipping.
+      - name: Build both language versions
+        run: ./docs/build_book.sh
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/book/_build/html
+          publish_dir: docs/_site

@@ -10,6 +10,8 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
+import android.graphics.Rect;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
@@ -38,7 +40,7 @@ import java.util.List;
 
 public class CameraHandler {
 
-    private final String TAG = "CameraHandler";
+    private static final String TAG = "CameraHandler";
 
     public interface FailureListener {
         void onCameraFailed(String reason);
@@ -62,7 +64,11 @@ public class CameraHandler {
     private int sensorOrientation = 90;
     private boolean lensFacingFront = false;
 
-    private ai.flow.adas.vision.VisionPipeline visionPipeline;
+    /**
+     * Swapped from another thread when the vision model changes in settings, so it is read exactly once
+     * per frame below: two reads could disagree and hand the traffic branch the wrong buffer.
+     */
+    private volatile ai.flow.adas.vision.VisionPipeline visionPipeline;
     private ai.flow.adas.vision.TrafficVisionPipeline trafficVisionPipeline;
     private ai.flow.adas.vision.LaneOverlayView laneOverlay;
 
@@ -84,7 +90,20 @@ public class CameraHandler {
     }
 
     private static final int SCALE_FACTOR = 2;
-    private static final int TARGET_FPS = 20;
+    /**
+     * Кадров в секунду, которых просим у камеры. Было 20, устройство отдавало 22.7 (то есть точного
+     * диапазона (20,20) у него нет и камера бежит свободно).
+     *
+     * Почему это важно для темпа зрения: конвейер обрабатывает кадр за 59 мс медианой (подготовка 9 +
+     * инференс 45.5), а период камеры был 44 мс. Закончив счёт, конвейер обнаруживает, что следующий
+     * кадр придёт только через 29 мс, и темп квантуется по периоду камеры — ровно половина камерного,
+     * 11.3 Гц (замерено: 2.02 кадра камеры на один обработанный, бег 2026_08_04_21_00_18). При 30 к/с
+     * квант становится 33 мс и ожидание падает до ~7 мс.
+     *
+     * Потолок при любой частоте камеры — время работы конвейера, ~15 Гц; 20 Гц апстрима требуют
+     * уложить подготовку с инференсом в один период камеры.
+     */
+    private static final int TARGET_FPS = 30;
 
     private float bagFx;
     private float bagFy;
@@ -374,8 +393,9 @@ public class CameraHandler {
                     image = reader.acquireLatestImage();
                     if (image == null) return;
 
+                    final ai.flow.adas.vision.VisionPipeline vp = visionPipeline;
                     ai.flow.adas.vision.YuvFrame yuv = null;
-                    if (visionPipeline != null || trafficVisionPipeline != null) {
+                    if (vp != null || trafficVisionPipeline != null) {
                         yuv = ai.flow.adas.vision.YuvFrame.copyFrom(image);
                     }
 
@@ -384,13 +404,13 @@ public class CameraHandler {
 
                     if (yuv != null) {
                         long captureTs = TimeUtil.nowMs();
-                        if (visionPipeline != null) {
-                            visionPipeline.submitYuv(yuv, captureTs);
+                        if (vp != null) {
+                            vp.submitYuv(yuv, captureTs);
                         }
                         if (trafficVisionPipeline != null) {
                             if (trafficVisionPipeline.wantsFrame()) {
                                 ai.flow.adas.vision.YuvFrame trafficYuv =
-                                        visionPipeline != null ? yuv.duplicate() : yuv;
+                                        vp != null ? yuv.duplicate() : yuv;
                                 trafficVisionPipeline.submitYuv(trafficYuv, captureTs);
                             }
                         }
@@ -473,6 +493,11 @@ public class CameraHandler {
                 Log.w(TAG, "No AE FPS ranges available; leaving default");
             }
 
+            MeteringRectangle[] aeRegions = roadMeteringRegions(cameraCharacteristics, W, H);
+            if (aeRegions != null) {
+                captureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, aeRegions);
+            }
+
             logCameraIntrinsics();
 
         } catch (Exception e) {
@@ -523,50 +548,154 @@ public class CameraHandler {
         }
     }
 
+    /**
+     * Прямоугольник замера экспозиции, накрывающий дорогу.
+     *
+     * Единственная настройка камеры, которая есть у flowpilot и которой не было у нас: экспозиция считалась
+     * по всему кадру вместе с небом, дорога систематически недоэкспонирована, и AE удлиняла выдержку — а с
+     * плавающим диапазоном частоты это роняло камеру (см. {@link #pickTargetFpsRange}).
+     *
+     * Порт НЕ дословный, и в этом суть. flowpilot считает прямоугольник от размера кадра
+     * (`W = Camera.frameSize[0]`, 1280x720), а `CONTROL_AE_REGIONS` задаётся в координатах активной области
+     * сенсора. На сенсоре 4000x3000 их прямоугольник попал бы в левый верхний угол, то есть ровно в небо —
+     * туда, откуда мы экспозицию и уводим. Здесь отображение делается честно: сначала находится вырез, из
+     * которого сенсор формирует наш кадр с его соотношением сторон, затем внутри выреза берётся та же доля,
+     * что у них — по горизонтали 0.4..0.6, по вертикали 0.5..0.7, то есть центр чуть ниже горизонта.
+     *
+     * Система координат зависит от коррекции дисторсии: при DISTORTION_CORRECTION_MODE_OFF это
+     * pre-correction активная область, иначе обычная. Мы дисторсию выключаем, поэтому предпочитается
+     * pre-correction.
+     */
+    private MeteringRectangle[] roadMeteringRegions(CameraCharacteristics chars, int frameWidth, int frameHeight) {
+        Integer maxRegions = chars.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
+        if (maxRegions == null || maxRegions < 1) {
+            Log.w(TAG, "AE metering regions not supported on this device — exposure stays whole-frame");
+            return null;
+        }
+        Rect array = chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE);
+        if (array == null) {
+            array = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        }
+        if (array == null || array.width() <= 0 || array.height() <= 0 || frameWidth <= 0 || frameHeight <= 0) {
+            Log.w(TAG, "No active array size — cannot place the metering region");
+            return null;
+        }
+
+        // Вырез, из которого сенсор делает кадр нашего соотношения сторон: по одной оси берётся всё, по
+        // другой — центрированная часть. Без этого шага прямоугольник уезжает вверх на всю разницу форматов.
+        float wantAspect = (float) frameWidth / (float) frameHeight;
+        float arrayAspect = (float) array.width() / (float) array.height();
+        int cropW = array.width();
+        int cropH = array.height();
+        if (arrayAspect > wantAspect) {
+            cropW = Math.round(array.height() * wantAspect);
+        } else if (arrayAspect < wantAspect) {
+            cropH = Math.round(array.width() / wantAspect);
+        }
+        int cropL = array.left + (array.width() - cropW) / 2;
+        int cropT = array.top + (array.height() - cropH) / 2;
+
+        int x = cropL + Math.round(cropW * 0.40f);
+        int y = cropT + Math.round(cropH * 0.50f);
+        int w = Math.max(1, Math.round(cropW * 0.20f));
+        int h = Math.max(1, Math.round(cropH * 0.20f));
+        Log.i(TAG, "AE metering on road: array " + array.width() + "x" + array.height()
+                + ", crop " + cropW + "x" + cropH + " at " + cropL + "," + cropT
+                + " -> region " + x + "," + y + " " + w + "x" + h + " (max regions " + maxRegions + ")");
+        return new MeteringRectangle[]{new MeteringRectangle(x, y, w, h, MeteringRectangle.METERING_WEIGHT_MAX)};
+    }
+
+    /**
+     * Диапазон частоты кадров для AE.
+     *
+     * Здесь было две ошибки подряд, и вторая хуже первой.
+     *
+     * Сначала брался любой диапазон, ПОКРЫВАЮЩИЙ цель: при отсутствии [30,30] подходил [15,30], а нижняя
+     * граница 15 разрешает автоэкспозиции ронять частоту вдвое ради выдержки. На вечернем заезде
+     * 2026_08_07_19_04_05 это дало интервал 67 мс (14.9 Гц) при работе конвейера 52 мс.
+     *
+     * Тогда стал предпочитаться ФИКСИРОВАННЫЙ диапазон — и это оказалось хуже. На заезде
+     * 2026_08_08_10_47_41 интервал встал ровно на 100 мс с модой на 100: единственный фиксированный
+     * диапазон у этого телефона оказался низким, и правило прибило камеру к 10 fps. Темп упал 13.5 -> 10.06
+     * Гц, а шаг уставки на дугах вырос 0.49 -> 0.91 градуса. Фиксированность сама по себе бесполезна, если
+     * фиксирует на низкой частоте.
+     *
+     * Правильный порядок предпочтений: сначала максимальная ДОСТИЖИМАЯ частота (верхняя граница), и уже
+     * среди равных по верхней — максимальная нижняя, потому что высокая нижняя граница и есть то, что
+     * мешает AE ронять частоту. То есть [30,30] лучше [15,30], а [15,30] лучше [10,10] — последнее правило
+     * и было нарушено.
+     */
     private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int targetFps) {
         Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (ranges == null || ranges.length == 0) {
             return null;
         }
-        Range<Integer> exact = null;
-        Range<Integer> covering = null;
-        int coveringSpan = Integer.MAX_VALUE;
+        StringBuilder all = new StringBuilder();
         for (Range<Integer> r : ranges) {
-            if (r.getLower() == targetFps && r.getUpper() == targetFps) {
-                exact = r;
-                break;
+            all.append(r.getLower()).append('-').append(r.getUpper()).append(' ');
+        }
+        Log.i(TAG, "AE fps ranges available: " + all.toString().trim());
+
+        Range<Integer> best = null;
+        for (Range<Integer> r : ranges) {
+            int upper = Math.min(r.getUpper(), targetFps);
+            if (upper <= 0) {
+                continue;
             }
-            if (r.getLower() <= targetFps && r.getUpper() >= targetFps) {
-                int span = r.getUpper() - r.getLower();
-                if (span < coveringSpan) {
-                    coveringSpan = span;
-                    covering = r;
-                }
+            // Диапазон, чья НИЖНЯЯ граница выше цели, целевой темп выдать не может — он навяжет
+            // свой. Например [60,60] на телефоне с 60-герцовым превью: по верхней границе он даёт
+            // ничью с [30,30], а по нижней выигрывает, и камера уходит на 60 Гц. Это удвоило бы
+            // работу потока камеры ради конвейера, который столько не съест, и вдвое урезало бы
+            // выдержку — ровно та беда со светом, от которой это правило и написано.
+            if (r.getLower() > targetFps) {
+                continue;
             }
-        }
-        if (exact != null) {
-            return exact;
-        }
-        if (covering != null) {
-            return covering;
-        }
-        Range<Integer> best = ranges[0];
-        int bestDist = Math.abs(best.getUpper() - targetFps) + Math.abs(best.getLower() - targetFps);
-        for (int i = 1; i < ranges.length; i++) {
-            Range<Integer> r = ranges[i];
-            int dist = Math.abs(r.getUpper() - targetFps) + Math.abs(r.getLower() - targetFps);
-            if (dist < bestDist) {
-                bestDist = dist;
+            if (best == null) {
+                best = r;
+                continue;
+            }
+            int bestUpper = Math.min(best.getUpper(), targetFps);
+            if (upper > bestUpper || (upper == bestUpper && r.getLower() > best.getLower())) {
                 best = r;
             }
+        }
+        if (best == null) {
+            return null;
+        }
+        if (!best.getLower().equals(best.getUpper())) {
+            Log.w(TAG, "Best AE fps range " + best.getLower() + "-" + best.getUpper()
+                    + " is not fixed — the sensor may still drop the rate in low light, but a fixed range at a"
+                    + " lower rate would be worse");
         }
         return best;
     }
 
     private void startSession() {
+        // Экспозиция и реальная длительность кадра раз в ~5 с. Это то, чем доказывается механизм: если после
+        // области замера выдержка падает, а длительность кадра встаёт на 1/fps — значит камеру уронила
+        // именно автоэкспозиция по небу, а не что-то другое. Без этих строк вечерний заезд снова оставил бы
+        // только «камера отдаёт 15 Гц» без причины.
         CameraCaptureSession.CaptureCallback listener = new CameraCaptureSession.CaptureCallback() {
+            private long lastLogNs = 0;
+
             public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                 super.onCaptureCompleted(session, request, result);
+                Long exp = result.get(TotalCaptureResult.SENSOR_EXPOSURE_TIME);
+                Long dur = result.get(TotalCaptureResult.SENSOR_FRAME_DURATION);
+                Integer iso = result.get(TotalCaptureResult.SENSOR_SENSITIVITY);
+                if (exp == null && dur == null) {
+                    return;
+                }
+                long now = System.nanoTime();
+                if (now - lastLogNs < 5_000_000_000L) {
+                    return;
+                }
+                lastLogNs = now;
+                Log.i(TAG, String.format("AE: exposure %.1f ms, frame duration %.1f ms (%.1f fps), iso %s",
+                        exp == null ? Float.NaN : exp / 1e6f,
+                        dur == null ? Float.NaN : dur / 1e6f,
+                        dur == null || dur == 0 ? Float.NaN : 1e9f / dur,
+                        iso == null ? "?" : iso.toString()));
             }
         };
 

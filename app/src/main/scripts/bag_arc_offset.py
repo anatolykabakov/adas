@@ -89,6 +89,24 @@ COLS = [
 
 
 # ─────────────────────────────────────────────────────────── bag extraction
+def median_std_in_range(x: np.ndarray, y_std, range_m: float) -> float:
+    """Median lane sigma over the near field only — the controller's `lane_std_range_m` window.
+
+    Returns NaN when the run predates `y_std` or when no sample falls inside the window, so a missing
+    measurement stays visibly missing instead of arriving as a confident zero.
+    """
+    if y_std is None or len(y_std) == 0:
+        return float("nan")
+    sig = np.asarray(y_std, dtype=np.float64)
+    n = min(len(sig), len(x))
+    if n == 0:
+        return float("nan")
+    m = np.isfinite(sig[:n]) & (np.asarray(x[:n], dtype=np.float64) <= range_m)
+    if not m.any():
+        return float("nan")
+    return float(np.median(sig[:n][m]))
+
+
 def fit_at_zero(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
     """Quadratic fit over x∈[0,FIT_X_MAX]; returns (y(0), κ≈2a)."""
     m = (x >= 0.0) & (x <= FIT_X_MAX) & np.isfinite(y)
@@ -98,7 +116,7 @@ def fit_at_zero(x: np.ndarray, y: np.ndarray) -> Tuple[float, float]:
     return float(c[2]), float(2.0 * c[0])
 
 
-def extract(bag: Path) -> np.ndarray:
+def extract(bag: Path, std_range_m: float = 20.0) -> np.ndarray:
     from vis.bag_io import iter_aligned, load_topic_messages
 
     dbg = load_topic_messages(bag, "control/lane_keep_debug")
@@ -129,9 +147,16 @@ def extract(bag: Path) -> np.ndarray:
         plan0 = (
             fit_at_zero(plan_x, plan_y)[0] if plan_x.size == plan_y.size >= 6 else np.nan
         )
-        # y_std appeared in runs from 2026-08-02; on older runs — empty, read as "no data"
-        sl = np.median(ll.lanes[1].y_std) if len(ll.lanes[1].y_std) else np.nan
-        sr = np.median(ll.lanes[2].y_std) if len(ll.lanes[2].y_std) else np.nan
+        # y_std appeared in runs from 2026-08-02; on older runs — empty, read as "no data".
+        #
+        # The median is taken over x <= std_range_m, not over the whole line, because that is what the
+        # controller does: `LanePathConfig::lane_std_range_m` (20 m as shipped, 40 m before 2026-08-06).
+        # Summarising over the full extent computes a different number from the one that gates blending —
+        # on an arc the inner line's far samples are extrapolation and its sigma quadruples past 40 m, so a
+        # full-extent median can reject a line whose near half is fine, and an analysis that disagrees with
+        # the running code cannot be used to judge a change to that code.
+        sl = median_std_in_range(x, ll.lanes[1].y_std, std_range_m)
+        sr = median_std_in_range(x, ll.lanes[2].y_std, std_range_m)
         rows.append(
             (
                 float(r["t"]) / 1000.0,
@@ -199,11 +224,13 @@ class Analysis:
         center_force: float = 0.0,
         width_min: float = 2.6,
         width_max: float = 4.2,
+        force_recompute: bool = False,
     ):
         c = {k: data[:, i] for i, k in enumerate(COLS)}
         self.c = c
         self.t = c["t"] - c["t"][0]
         self.blend, self.shift = blend, shift
+        self.std_bad = std_bad
 
         def soft(p):
             return np.where(p >= 0.3, p, 0.0)
@@ -245,8 +272,14 @@ class Analysis:
         # If the run was recorded by a build that logs these values itself, use the logged ones:
         # then the decomposition reflects what actually ran, not a second reimplementation of
         # laneLinesToPath. Recomputation remains as a cross-check.
-        self.logged = bool(np.any(c["log_anchored"] > 0.5)) or bool(
-            np.any(c["log_gain"] > 0)
+        #
+        # `force_recompute` exists for one specific experiment: scoring the *same* bag at two different
+        # `lane_std_range_m` values, to isolate the window from everything else that differs between two
+        # drives. On a bag that logs its own blending weight the logged value is by definition the one the
+        # old window produced and does not move when this analysis changes its window — so the comparison
+        # has to come from the recomputation on both sides, or it silently compares a number to itself.
+        self.logged = not force_recompute and (
+            bool(np.any(c["log_anchored"] > 0.5)) or bool(np.any(c["log_gain"] > 0))
         )
         if self.logged:
             self.off_recomputed = self.off_lane
@@ -364,19 +397,35 @@ def report(A: Analysis) -> None:
     print(f"\nreference offset by component:")
     print(
         f"{'segment':<26} {'n':>6} {'ref off':>8} {'plan·(1−d)':>12} {'lane·d':>10} "
-        f"{'shift':>7} {'d':>5} {'width':>7} {'σ worst':>9}"
+        f"{'shift':>7} {'d':>5} {'width':>7} {'σ worst':>9} {'σ p90':>7} {'σ veto':>7} {'σ veto*':>8}"
     )
     s_worst = np.fmax(c["std_l"], c["std_r"])
+    # The effect of `lane_std_range_m` lives in the tail, not the median. Measured on run
+    # 2026_08_06_00_36_42 the median worst-line sigma on a left arc is 0.14 — nowhere near the 1.5 cut-off —
+    # while 20 % of the frames on that same arc are *above* the cut-off. So a median sigma and a median `d`
+    # both look untouched by a change that alters one frame in five, and reporting only those two is how an
+    # experiment concludes "no effect" about something that matters. `σ veto` is that share: frames whose
+    # worst line is at or past `lane_std_bad_m`, i.e. frames where sigma alone zeroed that line's weight.
+    veto = s_worst >= A.std_bad
+    # Two veto shares, and the difference between them is the point. `A.good` requires *both* lane
+    # probabilities above 0.3, which quietly excludes most of the frames where sigma actually vetoes a line —
+    # so the veto share over the good set is near zero by construction and cannot measure a change aimed at
+    # exactly those frames. `σ veto*` is the same share over every frame in the segment with a finite sigma,
+    # gates and all, which is the population the window change is meant to move.
     for name, sel in A.bins():
         s = A.good & sel
         if s.sum() < 30:
             continue
         d = float(np.median(A.d[s]))
+        finite = s & np.isfinite(s_worst)
         print(
             f"{name:<26} {s.sum():>6} {np.median(A.ref_bias[s]):>+8.2f} "
             f"{np.median(A.plan_bias[s]) * (1 - d):>+12.2f} "
             f"{np.median(A.lane_bias[s]) * d:>+10.2f} {-A.shift:>+7.2f} {d:>5.2f} "
-            f"{np.median(A.width[s]):>7.2f} {np.nanmedian(s_worst[s]):>9.2f}"
+            f"{np.median(A.width[s]):>7.2f} {np.nanmedian(s_worst[s]):>9.2f} "
+            f"{np.nanpercentile(s_worst[finite], 90) if finite.sum() else float('nan'):>7.2f} "
+            f"{np.mean(veto[finite]) * 100 if finite.sum() else float('nan'):>6.0f}% "
+            f"{np.mean(veto[sel & np.isfinite(s_worst)]) * 100 if (sel & np.isfinite(s_worst)).sum() else float('nan'):>7.0f}%"
         )
     print(
         "  model plan relative to lane center, unweighted: "
@@ -652,6 +701,13 @@ def main() -> int:
     p.add_argument("--std-good", type=float, default=0.2, help="lane_std_good_m in bag")
     p.add_argument("--std-bad", type=float, default=0.8, help="lane_std_bad_m in bag")
     p.add_argument(
+        "--std-range",
+        type=float,
+        default=20.0,
+        help="lane_std_range_m in bag: sigma is summarised over x <= this, as the controller does "
+        "(20 as shipped since 2026-08-06, 40 before)",
+    )
+    p.add_argument(
         "--center-force",
         type=float,
         default=0.0,
@@ -669,18 +725,43 @@ def main() -> int:
         action="store_true",
         help="weight blending by model σ (not in APK before 2026-08-02)",
     )
+    p.add_argument(
+        "--recompute",
+        action="store_true",
+        help="ignore the blending values the bag logged and recompute them, so that --std-range actually "
+        "changes the answer; the way to score one bag at two windows",
+    )
     p.add_argument("--plots", type=Path, default=None, help="where to save plots")
     p.add_argument("--prefix", default="offset", help="plot filename prefix")
     args = p.parse_args()
 
     if args.cache and args.cache.exists():
-        data = np.load(args.cache)["data"]
-        print(f"loaded from cache {args.cache}")
+        cached = np.load(args.cache)
+        # The sigma columns are summarised at extraction time, so a cache taken at a different
+        # `--std-range` holds different numbers under the same name. Refuse it rather than quietly answer
+        # the wrong question — this analysis exists to judge a change to that very window.
+        cached_range = float(cached["std_range_m"]) if "std_range_m" in cached else None
+        if cached_range is None or abs(cached_range - args.std_range) > 1e-9:
+            was = (
+                "unknown (cache written before --std-range existed)"
+                if cached_range is None
+                else f"{cached_range:g}"
+            )
+            print(
+                f"cache {args.cache} was extracted with std_range = {was}, asked for {args.std_range:g} — "
+                "re-extracting; delete the cache or pass the matching --std-range"
+            )
+            data = extract(args.bag, args.std_range)
+            args.cache.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(args.cache, data=data, std_range_m=args.std_range)
+        else:
+            data = cached["data"]
+            print(f"loaded from cache {args.cache} (std_range {cached_range:g})")
     else:
-        data = extract(args.bag)
+        data = extract(args.bag, args.std_range)
         if args.cache:
             args.cache.parent.mkdir(parents=True, exist_ok=True)
-            np.savez_compressed(args.cache, data=data)
+            np.savez_compressed(args.cache, data=data, std_range_m=args.std_range)
             print(f"extraction saved to {args.cache}")
 
     print(f"\nbag {args.bag.name}")
@@ -694,6 +775,7 @@ def main() -> int:
         args.center_force,
         args.width_min,
         args.width_max,
+        args.recompute,
     )
     report(A)
     if args.plots:

@@ -26,7 +26,8 @@ public class VisionPipeline {
     private final HandlerThread thread;
     private final Handler handler;
     private final ExecutorService bagExecutor;
-    private final SupercomboOnnxRunner runner;
+    /** The model is an implementation detail behind {@link ModelRunner}. */
+    private final ModelRunner runner;
     private final LaneOverlayView overlay;
     private final boolean publishPose;
 
@@ -34,7 +35,17 @@ public class VisionPipeline {
     private boolean busy;
     private YuvFrame pendingYuv;
     private long pendingCaptureTs;
+    /** When {@link #submitYuv} received the pending frame — camera to app delivery. */
+    private long pendingSubmitTs;
+    /**
+     * Captures overwritten in the 1-slot buffer since the last one that got processed. This is the
+     * number that separates the two explanations for a slow loop: frames arriving late (zero drops,
+     * long delivery) against inference not keeping up (drops every cycle).
+     */
+    private int pendingDropped;
     private int frameId;
+    /** Set by {@link #close}, read by the inference thread. */
+    private volatile boolean closed;
 
     public VisionPipeline(Context context, LaneOverlayView overlay) throws Exception {
         this(context, overlay, true);
@@ -42,9 +53,19 @@ public class VisionPipeline {
 
     public VisionPipeline(Context context, LaneOverlayView overlay, boolean cameraCalib)
             throws Exception {
+        this(context, overlay, cameraCalib, ai.flow.adas.AdasConfig.modelRunner(context));
+    }
+
+    /**
+     * The runner is passed explicitly rather than read from the file, so the settings switch changes the
+     * model live without saving first — the same way the pp/mpc/fp controller radio behaves.
+     */
+    public VisionPipeline(Context context, LaneOverlayView overlay, boolean cameraCalib,
+                          String runnerName) throws Exception {
         this.overlay = overlay;
         this.publishPose = cameraCalib;
-        this.runner = new SupercomboOnnxRunner(context.getApplicationContext());
+        this.runner = createRunner(context.getApplicationContext(), runnerName);
+        android.util.Log.i("VisionPipeline", "model runner: " + runner.name());
         thread = new HandlerThread("SupercomboInfer");
         thread.start();
         handler = new Handler(thread.getLooper());
@@ -53,6 +74,24 @@ public class VisionPipeline {
             t.setPriority(Thread.NORM_PRIORITY - 1);
             return t;
         });
+    }
+
+    /** Falls back to ONNX: thneed is a separate .so on the GPU and must never take the app down. */
+    private static ModelRunner createRunner(Context context, String choice) throws Exception {
+        if ("thneed".equals(choice)) {
+            try {
+                return new SupercomboThneedRunner(context);
+            } catch (Throwable e) {
+                android.util.Log.e("VisionPipeline", "thneed unavailable — falling back to ONNX", e);
+            }
+        } else if ("compare".equals(choice)) {
+            try {
+                return new ShadowCompareRunner(context);
+            } catch (Throwable e) {
+                android.util.Log.e("VisionPipeline", "shadow compare unavailable — falling back to ONNX", e);
+            }
+        }
+        return new SupercomboOnnxRunner(context);
     }
 
     public void submitBitmap(Bitmap bitmap) {
@@ -86,15 +125,7 @@ public class VisionPipeline {
                     busy = false;
                 }
             }
-            final SupercomboOnnxRunner.Result bagRes = res;
-            final int bagId = id;
-            bagExecutor.execute(() -> {
-                try {
-                    publishBag(bagRes, bagId);
-                } catch (Exception e) {
-                    Log.e(TAG, "bag log failed", e);
-                }
-            });
+            submitBag(res, id);
             handler.post(this::drainYuvLatest);
         });
     }
@@ -108,10 +139,15 @@ public class VisionPipeline {
             return;
         }
         final long captureTs = captureTsMs > 0 ? captureTsMs : ai.flow.adas.TimeUtil.nowMs();
+        final long submitTs = ai.flow.adas.TimeUtil.nowMs();
         boolean start;
         synchronized (lock) {
+            if (pendingYuv != null) {
+                pendingDropped++;  // overwriting an unprocessed capture
+            }
             pendingYuv = frame;
             pendingCaptureTs = captureTs;
+            pendingSubmitTs = submitTs;
             if (busy) {
                 return;
             }
@@ -128,10 +164,15 @@ public class VisionPipeline {
         while (true) {
             final YuvFrame frame;
             final long captureTs;
+            final long submitTs;
+            final int dropped;
             synchronized (lock) {
                 frame = pendingYuv;
                 captureTs = pendingCaptureTs;
+                submitTs = pendingSubmitTs;
+                dropped = pendingDropped;
                 pendingYuv = null;
+                pendingDropped = 0;
                 if (frame == null) {
                     busy = false;
                     return;
@@ -140,25 +181,45 @@ public class VisionPipeline {
                 busy = true;
             }
 
+            final long pickupTs = ai.flow.adas.TimeUtil.nowMs();
             final int id = frameId++;
             SupercomboOnnxRunner.Result res = null;
             try {
                 res = runner.run(frame, id, captureTs);
+                if (res != null && res.lanes != null) {
+                    res.lanes.submitTimestampMs = submitTs;
+                    res.lanes.pickupTimestampMs = pickupTs;
+                    res.lanes.framesDropped = dropped;
+                }
                 publishControl(res, id);
             } catch (Exception e) {
                 Log.e(TAG, "infer failed", e);
             }
             // Bag off the infer thread so a pending latest can start immediately.
-            final SupercomboOnnxRunner.Result bagRes = res;
-            final int bagId = id;
+            submitBag(res, id);
+            // Loop: pick up a newer frame that arrived during this run.
+        }
+    }
+
+    /**
+     * Bag writes off the inference thread, and out of the way of the shutdown race: {@link #close}
+     * stops {@link #bagExecutor} while a frame may still be in flight, which would otherwise throw
+     * RejectedExecutionException on the inference thread. Live model switching makes that routine.
+     */
+    private void submitBag(SupercomboOnnxRunner.Result res, int id) {
+        if (closed) {
+            return;
+        }
+        try {
             bagExecutor.execute(() -> {
                 try {
-                    publishBag(bagRes, bagId);
+                    publishBag(res, id);
                 } catch (Exception e) {
                     Log.e(TAG, "bag log failed", e);
                 }
             });
-            // Loop: pick up a newer frame that arrived during this run.
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Closed between the check and the submit; the last frame is not worth keeping.
         }
     }
 
@@ -222,7 +283,13 @@ public class VisionPipeline {
         runner.setCalib(rollDeg, pitchDeg, yawDeg, fx, fy, cx, cy, width, height);
     }
 
+    /** CAN speed, an input of the 0.9.x model. Arrives at 100 Hz; the runner takes the latest value. */
+    public void setEgoSpeed(float speedMps) {
+        runner.setEgoSpeed(speedMps);
+    }
+
     public void close() {
+        closed = true;
         synchronized (lock) {
             pendingYuv = null;
             busy = true; // stop accepting

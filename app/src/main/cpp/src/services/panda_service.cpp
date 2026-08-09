@@ -30,6 +30,12 @@ void PandaService::configure()
       LOGW("No DBC path — CarState decode disabled");
     }
 
+    decoder_.setSpeedFilterConfig(config_.speed_filter);
+
+    using C = volkswagen::MqbSafetyConstants;
+    safety_.setAlternativeExperience(config_.lat_always_on ? (C::kAltExpDisableDisengageOnGas | C::kAltExpAlka)
+                                                          : C::kAltExpDisableDisengageOnGas);
+
     initializePanda();
 
     subscribe<ai::flow::adas::ZMQMessage>(adas::topics::kSteerCommand,
@@ -44,7 +50,8 @@ void PandaService::configure()
     scheduleTimer(
         10, [this] { carControllerCallback(); }, "tx");
 
-    LOGI("PandaService configured (cruise_buttons=%s)", config_.cruise_buttons_enabled ? "ON" : "off");
+    LOGI("PandaService configured (cruise_buttons=%s, wheel_speed_factor=%.4f)",
+         config_.cruise_buttons_enabled ? "ON" : "off", config_.speed_filter.wheel_speed_factor);
   } catch (const std::exception& e) {
     LOGE("Failed to configure PandaService: %s", e.what());
     throw;
@@ -92,9 +99,15 @@ volkswagen::CruiseButtonCmd PandaService::computeCruiseButtons(const volkswagen:
 
   if (cs.cruiseEngaged && !cruise_was_engaged_) {
     cruise_v_set_ = std::max(0.0, static_cast<double>(cs.vEgo));
+    // The driver's chosen speed is the ceiling for the whole engagement. Without a radar we have no
+    // business driving faster than they asked; the assistant's only authority is to give speed back
+    // and then restore it. This also removes half the button traffic: on run 2026_08_06_00_36_42 the
+    // actuator produced roughly as many up-tips as down-tips, hunting around a target that a
+    // one-sided authority would never have chased.
+    cruise_v_set_ceiling_ = cruise_v_set_;
     cruise_hold_tip_up_ = cruise_hold_tip_down_ = false;
     cruise_cooldown_until_ms_ = 0;
-    LOGI("cruise engage: latch v_set=%.1f km/h", cruise_v_set_ * 3.6);
+    LOGI("cruise engage: latch v_set=%.1f km/h (ceiling)", cruise_v_set_ * 3.6);
   }
   if (!cs.cruiseEngaged) {
     cruise_was_engaged_ = false;
@@ -122,7 +135,8 @@ volkswagen::CruiseButtonCmd PandaService::computeCruiseButtons(const volkswagen:
   if (now < cruise_cooldown_until_ms_ || !plan_fresh)
     return cmd;
 
-  const double err = long_v_target_ - cruise_v_set_;
+  const double v_want = std::min(long_v_target_, cruise_v_set_ceiling_);
+  const double err = v_want - cruise_v_set_;
   if (std::abs(err) < config_.cruise_deadband_ms)
     return cmd;
 
@@ -131,7 +145,7 @@ volkswagen::CruiseButtonCmd PandaService::computeCruiseButtons(const volkswagen:
   if (err > 0) {
     cruise_hold_tip_up_ = true;
     cmd.tip_up = true;
-    cruise_v_set_ += config_.cruise_tip_step_ms;
+    cruise_v_set_ = std::min(cruise_v_set_ceiling_, cruise_v_set_ + config_.cruise_tip_step_ms);
   } else {
     cruise_hold_tip_down_ = true;
     cmd.tip_down = true;
@@ -139,6 +153,20 @@ volkswagen::CruiseButtonCmd PandaService::computeCruiseButtons(const volkswagen:
   }
   return cmd;
 }
+
+bool PandaService::assistAllowed(const volkswagen::CarStateView& cs) const
+{
+  return volkswagen::lateralActuationAllowed(safety_.lastControlsAllowed(), config_.lat_always_on, cs);
+}
+
+namespace {
+// Kept next to the call so the reasoning does not drift away from it.
+// Upstream's gate is `controlsd.py:677`. Their fourth condition, calibration validity, is intentionally
+// absent from `lateralActuationAllowed`: the camera moves every mount and the estimator converges in 30–60 s,
+// which costs a measured 0.02 m of offset on straights (see BACKLOG §1), so a calibration gate would withhold
+// the assist for a minute to avoid two centimetres. With always-on lateral the car now steers during that
+// warm-up, which is the one place this decision is worth revisiting on the road rather than in a comment.
+}  // namespace
 
 void PandaService::carControllerCallback()
 {
@@ -154,7 +182,7 @@ void PandaService::carControllerCallback()
   const auto cs = decoder_.toCarStateView();
 
   volkswagen::CarControl cc;
-  cc.latActive = cmd_fresh && hca_cmd_enabled_ && safety_.lastControlsAllowed();
+  cc.latActive = cmd_fresh && hca_cmd_enabled_ && assistAllowed(cs);
   if (cmd_fresh)
     cc.actuators.steerTorqueCNm = hca_cmd_steer_;
   cc.hud.leftLaneVisible = true;
@@ -224,6 +252,7 @@ void PandaService::pandaStateCallback()
     if (!health)
       return;
 
+    const auto cs_now = decoder_.toCarStateView();
     volkswagen::SafetyLogContext log;
     log.last_tsk_status = decoder_.lastTskStatus();
     log.cruise_engaged = decoder_.state().cruise_engaged();
@@ -232,12 +261,16 @@ void PandaService::pandaStateCallback()
     log.eps_hca_status = decoder_.epsHcaStatus();
     log.apply_steer_last = car_controller_.applySteerLast();
     log.hca_cmd_steer = hca_cmd_steer_;
-    log.lat_cmd_active = hca_cmd_enabled_ && safety_.lastControlsAllowed();
+    log.lat_cmd_active = hca_cmd_enabled_ && assistAllowed(cs_now);
     log.ldw_valid = decoder_.ldwStock().valid;
 
     auto out = safety_.tick(*panda_, *health, utils::getCurrentTimestamp(), log);
-    if (out)
-      publish(adas::topics::kPandaHealth, utils::createHealthMessage(*out));
+    if (out) {
+      auto msg = utils::createHealthMessage(*out);
+      // Computed after the tick so it reflects the controls_allowed this cycle actually saw.
+      msg.mutable_panda_health()->set_lat_actuation_allowed(assistAllowed(cs_now));
+      publish(adas::topics::kPandaHealth, msg);
+    }
   } catch (const std::exception& e) {
     LOGE("Exception in pandaStateCallback(): %s", e.what());
   }

@@ -144,16 +144,76 @@ assert params["pp_k_dd"] == 0.8
 Supported types: `bool`, `int`, `long long`, `float`, `double`, `string`.
 Android NDK needs the parse helpers as free functions (see `detail::parseParamText` in the header) — a class-static template failed to link.
 
+## Is the bus the bottleneck? Measure, do not assume
+
+A message bus is the natural suspect when a pipeline is slow, and suspicion is cheap. This one was measured,
+and the answer shapes how you read every latency number elsewhere in the book.
+
+**Publishing wakes the subscriber immediately.** `publish` copies into each subscriber queue and calls
+`cv.notify_one()`, so the owning thread is runnable at once — it does not wait for its next timer tick. The
+only two places where anything polls are the boundaries with the outside world: the ZMQ ingress from Java and
+the CAN egress to the panda, both on 10 ms timers because the thing on the other side has no way to wake us.
+
+The difference between those two designs is worth seeing rather than believing:
+
+```python
+import math
+
+# Two ways to hand a message from producer to consumer. The producer emits vision frames at the measured
+# 68.3 ms interval; the consumer either polls on its own 10 ms timer or is woken on publish.
+#
+# 68.3 and not 90: a period that is an exact multiple of the poll interval always lands on a tick and the
+# wait comes out zero, which flatters polling for a reason that has nothing to do with the design.
+PRODUCE_MS = 68.3
+POLL_MS = 10.0
+N = 500
+
+polled = []
+for i in range(N):
+    t_pub = i * PRODUCE_MS
+    next_tick = POLL_MS * math.ceil(t_pub / POLL_MS)
+    polled.append(next_tick - t_pub)
+
+print(f"polled  : mean {sum(polled) / N:5.2f} ms, worst {max(polled):5.2f} ms")
+print(f"notified: mean {0.0:5.2f} ms, worst {0.0:5.2f} ms")
+print()
+print("Half a poll interval on average and a full one at worst, per hop. With four hops between camera")
+print("and CAN that is around 20 ms of pure waiting — a quarter of the whole 79 ms budget, spent on")
+print("nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.")
+```
+
+**Timers fire when they say they do.** Over 143 700 firings on a real drive, the mean interval was
+**10.00 ms** against a nominal 10. The worst cases were 44.8 ms in the panda service — most likely a USB
+stall, i.e. the outside world, not the scheduler — and 21.8 ms in the ZMQ bridge.
+
+So the measured conclusion is: **the middleware never delays a message on a timer**, and the 26 ms of
+non-inference latency in the pipeline is not the bus. Of the ~7 ms between model output and command, about 5
+is the ZMQ ingress poll — a real cost, and the only one worth naming.
+
+```{admonition} What this buys you diagnostically
+:class: tip
+When a bag shows a stale reference, the bus is already ruled out. That is worth more than it sounds: it means
+the search space is the camera → model chain or the outside boundaries, and you can stop reading
+`middleware.hpp`.
+```
+
 ## Queues and drops
 
 Default subscriber capacity is finite (~100). If a slow service does not drain:
 
 * new messages can be **dropped**;
-* `middleware/stats` shows lagging timers / drops.
+* `middleware/stats` shows lagging timers and drops, and it is in every bag.
 
 ```{warning}
-A “bad controller” on a bag where `middleware/stats` shows huge timer lag is often a **scheduling** story, not a gain story.
+A "bad controller" on a bag where `middleware/stats` shows huge timer lag is often a **scheduling** story, not
+a gain story. Check it before touching a weight — it takes one plot.
 ```
+
+Note the asymmetry with the vision pipeline, because the two make opposite choices for good reasons. The bus
+queues up to ~100 messages and drops the newest when full; `VisionPipeline` keeps exactly **one** slot and
+drops the *oldest*, overwriting the pending frame. A control loop wants the freshest measurement and has no
+use for a backlog of stale frames, while a logger or an analysis consumer wants every message it was promised.
+Same word — "drop" — opposite policy.
 
 ## How to study this in the repo
 

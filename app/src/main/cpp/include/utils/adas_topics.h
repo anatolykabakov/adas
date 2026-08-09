@@ -13,6 +13,10 @@ inline constexpr const char* kVehicleChassis = "vehicle/chassis";
 inline constexpr const char* kVisionLanes = "vision/lanes";
 inline constexpr const char* kVisionPath = "vision/path";
 inline constexpr const char* kGpsLocation = "sensors/gps/location";
+/** Raw geodetic fix as the phone reports it. `kGpsLocation` carries the same fix, but by the time anything
+ *  in C++ sees it `TopicConvertService` has already projected it into a local frame whose origin is private
+ *  to that projector — so this is the only topic that still has latitude and longitude on it. */
+inline constexpr const char* kGpsData = "sensors/gps/data";
 inline constexpr const char* kImu = "sensors/imu";
 inline constexpr const char* kImuRaw = "sensors/imu_raw";
 inline constexpr const char* kImuYaw = "sensors/imu_yaw";
@@ -33,6 +37,7 @@ inline constexpr const char* kVehicleState = "vehicle/state";
 inline constexpr const char* kCanRx = "can/rx";
 inline constexpr const char* kPandaHealth = "panda/health";
 inline constexpr const char* kMiddlewareStats = "middleware/stats";
+inline constexpr const char* kMapLocal = "map/local";
 }  // namespace topics
 
 struct ChassisSample {
@@ -94,6 +99,11 @@ struct ImuSample {
   int64_t timestamp_us = 0;
   double yaw_rate = 0.0;
   bool valid = false;
+  /** Lateral specific force in the vehicle frame (x forward, y right, z down), m/s². Needed by
+   *  `RoadRollEstimator`; `lat_accel_valid` is false until a mount heading exists, because gravity alone
+   *  does not measure heading and the y axis would point nowhere in particular. */
+  double lat_accel = 0.0;
+  bool lat_accel_valid = false;
 };
 
 struct LocalizationPose {
@@ -107,6 +117,21 @@ struct LocalizationPose {
   double odom_y = 0.0;
   double ekf_x = 0.0;
   double ekf_y = 0.0;
+  /** Road bank and its uncertainty — see `utils/road_roll_estimator.h`. Gate on the std, not on presence:
+   *  10° is the "no usable roll" value `paramsd` itself falls back to. */
+  double road_roll_deg = 0.0;
+  double road_roll_std_deg = 10.0;
+  bool road_roll_valid = false;
+  /** Vehicle parameters as learned online — see `utils/params_learner.h`. Published even while the
+   *  controller still uses the configured constants, because the only way to earn the switch is to record
+   *  the learned value next to the hand-tuned one over a real drive. */
+  double learned_stiffness_factor = 0.0;
+  double learned_steer_ratio = 0.0;
+  double learned_angle_offset_deg = 0.0;
+  double learned_stiffness_std = 0.0;
+  double learned_steer_ratio_std = 0.0;
+  bool learned_params_valid = false;
+  int learned_sample_count = 0;
 };
 
 struct LaneUvMsg {

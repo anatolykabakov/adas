@@ -13,6 +13,8 @@ void SafetyWarnService::configure()
   subscribe<ai::flow::adas::ZMQMessage>(topics::kVisionModelLong,
                                         [this](const ai::flow::adas::ZMQMessage& m) { onModelLong(m); });
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
+  subscribe<ai::flow::adas::ZMQMessage>(topics::kSteerCommand,
+                                        [this](const ai::flow::adas::ZMQMessage& m) { onSteer(m); });
   scheduleTimer(
       50, [this] { tick(); }, "tick");
   LOGI("SafetyWarnService: path + model_long + chassis → %s (FCW/AEB/LDW, no actuation)", topics::kSafetyWarn);
@@ -40,7 +42,16 @@ void SafetyWarnService::reset()
   lane_anchored_ = false;
   last_cte_m_ = 0.0;
   last_path_ts_us_ = 0;
+  lat_active_ts_us_ = 0;
   rebuildLatches();
+}
+
+void SafetyWarnService::onSteer(const ai::flow::adas::ZMQMessage& msg)
+{
+  if (!msg.has_steer_command())
+    return;
+  if (msg.steer_command().enabled())
+    lat_active_ts_us_ = static_cast<int64_t>(now());
 }
 
 void SafetyWarnService::onPath(const LanePathMsg& msg)
@@ -86,6 +97,10 @@ void SafetyWarnService::tick()
   safety::PlannerInput in;
   in.ego_speed_ms = std::max(0.0, chassis_.speed_mps);
   in.driver_steering = chassis_.steering_pressed;
+  // Свежесть по тому же сроку, что у команды в PandaService (kHcaCmdTimeoutMs): дольше держать
+  // подавление нельзя, иначе LDW промолчит и после того, как ассистент отпустил руль.
+  constexpr int64_t kLatActiveTimeoutUs = 250'000;
+  in.lat_active = lat_active_ts_us_ > 0 && (static_cast<int64_t>(now()) - lat_active_ts_us_) <= kLatActiveTimeoutUs;
   in.left_blinker = chassis_.left_blinker;
   in.right_blinker = chassis_.right_blinker;
   if (have_lateral_) {

@@ -26,6 +26,9 @@ void LateralMpc::reset()
   u_.fill(0.0);
   x0_.fill(0.0);
   x0_inited_ = false;
+  psi_sol_.fill(0.0);
+  r_sol_.fill(0.0);
+  has_sol_ = false;
 }
 
 double LateralMpc::tNode(int i) { return 10.0 * std::pow(static_cast<double>(i) / kTIdxMax, 2.0); }
@@ -324,6 +327,10 @@ LatMpcResult LateralMpc::update(double speed_mps, double yaw_rate, double Lf, co
     return out;
   }
 
+  psi_sol_ = psi_sol;
+  r_sol_ = r_sol;
+  has_sol_ = true;
+
   const double desired_kappa = lagAdjustedCurvature(v, psi_sol, r_sol, u_, dt_s);
   const double max_kappa_rate = cfg_.max_lateral_jerk / (v * v);
   const double desired_rate = clampd(u_[0] / v, -max_kappa_rate, max_kappa_rate);
@@ -341,6 +348,17 @@ LatMpcResult LateralMpc::update(double speed_mps, double yaw_rate, double Lf, co
     out.steer_rad_vp = 0.0;
   }
   return out;
+}
+
+std::optional<double> LateralMpc::curvatureAtSpeed(double speed_mps, double dt_s) const
+{
+  if (!has_sol_)
+    return std::nullopt;
+  const double v = std::max(speed_mps, kMinSpeed);
+  const double k = lagAdjustedCurvature(v, psi_sol_, r_sol_, u_, clampd(dt_s, 0.02, 0.5));
+  if (!std::isfinite(k))
+    return std::nullopt;
+  return k;
 }
 
 }  // namespace flowpilot

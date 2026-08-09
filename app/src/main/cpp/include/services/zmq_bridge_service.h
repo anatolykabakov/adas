@@ -26,6 +26,7 @@ inline const std::vector<std::string> kZmqOutboundTopics = {
     "control/long_plan",
     "safety/warn",
     "traffic/state",
+    "map/local",
 };
 
 class ZmqBridgeService : public adas::Service {

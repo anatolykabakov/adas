@@ -71,6 +71,9 @@ message LaneKeepDebug {
   double p_ld_max = 62;
   double p_ld_curv_gain = 63;
   double p_max_steer_deg = 64;
+  // Действующий потолок момента: без него разбор бага считает долю тиков «на упоре»
+  // по зашитой константе и молча врёт после первой же правки конфига.
+  int32 p_max_torque_cnm = 74;
   double p_mpc_epsi_gain = 65;
   double p_mpc_ff_scale = 66;
   double p_mpc_kappa_yaw_blend = 67;
@@ -82,4 +85,7 @@ message LaneKeepDebug {
   int64 vision_ts_ms = 81;
   int64 chassis_ts_ms = 82;
   int64 publish_ts_ms = 83;
+
+  bool assist_allowed = 84;
+  bool assist_known = 85;
 }

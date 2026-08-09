@@ -41,6 +41,28 @@ public:
   double cam_odo_R = 0.05;
   bool invert_cam_yaw_rate = false;
 
+  /** Which GPS measurements are allowed through. Each one is separate because a fused estimate does not
+   *  say which sensor carries it, and switching sources off one at a time is the only cheap way to find
+   *  out what the filter would do without each. `LocalizationService::Config::Sources` drives these. */
+  bool use_gps_position = true;
+  bool use_gps_course = true;
+  bool use_gps_velocity = true;
+
+  /** Variance of the GPS velocity measurement.
+   *
+   *  It was 1.0, i.e. an assumed 1 m/s of noise, and at that value the measurement is decorative: the
+   *  wheel speed arrives twenty times more often with an assumed 0.1 m/s, so GPS velocity contributed
+   *  about one part in eight thousand and the fused speed was the wheel speed to six decimals.
+   *
+   *  Measured, Doppler is far better than 1 m/s. The residual between GNSS Doppler and the
+   *  scale-corrected wheel speed is 0.066-0.101 m/s median on two runs, and that residual contains both
+   *  sensors plus the 1 Hz sampling — so 0.1 m/s is a fair bound for Doppler alone, not 1.0.
+   *
+   *  A caveat that keeps this from being tightened further: `updateGpsVel` observes
+   *  `[vx, vy] = v·[cos ψ, sin ψ]`, so it corrects heading as well as speed. Making it very confident
+   *  would let it fight the yaw-rate chain. 0.1 m/s is where the evidence is; below that, measure first. */
+  double gps_vel_R = 0.1 * 0.1;
+
 private:
   void record(double rx, double ry, double ox, double oy, double ex, double ey);
   void snapYaw(double yaw_enu);

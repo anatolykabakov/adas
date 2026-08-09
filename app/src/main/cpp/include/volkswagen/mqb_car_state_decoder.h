@@ -6,6 +6,7 @@
 #include "car_state.pb.h"
 #include "panda/can_frame.h"
 #include "utils/can_parser.h"
+#include "utils/speed_filter.h"
 #include "volkswagen/carcontroller.h"
 #include "volkswagen/values.h"
 
@@ -17,11 +18,19 @@ inline bool cruiseEngagedFromTsk(int tsk_status) { return tsk_status == 3 || tsk
 
 inline bool cruiseAvailableFromTsk(int tsk_status) { return cruiseEngagedFromTsk(tsk_status) || tsk_status == 2; }
 
+/** `Getriebe_11.GE_Fahrstufe` per `vw_mqb_2010.dbc`: 5 P, 6 R, 7 N, 8 D, 9 S, 10 E, 13/14 T. Only reverse
+ *  matters here, and 0 means the frame has not been seen yet rather than a gear. */
+inline bool gearIsReverse(int gear) { return gear == 6; }
+
 class MqbCarStateDecoder {
 public:
   explicit MqbCarStateDecoder(DBSParser* dbc = nullptr) : dbc_(dbc) {}
 
   void setDbc(DBSParser* dbc) { dbc_ = dbc; }
+
+  /** Wheel-speed filtering and the wheel-radius correction — see `SpeedFilter`. */
+  void setSpeedFilterConfig(const adas::SpeedFilter::Config& cfg) { speed_filter_.setConfig(cfg); }
+  const adas::SpeedFilter& speedFilter() const { return speed_filter_; }
 
   void updateFromFrame(const can_frame& frame);
 
@@ -47,7 +56,9 @@ private:
   DBSParser* dbc_ = nullptr;
   ai::flow::adas::CarState state_;
   bool dirty_ = false;
-  double prev_v_ego_ = 0.0;
+  /** Filtered speed and acceleration from the raw wheel-speed average — see `SpeedFilter` for what
+   *  the unfiltered finite difference looked like. */
+  adas::SpeedFilter speed_filter_{};
   int64_t prev_v_ts_ms_ = 0;
   bool brake_esp_ = false;
   bool brake_motor_ = false;

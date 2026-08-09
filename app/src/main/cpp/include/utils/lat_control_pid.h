@@ -7,7 +7,7 @@ namespace adas {
 
 class PidController {
 public:
-  PidController(double k_p = 0.6, double k_i = 0.2, double k_f = 0.00006, double rate_hz = 50.0, double pos_limit = 1.0,
+  PidController(double k_p = 0.6, double k_i = 0.2, double k_f = 0.00015, double rate_hz = 50.0, double pos_limit = 1.0,
                 double neg_limit = -1.0)
     : k_p_(k_p)
     , k_i_(k_i)
@@ -72,7 +72,7 @@ public:
 private:
   double k_p_ = 0.6;
   double k_i_ = 0.2;
-  double k_f_ = 0.00006;
+  double k_f_ = 0.00015;
   double pos_limit_ = 1.0;
   double neg_limit_ = -1.0;
   double i_rate_ = 0.02;
@@ -81,16 +81,28 @@ private:
   double control_ = 0;
 };
 
+/// Feedforward floor speed [m/s]: below it the torque demand is set by turning the wheel against
+/// tyre scrub, not by holding the car in the corner, and that part does not scale with v².
+///
+/// Fitted over three drives (2026_08_04, 08-07, 08-08) on steady-state frames with the proportional
+/// term subtracted: the required coefficient on SWA follows `a + b·v²` with a = 0.019/0.014/0.005 and
+/// b = 0.000119/0.000146/0.000173. `sqrt(a/b)` is this floor — 9.8 m/s, about 35 km/h.
+inline constexpr double kFeedforwardFloorMps = 9.8;
+
 class LatControlPid {
 public:
-  LatControlPid(double k_p = 0.6, double k_i = 0.2, double k_f = 0.00006, double rate_hz = 50.0)
+  LatControlPid(double k_p = 0.6, double k_i = 0.2, double k_f = 0.00015, double rate_hz = 50.0,
+                double v_ff_floor_mps = kFeedforwardFloorMps)
     : pid_(k_p, k_i, k_f, rate_hz)
+    , v_ff_floor_mps_(v_ff_floor_mps)
   {
   }
 
   void reset() { pid_.reset(); }
 
   void setGains(double k_p, double k_i, double k_f) { pid_.setGains(k_p, k_i, k_f); }
+
+  void setFeedforwardFloor(double v_mps) { v_ff_floor_mps_ = std::max(0.0, v_mps); }
 
   void setRate(double rate_hz) { pid_.setRate(rate_hz); }
 
@@ -114,7 +126,8 @@ public:
       return r;
     }
 
-    const double ff = desired_swa_deg * v_ego_mps * v_ego_mps;
+    // A floor on v² rather than a separate term, so the feedforward keeps a single gain.
+    const double ff = desired_swa_deg * (v_ego_mps * v_ego_mps + v_ff_floor_mps_ * v_ff_floor_mps_);
     r.steer_norm = pid_.update(r.angle_error_deg, v_ego_mps, steering_pressed, ff);
     r.p = pid_.p();
     r.i = pid_.i();
@@ -125,6 +138,7 @@ public:
 
 private:
   PidController pid_;
+  double v_ff_floor_mps_ = kFeedforwardFloorMps;
 };
 
 }  // namespace adas

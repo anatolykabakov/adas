@@ -69,6 +69,8 @@ maps/
 
 # Course book build (cd docs/book && jupyter-book build .)
 docs/book/_build/
+docs/book_ru/_build/
+docs/_site/
 
 # Editor / OS / toolchain caches
 *~
@@ -79,3 +81,6 @@ docs/book/_build/
 # Root-level PlotJuggler / analysis dumps
 /*.csv
 /*.json
+
+# Ad-hoc plot output from the analysis scripts (--plot out.png)
+out.png

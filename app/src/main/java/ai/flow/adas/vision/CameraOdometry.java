@@ -4,8 +4,6 @@ public final class CameraOdometry {
 
     public static final int POSE_SIZE = 12;
     public static final int TEMPORAL_SIZE = 512;
-    public static final int OUTPUT_SIZE = 6409;
-    public static final int POSE_IDX = OUTPUT_SIZE - TEMPORAL_SIZE - POSE_SIZE;
 
     public final float[] trans = new float[3];
     public final float[] rot = new float[3];
@@ -21,11 +19,20 @@ public final class CameraOdometry {
     }
 
     public static CameraOdometry parse(float[] out) {
+        return out == null ? new CameraOdometry() : parse(out, poseIdx(out.length));
+    }
+
+    /**
+     * Pose at an explicit offset. The {@link #poseIdx} heuristic only holds for our layout, where the
+     * pose is last before the features; 0.9.x has more fields after it and the same formula gives 5980
+     * instead of 5948. The pose struct itself is identical across generations — velocity_mean,
+     * rotation_mean, velocity_std, rotation_std — only its address differs.
+     */
+    public static CameraOdometry parse(float[] out, int poseIdx) {
         CameraOdometry o = new CameraOdometry();
         if (out == null) {
             return o;
         }
-        int poseIdx = poseIdx(out.length);
         if (out.length < poseIdx + POSE_SIZE) {
             return o;
         }

@@ -1,0 +1,6 @@
+# Book is written in v1 format (_config.yml + _toc.yml). jupyter-book 2.x is mystmd with
+# different CLI and config format: `jupyter-book build .` fails with EISDIR there.
+jupyter-book>=0.15,<2
+matplotlib
+numpy
+protobuf>=3.20,<4

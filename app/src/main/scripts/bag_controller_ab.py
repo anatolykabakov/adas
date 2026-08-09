@@ -8,7 +8,7 @@ driver's rack:
   fp   — ADAS port of the flowpilot MPC (Eigen gradient descent, N=16, slew guard)
   mpc  — VisionPilot spatial MPC (FF-only seed per config.json)
 
-Metrics on the clean mask (controls_allowed, no driver torque, v>3 m/s):
+Metrics on the clean mask (torque actually reaching the rack, no driver torque, v>3 m/s):
   |err|med / p95 vs rack, correlation, and HF = median |ΔSWA| between frames (chatter).
 
     ./bag_controller_ab.py adas_logs/<session> --t0 753 --t1 860 --plot out.png

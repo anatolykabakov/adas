@@ -52,13 +52,16 @@ void applyCameraOffset(LanePathMsg& msg, double camera_offset_m)
     p.y() += camera_offset_m;
 }
 
-double medianLaneStd(const ai::flow::adas::LanePolyline& lane, const ai::flow::adas::LaneLines& ll)
+double medianLaneStd(const ai::flow::adas::LanePolyline& lane, const ai::flow::adas::LaneLines& ll, double range_m)
 {
   std::vector<double> stds;
   const int n = std::min(lane.y_std_size(), ll.x_size());
+  // Зажим снизу, а не подмена умолчанием: раньше узкое заданное окно (например 4 м) молча
+  // превращалось в самое широкое, 5-40 м, то есть в противоположность тому, что просили.
+  const double x_max = std::max(range_m, 10.0);
   for (int i = 0; i < n; ++i) {
     const double x = ll.x(i);
-    if (x < 5.0 || x > 40.0)
+    if (x < 5.0 || x > x_max)
       continue;
     const double s = lane.y_std(i);
     if (s > 0.0 && std::isfinite(s))
@@ -179,8 +182,10 @@ LanePathMsg laneLinesToPath(const ai::flow::adas::LaneLines& ll, const LanePathC
     l_prob = softLaneProb(ll.lanes(1).prob(), cfg.min_lane_prob);
     r_prob = softLaneProb(ll.lanes(2).prob(), cfg.min_lane_prob);
 
-    l_prob *= stdConfidence(medianLaneStd(ll.lanes(1), ll), cfg.lane_std_good_m, cfg.lane_std_bad_m);
-    r_prob *= stdConfidence(medianLaneStd(ll.lanes(2), ll), cfg.lane_std_good_m, cfg.lane_std_bad_m);
+    l_prob *=
+        stdConfidence(medianLaneStd(ll.lanes(1), ll, cfg.lane_std_range_m), cfg.lane_std_good_m, cfg.lane_std_bad_m);
+    r_prob *=
+        stdConfidence(medianLaneStd(ll.lanes(2), ll, cfg.lane_std_range_m), cfg.lane_std_good_m, cfg.lane_std_bad_m);
 
     double w_sum = 0.0;
     int w_n = 0;

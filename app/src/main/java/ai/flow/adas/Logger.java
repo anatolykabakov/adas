@@ -17,6 +17,8 @@ public class Logger {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private File logDirectory;
     private volatile BagLogger bagLogger;
+    /** Audio shares the bag's lifetime: one button, so it is never the thing that was switched off. */
+    private final AudioRecorder audio = new AudioRecorder();
 
     private Logger() {
     }
@@ -59,6 +61,9 @@ public class Logger {
         bagLogger = bl;
         running.set(true);
 
+        // Monotonic start stamp, same scale as the bag messages; it goes into the file name.
+        audio.start(dir, TimeUtil.nowMs());
+
         Log.i(TAG, "Logger started successfully");
     }
 
@@ -68,6 +73,8 @@ public class Logger {
         }
 
         running.set(false);
+
+        audio.stop();
 
         BagLogger bl = bagLogger;
         bagLogger = null;
