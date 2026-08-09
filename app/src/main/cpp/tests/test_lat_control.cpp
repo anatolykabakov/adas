@@ -6,13 +6,14 @@
 #include <gtest/gtest.h>
 #include <json/json.h>
 
-#include "adas_app.h"
-#include "utils/lat_control_pid.h"
-#include "services/topic_convert_service.h"
-#include "utils/topic_convert.h"
-#include "utils/pure_pursuit.h"
-#include "volkswagen/carcontroller.h"
-#include "volkswagen/values.h"
+#include "adas/adas_app.h"
+#include "adas/utils/adas_config.h"
+#include "adas/utils/lat_control_pid.h"
+#include "adas/services/topic_convert.h"
+#include "adas/utils/topic_convert.h"
+#include "adas/lateral/pp.h"
+#include "adas/platform/volkswagen/carcontroller.h"
+#include "adas/platform/volkswagen/values.h"
 
 using adas::LatControlPid;
 using adas::PidController;
@@ -58,12 +59,128 @@ TEST(LatControlPid, InactiveResets)
 
 TEST(LatControlPid, FeedforwardUsesVSquared)
 {
-  LatControlPid lat(0.0, 0.0, 0.001, 50.0);
+  // Floor explicitly off: checks that the feedforward shape is unchanged, SWA * v squared.
+  LatControlPid lat(0.0, 0.0, 0.001, 50.0, 0.0);
 
   auto r = lat.update(true, 10.0, 10.0, 10.0, false);
   EXPECT_NEAR(r.angle_error_deg, 0.0, 1e-12);
   EXPECT_NEAR(r.steer_norm, 1.0, 1e-9);
   EXPECT_NEAR(r.f, 1.0, 1e-9);
+}
+
+TEST(LatControlPid, FeedforwardFloorAddsSpeedIndependentDemand)
+{
+  const double floor_mps = 10.0;
+  LatControlPid lat(0.0, 0.0, 0.001, 50.0, floor_mps);
+
+  // At zero speed the v-squared term is exactly zero: without a floor there would be no feedforward at
+  // all, which is why torque on a slow tight arc only rose after an error had appeared.
+  auto slow = lat.update(true, 10.0, 10.0, 0.0, false);
+  EXPECT_NEAR(slow.f, 0.001 * 10.0 * floor_mps * floor_mps, 1e-9);
+  EXPECT_GT(slow.f, 0.0);
+
+  // At the floor speed the contribution doubles: the two terms are equal.
+  lat.reset();
+  auto at_floor = lat.update(true, 1.0, 1.0, floor_mps, false);
+  EXPECT_NEAR(at_floor.f, 2.0 * 0.001 * 1.0 * floor_mps * floor_mps, 1e-9);
+
+  // On the highway the floor is a correction, not the main term: at 25 m/s it adds 16 %.
+  lat.reset();
+  auto fast = lat.update(true, 1.0, 1.0, 25.0, false);
+  EXPECT_NEAR(fast.f, 0.001 * 1.0 * (625.0 + 100.0), 1e-9);
+  EXPECT_LT((fast.f - 0.001 * 625.0) / fast.f, 0.20);
+}
+
+TEST(LatControlPid, FeedforwardMatchesMeasuredDemandAcrossSpeeds)
+{
+  // Numbers from the fit over three drives: the required coefficient on SWA over steady-state frames
+  // with the proportional term subtracted. The 35 % tolerance is the spread between the drives.
+  struct Point {
+    double v_mps;
+    double measured_norm_per_deg;
+  };
+  const Point points[] = {{6.0, 0.0185}, {10.0, 0.0265}, {15.0, 0.0465}, {21.0, 0.0765}};
+
+  LatControlPid lat(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
+  for (const auto& pt : points) {
+    lat.reset();
+    auto r = lat.update(true, 1.0, 1.0, pt.v_mps, false);
+    const double rel = std::abs(r.f - pt.measured_norm_per_deg) / pt.measured_norm_per_deg;
+    EXPECT_LT(rel, 0.35) << "v = " << pt.v_mps << " m/s: feedforward " << r.f << ", measured "
+                         << pt.measured_norm_per_deg;
+  }
+}
+
+TEST(AdasConfigLoad, CameraYawRateSourceIsOffAndInvertible)
+{
+  // Regression for review item 1: the camera yaw rate has the opposite sign (correlation -0.994) and,
+  // with the source enabled, passed the EKF gate in 85.7 % of ticks. Checks both that the source is off
+  // in the shipped config and that the sign flip reaches the filter at all — the field existed but
+  // `adas_config.cpp` never read it, so it stayed false forever.
+  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_cam_yaw_test."
+                                                                                                 "json";
+  {
+    std::ofstream f(path);
+    f << R"({"localization": {"use_camera_odometry": true, "invert_cam_yaw_rate": true}})";
+  }
+  bool ok = false;
+  auto cfg = AdasApp::Config::loadFromFile(path, &ok);
+  EXPECT_TRUE(ok);
+  EXPECT_TRUE(cfg.localization.invert_cam_yaw_rate);
+  EXPECT_TRUE(cfg.localization.sources.camera_odometry);
+  std::remove(path.c_str());
+
+  {
+    std::ofstream f(path);
+    f << R"({"localization": {"use_camera_odometry": false, "invert_cam_yaw_rate": false}})";
+  }
+  cfg = AdasApp::Config::loadFromFile(path, &ok);
+  EXPECT_TRUE(ok);
+  EXPECT_FALSE(cfg.localization.invert_cam_yaw_rate);
+  EXPECT_FALSE(cfg.localization.sources.camera_odometry);
+  std::remove(path.c_str());
+}
+
+TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
+{
+  // The floor is wired separately from the gain, and a silently dropped floor would look exactly like
+  // the old behaviour: a weak feedforward on slow arcs, with nothing in the log.
+  const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_ff_floor_test."
+                                                                                                 "json";
+  {
+    std::ofstream f(path);
+    f << R"({"vehicle": {"lat_pid_kf": 0.00021, "lat_pid_ff_floor_mps": 7.5}})";
+  }
+  bool ok = false;
+  const auto cfg = AdasApp::Config::loadFromFile(path, &ok);
+  EXPECT_TRUE(ok);
+  EXPECT_NEAR(cfg.lane_keep.pid_kf, 0.00021, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, 7.5, 1e-12);
+  std::remove(path.c_str());
+}
+
+TEST(AdasConfigLoad, FeedforwardDefaultsAreTheMeasuredOnes)
+{
+  // With no config on the device the header defaults apply, and they must match the fitted values.
+  AdasApp::Config cfg;
+  EXPECT_NEAR(cfg.lane_keep.pid_kf, 0.00015, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, adas::kFeedforwardFloorMps, 1e-12);
+}
+
+TEST(LatControlPid, OldGainUnderdeliveredAtEverySpeed)
+{
+  // Regression on the reason for the change: 0.00006 without a floor under-delivered several-fold at
+  // every speed, which is what showed up as under-steer on arcs.
+  LatControlPid old_pid(0.0, 0.0, 0.00006, 50.0, 0.0);
+  LatControlPid now(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
+
+  for (double v : {6.0, 10.0, 15.0, 21.0}) {
+    old_pid.reset();
+    now.reset();
+    const double was = old_pid.update(true, 1.0, 1.0, v, false).f;
+    const double is = now.update(true, 1.0, 1.0, v, false).f;
+    EXPECT_GT(is, 2.0 * was) << "v = " << v;
+  }
 }
 
 TEST(PurePursuit, StraightCenterlineNearZeroSteer)
@@ -437,9 +554,9 @@ TEST(AdasConfigFile, ShippedJsonReachesTheTopicConvertKnobs)
 
 TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
 {
-  adas::TopicConvertService::Config cfg;
+  adas::services::TopicConvert::Config cfg;
   cfg.path_lane_blend_scale = 0.6;
-  adas::TopicConvertService svc(cfg);
+  adas::services::TopicConvert svc(cfg);
   EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 0.6);
 
   svc.setLaneBlendScale(1.0);
@@ -449,4 +566,97 @@ TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
   EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 1.0) << "above 1.0 is meaningless";
   svc.setLaneBlendScale(-0.2);
   EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 0.0) << "negative weight would invert the path";
+}
+
+// ── σ summary range ───────────────────────────────────────────────────────────────────────────
+//
+// Measured on run 2026_08_06_00_36_42: worst-line σ roughly doubles from the near half of the old
+// 5–40 m window to the far half (right arc 0.34 against 0.78) and quadruples past 40 m, because on a
+// bend the inner line leaves the frame and its far samples are extrapolation. A line whose near half
+// is good was therefore being vetoed by the part we had not seen.
+//
+// Blending weight is not published, so these tests read it the way it shows up on the road: the model
+// plan sits 1.0 m off the lane centre, and the reference lands between the two in proportion to the
+// weight. Reference at the plan means the lines were discarded.
+
+namespace {
+
+constexpr double kStdRangePlanY = 1.0;
+
+/** Straight lane centred on 0, plan offset by `kStdRangePlanY`, σ growing with range. */
+ai::flow::adas::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
+{
+  ai::flow::adas::LaneLines ll;
+  for (int lane = 0; lane < 4; ++lane) {
+    auto* l = ll.add_lanes();
+    l->set_prob(lane == 1 || lane == 2 ? 0.99f : 0.05f);
+  }
+  for (int i = 0; i < 33; ++i) {
+    const double x = i * 1.5;
+    ll.add_x(x);
+    ll.add_plan_x(x);
+    ll.add_plan_y(kStdRangePlanY);
+    const double sigma = x <= split_x ? std_near : std_far;
+    for (int lane = 0; lane < 4; ++lane) {
+      auto* l = ll.mutable_lanes(lane);
+      const double half = 1.65;
+      l->add_y(lane == 1 ? -half : (lane == 2 ? half : (lane == 0 ? -3.3 : 3.3)));
+      l->add_y_std(sigma);
+    }
+  }
+  return ll;
+}
+
+adas::LanePathConfig stdRangeCfg(double range_m)
+{
+  adas::LanePathConfig cfg = pathCfg(1.0, 0.0);
+  cfg.lane_std_good_m = 0.3;
+  cfg.lane_std_bad_m = 1.5;
+  cfg.lane_std_range_m = range_m;
+  return cfg;
+}
+
+double referenceY(const ai::flow::adas::LaneLines& ll, const adas::LanePathConfig& cfg)
+{
+  const auto out = adas::laneLinesToPath(ll, cfg);
+  return out.polyline.size() >= 2 ? out.polyline[1].y() : std::nan("");
+}
+
+}  // namespace
+
+TEST(LaneStdRange, NearWindowKeepsALineWhoseFarHalfIsUnobserved)
+{
+  // σ 0.3 out to 20 m, then 2.5 — exactly the bend geometry. Over the near window the line is
+  // trustworthy; over the old 5–40 m window its median lands past the 1.5 m cut-off.
+  const auto ll = laneFrameWithStd(/*near=*/0.3, /*far=*/2.5);
+
+  const double near_y = referenceY(ll, stdRangeCfg(20.0));
+  const double far_y = referenceY(ll, stdRangeCfg(40.0));
+
+  EXPECT_LT(near_y, 0.5 * kStdRangePlanY) << "near window should trust the observed half";
+  EXPECT_NEAR(far_y, kStdRangePlanY, 0.05) << "old window let unobserved range veto the line";
+}
+
+TEST(LaneStdRange, ABadNearHalfIsStillRejected)
+{
+  // The narrower window must not become a way to ignore σ: a line that is noisy where it matters
+  // has to lose its weight.
+  const auto ll = laneFrameWithStd(/*near=*/2.0, /*far=*/2.0);
+  EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), kStdRangePlanY, 0.05);
+}
+
+TEST(LaneStdRange, AGoodLineIsUnaffectedByTheWindow)
+{
+  const auto ll = laneFrameWithStd(/*near=*/0.15, /*far=*/0.2);
+  EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), referenceY(ll, stdRangeCfg(40.0)), 1e-9);
+}
+
+TEST(ShippedConfig, LaneStdRangeIsTheNearField)
+{
+  bool ok = false;
+  const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
+  ASSERT_TRUE(ok);
+  EXPECT_GT(cfg.topic_convert.lane_std_range_m, 5.0);
+  EXPECT_LE(cfg.topic_convert.lane_std_range_m, 25.0) << "past ~25 m sigma is dominated by extrapolation, see the "
+                                                         "measured table";
 }

@@ -1,33 +1,52 @@
-# ADAS documentation
+# Документация ADAS
 
-## Start here
+Двадцать файлов подряд читать не нужно. Ниже — что открыть под конкретный вопрос.
 
-| document | topic |
+## Если вы здесь впервые
+
+1. [`IMAGE_TO_CAN_PIPELINE.md`](IMAGE_TO_CAN_PIPELINE.md) — весь путь от кадра камеры до кадра HCA на
+   шине, по этапам. Одна эта страница даёт карту системы.
+2. [`CONTROLLER_LIMITS.md`](CONTROLLER_LIMITS.md) — где ассистент работает, а где нет. Короткая и
+   важная: половина вопросов «почему не рулит» отвечается отсюда.
+3. [`book/`](book/) — курс на 23 главы ([сайт](https://anatolykabakov.github.io/adas/),
+   [по-русски](https://anatolykabakov.github.io/adas/ru/)). Это учебник, а не справочник.
+
+## Если вы собираетесь ехать
+
+| | |
 |---|---|
-| [`book/`](book/) | course — [live site](https://anatolykabakov.github.io/adas/) |
-| [`IMAGE_TO_CAN_PIPELINE.md`](IMAGE_TO_CAN_PIPELINE.md) | camera frame → HCA CAN |
-| [`MAPMATCH.md`](MAPMATCH.md) | offline track-shape localization (complement to live EKF) |
-| [`CONTROLLER_LIMITS.md`](CONTROLLER_LIMITS.md) | where the assistant works |
-| [`BACKLOG.md`](BACKLOG.md) | open work in priority order |
-| [`BENCHMARK_COMMA2.md`](BENCHMARK_COMMA2.md) | vs comma-two + plan to close the gap |
-| [`SIM_CONTROLLER_TEST.md`](SIM_CONTROLLER_TEST.md) | MetaDrive closed-loop eval |
+| [`PREDRIVE.md`](PREDRIVE.md) | **что уезжает на следующем заезде, какой вопрос задаёт и что считать ответом.** Пишется до заезда, потому что критерий, придуманный после взгляда на данные, — не критерий |
+| [`BAG_ANALYSIS.md`](BAG_ANALYSIS.md) | как разобрать заезд одной командой, включая голосовые пометки водителя |
 
-## Design and subsystems
+## Если вы разбираетесь, почему машина ведёт себя не так
 
-| document | topic |
+| вопрос | документ |
 |---|---|
-| [`SAFETY_WARN.md`](SAFETY_WARN.md) | FCW / AEB / LDW |
-| [`MPC_EXPLAINED.md`](MPC_EXPLAINED.md) | VisionPilot MPC (`mpc`) |
-| [`PARAMSD.md`](PARAMSD.md) | upstream `paramsd` |
-| [`MAPMATCH.md`](MAPMATCH.md) | track-shape localization |
-| [`TRAFFIC_VISION.md`](TRAFFIC_VISION.md) | YOLO signs / lights |
-| [`MODEL_LONG_PLAN.md`](MODEL_LONG_PLAN.md) | long plan / lead |
-| [`CRUISE_BUTTONS.md`](CRUISE_BUTTONS.md) | stock cruise via GRA |
+| поперечный тракт по этапам, с числами, и где команда молча умирает | [`LATERAL_CHAIN_RU.md`](LATERAL_CHAIN_RU.md) |
+| темп зрения и почему он задаёт качество руля | [`VISION_RATE.md`](VISION_RATE.md) |
+| насколько мы отстаём от comma на той же машине | [`BENCHMARK_COMMA2.md`](BENCHMARK_COMMA2.md) |
+| что перенесено от dragonpilot/flowpilot дословно, где разошлись и что недонесли | [`DIFF_FROM_DP_RU.md`](DIFF_FROM_DP_RU.md) |
+| замкнутая проверка контроллера в симуляторе | [`SIM_CONTROLLER_TEST.md`](SIM_CONTROLLER_TEST.md) |
 
-## Course build
+## Справочник по подсистемам
 
-```bash
-cd docs/book && pip install -r requirements.txt && jupyter-book build .
-```
+Открывать по необходимости, подряд не читать.
 
-Deploy: push `docs/book/**` → `gh-pages`. Start: [`book/Introduction/intro.md`](book/Introduction/intro.md).
+| подсистема | |
+|---|---|
+| MPC удержания полосы | [`MPC_EXPLAINED.md`](MPC_EXPLAINED.md) |
+| продольный план и лид | [`MODEL_LONG_PLAN.md`](MODEL_LONG_PLAN.md) |
+| предупреждения FCW / AEB / LDW | [`SAFETY_WARN.md`](SAFETY_WARN.md) |
+| кнопки штатного круиза | [`CRUISE_BUTTONS.md`](CRUISE_BUTTONS.md) |
+| выучиваемые параметры машины | [`PARAMSD.md`](PARAMSD.md) |
+| кривизна дороги впереди по карте | [`MAP_CURVATURE.md`](MAP_CURVATURE.md) |
+| сопоставление трека с картой офлайн | [`MAPMATCH.md`](MAPMATCH.md) |
+| распознавание знаков и светофоров | [`TRAFFIC_VISION.md`](TRAFFIC_VISION.md) |
+
+## Что делать дальше и что уже сделано
+
+| | |
+|---|---|
+| [`BACKLOG.md`](BACKLOG.md) | открытые задачи в порядке приоритета, ранжированные по измеренному расхождению с comma |
+| [`REVIEW_2026_08_09.md`](REVIEW_2026_08_09.md) | ревью ветки: 18 дефектов, чем каждый грозил и как исправлен |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | что вошло в релиз. Сюда же переехала история завершённых задач из бэклога |

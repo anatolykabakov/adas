@@ -1,9 +1,9 @@
-#include "panda/panda_comms.h"
+#include "adas/panda/panda_comms.h"
 
 #include <cassert>
 #include <stdexcept>
 
-#include "utils/logger.h"
+#include "adas/utils/logger.h"
 
 #define USB_CTRL_TIMEOUT_MS 100
 

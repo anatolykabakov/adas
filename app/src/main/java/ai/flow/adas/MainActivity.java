@@ -48,7 +48,11 @@ public class MainActivity extends AppCompatActivity {
     private GPSHandler gpsHandler;
     private IMUHandler imuHandler;
     private PhoneStatsHandler phoneStatsHandler;
-    private VisionPipeline visionPipeline;
+    /** Swapped from {@link #visionRebuild} when the model changes; read from the UI and ZMQ threads. */
+    private volatile VisionPipeline visionPipeline;
+    /** Single thread so two quick taps cannot rebuild concurrently and orphan a pipeline. */
+    private final java.util.concurrent.ExecutorService visionRebuild =
+            java.util.concurrent.Executors.newSingleThreadExecutor(r -> new Thread(r, "VisionRebuild"));
     private ai.flow.adas.vision.TrafficVisionPipeline trafficVisionPipeline;
 
     private boolean cameraStarted;
@@ -71,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private ParamSlider steerRatioSlider;
     private ParamSlider laneBlendSlider;
     private RadioGroup laneKeepControllerGroup;
+    private RadioGroup modelRunnerGroup;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Runnable canStatusTick = new Runnable() {
@@ -122,10 +127,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (AdasConfig.visionSupercomboEnabled(this)) {
             try {
-                visionPipeline = new VisionPipeline(this, laneOverlay);
+                visionPipeline = new VisionPipeline(this, laneOverlay, true, params.modelRunner);
                 cameraHandler.setVisionPipeline(visionPipeline);
                 applyParamsToVision();
-                Log.i(LOG_TAG, "VisionPipeline ready (supercombo ONNX + calib warp)");
+                Log.i(LOG_TAG, "VisionPipeline ready: " + params.modelRunner + " + calib warp");
             } catch (Exception e) {
                 Log.e(LOG_TAG, "VisionPipeline init failed", e);
                 Toast.makeText(this, "ONNX init failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -298,7 +303,51 @@ public class MainActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
         });
 
+        modelRunnerGroup = findViewById(R.id.modelRunnerGroup);
+        modelRunnerGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (suppressControllerUi) {
+                return;
+            }
+            params.modelRunner = checkedId == R.id.modelThneed ? "thneed" : "onnx";
+            rebuildVisionPipeline();
+        });
+
         bindSlidersFromParams();
+    }
+
+    /**
+     * Rebuilds the vision pipeline for the selected model, live and without a restart.
+     *
+     * <p>Off the UI thread: ONNX init takes hundreds of milliseconds and thneed loads a 50 MB model,
+     * which would be an ANR on the main thread. While it rebuilds the camera delivers to nobody, so
+     * lateral control has no target for that moment — switch on a straight, not in a bend.
+     */
+    private void rebuildVisionPipeline() {
+        final String choice = RuntimeParams.normalizeModelRunner(params.modelRunner);
+        Toast.makeText(this, "Model -> " + choice.toUpperCase() + ", rebuilding...",
+                Toast.LENGTH_SHORT).show();
+        visionRebuild.execute(() -> {
+            VisionPipeline old = visionPipeline;
+            try {
+                cameraHandler.setVisionPipeline(null);
+                visionPipeline = null;
+                if (old != null) {
+                    old.close();
+                }
+                VisionPipeline fresh = new VisionPipeline(this, laneOverlay, true, choice);
+                visionPipeline = fresh;
+                cameraHandler.setVisionPipeline(fresh);
+                runOnUiThread(() -> {
+                    applyParamsToVision();
+                    Toast.makeText(this, "Model: " + choice.toUpperCase(), Toast.LENGTH_SHORT).show();
+                });
+                Log.i(LOG_TAG, "VisionPipeline rebuilt: " + choice);
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "vision pipeline rebuild failed", e);
+                runOnUiThread(() -> Toast.makeText(this,
+                        "Model switch failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        });
     }
 
     private boolean suppressControllerUi;
@@ -322,6 +371,12 @@ public class MainActivity extends AppCompatActivity {
         steerRatioSlider.setValue(params.steerRatio);
         if (laneBlendSlider != null) {
             laneBlendSlider.setValue(params.laneBlendScale);
+        }
+        if (modelRunnerGroup != null) {
+            suppressControllerUi = true;
+            modelRunnerGroup.check("thneed".equals(RuntimeParams.normalizeModelRunner(params.modelRunner))
+                    ? R.id.modelThneed : R.id.modelOnnx);
+            suppressControllerUi = false;
         }
         if (laneKeepControllerGroup != null) {
             String c = RuntimeParams.normalizeController(params.laneKeepController);
@@ -455,6 +510,11 @@ public class MainActivity extends AppCompatActivity {
             }
             laneOverlay.setHcaStatus(status);
         }
+        // CAN speed, an input of the 0.9.x model. Arrives at 100 Hz, far more often than frames, so the
+        // latest value is simply kept and the frame gets whatever it was at inference time.
+        if (message.hasCarState() && visionPipeline != null) {
+            visionPipeline.setEgoSpeed(message.getCarState().getVEgo());
+        }
         if (message.hasSafetyWarn()) {
             SafetyWarnOuter.SafetyWarnState w = message.getSafetyWarn();
             laneOverlay.setSafetyWarn(w.getFcw(), w.getAeb(), w.getLldw(), w.getRldw());
@@ -551,6 +611,8 @@ public class MainActivity extends AppCompatActivity {
                         != PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         != PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                        != PackageManager.PERMISSION_GRANTED
                 || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                         && ContextCompat.checkSelfPermission(
                                         this, Manifest.permission.HIGH_SAMPLING_RATE_SENSORS)
@@ -560,6 +622,8 @@ public class MainActivity extends AppCompatActivity {
             perms.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
             perms.add(Manifest.permission.ACCESS_FINE_LOCATION);
             perms.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+            // Microphone, for the audio recorded alongside the bag; a refusal costs only the audio.
+            perms.add(Manifest.permission.RECORD_AUDIO);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 perms.add(Manifest.permission.HIGH_SAMPLING_RATE_SENSORS);
             }
@@ -650,6 +714,7 @@ public class MainActivity extends AppCompatActivity {
         if (visionPipeline != null) {
             visionPipeline.close();
         }
+        visionRebuild.shutdown();
         if (trafficVisionPipeline != null) {
             trafficVisionPipeline.close();
             trafficVisionPipeline = null;

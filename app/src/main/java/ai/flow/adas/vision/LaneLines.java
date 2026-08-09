@@ -25,6 +25,8 @@ public class LaneLines {
 
     public final float[][] edgesY = new float[2][N];
     public final float[][] edgesZ = new float[2][N];
+    /** Road edge sigma (m), same exp() convention as the lane sigmas. */
+    public final float[][] edgesYStd = new float[2][N];
     public final float[] laneProbs = new float[4];
 
 
@@ -46,6 +48,16 @@ public class LaneLines {
     /** Warp + pack to 6ch (ms), before session.run. */
     public float prepDurationMs;
     public int frameId;
+
+    /** When the frame reached {@code VisionPipeline.submitYuv} — camera to app delivery. */
+    public long submitTimestampMs;
+    /** When the inference thread took it out of the 1-slot latest buffer — queue wait. */
+    public long pickupTimestampMs;
+    /**
+     * Captures overwritten in that buffer since the previous processed frame, i.e. thrown away
+     * because inference was still running. Zero means the pipeline kept up with the camera.
+     */
+    public int framesDropped;
 
     /** Full ONNX flat output for bag offline debug; null if not set. */
     public float[] modelOut;
@@ -69,6 +81,7 @@ public class LaneLines {
         for (int i = 0; i < 2; i++) {
             System.arraycopy(edgesY[i], 0, o.edgesY[i], 0, N);
             System.arraycopy(edgesZ[i], 0, o.edgesZ[i], 0, N);
+            System.arraycopy(edgesYStd[i], 0, o.edgesYStd[i], 0, N);
         }
         System.arraycopy(planX, 0, o.planX, 0, N);
         System.arraycopy(planY, 0, o.planY, 0, N);
@@ -83,6 +96,9 @@ public class LaneLines {
         o.inferDurationMs = inferDurationMs;
         o.prepDurationMs = prepDurationMs;
         o.frameId = frameId;
+        o.submitTimestampMs = submitTimestampMs;
+        o.pickupTimestampMs = pickupTimestampMs;
+        o.framesDropped = framesDropped;
         if (modelOut != null) {
             o.modelOut = modelOut.clone();
         }

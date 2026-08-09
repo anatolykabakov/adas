@@ -19,7 +19,7 @@ warnings where there was no danger.
 computed and published as `accel_ms2`, but does not affect warnings.
 
 ```
-target present (lead0, prob ≥ 0.5, 1 < d < 150 m) and v_ego ≥ 3 m/s
+target present (lead0, prob ≥ 0.5, 1 < d < 150 m) and v_ego ≥ 8 m/s
 target in its lane:  |y_target − path(d)| ≤ 2.0 m,   path(d) ≈ cte + ½·κ·d²
 closing:            Δv = v_ego − v_target ≥ 0.5 m/s
                       ttc  = gap / Δv
@@ -38,6 +38,7 @@ v_ego ≥ 12.5 m/s  (≈45 km/h)
 path anchored on TWO lane lines of plausible width (LanePathMsg::lane_anchored)
 turn signal on that side off (Gateway_72: BH_Blinker_li / BH_Blinker_re)
 driver not holding wheel (chassis.steering_pressed)
+we are not steering ourselves (fresh controls/steer with enabled, 250 ms window)
 then:  |cte| > 0.5 m AND outward drift > 0.05 m/s     — or  |cte| > 0.8 m
 ```
 
@@ -50,6 +51,27 @@ available runs lack this frame because the receive filter did not pass it.
 Lane-marking requirement is key. Without it CTE is relative to the model plan, which on interchanges,
 narrowings, and single-line segments swings by more than a meter; each such spike used to be
 a warning. Outward-drift requirement separates lane departure from holding an offset line.
+
+### Two gates added after the first run with control engaged
+
+Run `2026_08_04_21_00_18` (23.5 min, night, no collisions and no unintended departures) produced 5
+forward and 7 lane warnings — false positives by definition. Both classes had a single cause each.
+
+**FCW/AEB speed gate 3 → 8 m/s.** All five episodes were stop-and-go: median 4.7 m/s, maximum 8.5.
+Worst case 4.3 m/s with a nearly stationary lead 9.5 m ahead — TTC ≈ 1.9 s arithmetically, trivially
+recoverable in practice. The trade-off is deliberate: city rear-end warnings below 29 km/h are given up
+to stop crying wolf. `RealThreatAboveTheSpeedGateStillWarns` pins the case the gate must not silence.
+
+**LDW suppressed while we steer** (`ldw_suppress_on_lat_active`, default on). Of 144 LDW frames, **82 %
+had lateral control engaged** and the driver was steering in only 6 %; |cte| was 0.54 m median with a
+drift rate of 0.15 m/s. That is the assistant's own tracking error on arcs, not a departure — LDW was
+warning about itself. Upstream gates LDW the same way: the warning addresses a drifting *driver*.
+Freshness window matches the HCA command timeout (250 ms) so LDW speaks again as soon as the assist
+lets go.
+
+Note on `threat_valid = 0` seen alongside active FCW/AEB in that run (15 of 74 and 11 of 16 frames):
+that is the latch holding, not a missing validity gate — raising a warning already requires
+`threat.valid`.
 
 **Debounce** (`WarningLatch`): raise after 3 consecutive ticks (150 ms), clear after 10 quiet
 (500 ms). Service tick — 50 ms.

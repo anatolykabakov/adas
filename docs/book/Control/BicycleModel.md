@@ -182,11 +182,79 @@ $$
 
 Highway kinematics **overstate** curvature — next chapter.
 
+## Does it hold on the real car? Measure before believing
+
+The model is a page of geometry with no free parameters, which makes it both trustworthy and easy to
+over-trust. The honest way to end this chapter is to check it, and the check is available: on steady arcs
+we can compare the curvature the car achieved, $\dot\psi / v$ from the ESP yaw sensor, against the
+$\tan\delta / L$ the model predicts from the steering angle.
+
+```python
+# Measured on this Golf, steady arcs, binned by speed. Model expectation from the bicycle model plus a
+# textbook understeer gradient — the point is which column moves and how fast.
+MEASURED = ((7.5, 0.97, 0.96), (13.5, 0.80, 0.87), (23.5, 0.54, 0.69))
+
+print(f"{'speed':>8} {'achieved/predicted':>19} {'expected':>9} {'verdict'}")
+for v, ratio, expected in MEASURED:
+    gap = ratio - expected
+    verdict = ("model is fine" if ratio > 0.95 else
+               "usable with a correction" if ratio > 0.7 else
+               "model over-commands by 2x")
+    print(f"{v:>5.1f} m/s {ratio:>17.2f} {expected:>9.2f}   {verdict}")
+```
+
+Two things to take from that.
+
+At parking and city speeds the model is essentially exact, which is why every textbook derivation stops
+here and why it is the right first thing to learn. At 23.5 m/s it delivers barely half the curvature
+asked for.
+
+And notice that the measured ratio is **below the textbook expectation at every speed** — 0.54 against
+0.69 at 23.5 m/s. So the slip is not just present, it is worse than a standard understeer gradient
+predicts. That gap is not a rounding error to absorb into a coefficient; it is the reason
+[the vehicle model chapter](./VehicleModel.md) exists and the reason a learned parameter estimator is on
+this project's list rather than a hand-tuned constant.
+
+### What the shortfall costs, in metres
+
+An abstract ratio is easy to shrug at, so convert it. If the model asks for curvature $\kappa$ and the car
+delivers $r\kappa$, the car turns on a larger radius than intended and drifts to the **outside** of the
+bend. Over an arc of length $s$ the lateral shortfall is approximately
+
+$$
+\Delta y \approx \tfrac{1}{2}(1 - r)\,\kappa\,s^2 .
+$$
+
+```python
+def outward_drift(radius_m, ratio, arc_length_m):
+    """Lateral error from delivering only `ratio` of the commanded curvature over an arc."""
+    kappa = 1.0 / radius_m
+    return 0.5 * (1.0 - ratio) * kappa * arc_length_m ** 2
+
+# The arc episodes actually driven, with the measured ratio at their speed.
+for radius, v, ratio, seconds in ((231.0, 13.6, 0.80, 21.7), (150.0, 13.8, 0.80, 12.2),
+                                  (134.0, 11.8, 0.80, 14.8), (123.0, 13.8, 0.80, 10.4)):
+    s_arc = v * seconds
+    print(f"R {radius:>5.0f} m at {v:>4.1f} m/s for {seconds:>4.1f} s ({s_arc:>5.0f} m of arc): "
+          f"open-loop drift {outward_drift(radius, ratio, s_arc):>6.1f} m")
+print("\nThose are open-loop numbers — feedback removes most of them. What survives feedback is the\n"
+      "0.21-0.29 m of steady tracking error measured on real left arcs, and that is the residue of\n"
+      "exactly this effect.")
+```
+
+The numbers are absurd on purpose: tens of metres. That is what the geometry alone would do over a long
+bend, and it is why no lane-keep system is open loop. But it also shows why the feedforward matters so
+much — feedback that has to remove tens of metres of modelling error is feedback with nothing left over
+for the road.
+
+
 ## Summary
 
 1. $\kappa = \tan\delta / L$, $R = 1/\kappa$.
 2. $\mathrm{SWA} = \texttt{steer\_sign}\cdot\delta\cdot\texttt{steer\_ratio}$.
 3. ICR explains the geometry; slip breaks the no-slip assumption at speed.
+4. **Verified against the car**: exact below 9 m/s, 0.80 at 12–15, 0.54 at 21–26 — and worse than a
+   textbook understeer gradient at every speed. Believe the model where it was checked, not everywhere.
 
 ```{admonition} Exercise
 :class: tip

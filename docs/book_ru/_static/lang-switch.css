@@ -1,0 +1,38 @@
+/* ENG/RU switch. Deliberately plain: it borrows the theme's own colour variables so it stays legible in
+   both light and dark mode instead of pinning a colour that only works in one. */
+.lang-switch {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--pst-color-border, #ccc);
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  color: var(--pst-color-text-muted, #555);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.lang-switch:hover,
+.lang-switch:focus {
+  color: var(--pst-color-primary, #0a6);
+  border-color: var(--pst-color-primary, #0a6);
+  text-decoration: none;
+}
+
+.lang-switch-item {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+/* Fallback when no navbar container is found — see the comment in lang-switch.js. Sits clear of the
+   theme's own top-right controls. */
+.lang-switch--floating {
+  position: fixed;
+  top: 0.6rem;
+  right: 4.5rem;
+  z-index: 1050;
+  background: var(--pst-color-background, #fff);
+}

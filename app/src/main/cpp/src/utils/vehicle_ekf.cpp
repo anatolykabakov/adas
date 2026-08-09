@@ -1,4 +1,4 @@
-#include "utils/vehicle_ekf.h"
+#include "adas/utils/vehicle_ekf.h"
 
 #include <cmath>
 
@@ -29,6 +29,7 @@ void VehicleEKF::reset(double x, double y, double yaw, double v, double yaw_rate
   P_(4, 4) = yaw_rate_unc * yaw_rate_unc;
   prediction_count = gps_update_count = gps_rejected_count = gps_reseed_count = 0;
   gps_yaw_update_count = gps_vel_update_count = imu_update_count = cam_odo_update_count = 0;
+  model_update_count = wheel_speed_update_count = 0;
   consecutive_gps_rejects_ = 0;
 }
 
@@ -39,16 +40,22 @@ void VehicleEKF::predict(double v_measured, double steering_angle, double dt)
   const double yaw = state_(2);
   const double v = state_(3);
 
-  double yaw_rate_pred = 0.0;
-  if (std::abs(steering_angle) > 0.001 && std::abs(v_measured) > 0.01) {
-    yaw_rate_pred = v_measured * std::tan(steering_angle) / wheelbase;
-  }
+  double yaw_rate_model = 0.0;
+  const bool have_model = std::abs(steering_angle) > 0.001 && std::abs(v_measured) > 0.01;
+  if (have_model)
+    yaw_rate_model = v_measured * std::tan(steering_angle) / wheelbase;
+
+  // Which yaw rate advances heading: the state (random walk, corrected by the gyro) or the bicycle
+  // model. See `setYawRateIsAState` for why the model is the wrong thing to trust on this car.
+  const double yaw_rate_used = yaw_rate_is_state_ ? state_(4) : yaw_rate_model;
 
   state_(0) = x + v * std::cos(yaw) * dt;
   state_(1) = y + v * std::sin(yaw) * dt;
-  state_(2) = normalizeAngle(yaw + yaw_rate_pred * dt);
-  state_(3) = v_measured;
-  state_(4) = yaw_rate_pred;
+  state_(2) = normalizeAngle(yaw + yaw_rate_used * dt);
+  if (!speed_is_state_)
+    state_(3) = v_measured;
+  if (!yaw_rate_is_state_)
+    state_(4) = yaw_rate_model;
 
   Mat5 F = Mat5::Identity();
   F(0, 2) = -v * std::sin(yaw) * dt;
@@ -59,6 +66,35 @@ void VehicleEKF::predict(double v_measured, double steering_angle, double dt)
 
   P_ = F * P_ * F.transpose() + Q_;
   ++prediction_count;
+
+  // The model is information, just weak information. Folding it in here keeps the filter usable when
+  // the gyro is invalid and CAN still reports steering — the case the old overwrite handled by
+  // accident and this branch handles on purpose.
+  if (yaw_rate_is_state_ && have_model)
+    applyYawRateUpdate(yaw_rate_model, R_model_, YawRateSource::BicycleModel);
+  // The wheel speed is a good measurement, just a scaled one. As a measurement it leaves room for GPS
+  // velocity to matter; as an assignment it erased it twenty times per GPS sample.
+  if (speed_is_state_)
+    applySpeedUpdate(v_measured, R_wheel_);
+}
+
+void VehicleEKF::applySpeedUpdate(double v_meas, double R)
+{
+  if (!std::isfinite(v_meas) || !(R > 0.0))
+    return;
+  const double S = P_(3, 3) + R;
+  if (std::abs(S) < 1e-12)
+    return;
+
+  Eigen::Matrix<double, 1, 5> H = Eigen::Matrix<double, 1, 5>::Zero();
+  H(0, 3) = 1.0;
+  const Vec5 K = P_ * H.transpose() / S;
+  state_ += K * (v_meas - state_(3));
+  state_(2) = normalizeAngle(state_(2));
+
+  const Mat5 IKH = Mat5::Identity() - K * H;
+  P_ = IKH * P_ * IKH.transpose() + (R * K) * K.transpose();
+  ++wheel_speed_update_count;
 }
 
 VehicleEKF::GpsPosResult VehicleEKF::updateGps(double gps_x, double gps_y, double max_innovation,
@@ -172,7 +208,7 @@ bool VehicleEKF::updateGpsVel(double vx_east, double vy_north, double R_vel)
   return true;
 }
 
-void VehicleEKF::applyYawRateUpdate(double yaw_rate_meas, double R, bool count_as_cam)
+void VehicleEKF::applyYawRateUpdate(double yaw_rate_meas, double R, YawRateSource source)
 {
   if (!std::isfinite(yaw_rate_meas) || !(R > 0.0))
     return;
@@ -189,10 +225,16 @@ void VehicleEKF::applyYawRateUpdate(double yaw_rate_meas, double R, bool count_a
 
   const Mat5 IKH = Mat5::Identity() - K * H;
   P_ = IKH * P_ * IKH.transpose() + (R * K) * K.transpose();
-  if (count_as_cam) {
-    ++cam_odo_update_count;
-  } else {
-    ++imu_update_count;
+  switch (source) {
+    case YawRateSource::Imu:
+      ++imu_update_count;
+      break;
+    case YawRateSource::CameraOdometry:
+      ++cam_odo_update_count;
+      break;
+    case YawRateSource::BicycleModel:
+      ++model_update_count;
+      break;
   }
 }
 

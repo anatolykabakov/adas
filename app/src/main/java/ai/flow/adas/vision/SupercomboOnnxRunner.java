@@ -16,8 +16,15 @@ import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtLoggingLevel;
 import ai.onnxruntime.OrtSession;
+import ai.onnxruntime.providers.NNAPIFlags;
 
-public class SupercomboOnnxRunner {
+public class SupercomboOnnxRunner implements ModelRunner {
+
+    @Override
+    public String name() {
+        return "onnx";
+    }
+
     private static final String TAG = "SupercomboOnnx";
 
     public static final int MODEL_W = 512;
@@ -34,6 +41,11 @@ public class SupercomboOnnxRunner {
     private static final int LANE_STDS_START = PLAN_END + 264;
     private static final int LANES_END = PLAN_END + 528;
     private static final int LANE_PROB_END = LANES_END + 8;
+    // Road edges: same two-half layout as the lanes — 132 floats of means (2 × 33 × y,z), then 132
+    // of log-sigmas. The sigmas were parsed by nobody until 2026-08-06, which is why the road-edge
+    // fallback for single-line stretches could not be evaluated: flowpilot gates edges on their
+    // sigma, and ours were not even recorded.
+    private static final int EDGE_STDS_START = LANE_PROB_END + 132;
     private static final int ROAD_END = LANE_PROB_END + 264;
 
     private static final int PLAN_MHP_N = 5;
@@ -85,7 +97,7 @@ public class SupercomboOnnxRunner {
         Log.i(TAG, "Loading model: " + model.getAbsolutePath() + " (" + model.length() + " bytes)"
                 + " availableProviders=" + env.getAvailableProviders());
 
-        session = createSessionPreferNnapi(model.getAbsolutePath());
+        session = createSessionPreferNnapi(model.getAbsolutePath(), AdasConfig.nnapiFp16(context));
 
         traffic[0] = 1.f;
         traffic[1] = 0.f;
@@ -94,25 +106,51 @@ public class SupercomboOnnxRunner {
     }
 
     /**
-     * Prefer Android NNAPI (GPU/DSP/NPU). On OnePlus 7T ~35 ms vs ~107 ms CPU.
-     * Falls back to CPU if NNAPI session create fails.
+     * Prefer Android NNAPI (GPU/DSP/NPU). On OnePlus 7T ~35 ms vs ~107 ms CPU.
+     *
+     * <p>Tries half precision first when asked ({@code vision.nnapi_fp16}, see
+     * {@link AdasConfig#nnapiFp16} for the offline evidence and why it is off by default), then plain
+     * NNAPI, then CPU. Each attempt builds its own {@code SessionOptions}: options cannot be reused
+     * after a failed {@code createSession}, which is why {@code TrafficYoloRunner} does the same.
      */
-    private OrtSession createSessionPreferNnapi(String modelPath) throws Exception {
-        OrtSession.SessionOptions opts = newSessionOptions(/*threads=*/ 2);
+    private OrtSession createSessionPreferNnapi(String modelPath, boolean fp16) throws Exception {
+        if (fp16) {
+            OrtSession s = tryNnapi(modelPath, /*fp16=*/ true);
+            if (s != null) {
+                return s;
+            }
+            Log.w(TAG, "NNAPI fp16 unavailable, retrying at full precision");
+        }
+        OrtSession s = tryNnapi(modelPath, /*fp16=*/ false);
+        if (s != null) {
+            return s;
+        }
+        Log.w(TAG, "NNAPI unavailable, falling back to CPU");
+        return env.createSession(modelPath, newSessionOptions(/*threads=*/ 2));
+    }
+
+    private OrtSession tryNnapi(String modelPath, boolean fp16) {
+        OrtSession.SessionOptions opts = null;
         try {
-            opts.addNnapi();
+            opts = newSessionOptions(/*threads=*/ 2);
+            if (fp16) {
+                opts.addNnapi(java.util.EnumSet.of(NNAPIFlags.USE_FP16));
+            } else {
+                opts.addNnapi();
+            }
             OrtSession s = env.createSession(modelPath, opts);
-            Log.i(TAG, "NNAPI EP enabled");
+            Log.i(TAG, "NNAPI EP enabled fp16=" + fp16);
             return s;
         } catch (Throwable t) {
-            Log.w(TAG, "NNAPI session failed — falling back to CPU", t);
-            try {
-                opts.close();
-            } catch (Throwable ignored) {
+            Log.w(TAG, "NNAPI fp16=" + fp16 + " session failed", t);
+            if (opts != null) {
+                try {
+                    opts.close();
+                } catch (Throwable ignored) {
+                }
             }
+            return null;
         }
-        OrtSession.SessionOptions cpuOpts = newSessionOptions(/*threads=*/ 2);
-        return env.createSession(modelPath, cpuOpts);
     }
 
     private static OrtSession.SessionOptions newSessionOptions(int intraOpThreads) throws Exception {
@@ -318,7 +356,20 @@ public class SupercomboOnnxRunner {
         throw new IllegalStateException("Unexpected ONNX output type: " + value.getClass());
     }
 
-    private static LaneLines parseLanes(float[] out) {
+    /**
+     * Parses the supercombo output.
+     *
+     * <p>Package-private rather than private because {@link SupercomboThneedRunner} parses the 0.9.x
+     * output with the same code: the plan and lane sections of the two generations match bitwise.
+     * Checked against their `driving.h` — plan element 5 x XYZ = 15 floats (our PLAN_COLS), prediction
+     * 15*33*2 + 1 = 991 (PLAN_GROUP), plans 991*5 = 4955 (PLAN_END), then the same four lines of 33 YZ
+     * pairs.
+     *
+     * <p>The generations diverge after road_edges, where 0.9.x adds wide_from_device_euler,
+     * temporal_pose, road_transform and action, so only what precedes that boundary is shared and the
+     * 0.9.x pose is read at its own offset.
+     */
+    static LaneLines parseLanes(float[] out) {
         LaneLines ll = new LaneLines();
         if (out.length < ROAD_END) {
             Log.w(TAG, "Output too short: " + out.length);
@@ -366,9 +417,11 @@ public class SupercomboOnnxRunner {
 
         for (int edge = 0; edge < 2; edge++) {
             int base = LANE_PROB_END + edge * 66;
+            int stdBase = EDGE_STDS_START + edge * 66;
             for (int i = 0; i < LaneLines.N; i++) {
                 ll.edgesY[edge][i] = out[base + i * 2];
                 ll.edgesZ[edge][i] = out[base + i * 2 + 1];
+                ll.edgesYStd[edge][i] = (float) Math.exp(out[stdBase + i * 2]);
             }
         }
         return ll;
@@ -441,6 +494,7 @@ public class SupercomboOnnxRunner {
         return Math.max(lo, Math.min(hi, v));
     }
 
+    @Override
     public void close() {
         try {
             session.close();

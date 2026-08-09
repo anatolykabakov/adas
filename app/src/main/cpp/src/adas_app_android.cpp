@@ -3,11 +3,11 @@
 #include <memory>
 #include <string>
 
-#include "adas_app.h"
+#include "adas/adas_app.h"
 #include <json/json.h>
 
-#include "utils/logger.h"
-#include "utils/yuv_warp.h"
+#include "adas/utils/logger.h"
+#include "adas/utils/yuv_warp.h"
 
 static std::unique_ptr<AdasApp> adas_app;
 
@@ -25,10 +25,11 @@ static std::string jstringToStd(JNIEnv* env, jstring value)
 extern "C" {
 
 JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStart(JNIEnv* env, jclass, jint fd, jstring dbcPath,
-                                                                    jstring configPath)
+                                                                    jstring configPath, jstring mapPath)
 {
   const std::string dbc_path = jstringToStd(env, dbcPath);
   const std::string config_path = jstringToStd(env, configPath);
+  const std::string map_path = jstringToStd(env, mapPath);
 
   bool cfg_ok = false;
   AdasApp::Config cfg = AdasApp::Config::loadFromFile(config_path, &cfg_ok);
@@ -36,8 +37,16 @@ JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStart(JNIEnv* env,
     LOGW("JNI nativeStart: config load failed (%s), continuing with defaults", config_path.c_str());
   }
 
-  LOGI("JNI nativeStart fd=%d dbc=%s config=%s lane_keep=%d loc=%d", fd, dbc_path.c_str(), config_path.c_str(),
-       cfg.feature_flags.enable_lane_keep ? 1 : 0, cfg.feature_flags.enable_localization ? 1 : 0);
+  // An APK asset has no path until Java unpacks it, so `map.path` in the config names the asset and this is
+  // where it landed. Empty means the `map_data` node is off and Java did not unpack it — leave the config
+  // value alone so a hand-pushed `/sdcard/adas_maps/` copy still works.
+  if (!map_path.empty()) {
+    cfg.map_data.map_path = map_path;
+  }
+
+  LOGI("JNI nativeStart fd=%d dbc=%s config=%s map=%s lane_keep=%d loc=%d map_data=%d", fd, dbc_path.c_str(),
+       config_path.c_str(), cfg.map_data.map_path.c_str(), cfg.feature_flags.enable_lane_keep ? 1 : 0,
+       cfg.feature_flags.enable_localization ? 1 : 0, cfg.feature_flags.enable_map_data ? 1 : 0);
   try {
     if (!adas_app) {
       adas_app = std::make_unique<AdasApp>(fd, dbc_path, cfg);

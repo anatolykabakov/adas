@@ -15,6 +15,8 @@ public final class ModelCalibWarp {
     /** openpilot / flowpilot medmodel intrinsics. */
     private static final float MED_FL = 910.0f;
     private static final float MED_CY = 47.6f;
+    /** flowpilot's `SBIGMODEL_FL`: half the medmodel focal length, so twice the field of view. */
+    private static final float SBIG_FL = 455.0f;
 
     /** view_from_device: device (x forward, y right, z down) → camera view. */
     private static final float[] VIEW_FROM_DEVICE = {
@@ -62,14 +64,34 @@ public final class ModelCalibWarp {
      */
     public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
                                      float fx, float fy, float cx, float cy) {
+        return warpMatrix(rollRad, pitchRad, yawRad, fx, fy, cx, cy, false);
+    }
+
+    /**
+     * @param bigModel use the wide model geometry instead of medmodel.
+     *
+     * <p>The 0.9.x generation takes two images, narrow and wide. With one camera, flowpilot feeds the
+     * same frame to the second input warped by `sbigmodel_intrinsics` instead of `medmodel_intrinsics`
+     * — camera intrinsics are unchanged, only the model ones differ. Values from their
+     * `transformations/Model.java`: `SBIGMODEL_FL = 455` against `MEDMODEL_FL = 910`, and
+     * `cy = 0.5 * (256 + MEDMODEL_CY) = 151.8`.
+     *
+     * <p>This does not produce a real wide field: the frame holds nothing outside the narrow view, so
+     * the periphery of the wide input is extrapolation past the source edge while the model was trained
+     * on a real wide camera. The main unmeasured risk of this path — docs/VISION_RATE.md §5.
+     */
+    public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
+                                     float fx, float fy, float cx, float cy, boolean bigModel) {
         float[] K = {
                 fx, 0, cx,
                 0, fy, cy,
                 0, 0, 1
         };
+        final float mfl = bigModel ? SBIG_FL : MED_FL;
+        final float mcy = bigModel ? 0.5f * (MODEL_H + MED_CY) : MED_CY;
         float[] medK = {
-                MED_FL, 0, 0.5f * MODEL_W,
-                0, MED_FL, MED_CY,
+                mfl, 0, 0.5f * MODEL_W,
+                0, mfl, mcy,
                 0, 0, 1
         };
         float[] medFromCalib = mul3(medK, VIEW_FROM_DEVICE);
@@ -83,11 +105,17 @@ public final class ModelCalibWarp {
     /** Same as {@link #warpMatrix} with degrees. */
     public static float[] warpMatrixDeg(float rollDeg, float pitchDeg, float yawDeg,
                                         float fx, float fy, float cx, float cy) {
+        return warpMatrixDeg(rollDeg, pitchDeg, yawDeg, fx, fy, cx, cy, false);
+    }
+
+    /** Same as {@link #warpMatrix} with degrees, with the wide-model variant. */
+    public static float[] warpMatrixDeg(float rollDeg, float pitchDeg, float yawDeg,
+                                        float fx, float fy, float cx, float cy, boolean bigModel) {
         return warpMatrix(
                 Math.toRadians(rollDeg),
                 Math.toRadians(pitchDeg),
                 Math.toRadians(yawDeg),
-                fx, fy, cx, cy);
+                fx, fy, cx, cy, bigModel);
     }
 
     /**

@@ -19,6 +19,7 @@ import "model_long.proto";
 import "safety_warn.proto";
 import "traffic_vision.proto";
 import "phone_stats.proto";
+import "map_data.proto";
 
 // Main message wrapper for ZMQ
 message ZMQMessage {
@@ -50,5 +51,6 @@ message ZMQMessage {
         TrafficDetections traffic_detections = 28;
         TrafficVisionState traffic_vision = 29;
         PhoneStats phone_stats = 30;
+        MapLocalState map_local = 31;
     }
 }

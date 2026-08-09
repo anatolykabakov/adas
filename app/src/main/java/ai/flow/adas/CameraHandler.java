@@ -10,6 +10,8 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
+import android.graphics.Rect;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.OutputConfiguration;
 import android.hardware.camera2.params.SessionConfiguration;
 import android.media.Image;
@@ -38,7 +40,7 @@ import java.util.List;
 
 public class CameraHandler {
 
-    private final String TAG = "CameraHandler";
+    private static final String TAG = "CameraHandler";
 
     public interface FailureListener {
         void onCameraFailed(String reason);
@@ -62,7 +64,11 @@ public class CameraHandler {
     private int sensorOrientation = 90;
     private boolean lensFacingFront = false;
 
-    private ai.flow.adas.vision.VisionPipeline visionPipeline;
+    /**
+     * Swapped from another thread when the vision model changes in settings, so it is read exactly once
+     * per frame below: two reads could disagree and hand the traffic branch the wrong buffer.
+     */
+    private volatile ai.flow.adas.vision.VisionPipeline visionPipeline;
     private ai.flow.adas.vision.TrafficVisionPipeline trafficVisionPipeline;
     private ai.flow.adas.vision.LaneOverlayView laneOverlay;
 
@@ -84,7 +90,14 @@ public class CameraHandler {
     }
 
     private static final int SCALE_FACTOR = 2;
-    private static final int TARGET_FPS = 20;
+    /**
+     * Frames per second requested from the camera.
+     *
+     * <p>The vision rate is quantised by the camera period: when a cycle takes longer than one period,
+     * the pipeline takes every second frame. Measured at 20 fps on run 2026_08_04_21_00_18 — 2.02
+     * camera frames per processed one, 11.3 Hz. At 30 fps the quantum is 33 ms instead of 44.
+     */
+    private static final int TARGET_FPS = 30;
 
     private float bagFx;
     private float bagFy;
@@ -374,8 +387,9 @@ public class CameraHandler {
                     image = reader.acquireLatestImage();
                     if (image == null) return;
 
+                    final ai.flow.adas.vision.VisionPipeline vp = visionPipeline;
                     ai.flow.adas.vision.YuvFrame yuv = null;
-                    if (visionPipeline != null || trafficVisionPipeline != null) {
+                    if (vp != null || trafficVisionPipeline != null) {
                         yuv = ai.flow.adas.vision.YuvFrame.copyFrom(image);
                     }
 
@@ -384,13 +398,13 @@ public class CameraHandler {
 
                     if (yuv != null) {
                         long captureTs = TimeUtil.nowMs();
-                        if (visionPipeline != null) {
-                            visionPipeline.submitYuv(yuv, captureTs);
+                        if (vp != null) {
+                            vp.submitYuv(yuv, captureTs);
                         }
                         if (trafficVisionPipeline != null) {
                             if (trafficVisionPipeline.wantsFrame()) {
                                 ai.flow.adas.vision.YuvFrame trafficYuv =
-                                        visionPipeline != null ? yuv.duplicate() : yuv;
+                                        vp != null ? yuv.duplicate() : yuv;
                                 trafficVisionPipeline.submitYuv(trafficYuv, captureTs);
                             }
                         }
@@ -473,6 +487,11 @@ public class CameraHandler {
                 Log.w(TAG, "No AE FPS ranges available; leaving default");
             }
 
+            MeteringRectangle[] aeRegions = roadMeteringRegions(cameraCharacteristics, W, H);
+            if (aeRegions != null) {
+                captureRequest.set(CaptureRequest.CONTROL_AE_REGIONS, aeRegions);
+            }
+
             logCameraIntrinsics();
 
         } catch (Exception e) {
@@ -523,50 +542,131 @@ public class CameraHandler {
         }
     }
 
+    /**
+     * Auto-exposure metering rectangle covering the road, so exposure is not computed against the sky.
+     *
+     * <p>Not a literal port of flowpilot's: they size the rectangle from the frame (1280x720), but
+     * `CONTROL_AE_REGIONS` is in active-array coordinates, and on a 4000x3000 sensor their rectangle
+     * would land in the top-left corner — the sky. Here the frame's aspect-ratio crop within the active
+     * array is found first, and their fractions are taken inside it: 0.4..0.6 across, 0.5..0.7 down.
+     *
+     * <p>The coordinate system depends on distortion correction: with DISTORTION_CORRECTION_MODE_OFF it
+     * is the pre-correction active array. We disable distortion, so that one is preferred
+     * pre-correction.
+     */
+    private MeteringRectangle[] roadMeteringRegions(CameraCharacteristics chars, int frameWidth, int frameHeight) {
+        Integer maxRegions = chars.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
+        if (maxRegions == null || maxRegions < 1) {
+            Log.w(TAG, "AE metering regions not supported on this device — exposure stays whole-frame");
+            return null;
+        }
+        Rect array = chars.get(CameraCharacteristics.SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE);
+        if (array == null) {
+            array = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        }
+        if (array == null || array.width() <= 0 || array.height() <= 0 || frameWidth <= 0 || frameHeight <= 0) {
+            Log.w(TAG, "No active array size — cannot place the metering region");
+            return null;
+        }
+
+        // The crop the sensor takes to produce our aspect ratio: one axis in full, the other centred.
+        float wantAspect = (float) frameWidth / (float) frameHeight;
+        float arrayAspect = (float) array.width() / (float) array.height();
+        int cropW = array.width();
+        int cropH = array.height();
+        if (arrayAspect > wantAspect) {
+            cropW = Math.round(array.height() * wantAspect);
+        } else if (arrayAspect < wantAspect) {
+            cropH = Math.round(array.width() / wantAspect);
+        }
+        int cropL = array.left + (array.width() - cropW) / 2;
+        int cropT = array.top + (array.height() - cropH) / 2;
+
+        int x = cropL + Math.round(cropW * 0.40f);
+        int y = cropT + Math.round(cropH * 0.50f);
+        int w = Math.max(1, Math.round(cropW * 0.20f));
+        int h = Math.max(1, Math.round(cropH * 0.20f));
+        Log.i(TAG, "AE metering on road: array " + array.width() + "x" + array.height()
+                + ", crop " + cropW + "x" + cropH + " at " + cropL + "," + cropT
+                + " -> region " + x + "," + y + " " + w + "x" + h + " (max regions " + maxRegions + ")");
+        return new MeteringRectangle[]{new MeteringRectangle(x, y, w, h, MeteringRectangle.METERING_WEIGHT_MAX)};
+    }
+
+    /**
+     * Picks the AE frame-rate range: highest achievable upper bound first, then the highest lower bound
+     * among equals — a high lower bound is what stops auto-exposure from dropping the rate for exposure.
+     * So [30,30] beats [15,30] beats [10,10].
+     *
+     * <p>Both halves are needed. Preferring any range that merely covers the target let [15,30] through
+     * and the camera ran at 67 ms (2026_08_07_19_04_05); preferring a fixed range pinned it to the only
+     * fixed range this phone offers, 10 fps, and the rate fell to 10.06 Hz (2026_08_08_10_47_41).
+     */
     private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int targetFps) {
         Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (ranges == null || ranges.length == 0) {
             return null;
         }
-        Range<Integer> exact = null;
-        Range<Integer> covering = null;
-        int coveringSpan = Integer.MAX_VALUE;
+        StringBuilder all = new StringBuilder();
         for (Range<Integer> r : ranges) {
-            if (r.getLower() == targetFps && r.getUpper() == targetFps) {
-                exact = r;
-                break;
+            all.append(r.getLower()).append('-').append(r.getUpper()).append(' ');
+        }
+        Log.i(TAG, "AE fps ranges available: " + all.toString().trim());
+
+        Range<Integer> best = null;
+        for (Range<Integer> r : ranges) {
+            int upper = Math.min(r.getUpper(), targetFps);
+            if (upper <= 0) {
+                continue;
             }
-            if (r.getLower() <= targetFps && r.getUpper() >= targetFps) {
-                int span = r.getUpper() - r.getLower();
-                if (span < coveringSpan) {
-                    coveringSpan = span;
-                    covering = r;
-                }
+            // A range whose lower bound exceeds the target cannot deliver the target rate — it forces
+            // its own. [60,60] ties [30,30] on the capped upper bound and would win on the lower one.
+            if (r.getLower() > targetFps) {
+                continue;
             }
-        }
-        if (exact != null) {
-            return exact;
-        }
-        if (covering != null) {
-            return covering;
-        }
-        Range<Integer> best = ranges[0];
-        int bestDist = Math.abs(best.getUpper() - targetFps) + Math.abs(best.getLower() - targetFps);
-        for (int i = 1; i < ranges.length; i++) {
-            Range<Integer> r = ranges[i];
-            int dist = Math.abs(r.getUpper() - targetFps) + Math.abs(r.getLower() - targetFps);
-            if (dist < bestDist) {
-                bestDist = dist;
+            if (best == null) {
+                best = r;
+                continue;
+            }
+            int bestUpper = Math.min(best.getUpper(), targetFps);
+            if (upper > bestUpper || (upper == bestUpper && r.getLower() > best.getLower())) {
                 best = r;
             }
+        }
+        if (best == null) {
+            return null;
+        }
+        if (!best.getLower().equals(best.getUpper())) {
+            Log.w(TAG, "Best AE fps range " + best.getLower() + "-" + best.getUpper()
+                    + " is not fixed — the sensor may still drop the rate in low light, but a fixed range at a"
+                    + " lower rate would be worse");
         }
         return best;
     }
 
     private void startSession() {
+        // Exposure and actual frame duration every ~5 s: if exposure falls and frame duration settles on
+        // 1/fps after the metering region is set, the rate was being dropped by auto-exposure.
         CameraCaptureSession.CaptureCallback listener = new CameraCaptureSession.CaptureCallback() {
+            private long lastLogNs = 0;
+
             public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                 super.onCaptureCompleted(session, request, result);
+                Long exp = result.get(TotalCaptureResult.SENSOR_EXPOSURE_TIME);
+                Long dur = result.get(TotalCaptureResult.SENSOR_FRAME_DURATION);
+                Integer iso = result.get(TotalCaptureResult.SENSOR_SENSITIVITY);
+                if (exp == null && dur == null) {
+                    return;
+                }
+                long now = System.nanoTime();
+                if (now - lastLogNs < 5_000_000_000L) {
+                    return;
+                }
+                lastLogNs = now;
+                Log.i(TAG, String.format("AE: exposure %.1f ms, frame duration %.1f ms (%.1f fps), iso %s",
+                        exp == null ? Float.NaN : exp / 1e6f,
+                        dur == null ? Float.NaN : dur / 1e6f,
+                        dur == null || dur == 0 ? Float.NaN : 1e9f / dur,
+                        iso == null ? "?" : iso.toString()));
             }
         };
 

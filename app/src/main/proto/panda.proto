@@ -56,4 +56,11 @@ message PandaHealth {
 
     // System status
     bool som_reset_triggered = 26;
+
+    // Whether lateral torque is actually being passed to the rack. NOT the same as controls_allowed: with
+    // always-on lateral (ALKA) the panda accepts HCA frames while controls_allowed is false, so anything
+    // downstream that gated on controls_allowed would withdraw exactly when the assist started working.
+    // PandaService is the only place that knows both halves, so it publishes the answer instead of leaving
+    // every consumer to re-derive it.
+    bool lat_actuation_allowed = 27;
 }

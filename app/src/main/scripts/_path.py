@@ -3,12 +3,8 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
-
-# Avoid TypeError with newer google.protobuf vs older generated *_pb2.py
-os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
 
 _SCRIPTS_ROOT = Path(__file__).resolve().parent
 _root = str(_SCRIPTS_ROOT)

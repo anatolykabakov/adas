@@ -1,5 +1,5 @@
-#include "utils/can_parser.h"
-#include "panda/can_frame.h"
+#include "adas/utils/can_parser.h"
+#include "adas/panda/can_frame.h"
 
 std::optional<double> DBSParser::extractSignal(const can_frame& frame, const std::string& signal_name)
 {

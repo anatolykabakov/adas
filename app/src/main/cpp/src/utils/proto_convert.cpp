@@ -1,4 +1,4 @@
-#include "utils/proto_convert.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
 
@@ -14,7 +14,7 @@ LaneKeepOutput laneKeepFromProto(const ai::flow::adas::LaneKeepState& p, int64_t
   o.has_target = p.has_target();
   o.curvature = p.curvature();
   o.status = p.status();
-  // Published as "ok:mpc" / "ok:pp" (see LaneKeepService::publishLaneKeep).
+  // Published as "ok:mpc" / "ok:pp" (see LaneKeep::publishLaneKeep).
   const auto colon = o.status.find(':');
   if (colon != std::string::npos) {
     o.controller = o.status.substr(colon + 1);

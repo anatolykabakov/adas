@@ -22,11 +22,13 @@ class AdasAppInstance implements Runnable {
     private final int fd;
     private final String dbcPath;
     private final String configPath;
+    private final String mapPath;
 
-    public AdasAppInstance(int fd, String dbcPath, String configPath) {
+    public AdasAppInstance(int fd, String dbcPath, String configPath, String mapPath) {
         this.fd = fd;
         this.dbcPath = dbcPath;
         this.configPath = configPath;
+        this.mapPath = mapPath;
     }
 
     @Override
@@ -36,7 +38,7 @@ class AdasAppInstance implements Runnable {
             return;
         }
         try {
-            AdasAppHandler.nativeStart(this.fd, this.dbcPath, this.configPath);
+            AdasAppHandler.nativeStart(this.fd, this.dbcPath, this.configPath, this.mapPath);
             AdasAppHandler.flushPendingLaneKeepParams();
         } catch (Throwable t) {
             Log.e("AdasAppHandler", "nativeStart failed (fd=" + fd + ")", t);
@@ -57,6 +59,7 @@ public class AdasAppHandler extends Service {
 
     private String dbcPath;
     private String configPath;
+    private String mapPath;
 
     private UsbDeviceConnection pandaConnection;
     private boolean nativeStarted;
@@ -89,6 +92,16 @@ public class AdasAppHandler extends Service {
         configPath = ensureAssetCopied(this, AdasConfig.ASSET, /*force=*/false);
         Log.i(TAG, "DBC path: " + dbcPath);
         Log.i(TAG, "Config path: " + configPath);
+
+        // The road map is 4.9 MB, so it is unpacked only when the service that reads it is on. Copying it
+        // unconditionally would cost every install that storage for a node that is off by default.
+        if (AdasConfig.mapDataEnabled(this)) {
+            mapPath = ensureAssetCopied(this, AdasConfig.mapAsset(this), /*force=*/false);
+            Log.i(TAG, "Map path: " + mapPath);
+        } else {
+            mapPath = "";
+            Log.i(TAG, "map_data node off — road map not unpacked");
+        }
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
@@ -198,7 +211,7 @@ public class AdasAppHandler extends Service {
         int fd = conn.getFileDescriptor();
         Log.i(TAG, "USB Device FD: " + fd + " (connection retained)");
         nativeStarted = true;
-        new Thread(new AdasAppInstance(fd, dbcPath, configPath), "AdasNative").start();
+        new Thread(new AdasAppInstance(fd, dbcPath, configPath, mapPath), "AdasNative").start();
     }
 
     static String ensureAssetCopied(Context context, String assetName, boolean force) {
@@ -221,7 +234,8 @@ public class AdasAppHandler extends Service {
         }
     }
 
-    public static native void nativeStart(int fd, String dbcPath, String configPath);
+    /** @param mapPath absolute path to the OSM road map, or "" to leave the configured one alone. */
+    public static native void nativeStart(int fd, String dbcPath, String configPath, String mapPath);
 
     public static native void nativeStop();
 

@@ -1,9 +1,10 @@
-#include "services/internal_subscriber.h"
+#include "adas/services/internal_subscriber.h"
 
 #include "messages.pb.h"
-#include "utils/proto_convert.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
+namespace services {
 
 void InternalSubscriber::configure()
 {
@@ -21,6 +22,11 @@ void InternalSubscriber::configure()
     if (!m.has_camera_calib())
       return;
     out_.emplace_back(cameraCalibFromProto(m.camera_calib(), m.timestamp() * 1000));
+  });
+  subscribe<ai::flow::adas::ZMQMessage>(topics::kSteerCommand, [this](const ai::flow::adas::ZMQMessage& m) {
+    if (!m.has_steer_command())
+      return;
+    out_.emplace_back(m.steer_command());
   });
   subscribe<ai::flow::adas::ZMQMessage>(topics::kSafetyWarn, [this](const ai::flow::adas::ZMQMessage& m) {
     if (!m.has_safety_warn())
@@ -42,4 +48,5 @@ std::vector<HostOutMsg> InternalSubscriber::popMessages()
   return out;
 }
 
+}  // namespace services
 }  // namespace adas

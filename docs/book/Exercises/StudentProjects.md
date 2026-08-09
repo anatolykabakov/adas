@@ -34,7 +34,7 @@ Repeat B1 (or `fp`) at `--vision-latency` ∈ $\{0,\ 0.07,\ 0.2\}$.
 **Deliverable:** which latency breaks which controller first.
 
 ### B3 Arc feed-forward
-Using [`MPC_EXPLAINED.md`](../../MPC_EXPLAINED.md), mark feed-forward vs feedback on one arc.
+Using `docs/MPC_EXPLAINED.md`, mark feed-forward vs feedback on one arc.
 **Deliverable:** sketch or annotated plot; one sentence on why raising CTE weight is the wrong first lever.
 
 ## C — platform & safety

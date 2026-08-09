@@ -1,83 +1,18 @@
-#include "mapmatch/search.h"
+#include "adas/mapmatch/search.h"
 
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "utils/logger.h"
+#include "adas/mapmatch/dir_edge.h"
+#include "adas/utils/logger.h"
 
 namespace adas {
 namespace mapmatch {
 namespace {
 
 constexpr double kDeg = M_PI / 180.0;
-
-inline std::uint32_t edgeOf(std::uint32_t de) { return de >> 1; }
-inline bool reversed(std::uint32_t de) { return (de & 1u) != 0u; }
-inline std::uint32_t makeDir(std::uint32_t edge, bool rev) { return (edge << 1) | (rev ? 1u : 0u); }
-
-double wrapPi(double a)
-{
-  while (a > M_PI)
-    a -= 2.0 * M_PI;
-  while (a < -M_PI)
-    a += 2.0 * M_PI;
-  return a;
-}
-
-double headingIn(const RoadMap& map, std::uint32_t de)
-{
-  return reversed(de) ? map.headingAtEnd(edgeOf(de)) + M_PI : map.headingAtStart(edgeOf(de));
-}
-
-double headingOut(const RoadMap& map, std::uint32_t de)
-{
-  return reversed(de) ? map.headingAtStart(edgeOf(de)) + M_PI : map.headingAtEnd(edgeOf(de));
-}
-
-std::uint32_t startNode(const RoadMap& map, std::uint32_t de)
-{
-  const RoadEdge& e = map.edge(edgeOf(de));
-  return reversed(de) ? e.node_b : e.node_a;
-}
-
-std::uint32_t endNode(const RoadMap& map, std::uint32_t de)
-{
-  const RoadEdge& e = map.edge(edgeOf(de));
-  return reversed(de) ? e.node_a : e.node_b;
-}
-
-double turnBetween(const RoadMap& map, std::uint32_t from_de, std::uint32_t to_de)
-{
-  return wrapPi(headingIn(map, to_de) - headingOut(map, from_de)) / kDeg;
-}
-
-std::vector<std::uint32_t> outgoing(const RoadMap& map, std::uint32_t node)
-{
-  std::vector<std::uint32_t> out;
-  std::size_t count = 0;
-  const std::uint32_t* ids = map.outEdges(node, &count);
-  out.reserve(count);
-  for (std::size_t i = 0; i < count; ++i) {
-    const std::uint32_t ei = ids[i];
-    const RoadEdge& e = map.edge(ei);
-    if (e.node_a == node)
-      out.push_back(makeDir(ei, false));
-    else if (e.node_b == node && !e.oneway)
-      out.push_back(makeDir(ei, true));
-  }
-  return out;
-}
-
-void dirPolyline(const RoadMap& map, std::uint32_t de, std::vector<double>& xs, std::vector<double>& ys)
-{
-  map.edgePolyline(edgeOf(de), xs, ys);
-  if (reversed(de)) {
-    std::reverse(xs.begin(), xs.end());
-    std::reverse(ys.begin(), ys.end());
-  }
-}
 
 double trackHeadingAt(const Track& track, double s)
 {
@@ -146,7 +81,7 @@ std::vector<RouteCandidate> searchRoutes(const RoadMap& map, const Track& track,
       for (const std::uint32_t out_de : outs) {
         if (edgeOf(out_de) == edgeOf(in_de))
           continue;
-        const double angle = turnBetween(map, in_de, out_de);
+        const double angle = turnBetweenDeg(map, in_de, out_de);
         if (angle * turn_deg <= 0.0)
           continue;
         if (std::abs(angle) < cfg.turn_start_min_deg)
@@ -277,7 +212,7 @@ std::vector<RouteCandidate> searchRoutes(const RoadMap& map, const Track& track,
       for (const std::uint32_t pde : incoming[node]) {
         if (edgeOf(pde) == edgeOf(cur) || seen.count(pde))
           continue;
-        const double turn = std::abs(turnBetween(map, pde, cur));
+        const double turn = std::abs(turnBetweenDeg(map, pde, cur));
         if (turn <= best_turn) {
           best_turn = turn;
           best_de = pde;

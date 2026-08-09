@@ -1,4 +1,4 @@
-#include "utils/online_localizer.h"
+#include "adas/utils/online_localizer.h"
 
 #include <cmath>
 
@@ -104,21 +104,26 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
     if (gps->timestamp_us > 0)
       last_gps_msg_us_ = gps->timestamp_us;
 
-    if (!yaw_seeded_ && gps->course_valid)
+    if (!yaw_seeded_ && gps->course_valid && use_gps_course)
       snapYaw(gps->yaw_enu);
 
-    const auto pos = ekf_.updateGps(gps->x, gps->y, 25.0, 50.0);
+    // With position off the filter is dead reckoning: no update, and no reseed either, so the pose is
+    // whatever the yaw-rate chain and the wheel speed make of it. That is the point of the switch.
+    const auto pos = use_gps_position ? ekf_.updateGps(gps->x, gps->y, 25.0, 50.0) : VehicleEKF::GpsPosResult::Accepted;
     if (pos != VehicleEKF::GpsPosResult::Rejected) {
       last_gps_t_ = t_;
 
       if (gps->course_valid) {
-        const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
-        if (pos == VehicleEKF::GpsPosResult::Reseeded || yaw_err > 0.5) {
-          snapYaw(gps->yaw_enu);
-        } else {
-          ekf_.updateGpsYaw(gps->yaw_enu, 0.05);
+        if (use_gps_course) {
+          const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
+          if (pos == VehicleEKF::GpsPosResult::Reseeded || yaw_err > 0.5) {
+            snapYaw(gps->yaw_enu);
+          } else {
+            ekf_.updateGpsYaw(gps->yaw_enu, 0.05);
+          }
         }
-        ekf_.updateGpsVel(gps->vx, gps->vy, 1.0);
+        if (use_gps_velocity)
+          ekf_.updateGpsVel(gps->vx, gps->vy, gps_vel_R);
       }
 
       if (pos == VehicleEKF::GpsPosResult::Reseeded) {

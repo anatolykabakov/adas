@@ -1,7 +1,7 @@
-#include "utils/protobuf_utils.h"
-#include "utils/logger.h"
-#include "panda/can.h"
-#include "panda/health.h"
+#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/logger.h"
+#include "adas/panda/can.h"
+#include "adas/panda/health.h"
 #include <ctime>
 
 namespace utils {

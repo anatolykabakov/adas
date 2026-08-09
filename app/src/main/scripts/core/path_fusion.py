@@ -35,18 +35,28 @@ def _interp_y(x: float, xs: np.ndarray, ys: np.ndarray) -> float:
 # Defaults kept in sync with C++ LanePathConfig / assets/config.json.
 DEFAULT_LANE_STD_GOOD_M = 0.3
 DEFAULT_LANE_STD_BAD_M = 1.5
+# Range the sigma summary covers. Was a fixed 40 m; measured on run 2026_08_06_00_36_42, worst-line
+# sigma roughly doubles from the near half to the far half of that window (right arc 0.34 over
+# 5-20 m against 0.78 over 20-40 m) because on a bend the inner line leaves the frame and its far
+# samples are extrapolation. See `LanePathConfig::lane_std_range_m` for the full table.
+DEFAULT_LANE_STD_RANGE_M = 20.0
 DEFAULT_LANE_WIDTH_MIN_M = 2.6
 DEFAULT_LANE_WIDTH_MAX_M = 4.6
 
 
-def _median_std(stds: Optional[np.ndarray], xs: np.ndarray) -> float:
-    """Median lane sigma over 5–40 m; -1 if sigma missing (no penalty)."""
+def _median_std(
+    stds: Optional[np.ndarray],
+    xs: np.ndarray,
+    range_m: float = DEFAULT_LANE_STD_RANGE_M,
+) -> float:
+    """Median lane sigma from 5 m out to ``range_m``; -1 if sigma missing (no penalty)."""
     if stds is None:
         return -1.0
     s = np.asarray(stds, dtype=np.float64)
     if s.size != xs.size:
         return -1.0
-    sel = (xs >= 5.0) & (xs <= 40.0) & np.isfinite(s) & (s > 0.0)
+    x_max = range_m if range_m > 5.0 else 40.0
+    sel = (xs >= 5.0) & (xs <= x_max) & np.isfinite(s) & (s > 0.0)
     return float(np.median(s[sel])) if sel.any() else -1.0
 
 
@@ -71,6 +81,7 @@ def lane_lines_to_path(
     lane_stds: Optional[Sequence[Optional[np.ndarray]]] = None,
     lane_std_good_m: float = DEFAULT_LANE_STD_GOOD_M,
     lane_std_bad_m: float = DEFAULT_LANE_STD_BAD_M,
+    lane_std_range_m: float = DEFAULT_LANE_STD_RANGE_M,
     lane_width_min_m: float = DEFAULT_LANE_WIDTH_MIN_M,
     lane_width_max_m: float = DEFAULT_LANE_WIDTH_MAX_M,
 ) -> Optional[np.ndarray]:
@@ -129,12 +140,16 @@ def lane_lines_to_path(
     )
     if both and lane_stds is not None:
         l_prob *= _std_confidence(
-            _median_std(lane_stds[1] if len(lane_stds) > 1 else None, xs),
+            _median_std(
+                lane_stds[1] if len(lane_stds) > 1 else None, xs, lane_std_range_m
+            ),
             lane_std_good_m,
             lane_std_bad_m,
         )
         r_prob *= _std_confidence(
-            _median_std(lane_stds[2] if len(lane_stds) > 2 else None, xs),
+            _median_std(
+                lane_stds[2] if len(lane_stds) > 2 else None, xs, lane_std_range_m
+            ),
             lane_std_good_m,
             lane_std_bad_m,
         )

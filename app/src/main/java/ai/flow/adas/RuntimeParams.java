@@ -43,6 +43,16 @@ public final class RuntimeParams {
 
     public String supercomboAsset = "supercombo.onnx";
 
+    /**
+     * Vision model: {@code onnx} or {@code thneed}. Same key as
+     * {@link AdasConfig#modelRunner} reads, so the settings switch and the native side cannot disagree.
+     */
+    public String modelRunner = "onnx";
+
+    public static String normalizeModelRunner(String v) {
+        return "thneed".equalsIgnoreCase(v) ? "thneed" : "onnx";
+    }
+
     public static String normalizeController(String ctrl) {
         if (ctrl == null) {
             return "pp";
@@ -82,6 +92,10 @@ public final class RuntimeParams {
             JSONObject logging = root.optJSONObject("logging");
             if (logging != null) {
                 p.recordCameraImages = logging.optBoolean("record_camera_images", p.recordCameraImages);
+            }
+            JSONObject vision = root.optJSONObject("vision");
+            if (vision != null) {
+                p.modelRunner = normalizeModelRunner(vision.optString("model_runner", p.modelRunner));
             }
             JSONObject cam = root.optJSONObject("calibration");
             if (cam != null) {
@@ -142,6 +156,14 @@ public final class RuntimeParams {
             root.put("logging", logging);
         }
         logging.put("record_camera_images", recordCameraImages);
+
+        // Only our own field: the comment_* keys live alongside and must survive.
+        JSONObject vision = root.optJSONObject("vision");
+        if (vision == null) {
+            vision = new JSONObject();
+            root.put("vision", vision);
+        }
+        vision.put("model_runner", normalizeModelRunner(modelRunner));
 
         JSONObject calib = root.optJSONObject("calibration");
         if (calib == null) {
