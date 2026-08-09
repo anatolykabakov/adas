@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Control/VehicleModel';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="MPC and fp" href="MPC_and_FP.html" />
     <link rel="prev" title="Pure Pursuit" href="PurePursuit.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Control/VehicleModel.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,7 +398,7 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -403,7 +406,14 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simple-understeer-formula">Simple understeer formula</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#measurement-recipe-bag">Measurement recipe (bag)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-knobs">Project knobs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-delay">Pipeline delay</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#calibrating-one-coefficient-and-finding-out-it-cannot-be-one-coefficient">Calibrating one coefficient, and finding out it cannot be one coefficient</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-contradiction">The contradiction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-it-was-resolved-find-a-third-sensor">How it was resolved: find a third sensor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-change-actually-bought">What the change actually bought</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-cannot-end-with-a-constant">Why this cannot end with a constant</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-delay-and-why-the-compensation-exceeds-the-measurement">Pipeline delay, and why the compensation exceeds the measurement</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
 </ul>
             </nav>
@@ -417,9 +427,9 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="vehicle-model-understeer">
-<h1>Vehicle Model (Understeer)<a class="headerlink" href="#vehicle-model-understeer" title="Ссылка на этот заголовок">#</a></h1>
+<h1>Vehicle Model (Understeer)<a class="headerlink" href="#vehicle-model-understeer" title="Link to this heading">#</a></h1>
 <section id="kinematics-vs-reality">
-<h2>Kinematics vs reality<a class="headerlink" href="#kinematics-vs-reality" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Kinematics vs reality<a class="headerlink" href="#kinematics-vs-reality" title="Link to this heading">#</a></h2>
 <p>From the bicycle chapter, <strong>kinematic</strong> curvature for wheel angle <span class="math notranslate nohighlight">\(\delta\)</span> is</p>
 <div class="math notranslate nohighlight">
 \[
@@ -441,7 +451,7 @@ On the highway the tires slip: for the <strong>same</strong> <span class="math n
 <p>If feed-forward uses <span class="math notranslate nohighlight">\(\kappa_{\mathrm{kin}}\)</span> only, it <strong>under-orders</strong> SWA in arcs → outward drift; feedback fights late, after vision delay.</p>
 </section>
 <section id="simple-understeer-formula">
-<h2>Simple understeer formula<a class="headerlink" href="#simple-understeer-formula" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Simple understeer formula<a class="headerlink" href="#simple-understeer-formula" title="Link to this heading">#</a></h2>
 <p>A one-parameter model used in openpilot-style stacks (and our <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>) looks like</p>
 <div class="math notranslate nohighlight">
 \[
@@ -463,7 +473,7 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
 </div>
 </section>
 <section id="measurement-recipe-bag">
-<h2>Measurement recipe (bag)<a class="headerlink" href="#measurement-recipe-bag" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Measurement recipe (bag)<a class="headerlink" href="#measurement-recipe-bag" title="Link to this heading">#</a></h2>
 <p>On frames where the <strong>driver</strong> steers (or any known SWA):</p>
 <ol class="arabic simple">
 <li><p><span class="math notranslate nohighlight">\(\delta = \mathrm{SWA} / (\texttt{steer\_sign}\cdot\texttt{steer\_ratio})\)</span>.</p></li>
@@ -513,68 +523,225 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">k_fact</span> <span class="o">/</span> <span class="n">k_kin</span>
 
-<span class="c1"># Synthetic demo: at 22 m/s, pretend fact is 0.61 * kin</span>
+<span class="c1"># At 22 m/s the measured ratio on this car is 0.54 — not a guess, see the table below.</span>
 <span class="n">v</span> <span class="o">=</span> <span class="mf">22.0</span>
 <span class="n">swa</span> <span class="o">=</span> <span class="o">-</span><span class="mf">60.0</span>  <span class="c1"># deg on CAN</span>
 <span class="n">delta</span> <span class="o">=</span> <span class="n">delta_from_swa_deg</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span>
 <span class="n">k_kin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span>
-<span class="n">k_fact</span> <span class="o">=</span> <span class="mf">0.61</span> <span class="o">*</span> <span class="n">k_kin</span>
+<span class="n">k_fact</span> <span class="o">=</span> <span class="mf">0.54</span> <span class="o">*</span> <span class="n">k_kin</span>
 <span class="n">yaw</span> <span class="o">=</span> <span class="n">k_fact</span> <span class="o">*</span> <span class="n">v</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;delta=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> deg, k_kin=</span><span class="si">{</span><span class="n">k_kin</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, &quot;</span>
       <span class="sa">f</span><span class="s2">&quot;ratio=</span><span class="si">{</span><span class="n">ratio_kin_vs_fact</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span><span class="w"> </span><span class="n">yaw</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>How much extra SWA does feed-forward need? If you want the <strong>same</strong> <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}\)</span> that kinematics promised at low speed, scale roughly by <span class="math notranslate nohighlight">\(1/0.61\approx 1.64\)</span> at 22 m/s (order of magnitude; real VM is smoother).</p>
+<p>How much extra SWA does feed-forward need? To recover the <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}\)</span> that kinematics
+promised at low speed you would scale by <span class="math notranslate nohighlight">\(1/0.54 \approx 1.85\)</span> at 22 m/s. Hold that number lightly: it is
+what a <em>naive</em> inversion asks for, and the real vehicle model spreads the correction smoothly over speed
+instead of applying a single factor. The gap between 1.85 and the 3–9 % the shipped parameter actually
+changes is the subject of the rest of this chapter.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">k_des</span> <span class="o">=</span> <span class="mf">0.02</span>  <span class="c1"># 1/m, mild arc</span>
 <span class="n">delta_kin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">k_des</span><span class="p">)</span>
-<span class="c1"># crude high-speed correction: inflate kappa request</span>
-<span class="n">delta_vm</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">k_des</span> <span class="o">/</span> <span class="mf">0.61</span><span class="p">)</span>
+<span class="c1"># crude high-speed correction: inflate the kappa request by the measured shortfall</span>
+<span class="n">delta_vm</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">k_des</span> <span class="o">/</span> <span class="mf">0.54</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;|SWA| kin=</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta_kin</span><span class="p">)</span><span class="o">*</span><span class="n">STEER_RATIO</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg, &quot;</span>
       <span class="sa">f</span><span class="s2">&quot;VM~</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta_vm</span><span class="p">)</span><span class="o">*</span><span class="n">STEER_RATIO</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 <section id="project-knobs">
-<h2>Project knobs<a class="headerlink" href="#project-knobs" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Project knobs<a class="headerlink" href="#project-knobs" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>C++ <code class="docutils literal notranslate"><span class="pre">vehicle_model.h</span></code>, Python <code class="docutils literal notranslate"><span class="pre">scripts/core/vehicle_model.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span> <span class="pre">=</span> <span class="pre">0.64</span></code> (shipped)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — <strong>0.50 shipped</strong>, and the rest of this chapter is about how that number was
+arrived at, because the route to it is more useful than the value.</p></li>
 </ul>
 </section>
-<section id="pipeline-delay">
-<h2>Pipeline delay<a class="headerlink" href="#pipeline-delay" title="Ссылка на этот заголовок">#</a></h2>
-<p>Medians on healthy run <code class="docutils literal notranslate"><span class="pre">01_14_22</span></code>:</p>
+<section id="calibrating-one-coefficient-and-finding-out-it-cannot-be-one-coefficient">
+<h2>Calibrating one coefficient, and finding out it cannot be one coefficient<a class="headerlink" href="#calibrating-one-coefficient-and-finding-out-it-cannot-be-one-coefficient" title="Link to this heading">#</a></h2>
+<p>Here is where a course normally stops: you have a formula with one free parameter, you measure the ratio
+on a bag, you solve for the parameter. We did that. It produced a contradiction that took two runs and a
+third sensor to resolve, and the contradiction is the lesson.</p>
+<section id="the-contradiction">
+<h3>The contradiction<a class="headerlink" href="#the-contradiction" title="Link to this heading">#</a></h3>
+<p>Two independent sources disagreed about the <em>direction</em> of the correction:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
-<tr class="row-odd"><th class="head"><p>link</p></th>
-<th class="head text-right"><p>ms</p></th>
+<tr class="row-odd"><th class="head"><p>source</p></th>
+<th class="head"><p>says</p></th>
+<th class="head"><p>implies</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>capture → end of inference</p></td>
-<td class="text-right"><p>~62</p></td>
+<tr class="row-even"><td><p>our bag measurement</p></td>
+<td><p><span class="math notranslate nohighlight">\(\kappa_{\text{fact}}/\kappa_{\text{kin}} = 0.54\)</span> at 22 m/s</p></td>
+<td><p>understeer <strong>stronger</strong> than our shipped 0.64 assumes → lower the factor</p></td>
 </tr>
-<tr class="row-odd"><td><p>inference → publish lane_keep</p></td>
-<td class="text-right"><p>~7</p></td>
-</tr>
-<tr class="row-even"><td><p>command → rack angle</p></td>
-<td class="text-right"><p>~40</p></td>
-</tr>
-<tr class="row-odd"><td><p>rack → yaw rate</p></td>
-<td class="text-right"><p>~120</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>sum</strong></p></td>
-<td class="text-right"><p><strong>~230</strong></p></td>
+<tr class="row-odd"><td><p>comma’s <code class="docutils literal notranslate"><span class="pre">liveParameters</span></code>, learned on <strong>this same car</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">tireStiffnessFactor</span></code> = 1.319 ± 0.007</p></td>
+<td><p>understeer <strong>weaker</strong> → raise it, by a factor of two</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span> <span class="pre">=</span> <span class="pre">0.35</span></code> <span class="math notranslate nohighlight">\(&gt; 0.23\)</span>: covers transport <strong>and</strong> dynamics.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">v</span> <span class="o">=</span> <span class="mf">22.0</span>  <span class="c1"># m/s</span>
-<span class="k">for</span> <span class="n">delay</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.23</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;delay </span><span class="si">{</span><span class="n">delay</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s → </span><span class="si">{</span><span class="n">v</span><span class="o">*</span><span class="n">delay</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m of travel&quot;</span><span class="p">)</span>
-<span class="c1"># 0.23 → 5.1 m,  0.35 → 7.7 m</span>
+<p>Both cannot be right, and neither could be dismissed: their estimator ran for hours on our roads with a
+tiny spread, and our measurement was straightforward arithmetic on our own logs.</p>
+</section>
+<section id="how-it-was-resolved-find-a-third-sensor">
+<h3>How it was resolved: find a third sensor<a class="headerlink" href="#how-it-was-resolved-find-a-third-sensor" title="Link to this heading">#</a></h3>
+<p>The suspect was the input the two calculations share and neither validates — the yaw rate. Ours comes from
+the car’s ESP sensor over CAN. If that sensor were scaled, our 0.54 would be wrong by exactly that scale
+and the argument would be over.</p>
+<p>So: compare it against two other things that measure the same physical quantity.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Three sensors, one quantity. Ratios measured on run 2026_08_04_21_00_18.</span>
+<span class="n">PAIRS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;phone gyro / ESP&quot;</span><span class="p">:</span> <span class="mf">1.017</span><span class="p">,</span> <span class="s2">&quot;camera odometry / ESP&quot;</span><span class="p">:</span> <span class="mf">0.849</span><span class="p">,</span> <span class="s2">&quot;camera odometry / gyro&quot;</span><span class="p">:</span> <span class="mf">0.788</span><span class="p">}</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">ratio</span> <span class="ow">in</span> <span class="n">PAIRS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;24</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">ratio</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Two physically independent sensors — a MEMS gyro and a wheel-based ESP unit — agree to 1.7 %,&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;with no dependence on speed. The camera is the outlier against both, consistently, and by&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;roughly the amount its own metric scale is off (0.888). So the ESP yaw rate is sound, and the&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;0.54 measurement stands.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That closed the question in the only way it could be closed: not by arguing about which estimator is
+better, but by adding a measurement that makes one of them checkable. Until that ran,
+<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> was frozen — deliberately, because moving a coefficient while its own input is
+under suspicion produces a number that fits one run and nothing else.</p>
+<div class="tip admonition">
+<p class="admonition-title">The general move</p>
+<p>When two estimates of a parameter disagree, do not average them and do not pick the more authoritative
+source. Find the input they share and measure it against something outside both.</p>
+</div>
+</section>
+<section id="what-the-change-actually-bought">
+<h3>What the change actually bought<a class="headerlink" href="#what-the-change-actually-bought" title="Link to this heading">#</a></h3>
+<p>With the input validated, the factor moved 0.64 → 0.50 and the next drive was measured on the same road:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>before (0.64)</p></th>
+<th class="head"><p>after (0.50)</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>left arc, total offset</p></td>
+<td><p>+0.30 m</p></td>
+<td><p><strong>+0.23 m</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>left arc, tracking error</p></td>
+<td><p>+0.29 m</p></td>
+<td><p><strong>+0.21 m</strong></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">understeer_command</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v_ms</span><span class="p">,</span> <span class="n">stiffness_factor</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.636</span><span class="p">,</span> <span class="n">ratio</span><span class="o">=</span><span class="mf">15.7</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Feedforward with the understeer term, in steering-wheel degrees.&quot;&quot;&quot;</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="mf">0.0015</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">stiffness_factor</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">kappa</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">K</span> <span class="o">*</span> <span class="n">v_ms</span> <span class="o">*</span> <span class="n">v_ms</span><span class="p">))</span> <span class="o">*</span> <span class="n">ratio</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;radius&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;speed&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;tsf 0.64&#39;</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;tsf 0.50&#39;</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;change&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">radius</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">231.0</span><span class="p">,</span> <span class="mf">13.6</span><span class="p">),</span> <span class="p">(</span><span class="mf">150.0</span><span class="p">,</span> <span class="mf">13.8</span><span class="p">),</span> <span class="p">(</span><span class="mf">134.0</span><span class="p">,</span> <span class="mf">11.8</span><span class="p">),</span> <span class="p">(</span><span class="mf">123.0</span><span class="p">,</span> <span class="mf">13.8</span><span class="p">)):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">understeer_command</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">radius</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="mf">0.64</span><span class="p">)</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">understeer_command</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">radius</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="mf">0.50</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">radius</span><span class="si">:</span><span class="s2">&gt;6.0f</span><span class="si">}</span><span class="s2"> m </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">a</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">b</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;+7.1f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note the size of it: <strong>3 to 9 % more steering angle</strong>. A trim, not a lever — and it removed a quarter of
+the tracking error. That is a good ratio of effect to intervention, and it is also the warning sign: if a
+3 % change in the command moves the outcome by 25 %, the loop is operating close to a limit.</p>
+</section>
+<section id="why-this-cannot-end-with-a-constant">
+<h3>Why this cannot end with a constant<a class="headerlink" href="#why-this-cannot-end-with-a-constant" title="Link to this heading">#</a></h3>
+<p>It ends here because the ratio itself is not constant:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>speed</p></th>
+<th class="head"><p>measured ratio</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>6–9 m/s</p></td>
+<td><p>0.97</p></td>
+</tr>
+<tr class="row-odd"><td><p>12–15 m/s</p></td>
+<td><p>0.80</p></td>
+</tr>
+<tr class="row-even"><td><p>21–26 m/s</p></td>
+<td><p>0.54</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>A single <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> fits one row. Pick it for the city and the highway under-commands; pick it
+for the highway and city arcs get cut. And 0.50 was measured to be right on urban arcs but made a
+<strong>replayed</strong> urban arc worse (−0.44 → −0.52 m), which is the kind of split you get when one parameter is
+carrying two jobs.</p>
+<p>The structural answer is to stop fitting a constant and estimate the parameters continuously, with the
+<span class="math notranslate nohighlight">\(v^2\)</span> dependence in the observation model rather than baked into a number. That is what upstream’s
+<code class="docutils literal notranslate"><span class="pre">paramsd</span></code> does — a nine-state filter over stiffness, steer ratio, two steering biases and road grade —
+and it is on this project’s list. The prerequisite it needs, and we do not yet have, is an estimate of
+<strong>road roll</strong>: a banked road produces the same lateral signature as an understeering car, and no amount of
+yaw-rate accuracy separates them.</p>
+</section>
+</section>
+<section id="pipeline-delay-and-why-the-compensation-exceeds-the-measurement">
+<h2>Pipeline delay, and why the compensation exceeds the measurement<a class="headerlink" href="#pipeline-delay-and-why-the-compensation-exceeds-the-measurement" title="Link to this heading">#</a></h2>
+<p>The second thing the feedforward has to know is that its picture of the road is old. Medians measured on a
+28-minute night run:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>link</p></th>
+<th class="head text-right"><p>ms</p></th>
+<th class="head"><p>measured how</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>capture → model output</p></td>
+<td class="text-right"><p>54</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">infer_ts</span> <span class="pre">−</span> <span class="pre">capture_ts</span></code> in <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>model output → steering command</p></td>
+<td class="text-right"><p>21</p></td>
+<td><p>to the <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> publish</p></td>
+</tr>
+<tr class="row-even"><td><p>panda CAN transmit</p></td>
+<td class="text-right"><p>~10</p></td>
+<td><p>its own 10 ms timer, not stamped</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>to the wire</strong></p></td>
+<td class="text-right"><p><strong>~89</strong></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p>command → rack angle</p></td>
+<td class="text-right"><p>~40</p></td>
+<td><p>EPS response, from CAN</p></td>
+</tr>
+<tr class="row-odd"><td><p>rack → yaw rate</p></td>
+<td class="text-right"><p>~120</p></td>
+<td><p>vehicle dynamics</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>to yaw rate</strong></p></td>
+<td class="text-right"><p><strong>~250</strong></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span> <span class="pre">=</span> <span class="pre">0.35</span></code> is deliberately larger than any of those sums, and the reason is worth stating
+because it looks like sloppiness. The first three rows are <em>transport</em> — pure dead time, and a lookahead
+compensates them exactly. The last two are <em>dynamics</em>: a first-order-ish response, where compensating with
+its nominal time constant leaves no margin for the response being slower than nominal on a cold rack, a
+worn tyre, or a rough surface. Under-compensating drifts; over-compensating oscillates, and the loop
+tolerates the first far better than the second.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">V</span> <span class="o">=</span> <span class="mf">22.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;delay&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;travel at 22 m/s&#39;</span><span class="si">:</span><span class="s2">&gt;18</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;what it covers&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">delay</span><span class="p">,</span> <span class="n">what</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">0.089</span><span class="p">,</span> <span class="s2">&quot;to the wire&quot;</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="s2">&quot;to yaw rate&quot;</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.35</span><span class="p">,</span> <span class="s2">&quot;shipped lookahead&quot;</span><span class="p">)):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">delay</span><span class="si">:</span><span class="s2">&gt;7.3f</span><span class="si">}</span><span class="s2">s </span><span class="si">{</span><span class="n">V</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">delay</span><span class="si">:</span><span class="s2">&gt;15.2f</span><span class="si">}</span><span class="s2"> m   </span><span class="si">{</span><span class="n">what</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The car covers 7.7 m during the shipped lookahead. On a 130 m arc that is 3.4 deg of&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;heading, which is why the lookahead is a feedforward input and not a tuning nicety.&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="warning admonition">
@@ -583,9 +750,9 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
 </div>
 </section>
 <section id="exercise">
-<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
-<li><p>Run the synthetic <code class="docutils literal notranslate"><span class="pre">ratio_kin_vs_fact</span></code> snippet; change <code class="docutils literal notranslate"><span class="pre">0.61</span></code> to <code class="docutils literal notranslate"><span class="pre">0.99</span></code> and see SWA inflation vanish.</p></li>
+<li><p>Run the synthetic <code class="docutils literal notranslate"><span class="pre">ratio_kin_vs_fact</span></code> snippet; change <code class="docutils literal notranslate"><span class="pre">0.54</span></code> to <code class="docutils literal notranslate"><span class="pre">0.99</span></code> and see the SWA inflation vanish.</p></li>
 <li><p>On a bag with driver steering, plot ratio by <span class="math notranslate nohighlight">\(v\)</span> bins; compare to the table.</p></li>
 <li><p>Argue in one sentence why cutting <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> to <span class="math notranslate nohighlight">\(0.23\)</span> can still hurt closed loop.</p></li>
 </ol>
@@ -627,18 +794,18 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
 <div class="prev-next-area">
     <a class="left-prev"
        href="PurePursuit.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Pure Pursuit</p>
       </div>
     </a>
     <a class="right-next"
        href="MPC_and_FP.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">MPC and fp</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -657,7 +824,7 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -665,7 +832,14 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#simple-understeer-formula">Simple understeer formula</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#measurement-recipe-bag">Measurement recipe (bag)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#project-knobs">Project knobs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-delay">Pipeline delay</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#calibrating-one-coefficient-and-finding-out-it-cannot-be-one-coefficient">Calibrating one coefficient, and finding out it cannot be one coefficient</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-contradiction">The contradiction</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#how-it-was-resolved-find-a-third-sensor">How it was resolved: find a third sensor</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-change-actually-bought">What the change actually bought</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-this-cannot-end-with-a-constant">Why this cannot end with a constant</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline-delay-and-why-the-compensation-exceeds-the-measurement">Pipeline delay, and why the compensation exceeds the measurement</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
 </ul>
   </nav></div>
@@ -681,7 +855,7 @@ The vehicle model <strong>scales the command up</strong> so the mental bicycle m
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

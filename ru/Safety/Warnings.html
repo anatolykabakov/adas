@@ -1,0 +1,882 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Предупреждения: FCW, AEB, LDW &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Safety/Warnings';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Калибровка камеры" href="../Calibration/Overview.html" />
+    <link rel="prev" title="MPC и fp" href="../Control/MPC_and_FP.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Safety/Warnings.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Предупреждения: FCW, AEB, LDW</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Что здесь означают сокращения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Путь данных</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Как эти правила получились: три круга ошибок</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Круг 1: ускорение как признак опасности</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Круг 2: цель, которой ещё нет</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Круг 3: предупреждение о самих себе</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fcw-aeb">Математика продольной угрозы (FCW / AEB)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#y">Почему важен <span class="math notranslate nohighlight">\(y\)</span> относительно пути</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ldw">Математика поперечного LDW</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#warninglatch">Антидребезг (<code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Блок конфига</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как воспроизвести и проверить</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Задания</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="fcw-aeb-ldw">
+<h1>Предупреждения: FCW, AEB, LDW<a class="headerlink" href="#fcw-aeb-ldw" title="Ссылка на этот заголовок">#</a></h1>
+<p>Сервис <strong><code class="docutils literal notranslate"><span class="pre">safety_warn</span></code></strong> поднимает <strong>только иконки и текст на экране</strong> — он <strong>не</strong> тормозит и не рулит.
+Это сделано намеренно: студенты изучают логику угроз без риска актуации.</p>
+<p>Основной инженерный документ: <code class="docutils literal notranslate"><span class="pre">docs/SAFETY_WARN.md</span></code>.
+Код: <code class="docutils literal notranslate"><span class="pre">safety_planner.hpp</span></code>, <code class="docutils literal notranslate"><span class="pre">safety_warn_service.cpp</span></code>, тесты <code class="docutils literal notranslate"><span class="pre">test_safety_warn.cpp</span></code>.</p>
+<section id="id1">
+<h2>Что здесь означают сокращения<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>флаг</p></th>
+<th class="head"><p>смысл в этом проекте</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>FCW</strong></p></td>
+<td><p>предупреждение о фронтальном столкновении — «вы сближаетесь слишком быстро»</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>AEB</strong></p></td>
+<td><p>более сильная фронтальная угроза (на экране красное <code class="docutils literal notranslate"><span class="pre">BRAKE!</span></code>) — <strong>автоторможения в нашем стеке всё равно нет</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>LLDW / RLDW</strong></p></td>
+<td><p>предупреждение о выходе из полосы влево / вправо</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>AEB перебивает FCW, когда сработали бы оба.</p>
+</section>
+<section id="id2">
+<h2>Путь данных<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>vision/lanes (Java) → TopicConvert → vision/path   ─┐
+vision/model_long (lead0, …)                       ─┼→ SafetyWarnService @ 50 ms
+vehicle/chassis (v, blinker, steering_pressed)     ─┘
+        → safety/warn → ZMQ OUT → HUD / bag
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Примечание</p>
+<p><code class="docutils literal notranslate"><span class="pre">LongPlanService</span></code> тоже может читать <code class="docutils literal notranslate"><span class="pre">model_long</span></code> для желаемого ускорения в духе ACC.
+Предупреждения этим ускорением IDM <strong>больше не пользуются</strong> — оно ложно срабатывало на пустом шоссе.</p>
+</div>
+</section>
+<section id="id3">
+<h2>Как эти правила получились: три круга ошибок<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Ничто в этой главе не спроектировано на бумаге. Каждое правило заменило более простое, которое срабатывало
+там, где опасности не было, и последовательность стоит проследить: поломки поучительнее формул.</p>
+<section id="id4">
+<h3>Круг 1: ускорение как признак опасности<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Первая версия поднимала FCW, когда желаемое ускорение IDM падало ниже −3 м/с², а AEB — ниже −5. Звучало
+разумно: хотим сильно тормозить — значит впереди опасность.</p>
+<p>Это неверно, потому что в ускорении IDM есть слагаемые, не имеющие отношения к машине впереди.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">idm_accel</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">v_lim</span><span class="p">,</span> <span class="n">gap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v_lead</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">s0</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">expn</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Treiber IDM. The free-road term alone can demand hard braking with nothing in front.&quot;&quot;&quot;</span>
+    <span class="n">free</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_ego</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">v_lim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span> <span class="o">**</span> <span class="n">expn</span>
+    <span class="n">inter</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">gap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">v_lead</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dv</span> <span class="o">=</span> <span class="n">v_ego</span> <span class="o">-</span> <span class="n">v_lead</span>
+        <span class="n">s_star</span> <span class="o">=</span> <span class="n">s0</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">v_ego</span> <span class="o">*</span> <span class="n">T</span> <span class="o">+</span> <span class="n">v_ego</span> <span class="o">*</span> <span class="n">dv</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">a_max</span> <span class="o">*</span> <span class="n">b</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">))</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="p">(</span><span class="n">s_star</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">gap</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">a_max</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">free</span> <span class="o">-</span> <span class="n">inter</span><span class="p">)</span>
+
+<span class="n">MU_G</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">9.81</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;situation&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;a_idm&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">  would fire?&quot;</span><span class="p">)</span>
+<span class="c1"># Empty road, over the assumed limit</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;empty road at 37 m/s, limit 27.8&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">37.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+<span class="c1"># Empty arc: the curvature speed limit becomes v_lim</span>
+<span class="n">v_lim_arc</span> <span class="o">=</span> <span class="p">(</span><span class="n">MU_G</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">50.0</span><span class="p">))</span> <span class="o">**</span> <span class="mf">0.5</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;empty R=50 m arc at 22 m/s&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">22.0</span><span class="p">,</span><span class="w"> </span><span class="n">v_lim_arc</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+<span class="c1"># An actual lead car, closing</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;lead 15 m ahead at 13 m/s, we do 20&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0</span><span class="p">,</span><span class="w"> </span><span class="mf">13.0</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>В первых двух строках нет никакой машины. И пустая дорога выше предполагаемого ограничения, и пустой крутой
+поворот требуют сильного торможения, и оба раньше зажигали предупреждение о столкновении. Урок обобщается за
+пределы этого проекта: <strong>желаемый выход контроллера не является сигналом опасности.</strong> В нём лежит всё, что
+контроллеру важно, а предупреждение должно строиться из самой угрозы.</p>
+<p>Поэтому правило стало основанным на угрозе — время до столкновения и требуемое замедление, вычисленные по
+цели, которая существует, — а ускорение IDM осталось в сообщении только как отладочное поле.</p>
+</section>
+<section id="id5">
+<h3>Круг 2: цель, которой ещё нет<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
+<p>Вторая версия брала самый вероятный из <code class="docutils literal notranslate"><span class="pre">lead0</span></code>, <code class="docutils literal notranslate"><span class="pre">lead1</span></code>, <code class="docutils literal notranslate"><span class="pre">lead2</span></code>. Это не три кандидата в машины: <code class="docutils literal notranslate"><span class="pre">lead1</span></code> и
+<code class="docutils literal notranslate"><span class="pre">lead2</span></code> — предсказания модели о лидере <strong>на +2 с и +4 с</strong>. Предупреждать о машине, которая по мнению модели
+окажется там через четыре секунды, — это другой продукт.</p>
+<p>Исправлено переходом только на <code class="docutils literal notranslate"><span class="pre">lead0</span></code>. Отмечаю это отдельно, потому что тот же дефект прожил в продольном
+планировщике ещё два месяца и нашёлся только когда планировщику дали действовать.</p>
+</section>
+<section id="id6">
+<h3>Круг 3: предупреждение о самих себе<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
+<p>С правилами по угрозе и с верной целью 23-минутный ночной заезд всё равно дал 5 фронтальных и 7 полосных
+предупреждений, все ложные. Две разные причины, и обе видны только в измерении:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>класс</p></th>
+<th class="head"><p>что сказали числа</p></th>
+<th class="head"><p>какой гейт появился</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>фронтальные</p></td>
+<td><p>все 5 эпизодов — движение в пробке: медиана 4.7 м/с, максимум 8.5. Худший случай 4.3 м/с при почти стоящем лидере в 9.5 м — арифметически TTC 1.9 с, на практике тривиально</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">warn_min_speed_ms</span></code> 3 → 8 м/с</p></td>
+</tr>
+<tr class="row-odd"><td><p>полосные</p></td>
+<td><p>из 144 кадров LDW <strong>82 % были при включённом своём поперечном управлении</strong>, а водитель рулил лишь в 6 %. |CTE| 0.54 м при сносе 0.15 м/с</p></td>
+<td><p>подавлять LDW, пока рулим сами (<code class="docutils literal notranslate"><span class="pre">ldw_suppress_on_lat_active</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Вторая причина — интереснее. LDW существует, чтобы предупреждать <em>сносящего водителя</em>. С включённым
+ассистентом смещение, которое он измеряет, — это собственная ошибка слежения ассистента на дуге; система
+предупреждала о себе, и делала это в 82 % случаев, когда открывала рот.</p>
+<div class="warning admonition">
+<p class="admonition-title">Дефолт в заголовке — ещё не решение</p>
+<p>Скоростной гейт выше был поднят в коде и <strong>не</strong> в <code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code>, а тот держит своё значение и
+перебивает. Поэтому правка оказалась мёртвой, и следующий заезд воспроизвёл те же три ложных срабатывания на
+4.8–5.5 м/с. Теперь три теста проверяют, что поставляемый конфиг соответствует решениям, принятым на дороге, а
+сборка отказывается компилировать конфиг, который не разбирается.</p>
+</div>
+</section>
+</section>
+<section id="fcw-aeb">
+<h2>Математика продольной угрозы (FCW / AEB)<a class="headerlink" href="#fcw-aeb" title="Ссылка на этот заголовок">#</a></h2>
+<p>Нужен <strong>присутствующий лидер</strong> (только <code class="docutils literal notranslate"><span class="pre">lead0</span></code>, не будущие гипотезы lead1/2):</p>
+<ul class="simple">
+<li><p>вероятность ≥ <code class="docutils literal notranslate"><span class="pre">lead_prob_thresh</span></code> (0.5);</p></li>
+<li><p>дистанция <span class="math notranslate nohighlight">\(d\)</span> в диапазоне <span class="math notranslate nohighlight">\((1,\ 150)\)</span> м;</p></li>
+<li><p>своя скорость <span class="math notranslate nohighlight">\(v \ge\)</span> <code class="docutils literal notranslate"><span class="pre">warn_min_speed_ms</span></code> (<strong>8 м/с</strong> — поднято с 3 после ложных срабатываний в пробке из круга 3);</p></li>
+<li><p>лидер примерно <strong>на нашем пути</strong>: <span class="math notranslate nohighlight">\(|y_{\mathrm{lead}} - y_{\mathrm{path}}(d)| \le\)</span> <code class="docutils literal notranslate"><span class="pre">lead_max_offset_m</span></code>;</p></li>
+<li><p>сближение: <span class="math notranslate nohighlight">\(\Delta v = v - v_{\mathrm{lead}} \ge\)</span> <code class="docutils literal notranslate"><span class="pre">min_closing_speed_ms</span></code>.</p></li>
+</ul>
+<p>Тогда</p>
+<div class="math notranslate nohighlight">
+\[
+\mathrm{ttc} = \frac{\mathrm{gap}}{\Delta v},
+\qquad
+a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
+\]</div>
+<p>С поставляемыми порогами:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head text-right"><p>TTC</p></th>
+<th class="head text-right"><p>требуемое замедление</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>FCW</p></td>
+<td class="text-right"><p><span class="math notranslate nohighlight">\(\le 2.5\)</span> с</p></td>
+<td class="text-right"><p>или <span class="math notranslate nohighlight">\(a_{\mathrm{req}} \ge 3.5\)</span> м/с²</p></td>
+</tr>
+<tr class="row-odd"><td><p>AEB</p></td>
+<td class="text-right"><p><span class="math notranslate nohighlight">\(\le 1.4\)</span> с</p></td>
+<td class="text-right"><p>или <span class="math notranslate nohighlight">\(a_{\mathrm{req}} \ge 5.5\)</span> м/с²</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">forward_warning</span><span class="p">(</span><span class="n">gap_m</span><span class="p">,</span> <span class="n">v_ego</span><span class="p">,</span> <span class="n">v_lead</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                    <span class="n">min_close</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">fcw_ttc</span><span class="o">=</span><span class="mf">2.5</span><span class="p">,</span> <span class="n">aeb_ttc</span><span class="o">=</span><span class="mf">1.4</span><span class="p">,</span>
+                    <span class="n">fcw_a</span><span class="o">=</span><span class="mf">3.5</span><span class="p">,</span> <span class="n">aeb_a</span><span class="o">=</span><span class="mf">5.5</span><span class="p">):</span>
+    <span class="n">dv</span> <span class="o">=</span> <span class="n">v_ego</span> <span class="o">-</span> <span class="n">v_lead</span>
+    <span class="k">if</span> <span class="n">gap_m</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">or</span> <span class="n">dv</span> <span class="o">&lt;</span> <span class="n">min_close</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+    <span class="n">ttc</span> <span class="o">=</span> <span class="n">gap_m</span> <span class="o">/</span> <span class="n">dv</span>
+    <span class="n">a_req</span> <span class="o">=</span> <span class="p">(</span><span class="n">dv</span> <span class="o">*</span> <span class="n">dv</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">gap_m</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ttc</span> <span class="o">&lt;=</span> <span class="n">aeb_ttc</span> <span class="ow">or</span> <span class="n">a_req</span> <span class="o">&gt;=</span> <span class="n">aeb_a</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;AEB&quot;</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
+    <span class="k">if</span> <span class="n">ttc</span> <span class="o">&lt;=</span> <span class="n">fcw_ttc</span> <span class="ow">or</span> <span class="n">a_req</span> <span class="o">&gt;=</span> <span class="n">fcw_a</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;FCW&quot;</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
+    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
+
+<span class="c1"># Slow close from 30 m at 5 m/s relative</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">forward_warning</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">))</span>
+<span class="c1"># Fast close — expect AEB</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">forward_warning</span><span class="p">(</span><span class="mf">12.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">))</span>
+<span class="c1"># Not closing</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">forward_warning</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">16.0</span><span class="p">))</span>
+</pre></div>
+</div>
+<section id="y">
+<h3>Почему важен <span class="math notranslate nohighlight">\(y\)</span> относительно пути<a class="headerlink" href="#y" title="Ссылка на этот заголовок">#</a></h3>
+<p>На дуге машина впереди <strong>в вашей же</strong> полосе имеет ненулевой <span class="math notranslate nohighlight">\(y\)</span> в системе машины.
+Сравнение с <strong>осью</strong> ложно даёт «соседняя полоса». Сравнение с <span class="math notranslate nohighlight">\(y_{\mathrm{path}}(d)\approx \mathrm{CTE}+\tfrac12\kappa d^2\)</span> удерживает вашего собственного лидера в полосе.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">cte</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">kappa</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">cte</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span>
+
+<span class="n">d</span><span class="p">,</span> <span class="n">y_lead</span> <span class="o">=</span> <span class="mf">25.0</span><span class="p">,</span> <span class="mf">0.8</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;in path?&quot;</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y_lead</span> <span class="o">-</span> <span class="n">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="mf">2.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="ldw">
+<h2>Математика поперечного LDW<a class="headerlink" href="#ldw" title="Ссылка на этот заголовок">#</a></h2>
+<p>Гейты (все обязательны, если не сказано иное):</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(v \ge\)</span> <code class="docutils literal notranslate"><span class="pre">ldw_min_speed_ms</span></code> (12.5 м/с ≈ 45 км/ч);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lane_anchored</span></code> — путь построен по <strong>двум</strong> правдоподобным линиям разметки;</p></li>
+<li><p>поворотник с этой стороны выключен (<code class="docutils literal notranslate"><span class="pre">ldw_suppress_on_blinker</span></code>);</p></li>
+<li><p>водитель не держит руль, если <code class="docutils literal notranslate"><span class="pre">ldw_suppress_on_driver_steer</span></code>;</p></li>
+<li><p><strong>мы не рулим сами</strong> (<code class="docutils literal notranslate"><span class="pre">ldw_suppress_on_lat_active</span></code>) — 82 % ложных полосных предупреждений были измерением собственной ошибки слежения ассистента на дуге.</p></li>
+</ul>
+<p>Тогда срабатывает, если</p>
+<div class="math notranslate nohighlight">
+\[
+|\mathrm{CTE}| &gt; 0.5~\mathrm{м}
+\ \textbf{и}\
+\text{скорость наружу} &gt; 0.05~\mathrm{м/с}
+\quad\textbf{или}\quad
+|\mathrm{CTE}| &gt; 0.8~\mathrm{м}.
+\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">ldw</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">cte_rate</span><span class="p">,</span> <span class="n">side_right</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+        <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span> <span class="n">anchored</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">blinker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">hands_on</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="mf">12.5</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">anchored</span> <span class="ow">or</span> <span class="n">hands_on</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="n">blinker</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">outward</span> <span class="o">=</span> <span class="p">(</span><span class="n">cte_rate</span> <span class="o">&gt;</span> <span class="mf">0.05</span><span class="p">)</span> <span class="k">if</span> <span class="n">side_right</span> <span class="k">else</span> <span class="p">(</span><span class="n">cte_rate</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="c1"># simplify: |cte| with outward OR hard threshold</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span> <span class="ow">and</span> <span class="n">outward</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.8</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hold offset in arc:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>   <span class="c1"># False (no outward rate)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;drifting out:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>         <span class="c1"># True</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hard offset:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>           <span class="c1"># True</span>
+</pre></div>
+</div>
+<p>Старое правило «просто <span class="math notranslate nohighlight">\(|cte|&gt;0.5\)</span>» давало <strong>сотни</strong> ложных эпизодов на городских бегах; LDW с гейтами их убрал — см. <code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code>.</p>
+</section>
+<section id="warninglatch">
+<h2>Антидребезг (<code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>)<a class="headerlink" href="#warninglatch" title="Ссылка на этот заголовок">#</a></h2>
+<p>Тик — 50 мс. Поднимаем после <strong>3</strong> истинных тиков (150 мс); снимаем после <strong>10</strong> ложных (500 мс).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Latch</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">set_n</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">hold_n</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hold_n</span> <span class="o">=</span> <span class="n">set_n</span><span class="p">,</span> <span class="n">hold_n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">raw</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">on</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">hold_n</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_n</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">on</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">on</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">on</span>
+
+<span class="n">L</span> <span class="o">=</span> <span class="n">Latch</span><span class="p">()</span>
+<span class="n">seq</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># spikes then quiet start</span>
+<span class="nb">print</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">bool</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>(Настоящая семантика защёлки — в <code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>, истина в тестах; этот набросок показывает, <em>зачем</em> антидребезг нужен.)</p>
+</section>
+<section id="id7">
+<h2>Блок конфига<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">config.json</span></code> → <code class="docutils literal notranslate"><span class="pre">safety_warn</span></code>:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;fcw_ttc_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span>
+<span class="nt">&quot;aeb_ttc_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.4</span><span class="p">,</span>
+<span class="nt">&quot;fcw_decel_ms2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">3.5</span><span class="p">,</span>
+<span class="nt">&quot;aeb_decel_ms2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.5</span><span class="p">,</span>
+<span class="nt">&quot;warn_min_speed_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span>
+<span class="nt">&quot;cte_ldw_threshold_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="nt">&quot;cte_ldw_hard_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="p">,</span>
+<span class="nt">&quot;ldw_min_speed_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">12.5</span><span class="p">,</span>
+<span class="nt">&quot;ldw_suppress_on_lat_active&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="nt">&quot;warn_set_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="nt">&quot;warn_hold_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+</pre></div>
+</div>
+<p>Два из этих значений — результат круга 3 выше, и оба лежат в поставляемом конфиге, а не только в дефолтах
+заголовка: дефолт, который конфиг перебивает, решением не является, — именно так скоростной гейт двое суток
+оставался мёртвым.</p>
+<p>Переключатель узла: <code class="docutils literal notranslate"><span class="pre">nodes.safety_warn:</span> <span class="pre">true</span></code>.</p>
+</section>
+<section id="id8">
+<h2>Как воспроизвести и проверить<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<p><strong>Юнит-тесты</strong> (без телефона):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./scripts/docker.sh<span class="w"> </span>tests
+<span class="c1"># или отфильтровать: test_safety_warn</span>
+</pre></div>
+</div>
+<p><strong>Эпизоды по бегу</strong> (настоящая цепочка Java→конвертация→сервис через <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>app/src/main/scripts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>app/src/main/scripts/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
+</pre></div>
+</div>
+<p>Сообщайте <strong>эпизоды</strong>, а не сырые количества кадров.</p>
+<div class="admonition warning">
+<p class="admonition-title">Предупреждение</p>
+<p>Во многих дорожных бегах нет пригодного <code class="docutils literal notranslate"><span class="pre">vision/model_long</span></code> → FCW и AEB молчат. LDW всё равно нужны <code class="docutils literal notranslate"><span class="pre">lane_anchored</span></code> и скорость.</p>
+</div>
+</section>
+<section id="id9">
+<h2>Задания<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Прогоните примеры <code class="docutils literal notranslate"><span class="pre">forward_warning</span></code>; найдите пару <code class="docutils literal notranslate"><span class="pre">(gap,</span> <span class="pre">Δv)</span></code>, которая даёт FCW, но не AEB.</p></li>
+<li><p>Объясните одним предложением, почему ускорение IDM было плохим триггером для FCW.</p></li>
+<li><p>По бегу прогоните <code class="docutils literal notranslate"><span class="pre">bag_safety_warn.py</span></code> и запишите количества эпизодов LDW / FCW / AEB плюс темп зрения.</p></li>
+</ol>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка камеры</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Safety"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../Control/MPC_and_FP.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">MPC и fp</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Calibration/Overview.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Калибровка камеры</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Что здесь означают сокращения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Путь данных</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Как эти правила получились: три круга ошибок</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Круг 1: ускорение как признак опасности</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Круг 2: цель, которой ещё нет</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Круг 3: предупреждение о самих себе</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fcw-aeb">Математика продольной угрозы (FCW / AEB)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#y">Почему важен <span class="math notranslate nohighlight">\(y\)</span> относительно пути</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ldw">Математика поперечного LDW</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#warninglatch">Антидребезг (<code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Блок конфига</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как воспроизвести и проверить</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Задания</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

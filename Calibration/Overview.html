@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Calibration/Overview';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="Latency and Thermal" href="../Latency/Overview.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Three calibrations, not one: intrinsics, vanishing point, model warp" href="IntrinsicsAndWarp.html" />
     <link rel="prev" title="Warnings: FCW, AEB, LDW" href="../Safety/Warnings.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Calibration/Overview.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,12 +398,14 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-shipped-config">Prior (shipped config)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-calibration">Online calibration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-degree-of-error-actually-costs">What a degree of error actually costs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-is-not-the-fix-it-looks-like">Persisting the estimate is not the fix it looks like</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#causal-chain-bias-cte">Causal chain (bias → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#practice">Practice</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-bags-can-and-cannot-measure">What bags can and cannot measure</a></li>
@@ -417,14 +422,20 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="camera-calibration">
-<h1>Camera Calibration<a class="headerlink" href="#camera-calibration" title="Ссылка на этот заголовок">#</a></h1>
+<h1>Camera Calibration<a class="headerlink" href="#camera-calibration" title="Link to this heading">#</a></h1>
 <p>Supercombo’s <strong>input warp</strong> depends on camera extrinsics (roll / pitch / yaw and mounting position).
 A few degrees of pitch error do not “look dramatic” in the HUD, but they bias the network input and show up as <strong>systematic CTE</strong> — the car sits habitually left or right of center even when the controller is healthy.</p>
 <p>This is the Phone ADAS analogue of AAD’s vanishing-point calibration chapter: we still care about extrinsics, but the main live path is the <strong>model odometry head</strong> rather than a chessboard every drive.</p>
 <p>Camera RPY for Supercombo is <strong>not</strong> vehicle ENU pose. The same <code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> prior also seeds
 phone IMU mount rotation — see <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a>.</p>
+<div class="note admonition">
+<p class="admonition-title">This chapter is the map; the next one is the mechanism</p>
+<p><a class="reference internal" href="IntrinsicsAndWarp.html"><span class="std std-doc">Three calibrations, not one</span></a> works through the intrinsics measurement, the online
+vanishing-point estimator and the model warp with runnable code and the measured numbers. Read this page for
+why calibration shows up as a control symptom, and that one for how each piece actually works.</p>
+</div>
 <section id="prior-shipped-config">
-<h2>Prior (shipped config)<a class="headerlink" href="#prior-shipped-config" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Prior (shipped config)<a class="headerlink" href="#prior-shipped-config" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">config.json</span></code> → <code class="docutils literal notranslate"><span class="pre">calibration.camera</span></code>:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">position_m</span></code> — camera in <strong>ISO vehicle</strong> frame (see <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">Coordinates</span></a>);</p></li>
@@ -433,7 +444,7 @@ phone IMU mount rotation — see <a class="reference internal" href="../Localiza
 <p>Example rig numbers (order of magnitude): ~0.1 m left of centerline, pitch <span class="math notranslate nohighlight">\(\approx -1.8°\)</span>, yaw <span class="math notranslate nohighlight">\(\approx 0.5°\)</span>. These are <strong>starting guesses</strong>, not ground truth forever.</p>
 </section>
 <section id="online-calibration">
-<h2>Online calibration<a class="headerlink" href="#online-calibration" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Online calibration<a class="headerlink" href="#online-calibration" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">CameraCalibService</span></code> consumes <code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> (and optionally lane UV) and publishes <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code>.
 On success / sufficient confidence, Java updates the warp used by the next Supercombo inputs.</p>
 <div class="warning admonition">
@@ -441,8 +452,70 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 <p>Roll often stays near <span class="math notranslate nohighlight">\(0\)</span> in live estimates. Treat large roll swings as suspicious; do not “tune LK” to compensate a broken roll state.</p>
 </div>
 </section>
+<section id="what-a-degree-of-error-actually-costs">
+<h2>What a degree of error actually costs<a class="headerlink" href="#what-a-degree-of-error-actually-costs" title="Link to this heading">#</a></h2>
+<p>The reason extrinsics matter more than they look is pure geometry: an angular error becomes a lateral
+error that grows with distance. A yaw error <span class="math notranslate nohighlight">\(\Delta\psi\)</span> puts a point at range <span class="math notranslate nohighlight">\(d\)</span> off by
+<span class="math notranslate nohighlight">\(d\tan\Delta\psi\)</span>, and a pitch error <span class="math notranslate nohighlight">\(\Delta\theta\)</span> moves the apparent ground intersection, which for a
+camera at height <span class="math notranslate nohighlight">\(h\)</span> looking at range <span class="math notranslate nohighlight">\(d\)</span> scales as roughly <span class="math notranslate nohighlight">\(d^2\Delta\theta / h\)</span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">H_CAM</span> <span class="o">=</span> <span class="mf">1.10</span>          <span class="c1"># camera height, m</span>
+<span class="n">FY</span> <span class="o">=</span> <span class="mf">995.2</span>            <span class="c1"># focal length in pixels, from the chessboard measurement</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">lateral_error_from_yaw</span><span class="p">(</span><span class="n">d_m</span><span class="p">,</span> <span class="n">yaw_err_deg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A yaw error rotates the whole scene: lateral error grows linearly with range.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">d_m</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">yaw_err_deg</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">range_error_from_pitch</span><span class="p">(</span><span class="n">d_m</span><span class="p">,</span> <span class="n">pitch_err_deg</span><span class="p">,</span> <span class="n">h_m</span><span class="o">=</span><span class="n">H_CAM</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A pitch error moves where the ground appears to be: error grows with range squared.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">d_m</span> <span class="o">*</span> <span class="n">d_m</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">pitch_err_deg</span><span class="p">)</span> <span class="o">/</span> <span class="n">h_m</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;range&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;yaw 1.5 deg&#39;</span><span class="si">:</span><span class="s2">&gt;13</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;pitch 0.5 deg&#39;</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">50</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> m </span><span class="si">{</span><span class="n">lateral_error_from_yaw</span><span class="p">(</span><span class="n">d</span><span class="p">,</span><span class="w"> </span><span class="mf">1.5</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;11.2f</span><span class="si">}</span><span class="s2"> m &quot;</span>
+          <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">range_error_from_pitch</span><span class="p">(</span><span class="n">d</span><span class="p">,</span><span class="w"> </span><span class="mf">0.5</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+
+<span class="c1"># And the other direction: how many pixels is a degree?</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">1 deg of pitch = </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FY</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> px of vertical shift in the source frame&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Run it: 1.5° of yaw is 0.52 m of lateral error at 20 m — which is three times the 0.15 m the controller
+is aiming for. And 1.5° is not a hypothetical. Between two consecutive night runs the learned yaw moved
+from +1.67° to +0.10° because the phone was remounted, and the pitch from −1.11° to −0.67°.</p>
+<div class="warning admonition">
+<p class="admonition-title">Consequence for comparing runs</p>
+<p>The learned RPY goes into the <strong>input warp</strong>, so the network literally sees a different image. Two runs
+with different learned yaw produce different model plans on the same road. Any cross-run comparison of
+plan offset is comparing two perception configurations, not two controllers — a trap this project fell
+into before noticing.</p>
+</div>
+</section>
+<section id="persisting-the-estimate-is-not-the-fix-it-looks-like">
+<h2>Persisting the estimate is not the fix it looks like<a class="headerlink" href="#persisting-the-estimate-is-not-the-fix-it-looks-like" title="Link to this heading">#</a></h2>
+<p>The online estimate converges and then is thrown away at shutdown, so the obvious move is to save it and
+use it as next drive’s prior. Measured, that is nearly worthless: the mount is not repeatable, so a
+prior from the previous mount is no better than the default. What matters instead is <strong>how fast the
+estimate converges</strong>, and there the news is good — on the 08-06 run it settled within 30–60 s, and the
+lateral offset on straights during the first 30 s was 0.02 m.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convergence as the online estimator actually behaved, from the bag: a first-order approach to the</span>
+<span class="c1"># true angle. The question a student should ask is not &quot;what is the final value&quot; but &quot;how much distance</span>
+<span class="c1"># do I cover before it is good enough&quot;.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">converge</span><span class="p">(</span><span class="n">prior_deg</span><span class="p">,</span> <span class="n">truth_deg</span><span class="p">,</span> <span class="n">tau_s</span><span class="p">,</span> <span class="n">t_s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">truth_deg</span> <span class="o">+</span> <span class="p">(</span><span class="n">prior_deg</span> <span class="o">-</span> <span class="n">truth_deg</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t_s</span> <span class="o">/</span> <span class="n">tau_s</span><span class="p">)</span>
+
+<span class="n">prior</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.67</span><span class="p">,</span> <span class="mf">0.10</span><span class="p">,</span> <span class="mf">15.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;t&#39;</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;yaw est&#39;</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;lateral err at 20 m&#39;</span><span class="si">:</span><span class="s2">&gt;21</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">60</span><span class="p">):</span>
+    <span class="n">est</span> <span class="o">=</span> <span class="n">converge</span><span class="p">(</span><span class="n">prior</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">s </span><span class="si">{</span><span class="n">est</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">lateral_error_from_yaw</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span><span class="w"> </span><span class="n">est</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">truth</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;19.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>So the practical rule is the boring one: <strong>do not judge lane-keep in the first minute</strong>, and do not chase
+a lateral bias measured there.</p>
+</section>
 <section id="causal-chain-bias-cte">
-<h2>Causal chain (bias → CTE)<a class="headerlink" href="#causal-chain-bias-cte" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Causal chain (bias → CTE)<a class="headerlink" href="#causal-chain-bias-cte" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Mount / prior error → wrong warp.</p></li>
 <li><p>Wrong warp → biased lane / plan laterals.</p></li>
@@ -452,7 +525,7 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 <p>Before raising Pure Pursuit or MPC gains, compare <strong>prior vs live RPY</strong> in the bag and check <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code>.</p>
 </section>
 <section id="practice">
-<h2>Practice<a class="headerlink" href="#practice" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Practice<a class="headerlink" href="#practice" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Do not judge lane-keep quality in the first minutes after a cold calib start.</p></li>
 <li><p>Persistent lateral bias on a straight <strong>without</strong> HCA engaged is a calib / offset candidate, not a <code class="docutils literal notranslate"><span class="pre">pp_k_dd</span></code> candidate.</p></li>
@@ -460,7 +533,7 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 </ul>
 </section>
 <section id="what-bags-can-and-cannot-measure">
-<h2>What bags can and cannot measure<a class="headerlink" href="#what-bags-can-and-cannot-measure" title="Ссылка на этот заголовок">#</a></h2>
+<h2>What bags can and cannot measure<a class="headerlink" href="#what-bags-can-and-cannot-measure" title="Link to this heading">#</a></h2>
 <p>Verified on three 2026-08-01 runs (phone remounted between first and second).</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -501,7 +574,7 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 </div>
 </section>
 <section id="exercise">
-<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>On a bag, plot live pitch/yaw vs prior.</p></li>
 <li><p>On a straight HCA-off window, estimate mean lane offset.</p></li>
@@ -513,7 +586,7 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 </div>
 <!-- next-chapter -->
 <hr class="docutils" />
-<p><strong>Next:</strong> <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency and thermal</span></a></p>
+<p><strong>Next:</strong> <a class="reference internal" href="IntrinsicsAndWarp.html"><span class="std std-doc">Three calibrations, not one</span></a></p>
 </section>
 </section>
 
@@ -549,19 +622,19 @@ On success / sufficient confidence, Java updates the warp used by the next Super
 <div class="prev-next-area">
     <a class="left-prev"
        href="../Safety/Warnings.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Warnings: FCW, AEB, LDW</p>
       </div>
     </a>
     <a class="right-next"
-       href="../Latency/Overview.html"
-       title="следующая страница">
+       href="IntrinsicsAndWarp.html"
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">Latency and Thermal</p>
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Three calibrations, not one: intrinsics, vanishing point, model warp</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -579,12 +652,14 @@ On success / sufficient confidence, Java updates the warp used by the next Super
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-shipped-config">Prior (shipped config)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-calibration">Online calibration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-degree-of-error-actually-costs">What a degree of error actually costs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-is-not-the-fix-it-looks-like">Persisting the estimate is not the fix it looks like</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#causal-chain-bias-cte">Causal chain (bias → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#practice">Practice</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-bags-can-and-cannot-measure">What bags can and cannot measure</a></li>
@@ -603,7 +678,7 @@ On success / sufficient confidence, Java updates the warp used by the next Super
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

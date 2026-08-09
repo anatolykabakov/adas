@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Overview';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Middleware (C++ bus)" href="Middleware.html" />
     <link rel="prev" title="Algorithms for Phone ADAS" href="../Introduction/intro.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Architecture/Overview.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,12 +398,13 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#purpose">Purpose</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layers">Layers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-was-built-in-the-order-it-was-built">How this was built, in the order it was built</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-you-will-touch">Configuration you will touch</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#typical-student-workflow">Typical student workflow</a></li>
 </ul>
@@ -415,11 +419,11 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="system-overview">
-<h1>System Overview<a class="headerlink" href="#system-overview" title="Ссылка на этот заголовок">#</a></h1>
+<h1>System Overview<a class="headerlink" href="#system-overview" title="Link to this heading">#</a></h1>
 <p>We want a phone on the windshield to keep a Golf 7 near lane center by commanding MQB <strong>HCA</strong> through a USB <strong>Panda</strong>.
 This chapter is the map of the repository before we dive into vision and control math.</p>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">#</a></h2>
 <p>The ADAS app:</p>
 <ol class="arabic simple">
 <li><p>captures the road with the camera (and supporting IMU / GPS);</p></li>
@@ -433,12 +437,12 @@ This chapter is the map of the repository before we dive into vision and control
 <a class="reference internal image-reference" href="../_images/pipeline_simple.png"><img alt="../_images/pipeline_simple.png" src="../_images/pipeline_simple.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 2 </span><span class="caption-text">End-to-end path you will learn to trace: sensors → model → path → control → CAN.</span><a class="headerlink" href="#id1" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Fig. 2 </span><span class="caption-text">End-to-end path you will learn to trace: sensors → model → path → control → CAN.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="layers">
-<h2>Layers<a class="headerlink" href="#layers" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Layers<a class="headerlink" href="#layers" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>layer</p></th>
@@ -465,8 +469,88 @@ This chapter is the map of the repository before we dive into vision and control
 <p><strong>Design rule:</strong> lateral algorithms live in C++. Python either analyzes a bag or drives the <strong>same</strong> native code through <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> (<code class="docutils literal notranslate"><span class="pre">publish</span> <span class="pre">→</span> <span class="pre">step</span> <span class="pre">→</span> <span class="pre">pop_messages</span></code>). That keeps lab sweeps honest relative to the phone.</p>
 <p>Next in this part: <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> (native bus) → <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Java layer</span></a> (camera / ORT / ZMQ) → <a class="reference internal" href="Pipeline.html"><span class="std std-doc">Pipeline</span></a> (frame → HCA). Also <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a> for warnings without actuation.</p>
 </section>
+<section id="how-this-was-built-in-the-order-it-was-built">
+<h2>How this was built, in the order it was built<a class="headerlink" href="#how-this-was-built-in-the-order-it-was-built" title="Link to this heading">#</a></h2>
+<p>The layer table above is what the system looks like now. It is not the order anyone would build it in, and
+following the table as a plan is how people get stuck. The order that works — and the order this book
+follows — is to close a loop as early as possible and then improve one link at a time.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>stage</p></th>
+<th class="head"><p>what you can do at the end of it</p></th>
+<th class="head"><p>what you cannot yet</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1. bag replay</p></td>
+<td><p>run the real C++ lane-keep code on recorded frames</p></td>
+<td><p>trust the numbers, since the recording came from a different controller</p></td>
+</tr>
+<tr class="row-odd"><td><p>2. sensors on the phone</p></td>
+<td><p>see live lanes, a live path, live latency</p></td>
+<td><p>steer</p></td>
+</tr>
+<tr class="row-even"><td><p>3. a native bus</p></td>
+<td><p>services that talk without knowing about each other</p></td>
+<td><p>know why something arrived late</p></td>
+</tr>
+<tr class="row-odd"><td><p>4. Panda, receive only</p></td>
+<td><p>see the car’s speed, steering angle, and whether HCA is even allowed</p></td>
+<td><p>send anything</p></td>
+</tr>
+<tr class="row-even"><td><p>5. Panda, transmit</p></td>
+<td><p>actually steer, with the panda’s safety model in the way</p></td>
+<td><p>know whether it steered <em>well</em></p></td>
+</tr>
+<tr class="row-odd"><td><p>6. measurement</p></td>
+<td><p>answer that question with a bag and a script</p></td>
+<td><p>stop, because now the real work starts</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Stage 6 is where a course usually ends and where this project spends most of its time. Two illustrations of
+why, both from real runs:</p>
+<ul class="simple">
+<li><p>the car did not steer for an entire drive, and the app logged nothing wrong. The panda was reporting a
+57-byte health packet where the code expected 58, so every field after the third was read from the wrong
+offset — including <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>;</p></li>
+<li><p>the first drive with longitudinal actuation enabled worked exactly as designed and was still a
+regression: the plan asked for a set speed 4.8 m/s below the current one, all drive, and the bus
+collected 715 button presses in 28 minutes.</p></li>
+</ul>
+<p>Neither is a control-theory problem. Both were found by comparing two independent measurements, which is
+what <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a> teaches.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The contract that makes stage 1 possible, and why it is worth building first: the controller cannot tell</span>
+<span class="c1"># where its path came from.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lane_keep_step</span><span class="p">(</span><span class="n">path_xy</span><span class="p">,</span> <span class="n">speed_ms</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stand-in for the real service: it sees a polyline and a speed. Nothing else.&quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
+    <span class="c1"># Curvature of a quadratic fit at the vehicle, the same quantity the real feedforward uses.</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">sx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">);</span> <span class="n">sxx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">);</span> <span class="n">sxxx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span> <span class="o">**</span> <span class="mi">3</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">sxxxx</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">v</span> <span class="o">**</span> <span class="mi">4</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">sy</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">y</span><span class="p">);</span> <span class="n">sxy</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">));</span> <span class="n">sxxy</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+    <span class="c1"># Solve the 3x3 normal equations for y = a x^2 + b x + c</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">sxxxx</span><span class="p">,</span> <span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">n</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">sxxy</span><span class="p">,</span> <span class="n">sxy</span><span class="p">,</span> <span class="n">sy</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;cte_m&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">&quot;epsi_rad&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">),</span> <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">speed_ms</span><span class="p">}</span>
+
+<span class="n">live</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.20</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>     <span class="c1"># from the camera</span>
+<span class="n">replay</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                             <span class="c1"># from a bag</span>
+<span class="n">simulated</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                          <span class="c1"># from MetaDrive</span>
+
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;live&quot;</span><span class="p">,</span> <span class="n">live</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;bag replay&quot;</span><span class="p">,</span> <span class="n">replay</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;simulator&quot;</span><span class="p">,</span> <span class="n">simulated</span><span class="p">)):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">lane_keep_step</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2">: cte </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;cte_m&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m, kappa </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;kappa&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Identical, by construction. That is what lets a lab sweep mean something.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
 <section id="configuration-you-will-touch">
-<h2>Configuration you will touch<a class="headerlink" href="#configuration-you-will-touch" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Configuration you will touch<a class="headerlink" href="#configuration-you-will-touch" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (optional override in app <code class="docutils literal notranslate"><span class="pre">filesDir</span></code>).</p>
 <p>Vehicle knobs (<code class="docutils literal notranslate"><span class="pre">vehicle.*</span></code>):</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;lane_keep_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fp&quot;</span><span class="p">,</span>
@@ -504,7 +588,7 @@ This chapter is the map of the repository before we dive into vision and control
 </div>
 </section>
 <section id="typical-student-workflow">
-<h2>Typical student workflow<a class="headerlink" href="#typical-student-workflow" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Typical student workflow<a class="headerlink" href="#typical-student-workflow" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Record or download a session under <code class="docutils literal notranslate"><span class="pre">adas_logs/...</span></code>.</p></li>
 <li><p>Run <code class="docutils literal notranslate"><span class="pre">latency.py</span></code>, bag visualizer, PlotJuggler — establish Hz / e2e.</p></li>
@@ -512,7 +596,7 @@ This chapter is the map of the repository before we dive into vision and control
 <li><p>Only then open <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> / <code class="docutils literal notranslate"><span class="pre">PurePursuit</span></code> source with Control chapters in hand.</p></li>
 </ol>
 <div class="admonition tip">
-<p class="admonition-title">Совет</p>
+<p class="admonition-title">Tip</p>
 <p>If CTE looks terrible, ask three questions in order: Is vision ≥ ~9 Hz? Is <span class="math notranslate nohighlight">\(y\)</span> / <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> consistent? Is calib sane? Gains come fourth.</p>
 </div>
 <!-- next-chapter -->
@@ -553,18 +637,18 @@ This chapter is the map of the repository before we dive into vision and control
 <div class="prev-next-area">
     <a class="left-prev"
        href="../Introduction/intro.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Algorithms for Phone ADAS</p>
       </div>
     </a>
     <a class="right-next"
        href="Middleware.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Middleware (C++ bus)</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -583,12 +667,13 @@ This chapter is the map of the repository before we dive into vision and control
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#purpose">Purpose</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#layers">Layers</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-was-built-in-the-order-it-was-built">How this was built, in the order it was built</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#configuration-you-will-touch">Configuration you will touch</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#typical-student-workflow">Typical student workflow</a></li>
 </ul>
@@ -605,7 +690,7 @@ This chapter is the map of the repository before we dive into vision and control
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

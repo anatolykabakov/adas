@@ -3,7 +3,7 @@
 Service **`safety_warn`** raises **icons / HUD text only** — it does **not** brake or steer.
 That is intentional: students can study threat logic without actuation risk.
 
-Canonical eng doc: [`SAFETY_WARN.md`](../../SAFETY_WARN.md).
+Canonical eng doc: `docs/SAFETY_WARN.md`.
 Code: `safety_planner.hpp`, `safety_warn_service.cpp`, tests `test_safety_warn.cpp`.
 
 ## What the acronyms mean here
@@ -30,13 +30,86 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 Warnings do **not** use that IDM accel anymore (it false-triggered on empty highways).
 ```
 
+## How these rules were arrived at: three rounds of being wrong
+
+Nothing in this chapter was designed on paper. Each rule replaced a simpler rule that fired when there was
+no danger, and the sequence is worth following because the failures are more instructive than the formulas.
+
+### Round 1: acceleration as a proxy for danger
+
+The first version raised FCW when the IDM desired acceleration fell below −3 m/s², and AEB below −5. It
+seemed reasonable: hard braking wanted means danger ahead.
+
+It is wrong because IDM acceleration includes terms that have nothing to do with a lead car.
+
+```python
+def idm_accel(v_ego, v_lim, gap=None, v_lead=None, a_max=1.5, b=3.0, T=1.5, s0=2.0, expn=4.0):
+    """Treiber IDM. The free-road term alone can demand hard braking with nothing in front."""
+    free = (v_ego / max(v_lim, 0.1)) ** expn
+    inter = 0.0
+    if gap is not None and v_lead is not None:
+        dv = v_ego - v_lead
+        s_star = s0 + max(0.0, v_ego * T + v_ego * dv / (2.0 * (a_max * b) ** 0.5))
+        inter = (s_star / max(gap, 0.5)) ** 2
+    return a_max * (1.0 - free - inter)
+
+MU_G = 0.5 * 9.81
+print(f"{'situation':>38} {'a_idm':>8}  would fire?")
+# Empty road, over the assumed limit
+print(f"{'empty road at 37 m/s, limit 27.8':>38} {idm_accel(37.0, 27.8):>8.2f}  FCW")
+# Empty arc: the curvature speed limit becomes v_lim
+v_lim_arc = (MU_G / (1.0 / 50.0)) ** 0.5
+print(f"{'empty R=50 m arc at 22 m/s':>38} {idm_accel(22.0, v_lim_arc):>8.2f}  FCW")
+# An actual lead car, closing
+print(f"{'lead 15 m ahead at 13 m/s, we do 20':>38} {idm_accel(20.0, 27.8, 15.0, 13.0):>8.2f}  FCW")
+```
+
+The first two lines have no car in them. An empty road above the assumed limit and an empty tight bend both
+demand hard braking, and both used to light the collision warning. The lesson generalises past this
+project: **a controller's desired output is not a hazard signal.** It contains everything the controller
+cares about, and a warning must be built from the hazard itself.
+
+So the rule became threat-based — time to collision and required deceleration, computed from a target that
+exists — and IDM acceleration stayed in the message as a debug field only.
+
+### Round 2: the target that is not there yet
+
+The second version took the most probable of `lead0`, `lead1`, `lead2`. Those are not three candidate cars:
+`lead1` and `lead2` are the model's predictions of the lead **at +2 s and +4 s**. Warning about a car that
+the model thinks will be there in four seconds is warning about the future, which is a different product.
+
+Fixed by using `lead0` only. Worth flagging because the same defect survived in the longitudinal planner
+for two more months, and was found only when that planner was first allowed to act.
+
+### Round 3: warning about ourselves
+
+With threat-based rules and the right target, a 23-minute night drive still produced 5 forward and 7 lane
+warnings, all false. Two distinct causes, and both are visible only in a measurement:
+
+| class | what the numbers said | the gate that followed |
+|---|---|---|
+| forward | all 5 episodes were stop-and-go: median 4.7 m/s, max 8.5. Worst case 4.3 m/s with a nearly stationary lead 9.5 m ahead — TTC 1.9 s arithmetically, trivial in practice | `warn_min_speed_ms` 3 → 8 m/s |
+| lane | of 144 LDW frames, **82 % had our own lateral control engaged**, and the driver was steering in only 6 %. \|CTE\| 0.54 m with 0.15 m/s of drift | suppress LDW while we steer (`ldw_suppress_on_lat_active`) |
+
+The second one is the interesting failure. LDW exists to warn a *drifting driver*. With the assistant
+engaged, the offset it measures is the assistant's own tracking error on an arc — so the system was
+warning about itself, and it did so 82 % of the time it spoke.
+
+```{admonition} A header default is not a decision
+:class: warning
+The speed gate above was raised in the code and **not** in `assets/config.json`, which keeps its own value
+and wins. So the fix was dead, and the next run reproduced the same three false warnings at 4.8–5.5 m/s.
+Three tests now assert that the shipped config matches the decisions taken on the road, and the build
+refuses to compile a config it cannot parse.
+```
+
 ## Longitudinal threat math (FCW / AEB)
 
 Need a **present lead** (`lead0` only — not future hypotheses lead1/2):
 
 * probability ≥ `lead_prob_thresh` (0.5);
 * distance $d$ in $(1,\ 150)$ m;
-* ego speed $v \ge$ `warn_min_speed_ms` (3 m/s);
+* ego speed $v \ge$ `warn_min_speed_ms` (**8 m/s** — raised from 3 after the stop-and-go false positives in round 3);
 * lead roughly **in path**: $|y_{\mathrm{lead}} - y_{\mathrm{path}}(d)| \le$ `lead_max_offset_m`;
 * closing: $\Delta v = v - v_{\mathrm{lead}} \ge$ `min_closing_speed_ms`.
 
@@ -98,7 +171,9 @@ Gates (all required unless noted):
 * $v \ge$ `ldw_min_speed_ms` (12.5 m/s ≈ 45 km/h);
 * `lane_anchored` — path built from **two** plausible lane lines;
 * blinker on that side off (`ldw_suppress_on_blinker`);
-* driver not holding wheel if `ldw_suppress_on_driver_steer`.
+* driver not holding wheel if `ldw_suppress_on_driver_steer`;
+* **we are not steering ourselves** (`ldw_suppress_on_lat_active`) — 82 % of the false lane warnings were the
+  assistant measuring its own tracking error on an arc.
 
 Then fire if
 
@@ -170,13 +245,18 @@ print([int(L.update(bool(x))) for x in seq])
 "aeb_ttc_s": 1.4,
 "fcw_decel_ms2": 3.5,
 "aeb_decel_ms2": 5.5,
-"warn_min_speed_ms": 3.0,
+"warn_min_speed_ms": 8.0,
 "cte_ldw_threshold_m": 0.5,
 "cte_ldw_hard_m": 0.8,
 "ldw_min_speed_ms": 12.5,
+"ldw_suppress_on_lat_active": true,
 "warn_set_frames": 3,
 "warn_hold_frames": 10
 ```
+
+Two of those values are the outcome of round 3 above, and both live in the shipped config rather than only in
+the header defaults — a header default the config overrides is not a decision, which is how the speed gate
+stayed dead for two days.
 
 Node switch: `nodes.safety_warn: true`.
 

@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -63,12 +63,13 @@
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Middleware';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Java layer (phone shell)" href="JavaLayer.html" />
     <link rel="prev" title="System Overview" href="Overview.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -80,7 +81,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -117,7 +118,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -130,9 +131,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -145,16 +146,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -205,9 +206,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -227,11 +228,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -244,6 +245,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -252,6 +254,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -304,7 +307,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -313,7 +316,7 @@
       
       <li><a href="../_sources/Architecture/Middleware.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -331,7 +334,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -351,7 +354,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -365,13 +368,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -393,7 +396,7 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -405,6 +408,7 @@
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#topics-students-see-often">Topics students see often</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag-live-knobs">ParamBag (live knobs)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-bus-the-bottleneck-measure-do-not-assume">Is the bus the bottleneck? Measure, do not assume</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#queues-and-drops">Queues and drops</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-study-this-in-the-repo">How to study this in the repo</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -420,13 +424,13 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="middleware-c-bus">
-<h1>Middleware (C++ bus)<a class="headerlink" href="#middleware-c-bus" title="Ссылка на этот заголовок">#</a></h1>
+<h1>Middleware (C++ bus)<a class="headerlink" href="#middleware-c-bus" title="Link to this heading">#</a></h1>
 <p>After vision and before HCA, almost everything in native code talks through one object: <strong><code class="docutils literal notranslate"><span class="pre">adas::Middleware</span></code></strong>.
 If you understand Middleware, you can read any service (<code class="docutils literal notranslate"><span class="pre">LaneKeep</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, <code class="docutils literal notranslate"><span class="pre">Panda</span></code>, …) without drowning in Android.</p>
 <p>Source of truth: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/middleware/middleware.hpp</span></code>.
 Tests that read like a tutorial: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/tests/test_middleware.cpp</span></code>.</p>
 <section id="mental-model">
-<h2>Mental model<a class="headerlink" href="#mental-model" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Mental model<a class="headerlink" href="#mental-model" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌──────────── Service A ────────────┐     ┌──────────── Service B ────────────┐
 │ worker thread                     │     │ worker thread                     │
 │  • subscribe callbacks            │     │  • subscribe callbacks            │
@@ -449,7 +453,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 </div>
 </section>
 <section id="two-modes">
-<h2>Two modes<a class="headerlink" href="#two-modes" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Two modes<a class="headerlink" href="#two-modes" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>mode</p></th>
@@ -482,7 +486,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 </div>
 </section>
 <section id="writing-a-tiny-service">
-<h2>Writing a tiny service<a class="headerlink" href="#writing-a-tiny-service" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Writing a tiny service<a class="headerlink" href="#writing-a-tiny-service" title="Link to this heading">#</a></h2>
 <p>Real API names (simplified Echo):</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;middleware/middleware.hpp&quot;</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;utils/adas_topics.h&quot;</span>
@@ -524,7 +528,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 </pre></div>
 </div>
 <section id="what-you-are-allowed-to-call-from-configure">
-<h3>What you are allowed to call from <code class="docutils literal notranslate"><span class="pre">configure()</span></code><a class="headerlink" href="#what-you-are-allowed-to-call-from-configure" title="Ссылка на этот заголовок">#</a></h3>
+<h3>What you are allowed to call from <code class="docutils literal notranslate"><span class="pre">configure()</span></code><a class="headerlink" href="#what-you-are-allowed-to-call-from-configure" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>API</p></th>
@@ -553,7 +557,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 </section>
 </section>
 <section id="topics-students-see-often">
-<h2>Topics students see often<a class="headerlink" href="#topics-students-see-often" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Topics students see often<a class="headerlink" href="#topics-students-see-often" title="Link to this heading">#</a></h2>
 <p>Defined in <code class="docutils literal notranslate"><span class="pre">utils/adas_topics.h</span></code>:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -588,7 +592,7 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 </div>
 </section>
 <section id="parambag-live-knobs">
-<h2>ParamBag (live knobs)<a class="headerlink" href="#parambag-live-knobs" title="Ссылка на этот заголовок">#</a></h2>
+<h2>ParamBag (live knobs)<a class="headerlink" href="#parambag-live-knobs" title="Link to this heading">#</a></h2>
 <p>Problem: UI thread must not race the control thread.</p>
 <p>Solution:</p>
 <ol class="arabic simple">
@@ -611,20 +615,73 @@ Tests that read like a tutorial: <code class="docutils literal notranslate"><spa
 <p>Supported types: <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code>, <code class="docutils literal notranslate"><span class="pre">string</span></code>.
 Android NDK needs the parse helpers as free functions (see <code class="docutils literal notranslate"><span class="pre">detail::parseParamText</span></code> in the header) — a class-static template failed to link.</p>
 </section>
+<section id="is-the-bus-the-bottleneck-measure-do-not-assume">
+<h2>Is the bus the bottleneck? Measure, do not assume<a class="headerlink" href="#is-the-bus-the-bottleneck-measure-do-not-assume" title="Link to this heading">#</a></h2>
+<p>A message bus is the natural suspect when a pipeline is slow, and suspicion is cheap. This one was measured,
+and the answer shapes how you read every latency number elsewhere in the book.</p>
+<p><strong>Publishing wakes the subscriber immediately.</strong> <code class="docutils literal notranslate"><span class="pre">publish</span></code> copies into each subscriber queue and calls
+<code class="docutils literal notranslate"><span class="pre">cv.notify_one()</span></code>, so the owning thread is runnable at once — it does not wait for its next timer tick. The
+only two places where anything polls are the boundaries with the outside world: the ZMQ ingress from Java and
+the CAN egress to the panda, both on 10 ms timers because the thing on the other side has no way to wake us.</p>
+<p>The difference between those two designs is worth seeing rather than believing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="c1"># Two ways to hand a message from producer to consumer. The producer emits vision frames at the measured</span>
+<span class="c1"># 68.3 ms interval; the consumer either polls on its own 10 ms timer or is woken on publish.</span>
+<span class="c1">#</span>
+<span class="c1"># 68.3 and not 90: a period that is an exact multiple of the poll interval always lands on a tick and the</span>
+<span class="c1"># wait comes out zero, which flatters polling for a reason that has nothing to do with the design.</span>
+<span class="n">PRODUCE_MS</span> <span class="o">=</span> <span class="mf">68.3</span>
+<span class="n">POLL_MS</span> <span class="o">=</span> <span class="mf">10.0</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">500</span>
+
+<span class="n">polled</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+    <span class="n">t_pub</span> <span class="o">=</span> <span class="n">i</span> <span class="o">*</span> <span class="n">PRODUCE_MS</span>
+    <span class="n">next_tick</span> <span class="o">=</span> <span class="n">POLL_MS</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">t_pub</span> <span class="o">/</span> <span class="n">POLL_MS</span><span class="p">)</span>
+    <span class="n">polled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_tick</span> <span class="o">-</span> <span class="n">t_pub</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;polled  : mean </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">N</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;notified: mean </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Half a poll interval on average and a full one at worst, per hop. With four hops between camera&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;and CAN that is around 20 ms of pure waiting — a quarter of the whole 79 ms budget, spent on&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Timers fire when they say they do.</strong> Over 143 700 firings on a real drive, the mean interval was
+<strong>10.00 ms</strong> against a nominal 10. The worst cases were 44.8 ms in the panda service — most likely a USB
+stall, i.e. the outside world, not the scheduler — and 21.8 ms in the ZMQ bridge.</p>
+<p>So the measured conclusion is: <strong>the middleware never delays a message on a timer</strong>, and the 26 ms of
+non-inference latency in the pipeline is not the bus. Of the ~7 ms between model output and command, about 5
+is the ZMQ ingress poll — a real cost, and the only one worth naming.</p>
+<div class="tip admonition">
+<p class="admonition-title">What this buys you diagnostically</p>
+<p>When a bag shows a stale reference, the bus is already ruled out. That is worth more than it sounds: it means
+the search space is the camera → model chain or the outside boundaries, and you can stop reading
+<code class="docutils literal notranslate"><span class="pre">middleware.hpp</span></code>.</p>
+</div>
+</section>
 <section id="queues-and-drops">
-<h2>Queues and drops<a class="headerlink" href="#queues-and-drops" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Queues and drops<a class="headerlink" href="#queues-and-drops" title="Link to this heading">#</a></h2>
 <p>Default subscriber capacity is finite (~100). If a slow service does not drain:</p>
 <ul class="simple">
 <li><p>new messages can be <strong>dropped</strong>;</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows lagging timers / drops.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows lagging timers and drops, and it is in every bag.</p></li>
 </ul>
 <div class="admonition warning">
-<p class="admonition-title">Предупреждение</p>
-<p>A “bad controller” on a bag where <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows huge timer lag is often a <strong>scheduling</strong> story, not a gain story.</p>
+<p class="admonition-title">Warning</p>
+<p>A “bad controller” on a bag where <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> shows huge timer lag is often a <strong>scheduling</strong> story, not
+a gain story. Check it before touching a weight — it takes one plot.</p>
 </div>
+<p>Note the asymmetry with the vision pipeline, because the two make opposite choices for good reasons. The bus
+queues up to ~100 messages and drops the newest when full; <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> keeps exactly <strong>one</strong> slot and
+drops the <em>oldest</em>, overwriting the pending frame. A control loop wants the freshest measurement and has no
+use for a backlog of stale frames, while a logger or an analysis consumer wants every message it was promised.
+Same word — “drop” — opposite policy.</p>
 </section>
 <section id="how-to-study-this-in-the-repo">
-<h2>How to study this in the repo<a class="headerlink" href="#how-to-study-this-in-the-repo" title="Ссылка на этот заголовок">#</a></h2>
+<h2>How to study this in the repo<a class="headerlink" href="#how-to-study-this-in-the-repo" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Skim <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">KnobService</span></code>).</p></li>
 <li><p>Open <code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code> → <code class="docutils literal notranslate"><span class="pre">configure()</span></code>: parameters + subscriptions.</p></li>
@@ -633,7 +690,7 @@ Android NDK needs the parse helpers as free functions (see <code class="docutils
 </ol>
 </section>
 <section id="exercise">
-<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Draw the path of one <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> from Panda (or bag) to <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code>.</p></li>
 <li><p>Add a hypothetical parameter <code class="docutils literal notranslate"><span class="pre">echo.gain</span></code> — which thread writes it, which thread reads it?</p></li>
@@ -677,18 +734,18 @@ Android NDK needs the parse helpers as free functions (see <code class="docutils
 <div class="prev-next-area">
     <a class="left-prev"
        href="Overview.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">System Overview</p>
       </div>
     </a>
     <a class="right-next"
        href="JavaLayer.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Java layer (phone shell)</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -707,7 +764,7 @@ Android NDK needs the parse helpers as free functions (see <code class="docutils
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -719,6 +776,7 @@ Android NDK needs the parse helpers as free functions (see <code class="docutils
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#topics-students-see-often">Topics students see often</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag-live-knobs">ParamBag (live knobs)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#is-the-bus-the-bottleneck-measure-do-not-assume">Is the bus the bottleneck? Measure, do not assume</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#queues-and-drops">Queues and drops</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-study-this-in-the-repo">How to study this in the repo</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -736,7 +794,7 @@ Android NDK needs the parse helpers as free functions (see <code class="docutils
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

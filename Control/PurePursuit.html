@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Control/PurePursuit';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Vehicle Model (Understeer)" href="VehicleModel.html" />
     <link rel="prev" title="Kinematic Bicycle Model" href="BicycleModel.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Control/PurePursuit.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,7 +398,7 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -407,6 +410,7 @@
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#toy-closed-loop-straight-path-offset-start">Toy closed loop (straight path, offset start)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-one-point-stops-being-enough">Where one point stops being enough</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration">Integration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-mistakes">Common mistakes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -422,13 +426,13 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="pure-pursuit">
-<h1>Pure Pursuit<a class="headerlink" href="#pure-pursuit" title="Ссылка на этот заголовок">#</a></h1>
+<h1>Pure Pursuit<a class="headerlink" href="#pure-pursuit" title="Link to this heading">#</a></h1>
 <blockquote>
 <div><p>Geometric lateral controller: path + speed <span class="math notranslate nohighlight">\(v\)</span> → wheel angle <span class="math notranslate nohighlight">\(\delta\)</span>.
 Mode <code class="docutils literal notranslate"><span class="pre">pp</span></code> in Phone ADAS. Geometry follows <a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">AAD</a> (CC BY 4.0).</p>
 </div></blockquote>
 <section id="problem-statement">
-<h2>Problem statement<a class="headerlink" href="#problem-statement" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Problem statement<a class="headerlink" href="#problem-statement" title="Link to this heading">#</a></h2>
 <p>We want <span class="math notranslate nohighlight">\(\delta(t)\)</span> so the car follows a path <span class="math notranslate nohighlight">\(\{(x_i,y_i)\}\)</span> in meters — <strong>lateral control</strong>.</p>
 <p><strong>Pure Pursuit idea:</strong></p>
 <ol class="arabic simple">
@@ -436,12 +440,12 @@ Mode <code class="docutils literal notranslate"><span class="pre">pp</span></cod
 <li><p>Choose <span class="math notranslate nohighlight">\(\delta\)</span> so the <strong>kinematic bicycle</strong> arc goes through TP.</p></li>
 </ol>
 <div class="admonition note">
-<p class="admonition-title">Примечание</p>
+<p class="admonition-title">Note</p>
 <p>Device frame: <span class="math notranslate nohighlight">\(y\)</span> <strong>right-positive</strong>. See <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">Coordinates</span></a>.</p>
 </div>
 </section>
 <section id="look-ahead">
-<h2>Look-ahead<a class="headerlink" href="#look-ahead" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Look-ahead<a class="headerlink" href="#look-ahead" title="Link to this heading">#</a></h2>
 <div class="math notranslate nohighlight">
 \[
 l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
@@ -480,12 +484,12 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 Shipped phone config: <code class="docutils literal notranslate"><span class="pre">pp_k_dd=0.8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_min=8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_max=25</span></code>.</p>
 </section>
 <section id="geometry">
-<h2>Geometry<a class="headerlink" href="#geometry" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Geometry<a class="headerlink" href="#geometry" title="Link to this heading">#</a></h2>
 <figure class="align-default" id="id1">
 <a class="reference internal image-reference" href="../_images/PurePursuitWrongDelta.png"><img alt="../_images/PurePursuitWrongDelta.png" src="../_images/PurePursuitWrongDelta.png" style="width: 70%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 5 </span><span class="caption-text">Wrong <span class="math notranslate nohighlight">\(\delta\)</span>: bicycle arc misses TP.</span><a class="headerlink" href="#id1" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Fig. 5 </span><span class="caption-text">Wrong <span class="math notranslate nohighlight">\(\delta\)</span>: bicycle arc misses TP.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <p>Try different <span class="math notranslate nohighlight">\(\delta\)</span> until the arc hits TP (AAD interactive figures):</p>
@@ -495,12 +499,12 @@ Shipped phone config: <code class="docutils literal notranslate"><span class="pr
 <img alt="δ = 11.3° — hits TP" src="../_images/PurePursuit_delta_11p3.png" /></p>
 </section>
 <section id="full-derivation-of-delta">
-<h2>Full derivation of <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#full-derivation-of-delta" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Full derivation of <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#full-derivation-of-delta" title="Link to this heading">#</a></h2>
 <figure class="align-default" id="id2">
 <a class="reference internal image-reference" href="../_images/PurePursuitLawOfSines.png"><img alt="../_images/PurePursuitLawOfSines.png" src="../_images/PurePursuitLawOfSines.png" style="width: 90%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 6 </span><span class="caption-text">Magenta triangle: ICR, rear axle, TP.</span><a class="headerlink" href="#id2" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Fig. 6 </span><span class="caption-text">Magenta triangle: ICR, rear axle, TP.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <p><strong>Notation</strong></p>
@@ -537,18 +541,18 @@ R = \frac{l_d}{2\sin\alpha}.
 \]</div>
 <p><strong>Step 5.</strong> Bicycle (previous chapter): <span class="math notranslate nohighlight">\(\delta = \arctan(L/R)\)</span>. Substitute <span class="math notranslate nohighlight">\(R\)</span>:</p>
 <div class="math notranslate nohighlight" id="equation-eq-pp">
-<span class="eqno">(1)<a class="headerlink" href="#equation-eq-pp" title="Ссылка на эту формулу">#</a></span>\[
+<span class="eqno">(1)<a class="headerlink" href="#equation-eq-pp" title="Link to this equation">#</a></span>\[
 \delta = \arctan\left(\frac{2 L \sin\alpha}{l_d}\right).
 \]</div>
 <figure class="align-default" id="id3">
 <a class="reference internal image-reference" href="../_images/pure_pursuit_simple_geometry.png"><img alt="../_images/pure_pursuit_simple_geometry.png" src="../_images/pure_pursuit_simple_geometry.png" style="width: 80%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 7 </span><span class="caption-text">Same law in a simpler sketch.</span><a class="headerlink" href="#id3" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">Same law in a simpler sketch.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <section id="numerical-example">
-<h3>Numerical example<a class="headerlink" href="#numerical-example" title="Ссылка на этот заголовок">#</a></h3>
+<h3>Numerical example<a class="headerlink" href="#numerical-example" title="Link to this heading">#</a></h3>
 <p>Fix <span class="math notranslate nohighlight">\(L=2.64\)</span> m, <span class="math notranslate nohighlight">\(l_d=8\)</span> m, TP at <span class="math notranslate nohighlight">\((x,y)=(7.5,\ 2.8)\)</span> m (device frame, <span class="math notranslate nohighlight">\(y\)</span> right+).</p>
 <div class="math notranslate nohighlight">
 \[
@@ -594,7 +598,7 @@ R = \frac{l_d}{2\sin\alpha}.
 </section>
 </section>
 <section id="toy-closed-loop-straight-path-offset-start">
-<h2>Toy closed loop (straight path, offset start)<a class="headerlink" href="#toy-closed-loop-straight-path-offset-start" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Toy closed loop (straight path, offset start)<a class="headerlink" href="#toy-closed-loop-straight-path-offset-start" title="Link to this heading">#</a></h2>
 <p>Path = the <span class="math notranslate nohighlight">\(x\)</span>-axis. Car starts at <span class="math notranslate nohighlight">\(y=1\)</span> m with <span class="math notranslate nohighlight">\(\theta=0\)</span>. Pure Pursuit should steer back.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -625,28 +629,100 @@ R = \frac{l_d}{2\sin\alpha}.
 </pre></div>
 </div>
 </section>
+<section id="where-one-point-stops-being-enough">
+<h2>Where one point stops being enough<a class="headerlink" href="#where-one-point-stops-being-enough" title="Link to this heading">#</a></h2>
+<p>Pure Pursuit reduces the whole path to a single point. That is its charm and its ceiling, and the ceiling
+is easy to demonstrate: the law has no way to distinguish two paths that pass through the same look-ahead
+point and then do completely different things.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">L_WB</span> <span class="o">=</span> <span class="mf">2.64</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pure Pursuit: wheel angle to reach the target point (tx, ty), y right-positive.&quot;&quot;&quot;</span>
+    <span class="n">ld_sq</span> <span class="o">=</span> <span class="n">tx</span> <span class="o">*</span> <span class="n">tx</span> <span class="o">+</span> <span class="n">ty</span> <span class="o">*</span> <span class="n">ty</span>
+    <span class="k">if</span> <span class="n">ld_sq</span> <span class="o">&lt;</span> <span class="mf">1e-6</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L_WB</span> <span class="o">*</span> <span class="n">ty</span><span class="p">,</span> <span class="n">ld_sq</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">path_point_at</span><span class="p">(</span><span class="n">kappa_near</span><span class="p">,</span> <span class="n">kappa_far</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">break_at</span><span class="o">=</span><span class="mf">12.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A path that bends one way up to `break_at` and another way beyond it.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ld</span> <span class="o">&lt;=</span> <span class="n">break_at</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ld</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">ld</span> <span class="o">*</span> <span class="n">ld</span>
+    <span class="n">y_break</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">break_at</span> <span class="o">*</span> <span class="n">break_at</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">break_at</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">ld</span> <span class="o">-</span> <span class="n">break_at</span>
+    <span class="k">return</span> <span class="n">ld</span><span class="p">,</span> <span class="n">y_break</span> <span class="o">+</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">d</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_far</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span>
+
+<span class="n">LD</span> <span class="o">=</span> <span class="mf">15.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;path&#39;</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;point at 15 m&#39;</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;delta&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;steady right bend&quot;</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s2">&quot;right, then straightens&quot;</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s2">&quot;right, then reverses&quot;</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.012</span><span class="p">)):</span>
+    <span class="n">tx</span><span class="p">,</span> <span class="n">ty</span> <span class="o">=</span> <span class="n">path_point_at</span><span class="p">(</span><span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span><span class="p">,</span> <span class="n">LD</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="n">tx</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">ty</span><span class="si">:</span><span class="s1">+.2f</span><span class="si">}</span><span class="s1">)&#39;</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">ty</span><span class="p">))</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Run it and the three commands differ, which looks reassuring — until you notice <em>why</em>. They differ only
+because the far curvature happens to move the point at 15 m. Shorten the look-ahead and the difference
+vanishes; lengthen it and the near bend disappears instead. The law is reading one sample of a function
+and the sample position is a tuning parameter.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;look-ahead&#39;</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2"> &quot;</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;steady&quot;</span><span class="p">,</span> <span class="s2">&quot;straightens&quot;</span><span class="p">,</span> <span class="s2">&quot;reverses&quot;</span><span class="p">)))</span>
+<span class="k">for</span> <span class="n">ld</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.006</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.012</span><span class="p">)):</span>
+        <span class="n">tx</span><span class="p">,</span> <span class="n">ty</span> <span class="o">=</span> <span class="n">path_point_at</span><span class="p">(</span><span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span><span class="p">,</span> <span class="n">ld</span><span class="p">)</span>
+        <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">)))</span>
+    <span class="n">spread</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ld</span><span class="si">:</span><span class="s2">&gt;10.0f</span><span class="si">}</span><span class="s2"> m &quot;</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;11.2f</span><span class="si">}</span><span class="s2">°&quot;</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">row</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;   spread </span><span class="si">{</span><span class="n">spread</span><span class="si">:</span><span class="s2">&gt;5.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>At 8 m the three paths are indistinguishable — the break point is beyond the target, so the controller
+cannot know it is coming. At 25 m the spread is large but the near bend has stopped mattering, so the car
+will cut it. There is no look-ahead that reads both, because there is only one number to read.</p>
+<p>This is the argument for a horizon, and it is a different argument from the understeer one. Understeer is
+a <em>modelling</em> error you can correct with a better model of the same one-step law. This is an
+<em>information</em> limit of the law itself. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC</span></a> answers it by optimising over many points at
+once; the <a class="reference internal" href="VehicleModel.html"><span class="std std-doc">vehicle model</span></a> chapter answers the other one first, because a horizon built
+on wrong kinematics just makes a confident wrong plan.</p>
+<div class="note admonition">
+<p class="admonition-title">Why Pure Pursuit is still in the tree</p>
+<p>It has no cost weights, no horizon, and one parameter with a physical meaning, which makes it the only
+controller here whose behaviour you can predict by hand. When a run looks wrong, switching to <code class="docutils literal notranslate"><span class="pre">pp</span></code> tells
+you whether the problem is in the controller or upstream of it. In offline replay it even holds the lane
+better than <code class="docutils literal notranslate"><span class="pre">fp</span></code> at every degradation level tried — while on the road the opposite is true, which is a
+finding about the replay, not about the controllers.</p>
+</div>
+</section>
 <section id="integration">
-<h2>Integration<a class="headerlink" href="#integration" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Integration<a class="headerlink" href="#integration" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID → Panda → HCA_01
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">&quot;lane_keep_controller&quot;:</span> <span class="pre">&quot;pp&quot;</span></code>. Road default is usually <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p>
 </section>
 <section id="common-mistakes">
-<h2>Common mistakes<a class="headerlink" href="#common-mistakes" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Common mistakes<a class="headerlink" href="#common-mistakes" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Wrong <span class="math notranslate nohighlight">\(y\)</span> sign (device vs ISO).</p></li>
 <li><p>Forgetting <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>.</p></li>
 <li><p>Tuning on thermal 3 Hz windows.</p></li>
 <li><p>No understeer model at <span class="math notranslate nohighlight">\(v\sim 20\)</span> m/s.</p></li>
+<li><p>Treating the look-ahead as a quality knob. It is a choice of <strong>which part of the path to ignore</strong> —
+see above. If tuning it feels like a trade-off between cutting corners and reacting late, that is
+because it is exactly that trade-off, and no value resolves it.</p></li>
 </ol>
 </section>
 <section id="exercise">
-<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Change <code class="docutils literal notranslate"><span class="pre">K_dd</span></code> in the toy loop: how does settling of <span class="math notranslate nohighlight">\(y\)</span> change?</p></li>
 <li><p>Put TP at <span class="math notranslate nohighlight">\((8, 0)\)</span> vs <span class="math notranslate nohighlight">\((8, 3)\)</span>: print <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
 <li><p>Bag sweep: <code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code> Pareto |CTE| vs |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.</p></li>
+<li><p>In the look-ahead sweep above, find the distance that minimises the spread across the three paths.
+Then explain why that distance is the <em>worst</em> choice rather than the best one.</p></li>
+<li><p>Add the understeer correction from the <a class="reference internal" href="VehicleModel.html"><span class="std std-doc">vehicle model</span></a> to <code class="docutils literal notranslate"><span class="pre">pp_delta</span></code> and re-run the
+sweep at 22 m/s. Does it change the information limit, or only the magnitudes?</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />
@@ -686,18 +762,18 @@ R = \frac{l_d}{2\sin\alpha}.
 <div class="prev-next-area">
     <a class="left-prev"
        href="BicycleModel.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Kinematic Bicycle Model</p>
       </div>
     </a>
     <a class="right-next"
        href="VehicleModel.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Vehicle Model (Understeer)</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -716,7 +792,7 @@ R = \frac{l_d}{2\sin\alpha}.
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -728,6 +804,7 @@ R = \frac{l_d}{2\sin\alpha}.
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#toy-closed-loop-straight-path-offset-start">Toy closed loop (straight path, offset start)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-one-point-stops-being-enough">Where one point stops being enough</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#integration">Integration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-mistakes">Common mistakes</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -745,7 +822,7 @@ R = \frac{l_d}{2\sin\alpha}.
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

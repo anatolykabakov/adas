@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Exercises/StudentProjects';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Setup" href="../Appendix/Setup.html" />
     <link rel="prev" title="Bag and Offline Analysis" href="../Logging/Bags.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Exercises/StudentProjects.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,7 +398,7 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -438,71 +441,71 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="projects">
-<h1>Projects<a class="headerlink" href="#projects" title="Ссылка на этот заголовок">#</a></h1>
+<h1>Projects<a class="headerlink" href="#projects" title="Link to this heading">#</a></h1>
 <p>Most assignments run on a bag without the car. Road HCA — instructor supervision only.
 Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> capture→infer (or say why missing).</p>
 <p>Work in the AAD spirit: read the chapter → run a small measurement → write what you saw, including failure cases.</p>
 <section id="a-data-analysis">
-<h2>A — data analysis<a class="headerlink" href="#a-data-analysis" title="Ссылка на этот заголовок">#</a></h2>
+<h2>A — data analysis<a class="headerlink" href="#a-data-analysis" title="Link to this heading">#</a></h2>
 <section id="a1-latency">
-<h3>A1 Latency<a class="headerlink" href="#a1-latency" title="Ссылка на этот заголовок">#</a></h3>
+<h3>A1 Latency<a class="headerlink" href="#a1-latency" title="Link to this heading">#</a></h3>
 <p>Pick 2–3 sessions. Build a table of rate and e2e. If a thermal / throttle window exists, correlate with <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">phone/stats</span></code>.
 <strong>Deliverable:</strong> plot + one paragraph separating “controller bad” vs “vision starved”.</p>
 </section>
 <section id="a2-understeer">
-<h3>A2 Understeer<a class="headerlink" href="#a2-understeer" title="Ссылка на этот заголовок">#</a></h3>
+<h3>A2 Understeer<a class="headerlink" href="#a2-understeer" title="Link to this heading">#</a></h3>
 <p>On driver-steered frames, plot <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}\)</span> by <span class="math notranslate nohighlight">\(v\)</span> bins (see <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a>).
 <strong>Deliverable:</strong> table vs the course reference bins; comment at <span class="math notranslate nohighlight">\(v\sim 20\)</span> m/s.</p>
 </section>
 <section id="a3-driver-vs-hca">
-<h3>A3 Driver vs HCA<a class="headerlink" href="#a3-driver-vs-hca" title="Ссылка на этот заголовок">#</a></h3>
+<h3>A3 Driver vs HCA<a class="headerlink" href="#a3-driver-vs-hca" title="Link to this heading">#</a></h3>
 <p>Reproduce CTE metrics on an instructor-assigned straight/arc bag.
 <strong>Deliverable:</strong> |CTE| med/p95 on straight vs arc; state vision Hz on those windows.</p>
 </section>
 <section id="a4-localization">
-<h3>A4 Localization<a class="headerlink" href="#a4-localization" title="Ссылка на этот заголовок">#</a></h3>
+<h3>A4 Localization<a class="headerlink" href="#a4-localization" title="Link to this heading">#</a></h3>
 <p>Read <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a>. On a bag: (1) ENU track from GPS, (2) time until <code class="docutils literal notranslate"><span class="pre">imu_yaw</span></code> valid, (3) overlay <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> vs odom.
 <strong>Deliverable:</strong> one plot + note where GPS heading snaps.</p>
 </section>
 </section>
 <section id="b-offline-control">
-<h2>B — offline control<a class="headerlink" href="#b-offline-control" title="Ссылка на этот заголовок">#</a></h2>
+<h2>B — offline control<a class="headerlink" href="#b-offline-control" title="Link to this heading">#</a></h2>
 <section id="b1-pure-pursuit-sweep">
-<h3>B1 Pure Pursuit sweep<a class="headerlink" href="#b1-pure-pursuit-sweep" title="Ссылка на этот заголовок">#</a></h3>
+<h3>B1 Pure Pursuit sweep<a class="headerlink" href="#b1-pure-pursuit-sweep" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code> on <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Pareto |CTE| vs |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
 <strong>Deliverable:</strong> knee point you would ship and why.</p>
 </section>
 <section id="b2-delay-sensitivity">
-<h3>B2 Delay sensitivity<a class="headerlink" href="#b2-delay-sensitivity" title="Ссылка на этот заголовок">#</a></h3>
+<h3>B2 Delay sensitivity<a class="headerlink" href="#b2-delay-sensitivity" title="Link to this heading">#</a></h3>
 <p>Repeat B1 (or <code class="docutils literal notranslate"><span class="pre">fp</span></code>) at <code class="docutils literal notranslate"><span class="pre">--vision-latency</span></code> ∈ <span class="math notranslate nohighlight">\(\{0,\ 0.07,\ 0.2\}\)</span>.
 <strong>Deliverable:</strong> which latency breaks which controller first.</p>
 </section>
 <section id="b3-arc-feed-forward">
-<h3>B3 Arc feed-forward<a class="headerlink" href="#b3-arc-feed-forward" title="Ссылка на этот заголовок">#</a></h3>
-<p>Using <span class="xref myst"><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></span>, mark feed-forward vs feedback on one arc.
+<h3>B3 Arc feed-forward<a class="headerlink" href="#b3-arc-feed-forward" title="Link to this heading">#</a></h3>
+<p>Using <code class="docutils literal notranslate"><span class="pre">docs/MPC_EXPLAINED.md</span></code>, mark feed-forward vs feedback on one arc.
 <strong>Deliverable:</strong> sketch or annotated plot; one sentence on why raising CTE weight is the wrong first lever.</p>
 </section>
 </section>
 <section id="c-platform-safety">
-<h2>C — platform &amp; safety<a class="headerlink" href="#c-platform-safety" title="Ссылка на этот заголовок">#</a></h2>
+<h2>C — platform &amp; safety<a class="headerlink" href="#c-platform-safety" title="Link to this heading">#</a></h2>
 <section id="c0-middleware">
-<h3>C0 Middleware<a class="headerlink" href="#c0-middleware" title="Ссылка на этот заголовок">#</a></h3>
+<h3>C0 Middleware<a class="headerlink" href="#c0-middleware" title="Link to this heading">#</a></h3>
 <p>Read <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a>. From <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code>, list: how a parameter reaches a service variable; what <code class="docutils literal notranslate"><span class="pre">step()</span></code> does in Simulated mode.</p>
 </section>
 <section id="c1-debug-field">
-<h3>C1 Debug field<a class="headerlink" href="#c1-debug-field" title="Ссылка на этот заголовок">#</a></h3>
+<h3>C1 Debug field<a class="headerlink" href="#c1-debug-field" title="Link to this heading">#</a></h3>
 <p>Add a field to <code class="docutils literal notranslate"><span class="pre">lane_keep_debug</span></code> → proto → PlotJuggler column.</p>
 </section>
 <section id="c2-phone-stats">
-<h3>C2 Phone stats<a class="headerlink" href="#c2-phone-stats" title="Ссылка на этот заголовок">#</a></h3>
+<h3>C2 Phone stats<a class="headerlink" href="#c2-phone-stats" title="Link to this heading">#</a></h3>
 <p>Extend <code class="docutils literal notranslate"><span class="pre">phone/stats</span></code> with a counter you care about (drops, YOLO ms, …).</p>
 </section>
 <section id="c3-metadrive">
-<h3>C3 MetaDrive<a class="headerlink" href="#c3-metadrive" title="Ссылка на этот заголовок">#</a></h3>
+<h3>C3 MetaDrive<a class="headerlink" href="#c3-metadrive" title="Link to this heading">#</a></h3>
 <p>Compare <code class="docutils literal notranslate"><span class="pre">pp</span></code> vs <code class="docutils literal notranslate"><span class="pre">fp</span></code> on a fixed scenario (<code class="docutils literal notranslate"><span class="pre">sim.eval</span></code>); report the same metrics as B1.</p>
 </section>
 <section id="c4-fcw-aeb-ldw">
-<h3>C4 FCW / AEB / LDW<a class="headerlink" href="#c4-fcw-aeb-ldw" title="Ссылка на этот заголовок">#</a></h3>
+<h3>C4 FCW / AEB / LDW<a class="headerlink" href="#c4-fcw-aeb-ldw" title="Link to this heading">#</a></h3>
 <p>Read <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Warnings</span></a>. Run unit tests touching <code class="docutils literal notranslate"><span class="pre">test_safety_warn</span></code>, then:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>app/src/main/scripts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>python3<span class="w"> </span>app/src/main/scripts/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
@@ -512,18 +515,18 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
 </section>
 </section>
 <section id="d-research">
-<h2>D — research<a class="headerlink" href="#d-research" title="Ссылка на этот заголовок">#</a></h2>
+<h2>D — research<a class="headerlink" href="#d-research" title="Link to this heading">#</a></h2>
 <section id="d1-yolo-under-load">
-<h3>D1 YOLO under load<a class="headerlink" href="#d1-yolo-under-load" title="Ссылка на этот заголовок">#</a></h3>
+<h3>D1 YOLO under load<a class="headerlink" href="#d1-yolo-under-load" title="Link to this heading">#</a></h3>
 <p>Enable traffic YOLO with a hard throttle so vision stays <span class="math notranslate nohighlight">\(\ge 9\)</span> Hz — or document that it cannot.</p>
 </section>
 <section id="d2-roll">
-<h3>D2 Roll<a class="headerlink" href="#d2-roll" title="Ссылка на этот заголовок">#</a></h3>
+<h3>D2 Roll<a class="headerlink" href="#d2-roll" title="Link to this heading">#</a></h3>
 <p>Is roll observable in live calib? Effect on mean CTE bias?</p>
 </section>
 </section>
 <section id="rubric">
-<h2>Rubric<a class="headerlink" href="#rubric" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Rubric<a class="headerlink" href="#rubric" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>criterion</p></th>
@@ -584,18 +587,18 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
 <div class="prev-next-area">
     <a class="left-prev"
        href="../Logging/Bags.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Bag and Offline Analysis</p>
       </div>
     </a>
     <a class="right-next"
        href="../Appendix/Setup.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Setup</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -614,7 +617,7 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -659,7 +662,7 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Pipeline';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Vision — Overview" href="../Vision/Overview.html" />
     <link rel="prev" title="Java layer (phone shell)" href="JavaLayer.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Architecture/Pipeline.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,16 +398,21 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#follow-one-frame-with-a-clock">Follow one frame, with a clock</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-between-frames">What happens between frames</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-by-stage">Stage by stage</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parallel-topics">Parallel topics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates">Rates</a></li>
 </ul>
@@ -419,11 +427,81 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="from-frame-to-can">
-<h1>From Frame to CAN<a class="headerlink" href="#from-frame-to-can" title="Ссылка на этот заголовок">#</a></h1>
+<h1>From Frame to CAN<a class="headerlink" href="#from-frame-to-can" title="Link to this heading">#</a></h1>
 <p><img alt="Simplified pipeline diagram" src="../_images/pipeline_simple.png" /></p>
-<p>Engineering version with implementation details: <span class="xref myst"><code class="docutils literal notranslate"><span class="pre">IMAGE_TO_CAN_PIPELINE.md</span></code></span>.</p>
+<p>Engineering version with implementation details: <code class="docutils literal notranslate"><span class="pre">docs/IMAGE_TO_CAN_PIPELINE.md</span></code>.</p>
+<section id="follow-one-frame-with-a-clock">
+<h2>Follow one frame, with a clock<a class="headerlink" href="#follow-one-frame-with-a-clock" title="Link to this heading">#</a></h2>
+<p>The stages below are easier to hold onto if you watch a single frame move through them. Each number is a
+measured median from a 28-minute night run. Per-stage medians do not have to add up to cumulative medians —
+these are chosen to land on the two cumulative figures <code class="docutils literal notranslate"><span class="pre">latency.py</span></code> actually reports, 54 ms to the model
+output and <strong>79 ms to the command</strong>, so the arithmetic is checkable rather than decorative.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured medians, run 2026_08_06_00_36_42. &quot;own&quot; is the stage&#39;s own cost; the clock accumulates.</span>
+<span class="n">STAGES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="s2">&quot;capture (Camera2 YUV, capture_ts stamped)&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;delivery to VisionPipeline&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>          <span class="c1"># instrumented from 2026-08; was invisible before</span>
+    <span class="p">(</span><span class="s2">&quot;geometric warp to 512x256&quot;</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Supercombo inference (OrtSession.run)&quot;</span><span class="p">,</span> <span class="mf">45.6</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;parse heads -&gt; vision/lanes&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Java -&gt; ZMQ -&gt; ZmqBridgeService&quot;</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>      <span class="c1"># of which ~5 is the 10 ms ingress poll</span>
+    <span class="p">(</span><span class="s2">&quot;TopicConvert -&gt; vision/path&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;LaneKeepService -&gt; controls/steer&quot;</span><span class="p">,</span> <span class="mf">19.4</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;PandaService -&gt; HCA_01 on the wire&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>  <span class="c1"># its own 10 ms TX timer</span>
+<span class="p">)</span>
+
+<span class="n">clock</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;stage&#39;</span><span class="si">:</span><span class="s2">&gt;44</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;own&#39;</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;clock&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;car has moved&#39;</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">own</span> <span class="ow">in</span> <span class="n">STAGES</span><span class="p">:</span>
+    <span class="n">clock</span> <span class="o">+=</span> <span class="n">own</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;44</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">own</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">At 22 m/s the command that reaches the rack was computed for a road position </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m back.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Two of those lines deserve attention.</p>
+<p><strong>Delivery is 0.0 because it was invisible.</strong> Until 2026-08 <code class="docutils literal notranslate"><span class="pre">capture_ts_ms</span></code> was the earliest timestamp on a
+frame, so a frame that arrived 40 ms late and a frame that waited 40 ms for a busy inference thread looked
+identical. <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code> now separate them — see
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p>
+<p><strong>The ZMQ hop costs about half a poll interval.</strong> It is one of only two places in the whole chain that polls,
+and the other is the CAN egress. Everything between them is notified, not polled —
+<a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> has the measurement.</p>
+</section>
+<section id="what-happens-between-frames">
+<h2>What happens between frames<a class="headerlink" href="#what-happens-between-frames" title="Link to this heading">#</a></h2>
+<p>Vision runs at 13.24 Hz. The actuator runs at 100 Hz, because HCA needs a strict cadence or the EPS drops the
+command. So for roughly seven ticks out of eight, the panda transmits a command derived from a <em>reference it
+has already used</em>.</p>
+<p>That is correct behaviour and it creates a trap for anyone reading logs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">VISION_HZ</span> <span class="o">=</span> <span class="mf">13.24</span>
+<span class="n">TX_HZ</span> <span class="o">=</span> <span class="mf">100.0</span>
+<span class="n">FRESH_WINDOW_MS</span> <span class="o">=</span> <span class="mf">50.0</span>        <span class="c1"># latency.py keeps commands within this of their vision timestamp</span>
+
+<span class="n">vision_period_ms</span> <span class="o">=</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
+<span class="n">per_frame</span> <span class="o">=</span> <span class="n">TX_HZ</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;vision period </span><span class="si">{</span><span class="n">vision_period_ms</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms, </span><span class="si">{</span><span class="n">per_frame</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> actuator ticks per vision frame&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;only the first tick uses a brand-new reference; the rest reuse it&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="c1"># The freshness filter is a time window, not &quot;one tick per frame&quot; — so what it keeps is the fraction of</span>
+<span class="c1"># the vision period that falls inside the window.</span>
+<span class="n">kept_predicted</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">FRESH_WINDOW_MS</span> <span class="o">/</span> <span class="n">vision_period_ms</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;predicted share passing a </span><span class="si">{</span><span class="n">FRESH_WINDOW_MS</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ms freshness filter: </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">kept_predicted</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;measured on the run: 113 723 kept of 168 107 = </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">113723</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">168107</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Compute e2e latency over the raw stream instead and the republishes drag the number up, because&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;their vision_ts is older than the command that carries it.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The fast loop is not idle work — it is the angle PID closing on the <em>measured</em> steering angle at 100 Hz,
+which is what makes the rack follow smoothly. But it means “the command is fresh” and “the picture is fresh”
+are different claims, and only the second one matters for safety. That distinction is why the staleness gate
+is keyed on the frame’s capture timestamp rather than on the command’s age, and why a 250 ms HCA command
+timeout did not protect against a 75-second-old plan.</p>
+</section>
+<section id="stage-by-stage">
+<h2>Stage by stage<a class="headerlink" href="#stage-by-stage" title="Link to this heading">#</a></h2>
 <section id="capture">
-<h2>1. Capture<a class="headerlink" href="#capture" title="Ссылка на этот заголовок">#</a></h2>
+<h3>1. Capture<a class="headerlink" href="#capture" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">CameraHandler</span></code> (Camera2):</p>
 <ul class="simple">
 <li><p>YUV buffer, nominally <strong>1280×720</strong>;</p></li>
@@ -433,25 +511,27 @@
 <p>Frame branches: preview UI; VisionPipeline queue; when logging — JPEG preview in bag (<strong>not</strong> warped 512×256 network input).</p>
 </section>
 <section id="geometric-warp">
-<h2>2. Geometric warp<a class="headerlink" href="#geometric-warp" title="Ссылка на этот заголовок">#</a></h2>
+<h3>2. Geometric warp<a class="headerlink" href="#geometric-warp" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> brings frame to medmodel <strong>512×256</strong> using intrinsic prior and calibration RPY. Pitch/yaw error shifts metric lane interpretation and causes systematic CTE.</p>
 </section>
 <section id="supercombo-inference">
-<h2>3. Supercombo inference<a class="headerlink" href="#supercombo-inference" title="Ссылка на этот заголовок">#</a></h2>
+<h3>3. Supercombo inference<a class="headerlink" href="#supercombo-inference" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> / <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> on separate thread:</p>
 <ul class="simple">
 <li><p>temporal stack (2 frames) + RNN state;</p></li>
 <li><p>output → parse → topic <strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (+ odometry / model_long);</p></li>
 <li><p>stamps <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p></li>
 </ul>
-<p>Nominally ~<strong>9–11 Hz</strong> (dt ≈ 90 ms). Under thermal throttle or competing YOLO rate drops to single-digit Hz — lateral metronome breaks.</p>
+<p><strong>13.24 Hz</strong> measured at 30 fps camera (dt ≈ 68 ms median, 75 mean). Under thermal throttle or with the
+traffic YOLO competing for the SoC it drops to single-digit Hz and the lateral metronome breaks. The rate is
+quantised by the camera period rather than set by the work — <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p>
 </section>
 <section id="java-native-bridge">
-<h2>4. Java → native bridge<a class="headerlink" href="#java-native-bridge" title="Ссылка на этот заголовок">#</a></h2>
+<h3>4. Java → native bridge<a class="headerlink" href="#java-native-bridge" title="Link to this heading">#</a></h3>
 <p>Protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> PUB on <code class="docutils literal notranslate"><span class="pre">:5555</span></code>. <code class="docutils literal notranslate"><span class="pre">ZmqBridgeService</span></code> reads IN and publishes to internal Middleware. Split: Java — camera/ORT/log, C++ — control/calib/panda.</p>
 </section>
 <section id="lane-keep">
-<h2>5. Lane-keep<a class="headerlink" href="#lane-keep" title="Ссылка на этот заголовок">#</a></h2>
+<h3>5. Lane-keep<a class="headerlink" href="#lane-keep" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> consumes path polyline and chassis (<span class="math notranslate nohighlight">\(v\)</span>, actual SWA). Controller from config:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> — Pure Pursuit + angle PID;</p></li>
@@ -461,11 +541,12 @@
 <p>Publications: <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p>
 </section>
 <section id="actuation">
-<h2>6. Actuation<a class="headerlink" href="#actuation" title="Ссылка на этот заголовок">#</a></h2>
+<h3>6. Actuation<a class="headerlink" href="#actuation" title="Link to this heading">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">PandaService</span></code> TX ~100 Hz, <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> frames. Gates: ignition, <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>, command age ≤ ~250 ms.</p>
 </section>
+</section>
 <section id="parallel-topics">
-<h2>Parallel topics<a class="headerlink" href="#parallel-topics" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Parallel topics<a class="headerlink" href="#parallel-topics" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>topic</p></th>
@@ -490,30 +571,35 @@
 </div>
 </section>
 <section id="rates">
-<h2>Rates<a class="headerlink" href="#rates" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Rates<a class="headerlink" href="#rates" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>signal</p></th>
-<th class="head"><p>typical</p></th>
+<th class="head"><p>measured</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>preview</p></td>
-<td><p>~20–30 Hz</p></td>
+<tr class="row-even"><td><p>camera</p></td>
+<td><p>30 fps requested, 33 ms period confirmed</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
-<td><p><strong>~9–11 Hz</strong></p></td>
+<td><p><strong>13.24 Hz</strong> (was 11.29 at 20 fps)</p></td>
 </tr>
 <tr class="row-even"><td><p>lane_keep publish</p></td>
-<td><p>≈ vision</p></td>
+<td><p>≈ vision, 13.24 Hz</p></td>
 </tr>
-<tr class="row-odd"><td><p>panda TX</p></td>
-<td><p>~100 Hz (between vision frames — stale vision_ts)</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
+<td><p>~100 Hz; 68 % pass the 50 ms freshness filter, 32 % are republishes on an older reference</p></td>
+</tr>
+<tr class="row-even"><td><p>panda TX</p></td>
+<td><p>100 Hz, its own timer</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Vision rate sets lateral decision period. Hz/e2e degradation must be recorded <strong>before</strong> comparing controllers.</p>
+<p>Vision rate sets the lateral decision period; the 100 Hz loop only closes the angle. Hz and e2e degradation
+must be recorded <strong>before</strong> comparing controllers, because a controller evaluated on a 3 Hz window is not the
+controller you shipped.</p>
 <p>Safety icons (<code class="docutils literal notranslate"><span class="pre">safety/warn</span></code>) are parallel to lane-keep — see <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
@@ -553,18 +639,18 @@
 <div class="prev-next-area">
     <a class="left-prev"
        href="JavaLayer.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Java layer (phone shell)</p>
       </div>
     </a>
     <a class="right-next"
        href="../Vision/Overview.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Vision — Overview</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -583,16 +669,21 @@
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#follow-one-frame-with-a-clock">Follow one frame, with a clock</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-between-frames">What happens between frames</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-by-stage">Stage by stage</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parallel-topics">Parallel topics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates">Rates</a></li>
 </ul>
@@ -609,7 +700,7 @@
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

@@ -1,0 +1,733 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Управление — как четыре главы опираются друг на друга &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Control/Overview';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Кинематическая велосипедная модель" href="BicycleModel.html" />
+    <link rel="prev" title="Локализация: собираем оценщик по одному датчику" href="../Localization/Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Управление — как четыре главы опираются друг на друга</a></li>
+<li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Control/Overview.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Управление — как четыре главы опираются друг на друга</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что на входе, что на выходе</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Почему одно число стоит пронести через все четыре главы</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">И чего стоит компенсация</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Порядок чтения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Целевое качество</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Управление — как четыре главы опираются друг на друга<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p><strong>Продольное</strong> управление задаёт скорость, <strong>поперечное</strong> — руление. Этот курс про поперечное: на MQB Golf
+без радара продольное остаётся штатным круизом, а наш путь через HCA — поперечный актуатор под присмотром
+(<code class="docutils literal notranslate"><span class="pre">docs/CRUISE_BUTTONS.md</span></code> рассказывает продольную историю и почему она так ограничена).</p>
+<p>Четыре главы дальше — это не четыре варианта на выбор. Каждая существует потому, что предыдущая ломается на
+чём-то измеримом, и интересна именно поломка.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>глава</p></th>
+<th class="head"><p>идея</p></th>
+<th class="head"><p>где ломается</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a></p></td>
+<td><p><span class="math notranslate nohighlight">\(\kappa = \tan\delta / L\)</span> — чистая геометрия</p></td>
+<td><p>считает, что колёса едут точно туда, куда смотрят. Измерено на этой машине: реальная кривизна составляет <strong>0.54</strong> от геометрической при 22 м/с</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a></p></td>
+<td><p>рулить на одну точку взгляда</p></td>
+<td><p>одна точка не может представлять путь, кривизна которого меняется внутри дальности взгляда, а сама дальность становится настраиваемым параметром без верного значения</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="VehicleModel.html"><span class="std std-doc">Модель машины и задержка</span></a></p></td>
+<td><p>добавить скольжение шин и задержку актуации</p></td>
+<td><p>коэффициент скольжения не константа — он меняется со скоростью, с 0.97 при 6–9 м/с до 0.54 при 21–26</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a></p></td>
+<td><p>оптимизировать короткую будущую траекторию</p></td>
+<td><p>горизонт стоит денег, у плана, который оптимизируется, своё смещение, а на крутых дугах актуатор насыщается и обратной связи просто нет</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="id2">
+<h2>Что на входе, что на выходе<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<p><strong>Входы</strong> (после топиков зрения и шасси): метрическая полилиния пути, скорость <span class="math notranslate nohighlight">\(v\)</span>, фактический угол
+рулевого колеса и метки времени. <strong>Выход:</strong> желаемый угол рулевого колеса, который <code class="docutils literal notranslate"><span class="pre">LatControlPID</span></code>
+превращает в нормированный момент для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> → EPS.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></th>
+<th class="head"><p>роль в курсе</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code></p></td>
+<td><p>геометрическая база — ближе всего к классическому Pure Pursuit</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mpc</span></code></p></td>
+<td><p>MPC в области пути — лучше всего для разбора стоимости и <span class="math notranslate nohighlight">\(\kappa\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
+<td><p><strong>по умолчанию на дороге</strong> — область времени, компенсация задержки, модель машины</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="id3">
+<h2>Почему одно число стоит пронести через все четыре главы<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Всё в этой части можно проверить об одну измеренную величину: отношение кривизны, которой машина реально
+достигает, к кривизне, которую предсказывает геометрия. Установившиеся дуги на этой машине дают</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>скорость</p></th>
+<th class="head"><p><span class="math notranslate nohighlight">\(\kappa_{\text{fact}} / \kappa_{\text{kin}}\)</span></p></th>
+<th class="head"><p>чего ждёт модель</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>6–9 м/с</p></td>
+<td><p>0.97</p></td>
+<td><p>0.96</p></td>
+</tr>
+<tr class="row-odd"><td><p>12–15 м/с</p></td>
+<td><p>0.80</p></td>
+<td><p>0.87</p></td>
+</tr>
+<tr class="row-even"><td><p>21–26 м/с</p></td>
+<td><p>0.54</p></td>
+<td><p>0.69</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Прочитайте первую строку — велосипедная модель отлична. Прочитайте последнюю — она перекручивает вдвое. Эта
+одна таблица и есть причина, по которой существуют остальные три главы, и причина, по которой постоянный
+<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> не может быть окончательным ответом.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">L</span> <span class="o">=</span> <span class="mf">2.636</span>                       <span class="c1"># wheelbase, m</span>
+<span class="n">STEER_RATIO</span> <span class="o">=</span> <span class="mf">15.7</span>
+<span class="n">MEASURED</span> <span class="o">=</span> <span class="p">{</span><span class="mf">7.5</span><span class="p">:</span> <span class="mf">0.97</span><span class="p">,</span> <span class="mf">13.5</span><span class="p">:</span> <span class="mf">0.80</span><span class="p">,</span> <span class="mf">23.5</span><span class="p">:</span> <span class="mf">0.54</span><span class="p">}</span>     <span class="c1"># speed -&gt; kappa_fact / kappa_kin</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">kappa_kinematic</span><span class="p">(</span><span class="n">delta_rad</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bicycle model: curvature from front wheel angle. No tyres, no speed.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta_rad</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">wheel_angle_for</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v_ms</span><span class="p">,</span> <span class="n">use_slip</span><span class="p">,</span> <span class="n">stiffness_factor</span><span class="o">=</span><span class="mf">0.64</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Command needed for a target curvature. `use_slip` adds the understeer term.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_slip</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">kappa</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span>
+    <span class="c1"># Understeer gradient scaled by the stiffness factor: delta = atan(k*L) * (1 + K*v^2)</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="mf">0.0015</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">stiffness_factor</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">kappa</span> <span class="o">*</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">K</span> <span class="o">*</span> <span class="n">v_ms</span> <span class="o">*</span> <span class="n">v_ms</span><span class="p">)</span>
+
+<span class="c1"># A 200 m arc, driven at three speeds. What curvature do we actually get?</span>
+<span class="n">kappa_target</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">200.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;speed&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;command&#39;</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;kinematic&#39;</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;achieved&#39;</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;error&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">ratio</span> <span class="ow">in</span> <span class="n">MEASURED</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">wheel_angle_for</span><span class="p">(</span><span class="n">kappa_target</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">use_slip</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">achieved</span> <span class="o">=</span> <span class="n">kappa_kinematic</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">*</span> <span class="n">ratio</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="p">(</span><span class="n">achieved</span> <span class="o">-</span> <span class="n">kappa_target</span><span class="p">)</span> <span class="o">/</span> <span class="n">kappa_target</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">STEER_RATIO</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2">° &quot;</span>
+          <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">kappa_kinematic</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;11.5f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">achieved</span><span class="si">:</span><span class="s2">&gt;10.5f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">err</span><span class="si">:</span><span class="s2">&gt;+7.0f</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Запустите: при 7.5 м/с геометрическая команда попадает в пределах пары процентов, а при 23.5 м/с даёт едва
+половину запрошенной кривизны. На дуге 200 м этот недобор и выталкивает машину наружу поворота — ровно тот
+симптом, который берётся исправлять глава <a class="reference internal" href="VehicleModel.html"><span class="std std-doc">про модель машины</span></a>.</p>
+</section>
+<section id="id4">
+<h2>И чего стоит компенсация<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>Очевидная правка — просить больше. Она работает до двух пределов, которые никаким коэффициентом не сдвинуть:
+настроенное ограничение угла и сам актуатор.</p>
+<p>Дуги ниже — те, что реально проезжались на измеренных бегах, каждая на своей скорости. Придумать радиус 70 м
+при 22 м/с значило бы 6.9 м/с² поперечного ускорения, за пределами сцепления дорожной шины, и полученное
+число ничему бы не научило.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MAX_STEER_DEG</span> <span class="o">=</span> <span class="mf">20.0</span>            <span class="c1"># vehicle.max_steer_deg, our own limit</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">compensated_command</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v_ms</span><span class="p">,</span> <span class="n">stiffness_factor</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">wheel_angle_for</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v_ms</span><span class="p">,</span> <span class="n">use_slip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">stiffness_factor</span><span class="o">=</span><span class="n">stiffness_factor</span><span class="p">)</span>
+
+<span class="c1"># radius, speed: the arc episodes from runs 2026_08_04_21_00_18 and 2026_08_06_00_36_42</span>
+<span class="n">ARCS</span> <span class="o">=</span> <span class="p">((</span><span class="mf">231.0</span><span class="p">,</span> <span class="mf">13.6</span><span class="p">),</span> <span class="p">(</span><span class="mf">150.0</span><span class="p">,</span> <span class="mf">13.8</span><span class="p">),</span> <span class="p">(</span><span class="mf">134.0</span><span class="p">,</span> <span class="mf">11.8</span><span class="p">),</span> <span class="p">(</span><span class="mf">123.0</span><span class="p">,</span> <span class="mf">13.8</span><span class="p">),</span> <span class="p">(</span><span class="mf">71.0</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;radius&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;speed&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;a_lat&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;tsf 0.64&#39;</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;tsf 0.50&#39;</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;clamped?&#39;</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">radius</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">ARCS</span><span class="p">:</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">radius</span>
+    <span class="n">a_lat</span> <span class="o">=</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span>
+    <span class="n">swa</span> <span class="o">=</span> <span class="p">[</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">compensated_command</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span> <span class="o">*</span> <span class="n">STEER_RATIO</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.64</span><span class="p">,</span> <span class="mf">0.50</span><span class="p">)]</span>
+    <span class="n">clamped</span> <span class="o">=</span> <span class="s2">&quot;yes&quot;</span> <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_STEER_DEG</span> <span class="o">*</span> <span class="n">STEER_RATIO</span> <span class="k">else</span> <span class="s2">&quot;no&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">radius</span><span class="si">:</span><span class="s2">&gt;6.0f</span><span class="si">}</span><span class="s2"> m </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">a_lat</span><span class="si">:</span><span class="s2">&gt;6.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">swa</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">swa</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">clamped</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Из этого вывода важны два чтения.</p>
+<p>Компенсация мала. Снижение <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> с 0.64 до 0.50 просит на этих дугах <strong>на 3–9 % больше
+угла</strong> — градус-два рулевого колеса, а не десятки. Это стоит усвоить до того, как трогать параметр: это
+подстройка, а не рычаг. И измеренное на дороге дало ровно то, что подстройка и должна давать, — ошибка
+слежения на левой дуге сдвинулась с +0.29 м до +0.21 м.</p>
+<p>Заметьте также, что ограничение угла ни разу не срабатывает. <code class="docutils literal notranslate"><span class="pre">max_steer_deg</span></code> — это предел <strong>колеса</strong>, то
+есть 20° его дают больше 300° рулевого колеса, а самая большая команда на этих дугах — 38°. Останавливает
+нас не ограничение, а момент. На измеренных правых дугах руль доезжает до заданного угла на левых (просили
++13.8°, получили +13.5°), но момент сидел на потолке ±300 cNm в <strong>65 % кадров правых дуг</strong>. Пока момент
+насыщен, обратной связи нет вовсе: команда больше — и ничего не меняется, кроме числа в логе. Поэтому план
+для крутых дуг — <em>запрашивать меньше кривизны</em>, а не поднимать коэффициент; и это граница, на которой вся
+эта часть курса заканчивается и начинается работа с восприятием.</p>
+</section>
+<section id="id5">
+<h2>Порядок чтения<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> — <span class="math notranslate nohighlight">\(\delta\)</span>, мгновенный центр вращения, <span class="math notranslate nohighlight">\(\kappa = \tan\delta/L\)</span>.</p></li>
+<li><p><a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — одношаговый геометрический закон и то, что скрывает дальность взгляда.</p></li>
+<li><p><a class="reference internal" href="VehicleModel.html"><span class="std std-doc">Модель машины и задержка</span></a> — почему кинематика врёт выше 15 м/с и что делают 89 мс
+задержки актуации при 22 м/с.</p></li>
+<li><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> — оптимизация на горизонте, веса стоимости и дорожные значения по умолчанию.</p></li>
+</ol>
+<div class="admonition tip">
+<p class="admonition-title">Совет</p>
+<p>Единственное диагностическое правило, которое стоит запомнить: <strong>плохой темп зрения или плохая калибровка не
+являются поводом поднимать веса CTE.</strong> Ошибка калибровки 1.5° — это 0.52 м поперечной ошибки на 20 м, втрое
+больше целевой, и никакой коэффициент контроллера не отличит её от настоящего смещения.</p>
+</div>
+</section>
+<section id="id6">
+<h2>Целевое качество<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<p>На здоровых окнах с включённым HCA медиана абсолютного смещения в полосе <strong>0.10–0.15 м</strong> при <span class="math notranslate nohighlight">\(v \approx 20\)</span>
+м/с сравнима с аккуратным человеком на тех же дорогах. Это стоит знать точно, потому что задаёт, когда
+останавливаться: измеренный на тех же дугах водитель без всякой помощи держит 0.15–0.17 м, а наш контроллер
+на прямых уже плавнее человека (0.12 против 0.16). Цель — не ноль, цель — человек.</p>
+<p>Отклонение масштаба метра на том же участке означает, что проверять надо <strong>сначала</strong> темп зрения, задержки и
+калибровку, и только потом параметры контроллера.</p>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Кинематическая велосипедная модель</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Control"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../Localization/Overview.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Локализация: собираем оценщик по одному датчику</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="BicycleModel.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Кинематическая велосипедная модель</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что на входе, что на выходе</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Почему одно число стоит пронести через все четыре главы</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">И чего стоит компенсация</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Порядок чтения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Целевое качество</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

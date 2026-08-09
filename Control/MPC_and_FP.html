@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 
 
-<html lang="ru" data-content_root="../" >
+<html data-adas-bilingual lang="en" data-content_root="../" >
 
   <head>
     <meta charset="utf-8" />
@@ -37,6 +37,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
   
   <!-- So that users can add custom icons -->
   <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
@@ -44,17 +45,16 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
 
-    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
-    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
     <script>let toggleOpenOnPrint = 'true';</script>
     <script src="../_static/togglebutton.js?v=b8b12719"></script>
-    <script src="../_static/translations.js?v=9bfe3ffa"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
@@ -65,12 +65,13 @@
     <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Control/MPC_and_FP';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
-    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
-    <link rel="search" title="Поиск" href="../search.html" />
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Warnings: FCW, AEB, LDW" href="../Safety/Warnings.html" />
     <link rel="prev" title="Vehicle Model (Understeer)" href="VehicleModel.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
   
     
@@ -82,7 +83,7 @@
   <body data-default-mode="">
   
   
-  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
 
   
   <div id="pst-scroll-pixel-helper"></div>
@@ -119,7 +120,7 @@
   
     <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
 <div class="bd-header__inner bd-page-width">
-  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
     <span class="fa-solid fa-bars"></span>
   </button>
   
@@ -132,9 +133,9 @@
         <div class="navbar-item navbar-persistent--container">
           
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
         </div>
@@ -147,16 +148,16 @@
   
     <div class="navbar-persistent--mobile">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button>
     </div>
   
 
   
-    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
       <span class="fa-solid fa-outdent"></span>
     </button>
   
@@ -207,9 +208,9 @@
 </a></div>
         <div class="sidebar-primary-item">
 
-<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
  <i class="fa-solid fa-magnifying-glass"></i>
- <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__default-text">Search</span>
  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
 </button></div>
         <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
@@ -229,11 +230,11 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: GPS, phone IMU, and the EKF</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Control — how the four chapters build on each other</a></li>
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Vehicle Model (Understeer)</a></li>
@@ -246,6 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
 </ul>
@@ -254,6 +256,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
     </div>
@@ -306,7 +309,7 @@
 
 
 <div class="dropdown dropdown-download-buttons">
-  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
     <i class="fas fa-download"></i>
   </button>
   <ul class="dropdown-menu">
@@ -315,7 +318,7 @@
       
       <li><a href="../_sources/Control/MPC_and_FP.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
-   title="Скачать исходный файл"
+   title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -333,7 +336,7 @@
       <li>
 <button onclick="window.print()"
   class="btn btn-sm btn-download-pdf-button dropdown-item"
-  title="Распечатать в PDF"
+  title="Print to PDF"
   data-bs-placement="left" data-bs-toggle="tooltip"
 >
   
@@ -353,7 +356,7 @@
 
 <button onclick="toggleFullScreen()"
   class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
-  title="Полноэкранный режим"
+  title="Fullscreen mode"
   data-bs-placement="bottom" data-bs-toggle="tooltip"
 >
   
@@ -367,13 +370,13 @@
 
 
 <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
-  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
-  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
   <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
 </button>
 
 
-<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
 <button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
@@ -395,7 +398,7 @@
         <div id="jb-print-toc">
             
             <div>
-                <h2> Содержание </h2>
+                <h2> Contents </h2>
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -425,6 +428,13 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-7-next-vision-frame">fp-7. Next vision frame</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-horizon-does-not-help">Where the horizon does not help</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-steady-offset-is-nearly-free-in-the-cost-function">1. A steady offset is nearly free in the cost function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lengthening-the-horizon-does-not-help-either">2. Lengthening the horizon does not help either</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-plan-it-optimises-has-its-own-bias">3. The plan it optimises has its own bias</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#and-when-torque-saturates-none-of-this-matters">4. And when torque saturates, none of this matters</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phone-knobs">Phone knobs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fair-comparison">Fair comparison</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -440,7 +450,7 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="mpc-and-fp">
-<h1>MPC and fp<a class="headerlink" href="#mpc-and-fp" title="Ссылка на этот заголовок">#</a></h1>
+<h1>MPC and fp<a class="headerlink" href="#mpc-and-fp" title="Link to this heading">#</a></h1>
 <p>Pure Pursuit picks <strong>one</strong> <span class="math notranslate nohighlight">\(\delta\)</span> that hits a look-ahead point.
 <strong>MPC</strong> optimizes a <strong>short future trajectory</strong>, applies the first command, and re-solves next frame.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -459,14 +469,14 @@
 </tbody>
 </table>
 </div>
-<p>Appendix with real-arc forensics: <span class="xref myst"><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></span>.</p>
+<p>Appendix with real-arc forensics: <code class="docutils literal notranslate"><span class="pre">docs/MPC_EXPLAINED.md</span></code>.</p>
 <ul class="simple">
-<li><p>VisionPilot <code class="docutils literal notranslate"><span class="pre">mpc</span></code>: <code class="docutils literal notranslate"><span class="pre">visionpilot/lateral_planning.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}20\)</span>, path-domain <span class="math notranslate nohighlight">\(ds\)</span>).</p></li>
-<li><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code>: <code class="docutils literal notranslate"><span class="pre">flowpilot/lateral_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, time grid → 2.5 s).</p></li>
+<li><p>VisionPilot <code class="docutils literal notranslate"><span class="pre">mpc</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_planning.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}20\)</span>, path-domain <span class="math notranslate nohighlight">\(ds\)</span>).</p></li>
+<li><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, time grid → 2.5 s).</p></li>
 <li><p>Path fusion (lanes↔plan): <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> / <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>.</p></li>
 </ul>
 <section id="state-symbols">
-<h2>State symbols<a class="headerlink" href="#state-symbols" title="Ссылка на этот заголовок">#</a></h2>
+<h2>State symbols<a class="headerlink" href="#state-symbols" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>symbol</p></th>
@@ -498,13 +508,13 @@
 <a class="reference internal image-reference" href="../_images/57_run0801_curve.png"><img alt="../_images/57_run0801_curve.png" src="../_images/57_run0801_curve.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 8 </span><span class="caption-text">When planner <span class="math notranslate nohighlight">\(\kappa\)</span> lags yaw-derived curvature, SWA undershoots and CTE grows.</span><a class="headerlink" href="#id1" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">When planner <span class="math notranslate nohighlight">\(\kappa\)</span> lags yaw-derived curvature, SWA undershoots and CTE grows.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
 <hr class="docutils" />
 <section id="seven-steps-visionpilot-mental-model">
-<h2>Seven steps (VisionPilot mental model)<a class="headerlink" href="#seven-steps-visionpilot-mental-model" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Seven steps (VisionPilot mental model)<a class="headerlink" href="#seven-steps-visionpilot-mental-model" title="Link to this heading">#</a></h2>
 <p>Shared toy constants for every snippet below:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -519,7 +529,7 @@
 </pre></div>
 </div>
 <section id="measure-cte-epsi-kappa">
-<h3>1. Measure CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span><a class="headerlink" href="#measure-cte-epsi-kappa" title="Ссылка на этот заголовок">#</a></h3>
+<h3>1. Measure CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span><a class="headerlink" href="#measure-cte-epsi-kappa" title="Link to this heading">#</a></h3>
 <p>Lane markings → lane-center polyline → quadratic <span class="math notranslate nohighlight">\(y = a x^2 + b x + c\)</span> in ego frame.
 At the vehicle (<span class="math notranslate nohighlight">\(x\approx 0\)</span>):</p>
 <ul class="simple">
@@ -545,7 +555,7 @@ At the vehicle (<span class="math notranslate nohighlight">\(x\approx 0\)</span>
 <p>You should recover CTE ≈ 0.3 m and <span class="math notranslate nohighlight">\(\kappa\)</span> near 0.02. On a real bag, compare <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> κ to <code class="docutils literal notranslate"><span class="pre">yaw_rate</span> <span class="pre">/</span> <span class="pre">v</span></code>.</p>
 </section>
 <section id="predict-trajectories-for-trial-delta">
-<h3>2. Predict trajectories for trial <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#predict-trajectories-for-trial-delta" title="Ссылка на этот заголовок">#</a></h3>
+<h3>2. Predict trajectories for trial <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#predict-trajectories-for-trial-delta" title="Link to this heading">#</a></h3>
 <p>VisionPilot rolls <strong>along path length</strong>, not clock time. For a candidate wheel angle <span class="math notranslate nohighlight">\(\delta\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}
@@ -579,7 +589,7 @@ At the vehicle (<span class="math notranslate nohighlight">\(x\approx 0\)</span>
 <p>Wrong <span class="math notranslate nohighlight">\(\delta\)</span> lets CTE grow; geometric <span class="math notranslate nohighlight">\(\delta\)</span> holds better. This is only the <strong>predictor</strong> — cost picks which <span class="math notranslate nohighlight">\(\delta\)</span> wins.</p>
 </section>
 <section id="score-with-j">
-<h3>3. Score with <span class="math notranslate nohighlight">\(J\)</span><a class="headerlink" href="#score-with-j" title="Ссылка на этот заголовок">#</a></h3>
+<h3>3. Score with <span class="math notranslate nohighlight">\(J\)</span><a class="headerlink" href="#score-with-j" title="Link to this heading">#</a></h3>
 <p>Lower is better. VisionPilot-style terms (simplified):</p>
 <div class="math notranslate nohighlight">
 \[
@@ -624,7 +634,7 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
 <p>Expect the minimum near <code class="docutils literal notranslate"><span class="pre">scale=1</span></code> (<span class="math notranslate nohighlight">\(\delta\approx\delta_{\mathrm{ff}}\)</span>). Set <code class="docutils literal notranslate"><span class="pre">W_DELTA=0</span></code> mentally: the ranking can flip toward pure CTE-minimizing <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
 </section>
 <section id="build-delta-mathrm-ff">
-<h3>4. Build <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span><a class="headerlink" href="#build-delta-mathrm-ff" title="Ссылка на этот заголовок">#</a></h3>
+<h3>4. Build <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span><a class="headerlink" href="#build-delta-mathrm-ff" title="Link to this heading">#</a></h3>
 <p>Feed-forward is the steering you need <strong>even if already centered</strong>:</p>
 <div class="math notranslate nohighlight">
 \[
@@ -644,7 +654,7 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
 </div>
 </section>
 <section id="solve-warm-start-gradient">
-<h3>5. Solve (warm start + gradient)<a class="headerlink" href="#solve-warm-start-gradient" title="Ссылка на этот заголовок">#</a></h3>
+<h3>5. Solve (warm start + gradient)<a class="headerlink" href="#solve-warm-start-gradient" title="Link to this heading">#</a></h3>
 <p>Seed, then finite-difference / gradient steps on the <span class="math notranslate nohighlight">\(\delta\)</span> sequence (C++: ~80 iters). In practice on road bags the descent barely moves the seed — <strong>seed quality ≈ output quality</strong>.</p>
 <div class="math notranslate nohighlight">
 \[
@@ -688,7 +698,7 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
 </div>
 </section>
 <section id="apply-first-sample-limits-swa-pid-hca">
-<h3>6. Apply first sample → limits → SWA → PID → HCA<a class="headerlink" href="#apply-first-sample-limits-swa-pid-hca" title="Ссылка на этот заголовок">#</a></h3>
+<h3>6. Apply first sample → limits → SWA → PID → HCA<a class="headerlink" href="#apply-first-sample-limits-swa-pid-hca" title="Link to this heading">#</a></h3>
 <p>Take a command slightly ahead in the horizon (delay), then clamp:</p>
 <ol class="arabic simple">
 <li><p>angle cap growing with speed,</p></li>
@@ -717,7 +727,7 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
 <p>Saturation at ±300 cNm means the <strong>plant</strong> cannot follow — not that the cost wanted more. Debug flag / UI: steering-limit indication.</p>
 </section>
 <section id="repeat-next-frame">
-<h3>7. Repeat next frame<a class="headerlink" href="#repeat-next-frame" title="Ссылка на этот заголовок">#</a></h3>
+<h3>7. Repeat next frame<a class="headerlink" href="#repeat-next-frame" title="Link to this heading">#</a></h3>
 <p>New <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (~80–90 ms median on phone) → new CTE/epsi/<span class="math notranslate nohighlight">\(\kappa\)</span> → back to step 1.
 MPC does <strong>not</strong> open-loop the whole second: only the first command is applied, then the plan is thrown away and rebuilt from the <strong>measured</strong> state.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">one_phone_frame</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">):</span>
@@ -748,12 +758,12 @@ MPC does <strong>not</strong> open-loop the whole second: only the first command
 </section>
 <hr class="docutils" />
 <section id="before-the-controller-lane-plan-blending">
-<h2>Before the controller: lane / plan blending<a class="headerlink" href="#before-the-controller-lane-plan-blending" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Before the controller: lane / plan blending<a class="headerlink" href="#before-the-controller-lane-plan-blending" title="Link to this heading">#</a></h2>
 <p>Both <code class="docutils literal notranslate"><span class="pre">fp</span></code> and <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">pp</span></code> track a <strong>reference polyline</strong> on topic <code class="docutils literal notranslate"><span class="pre">vision/path</span></code>.
 That polyline is <strong>not</strong> raw paint and <strong>not</strong> raw Supercombo plan — it is a fusion in
 <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> (<code class="docutils literal notranslate"><span class="pre">topic_convert</span></code> / Python mirror <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>).</p>
 <section id="why-fuse">
-<h3>Why fuse?<a class="headerlink" href="#why-fuse" title="Ссылка на этот заголовок">#</a></h3>
+<h3>Why fuse?<a class="headerlink" href="#why-fuse" title="Link to this heading">#</a></h3>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>source</p></th>
@@ -777,7 +787,7 @@ That polyline is <strong>not</strong> raw paint and <strong>not</strong> raw Sup
 <code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code> (shipped <strong>0.6</strong>): even with perfect lines, 40 % of the plan offset remains.</p>
 </section>
 <section id="formula-device-frame-y-right">
-<h3>Formula (device frame, <span class="math notranslate nohighlight">\(y\)</span> right+)<a class="headerlink" href="#formula-device-frame-y-right" title="Ссылка на этот заголовок">#</a></h3>
+<h3>Formula (device frame, <span class="math notranslate nohighlight">\(y\)</span> right+)<a class="headerlink" href="#formula-device-frame-y-right" title="Link to this heading">#</a></h3>
 <ol class="arabic simple">
 <li><p>Soft probabilities from near left/right (<code class="docutils literal notranslate"><span class="pre">lanes[1]</span></code>, <code class="docutils literal notranslate"><span class="pre">lanes[2]</span></code>), then × σ-confidence
 (median <code class="docutils literal notranslate"><span class="pre">y_std</span></code> over 5–40 m: full weight if <span class="math notranslate nohighlight">\(\sigma\le\)</span> <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code> 0.3,
@@ -861,8 +871,8 @@ y = d_{\mathrm{prob}}\, y_{\mathrm{lane}} + (1 - d_{\mathrm{prob}})\, y_{\mathrm
 </section>
 <hr class="docutils" />
 <section id="fp-model-flowpilot-time-domain-mpc">
-<h2><code class="docutils literal notranslate"><span class="pre">fp</span></code> model (flowpilot time-domain MPC)<a class="headerlink" href="#fp-model-flowpilot-time-domain-mpc" title="Ссылка на этот заголовок">#</a></h2>
-<p>Road default (<code class="docutils literal notranslate"><span class="pre">lane_keep_controller=fp</span></code>). Code: <code class="docutils literal notranslate"><span class="pre">flowpilot/lateral_mpc.cpp</span></code>,
+<h2><code class="docutils literal notranslate"><span class="pre">fp</span></code> model (flowpilot time-domain MPC)<a class="headerlink" href="#fp-model-flowpilot-time-domain-mpc" title="Link to this heading">#</a></h2>
+<p>Road default (<code class="docutils literal notranslate"><span class="pre">lane_keep_controller=fp</span></code>). Code: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_mpc.cpp</span></code>,
 wired in <code class="docutils literal notranslate"><span class="pre">LaneKeepService::stepFlowpilot</span></code>.</p>
 <p>Opposite of VisionPilot’s <strong>path-domain</strong> <span class="math notranslate nohighlight">\(\delta\)</span>-MPC:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -893,7 +903,7 @@ wired in <code class="docutils literal notranslate"><span class="pre">LaneKeepSe
 </table>
 </div>
 <section id="fp-1-reference-in-time">
-<h3>fp-1. Reference in time<a class="headerlink" href="#fp-1-reference-in-time" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-1. Reference in time<a class="headerlink" href="#fp-1-reference-in-time" title="Link to this heading">#</a></h3>
 <p>Polyline is flipped to openpilot left+ (<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">\leftarrow</span> <span class="pre">-y</span></code>). Sample at distances <span class="math notranslate nohighlight">\(v\cdot t_i\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[
@@ -930,7 +940,7 @@ If Supercombo orientation heads exist, <span class="math notranslate nohighlight
 </div>
 </section>
 <section id="fp-2-dynamics-state">
-<h3>fp-2. Dynamics (state)<a class="headerlink" href="#fp-2-dynamics-state" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-2. Dynamics (state)<a class="headerlink" href="#fp-2-dynamics-state" title="Link to this heading">#</a></h3>
 <p>State <span class="math notranslate nohighlight">\(x=(X,Y,\psi,r)\)</span>, control <span class="math notranslate nohighlight">\(u=\dot r\)</span> (yaw acceleration):</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}
@@ -959,7 +969,7 @@ If Supercombo orientation heads exist, <span class="math notranslate nohighlight
 </div>
 </section>
 <section id="fp-3-cost">
-<h3>fp-3. Cost<a class="headerlink" href="#fp-3-cost" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-3. Cost<a class="headerlink" href="#fp-3-cost" title="Link to this heading">#</a></h3>
 <p>With <span class="math notranslate nohighlight">\(v_{\mathrm{off}}=v+\texttt{speed\_offset}\)</span> (default +10):</p>
 <div class="math notranslate nohighlight">
 \[
@@ -999,12 +1009,12 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 <p><span class="math notranslate nohighlight">\(u{=}0.01\)</span> cuts path cost and ends near the 0.25 m ref; full <span class="math notranslate nohighlight">\(J\)</span> still rises from the rate term — the real GD balances both (shipped <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>).</p>
 </section>
 <section id="fp-4-solve">
-<h3>fp-4. Solve<a class="headerlink" href="#fp-4-solve" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-4. Solve<a class="headerlink" href="#fp-4-solve" title="Link to this heading">#</a></h3>
 <p>Warm-start previous <span class="math notranslate nohighlight">\(u\)</span>; ~50 FD-GD iterations with line search (<code class="docutils literal notranslate"><span class="pre">gd_step=0.1</span></code>).
 Same spirit as VisionPilot: good warm start matters; horizon is short.</p>
 </section>
 <section id="fp-5-lag-adjusted-curvature-the-delay-trick">
-<h3>fp-5. Lag-adjusted curvature (the delay trick)<a class="headerlink" href="#fp-5-lag-adjusted-curvature-the-delay-trick" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-5. Lag-adjusted curvature (the delay trick)<a class="headerlink" href="#fp-5-lag-adjusted-curvature-the-delay-trick" title="Link to this heading">#</a></h3>
 <p>After the solve, read yaw-rate trajectory <span class="math notranslate nohighlight">\(r(t)\)</span> and form</p>
 <div class="math notranslate nohighlight">
 \[
@@ -1034,7 +1044,7 @@ command the curvature you need <strong>when the rack will actually move</strong>
 </div>
 </section>
 <section id="fp-6-kappa-star-to-wheel-angle-pid-hca">
-<h3>fp-6. <span class="math notranslate nohighlight">\(\kappa^\star \to\)</span> wheel angle → PID → HCA<a class="headerlink" href="#fp-6-kappa-star-to-wheel-angle-pid-hca" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-6. <span class="math notranslate nohighlight">\(\kappa^\star \to\)</span> wheel angle → PID → HCA<a class="headerlink" href="#fp-6-kappa-star-to-wheel-angle-pid-hca" title="Link to this heading">#</a></h3>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>κ*  →  vehicle_model (if lat_use_vehicle_model)  →  δ
     →  angle slew / caps  →  × steer_ratio  →  angle-PID  →  HCA torque
 </pre></div>
@@ -1043,14 +1053,90 @@ command the curvature you need <strong>when the rack will actually move</strong>
 Details of understeer scaling: <a class="reference internal" href="VehicleModel.html"><span class="std std-doc">Vehicle model</span></a>.</p>
 </section>
 <section id="fp-7-next-vision-frame">
-<h3>fp-7. Next vision frame<a class="headerlink" href="#fp-7-next-vision-frame" title="Ссылка на этот заголовок">#</a></h3>
+<h3>fp-7. Next vision frame<a class="headerlink" href="#fp-7-next-vision-frame" title="Link to this heading">#</a></h3>
 <p>Re-solve with measured <code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> (not fixed 0.05). Angle-PID on the phone runs off
 <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> (~100 Hz after CAN RX 10 ms); planner rate stays vision-limited (~12.5 Hz).</p>
 </section>
 </section>
 <hr class="docutils" />
+<section id="where-the-horizon-does-not-help">
+<h2>Where the horizon does not help<a class="headerlink" href="#where-the-horizon-does-not-help" title="Link to this heading">#</a></h2>
+<p>A horizon fixes the information limit of Pure Pursuit — it reads the whole path instead of one point. It does
+not fix everything, and the three things it cannot fix were each measured rather than argued.</p>
+<section id="a-steady-offset-is-nearly-free-in-the-cost-function">
+<h3>1. A steady offset is nearly free in the cost function<a class="headerlink" href="#a-steady-offset-is-nearly-free-in-the-cost-function" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">fp</span></code> resets its state every frame: <span class="math notranslate nohighlight">\(x_0 = [0, 0, 0, \dot\psi]\)</span>. The car is, by definition, exactly on its own
+reference at node 0. So the only way a persistent offset can be penalised is through the <em>later</em> nodes — and
+that is where the time grid works against you.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">V</span> <span class="o">=</span> <span class="mf">15.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;node&#39;</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;t, s&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;distance, m&#39;</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;lateral reach, m&#39;</span><span class="si">:</span><span class="s2">&gt;17</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">V</span> <span class="o">*</span> <span class="n">t</span>
+    <span class="c1"># How far sideways can the car physically move by then, at a generous 3 m/s^2 of lateral accel?</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">t</span> <span class="o">*</span> <span class="n">t</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;7.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">&gt;12.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">reach</span><span class="si">:</span><span class="s2">&gt;17.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Read the reach column. Over the first four nodes the car cannot move sideways by more than a few
+centimetres, whatever the steering does — so a 0.35 m offset at those nodes is not a cost the optimiser can
+act on, it is a constant. The nodes where lateral motion is possible are far enough ahead that a curvature
+error dominates them.</p>
+<p>Measured consequence: the car sat <strong>0.35 m inside its own reference</strong> on arcs. And this is not a weight to
+tune — closed-loop sweeps confirmed that neither <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight</span></code> (150 against 800) nor
+<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> (0.23 against 0.35) changes it. What removes a steady offset is an integral term, which
+this formulation does not have, or a reference that is already shifted, which is what
+lane blending, a few sections above does.</p>
+</section>
+<section id="lengthening-the-horizon-does-not-help-either">
+<h3>2. Lengthening the horizon does not help either<a class="headerlink" href="#lengthening-the-horizon-does-not-help-either" title="Link to this heading">#</a></h3>
+<p>The obvious response is “use flowpilot’s N = 32 instead of our 16”. Checked, and it does not follow, because
+the grid is quadratic:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_second</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;our N=16: </span><span class="si">{</span><span class="n">first_second</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">N_FP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> nodes inside the first second, horizon </span><span class="si">{</span><span class="n">t_node</span><span class="p">(</span><span class="n">N_FP</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="n">first_second_32</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">33</span><span class="p">)</span> <span class="k">if</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="mf">32.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;N=32    : </span><span class="si">{</span><span class="n">first_second_32</span><span class="si">}</span><span class="s2"> of 33 nodes inside the first second, horizon &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mf">10.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mi">32</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">32.0</span><span class="p">)</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">The near zone is already as densely sampled as theirs. Doubling N adds far nodes, which at equal&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;weights dilutes the near zone that actually matters, and costs about 4x more to solve because we&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;use gradient descent rather than acados.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="the-plan-it-optimises-has-its-own-bias">
+<h3>3. The plan it optimises has its own bias<a class="headerlink" href="#the-plan-it-optimises-has-its-own-bias" title="Link to this heading">#</a></h3>
+<p>MPC minimises distance to a reference. If the reference is wrong, it tracks the wrong thing perfectly. On
+arcs the model plan sits <strong>+0.32 / −0.35 m</strong> from the lane centre, and an attempt to remove that with a
+single curvature coefficient failed in an instructive way:</p>
+<ul class="simple">
+<li><p>parameterised as a constant distance (<span class="math notranslate nohighlight">\(50.2\kappa\)</span>) it was unstable within one run — 20.2 below 12 m/s
+against 77.2 above;</p></li>
+<li><p>the correct parameterisation is a <em>time</em> lookahead, <span class="math notranslate nohighlight">\(\tfrac{1}{2}\kappa(vT)^2\)</span>, and <span class="math notranslate nohighlight">\(T\)</span> is indeed stable
+against speed: 0.71–1.03 s;</p></li>
+<li><p>but not reproducible <strong>between</strong> runs: 0.84 s on one, 0.56 s on another, because the two runs had
+different learned camera yaw (+1.12° against +0.24°), which changes the input warp, so the network sees a
+different image and outputs a different plan.</p></li>
+</ul>
+<p>So the coefficient cannot be baked in: on another calibration it adds its own offset. That is why lane
+blending — which needs no tunable number — became the main lever instead.</p>
+</section>
+<section id="and-when-torque-saturates-none-of-this-matters">
+<h3>4. And when torque saturates, none of this matters<a class="headerlink" href="#and-when-torque-saturates-none-of-this-matters" title="Link to this heading">#</a></h3>
+<p>On the measured right arcs, torque sat at the ±300 cNm HCA ceiling in <strong>65 % of frames</strong> (76 % on an earlier
+run, 80 % within one 12.3-second episode at R = 130 m). While saturated there is no feedback at all: the
+optimiser’s output changes and the rack does not. The remedy is to request less curvature, not to solve
+harder.</p>
+<div class="tip admonition">
+<p class="admonition-title">What to take from this section</p>
+<p>Each limit above is a different kind. One is structural (no integral term), one is a non-result (the horizon
+is long enough), one is upstream (the plan’s own bias, coupled to calibration), and one is physical (the
+actuator). Diagnosing which one you are looking at is most of the work, and none of them is found by
+sweeping weights.</p>
+</div>
+</section>
+</section>
 <section id="phone-knobs">
-<h2>Phone knobs<a class="headerlink" href="#phone-knobs" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Phone knobs<a class="headerlink" href="#phone-knobs" title="Link to this heading">#</a></h2>
 <p><strong>Shared / path</strong></p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code>, <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code>, <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code>, <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code></p></li>
@@ -1066,12 +1152,12 @@ Details of understeer scaling: <a class="reference internal" href="VehicleModel.
 <p><code class="docutils literal notranslate"><span class="pre">ff_scale</span></code>, <code class="docutils literal notranslate"><span class="pre">epsi_gain</span></code>, <code class="docutils literal notranslate"><span class="pre">cte_gain_*</span></code>, <code class="docutils literal notranslate"><span class="pre">mpc_kappa_yaw_blend</span></code>.</p>
 </section>
 <section id="fair-comparison">
-<h2>Fair comparison<a class="headerlink" href="#fair-comparison" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Fair comparison<a class="headerlink" href="#fair-comparison" title="Link to this heading">#</a></h2>
 <p>One bag window, vision <span class="math notranslate nohighlight">\(\gtrsim 9\)</span> Hz: |CTE| med/p95, |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|, straight vs arc separately.
 Tool: <code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span> <span class="pre">--vision-latency</span> <span class="pre">...</span></code> (also sweeps <code class="docutils literal notranslate"><span class="pre">--blend</span></code>).</p>
 </section>
 <section id="exercise">
-<h2>Exercise<a class="headerlink" href="#exercise" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>VisionPilot steps 2–3: which <span class="math notranslate nohighlight">\(\delta\)</span> wins on the arc? Zero the <span class="math notranslate nohighlight">\(\delta\)</span>-pin weight — does the winner move?</p></li>
 <li><p>Blending snippet: at <code class="docutils literal notranslate"><span class="pre">y(40)</span></code>, how much of the −0.4 m plan cut remains at <code class="docutils literal notranslate"><span class="pre">blend=0.6</span></code>?</p></li>
@@ -1117,18 +1203,18 @@ Tool: <code class="docutils literal notranslate"><span class="pre">bag_config_sw
 <div class="prev-next-area">
     <a class="left-prev"
        href="VehicleModel.html"
-       title="предыдущая страница">
+       title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-subtitle">previous</p>
         <p class="prev-next-title">Vehicle Model (Understeer)</p>
       </div>
     </a>
     <a class="right-next"
        href="../Safety/Warnings.html"
-       title="следующая страница">
+       title="next page">
       <div class="prev-next-info">
-        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-subtitle">next</p>
         <p class="prev-next-title">Warnings: FCW, AEB, LDW</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
@@ -1147,7 +1233,7 @@ Tool: <code class="docutils literal notranslate"><span class="pre">bag_config_sw
   <div class="sidebar-secondary-item"><div
     id="pst-page-navigation-heading-2"
     class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Содержание
+    <i class="fa-solid fa-list"></i> Contents
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
@@ -1177,6 +1263,13 @@ Tool: <code class="docutils literal notranslate"><span class="pre">bag_config_sw
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-7-next-vision-frame">fp-7. Next vision frame</a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#where-the-horizon-does-not-help">Where the horizon does not help</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#a-steady-offset-is-nearly-free-in-the-cost-function">1. A steady offset is nearly free in the cost function</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lengthening-the-horizon-does-not-help-either">2. Lengthening the horizon does not help either</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-plan-it-optimises-has-its-own-bias">3. The plan it optimises has its own bias</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#and-when-torque-saturates-none-of-this-matters">4. And when torque saturates, none of this matters</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#phone-knobs">Phone knobs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fair-comparison">Fair comparison</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercise">Exercise</a></li>
@@ -1194,7 +1287,7 @@ Tool: <code class="docutils literal notranslate"><span class="pre">bag_config_sw
   <div class="footer-item">
     
 <p class="component-author">
-Автор: Atom ADAS / student course notes
+By Atom ADAS / student course notes
 </p>
 
   </div>

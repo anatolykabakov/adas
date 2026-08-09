@@ -1,0 +1,879 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Supercombo на устройстве &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Vision/Supercombo';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Локализация: собираем оценщик по одному датчику" href="../Localization/Overview.html" />
+    <link rel="prev" title="Системы координат" href="Coordinates.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Vision/Supercombo.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Supercombo на устройстве</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Шаг 1: привести кадр к геометрии, которую ждёт модель</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит с одним кадром</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Шаг 2: запустить и решить, с какой точностью</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как выглядит здоровое состояние</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Выбор гипотезы плана</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: какой темп получится на самом деле</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Шаг 5: что реально потребляет управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Границы учебной постановки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Код, который стоит пробежать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задания</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="supercombo">
+<h1>Supercombo на устройстве<a class="headerlink" href="#supercombo" title="Ссылка на этот заголовок">#</a></h1>
+<p>Мы хотим, чтобы телефон превращал кадр с камеры на лобовом стекле в контракт <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора</span></a>.
+Сеть — одна ONNX-модель из семейства openpilot / flowpilot (обычно <strong>v0.8.x</strong>, ширина выхода 6472 в нашей сборке). Инференс идёт в <strong>Java ONNX Runtime</strong>, не через thneed или SNPE.</p>
+<section id="id1">
+<h2>Шаг 1: привести кадр к геометрии, которую ждёт модель<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<p>Сеть обучалась на одной камере в одном положении крепления. У нас ни то, ни другое, поэтому перед инференсом
+кадр разворачивается в каноническую геометрию openpilot «medmodel» — 512×256, фокус 910 px — с вычтенными
+выученными углами крепления. Эта гомография, почему она зависит от двух разных калибровок и что с ней делает
+перестановка телефона на 1.5°, — предмет главы
+<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">Три калибровки, а не одна</span></a>. Прочтите её сначала, если ещё не.</p>
+<p>Два следствия, которые надо унести в эту главу:</p>
+<ul class="simple">
+<li><p>модель видит <em>производное</em> изображение, поэтому её выход наследует любую ошибку калибровки выше;</p></li>
+<li><p>warp не бесплатен. Он стоит 7 мс медианно и 35.7 мс на p95, и этот хвост — ровно те кадры, где эталон
+старше 150 мс.</p></li>
+</ul>
+<section id="id2">
+<h3>Что происходит с одним кадром<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
+<p>Для каждого принятого кадра камеры:</p>
+<ol class="arabic simple">
+<li><p>Bitmap и <code class="docutils literal notranslate"><span class="pre">capture_ts</span></code> (время экспозиции или доставки).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> → вход модели <strong><span class="math notranslate nohighlight">\(512\times 256\)</span></strong> (совместимый с medmodel путь).</p></li>
+<li><p>Временной стек и состояние RNN (контекст в два кадра).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code> → сырой вектор; записываются <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>.</p></li>
+<li><p>Разбор голов → линии разметки и края, план (MHP → лучшая гипотеза), камерная одометрия, опционально продольное.</p></li>
+<li><p>Публикация <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (при желании полный <code class="docutils literal notranslate"><span class="pre">model_out</span></code> кладётся в бег).</p></li>
+</ol>
+<div class="warning admonition">
+<p class="admonition-title">Политика отбрасывания</p>
+<p>Когда конвейер занят, <strong>новые кадры отбрасываются</strong>. Измеренный темп падает.
+Это задача зрения и планирования, а не приглашение поднять веса CTE в MPC.</p>
+</div>
+</section>
+</section>
+<section id="id3">
+<h2>Шаг 2: запустить и решить, с какой точностью<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Инференс — это <code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code> на Android ONNX Runtime, не thneed и не SNPE. Поэтому артефакты <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>,
+которые поставляют flowpilot и dragonpilot, нам бесполезны: это предкомпилированные программы под GPU
+Snapdragon 845, привязанные к их среде исполнения.</p>
+<p>Провайдер исполнения выбирается цепочкой с откатом: NNAPI в половинной точности, если попросили, затем
+обычный NNAPI, затем CPU. Каждая попытка строит свежие опции сессии, потому что после неудачного
+<code class="docutils literal notranslate"><span class="pre">createSession</span></code> опции переиспользовать нельзя.</p>
+<p>Половинная точность стоит около 15–20 мс из 45.6 — это самый крупный оставшийся рычаг в конвейере. Она
+<strong>выключена по умолчанию</strong>, и причина — измерение, а не осторожность: перевод всей модели в fp16 (проверка
+строже, чем ослабление точности по узлам в NNAPI) сдвинул центр полосы на 0.027 м и смещение плана на
+0.037 м, при этом вероятности линий выросли, а хвост σ укоротился. Деградации нет. Но расхождение по кадрам
+составило 0.05 м медианно и 0.20 м на p95 по центру полосы, а в очереди стоит другая правка поперечного
+тракта — поэтому она ждёт своей очереди как эксперимент с одной переменной.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Офлайн-проверка, на кадрах, где видны обе линии. Заезд не нужен.</span>
+<span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
+python3<span class="w"> </span>bag_fp16_ab.py<span class="w"> </span>../../../../adas_logs/&lt;session&gt;<span class="w"> </span>--n<span class="w"> </span><span class="m">200</span><span class="w"> </span>--t0<span class="w"> </span><span class="m">900</span><span class="w"> </span>--t1<span class="w"> </span><span class="m">1100</span>
+</pre></div>
+</div>
+<section id="id4">
+<h3>Как выглядит здоровое состояние<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Медианы с ночного заезда длиной 28 минут при камере 30 к/с, без YOLO для знаков (<code class="docutils literal notranslate"><span class="pre">2026_08_06_00_36_42</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>величина</p></th>
+<th class="head text-right"><p>медиана</p></th>
+<th class="head text-right"><p>p95</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>подготовка кадра (warp)</p></td>
+<td class="text-right"><p>7.0 мс</p></td>
+<td class="text-right"><p>35.7</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">infer</span></code> в ORT</p></td>
+<td class="text-right"><p><strong>45.6 мс</strong></p></td>
+<td class="text-right"><p>53.8</p></td>
+</tr>
+<tr class="row-even"><td><p>сквозное съёмка → выход модели</p></td>
+<td class="text-right"><p>54 мс</p></td>
+<td class="text-right"><p>81</p></td>
+</tr>
+<tr class="row-odd"><td><p>съёмка → команда на руль</p></td>
+<td class="text-right"><p>79 мс</p></td>
+<td class="text-right"><p>111</p></td>
+</tr>
+<tr class="row-even"><td><p>темп публикации</p></td>
+<td class="text-right"><p><strong>13.24 Гц</strong></p></td>
+<td class="text-right"><p>—</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Читать это можно двумя способами. Медианы говорят, что конвейер здоров. А p95 подготовки кадра — впятеро
+больше медианы — говорит, что беда живёт в хвосте, и это те же кадры, на которых эталон переваливает за
+150 мс.</p>
+<p>Если вы видите инференс по 300–500 мс и 2–3 Гц, это <strong>нагрев или борьба за процессор</strong>, а не «сеть обычно
+такая медленная». Включение детектора знаков YOLO делает то же самое намеренно: он конкурирует за тот же
+SoC, поэтому выключайте его перед сравнением контроллеров.</p>
+<div class="warning admonition">
+<p class="admonition-title">Зависания зрения — до сих пор открытый пункт</p>
+<p>На дневном беге эталон был старше 300 мс 15.9 % времени, с одной дырой в <strong>75 секунд</strong>, при том что CAN
+держал свои 10 мс и таймеры держали свои — то есть ни процессор, ни планирование этого не объясняют. Тот же
+маршрут ночью прошёл чисто (<code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> максимум 119 мс, ни одного устаревшего кадра). Нагрев — ведущее
+объяснение, но не доказанное; метки прихода кадра, добавленные в августе 2026, существуют, чтобы это решить.</p>
+</div>
+</section>
+</section>
+<section id="id5">
+<h2>Шаг 3: прочитать выходной вектор<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<p>Модель возвращает один плоский массив float. Ничто в нём не подписано, а раскладка — самое неверно
+прочитанное место в этом проекте, поэтому этот раздел — её запускаемая карта.</p>
+<p>Для нашей сборки (<code class="docutils literal notranslate"><span class="pre">sc_v0.8.12</span></code>, ширина 6472; у сборки 6409 тот же префикс):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>срез</p></th>
+<th class="head"><p>содержимое</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[0</span> <span class="pre">:</span> <span class="pre">4955)</span></code></p></td>
+<td><p><strong>PLAN</strong> — 5 гипотез траектории (MHP)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[4955</span> <span class="pre">:</span> <span class="pre">5483)</span></code></p></td>
+<td><p><strong>LANES</strong> — 4 линии: 264 float средних, затем 264 логарифмов σ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[5483</span> <span class="pre">:</span> <span class="pre">5491)</span></code></p></td>
+<td><p>логиты вероятностей линий, их 8</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[5491</span> <span class="pre">:</span> <span class="pre">5755)</span></code></p></td>
+<td><p><strong>ROAD EDGES</strong> — 2 края: 132 средних, затем 132 логарифмов σ</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[5755</span> <span class="pre">:</span> <span class="pre">…)</span></code></p></td>
+<td><p>лидер, desire, meta, поза, состояние GRU</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Внутри живут две ловушки.</p>
+<p><strong>Ловушка первая: чередуются <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">z)</span></code>, а не <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code>.</strong> Внутри 66 float одной линии значения чередуют
+поперечное положение и высоту: индекс <code class="docutils literal notranslate"><span class="pre">i*2</span></code> — это <span class="math notranslate nohighlight">\(y\)</span>, <code class="docutils literal notranslate"><span class="pre">i*2+1</span></code> — это <span class="math notranslate nohighlight">\(z\)</span>. Широко скопированный демо-парсер
+читает их как <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code> и кажется работающим — потому что чётные индексы для <span class="math notranslate nohighlight">\(y\)</span> он берёт правильно, — а
+его «сигма» на самом деле высота линии над дорогой. Если ваша неопределённость подозрительно гладкая и
+маленькая, вот почему.</p>
+<p><strong>Ловушка вторая: сигмы лежат второй половиной, и они логарифмы.</strong> Настоящая <span class="math notranslate nohighlight">\(\sigma\)</span> — это <span class="math notranslate nohighlight">\(\exp(\cdot)\)</span>
+соответствующего элемента второй половины блока. У нас для краёв дороги их не читал никто до 6 августа
+2026 — потому ни один бег и не мог ответить, годны ли края, — а когда наконец прочли, оказалось, что они в
+7.5 раза шумнее линий разметки.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">PLAN_END</span> <span class="o">=</span> <span class="mi">4955</span>
+<span class="n">LANE_STDS_START</span> <span class="o">=</span> <span class="n">PLAN_END</span> <span class="o">+</span> <span class="mi">264</span>
+<span class="n">LANES_END</span> <span class="o">=</span> <span class="n">PLAN_END</span> <span class="o">+</span> <span class="mi">528</span>
+<span class="n">LANE_PROB_END</span> <span class="o">=</span> <span class="n">LANES_END</span> <span class="o">+</span> <span class="mi">8</span>
+<span class="n">EDGE_STDS_START</span> <span class="o">=</span> <span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="mi">132</span>
+<span class="n">ROAD_END</span> <span class="o">=</span> <span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="mi">264</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sigmoid</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">v</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_lines</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;4 lane lines and 2 road edges from the flat vector: y, z, sigma, probability.&quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">lanes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">PLAN_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">PLAN_END</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
+        <span class="n">stds</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
+        <span class="n">lanes</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2   — lateral</span>
+            <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2+1 — height, NOT sigma</span>
+            <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]),</span>                          <span class="c1"># second half of the block, and a log</span>
+            <span class="s2">&quot;prob&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">LANES_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])),</span>   <span class="c1"># odd logit, per the official parser</span>
+        <span class="p">})</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+        <span class="n">block</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
+        <span class="n">stds</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">EDGE_STDS_START</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">EDGE_STDS_START</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])})</span>
+    <span class="k">return</span> <span class="n">lanes</span><span class="p">,</span> <span class="n">edges</span>
+
+<span class="c1"># The 33 sample distances the model always uses — quadratic, so 11 of them are inside the first second</span>
+<span class="c1"># at 10 m/s. Worth knowing before you wonder why the far end is so sparse.</span>
+<span class="n">X_IDXS</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.1875</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mf">1.6875</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.6875</span><span class="p">,</span> <span class="mf">6.75</span><span class="p">,</span> <span class="mf">9.1875</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">15.1875</span><span class="p">,</span> <span class="mf">18.75</span><span class="p">,</span>
+                   <span class="mf">22.6875</span><span class="p">,</span> <span class="mf">27.0</span><span class="p">,</span> <span class="mf">31.6875</span><span class="p">,</span> <span class="mf">36.75</span><span class="p">,</span> <span class="mf">42.1875</span><span class="p">,</span> <span class="mf">48.0</span><span class="p">,</span> <span class="mf">54.1875</span><span class="p">,</span> <span class="mf">60.75</span><span class="p">,</span> <span class="mf">67.6875</span><span class="p">,</span> <span class="mf">75.0</span><span class="p">,</span>
+                   <span class="mf">82.6875</span><span class="p">,</span> <span class="mf">90.75</span><span class="p">,</span> <span class="mf">99.1875</span><span class="p">,</span> <span class="mf">108.0</span><span class="p">,</span> <span class="mf">117.1875</span><span class="p">,</span> <span class="mf">126.75</span><span class="p">,</span> <span class="mf">136.6875</span><span class="p">,</span> <span class="mf">147.0</span><span class="p">,</span> <span class="mf">157.6875</span><span class="p">,</span>
+                   <span class="mf">168.75</span><span class="p">,</span> <span class="mf">180.1875</span><span class="p">,</span> <span class="mf">192.0</span><span class="p">])</span>
+
+<span class="c1"># Synthetic output: a 3.5 m lane, sigma growing with range, so the indexing can be checked round-trip.</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">6472</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">y_off</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">((</span><span class="o">-</span><span class="mf">5.25</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.75</span><span class="p">,</span> <span class="mf">1.75</span><span class="p">,</span> <span class="mf">5.25</span><span class="p">)):</span>        <span class="c1"># farLeft, left, right, farRight</span>
+    <span class="n">block</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">66</span><span class="p">)</span>
+    <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">y_off</span>                                        <span class="c1"># y</span>
+    <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.02</span>                                         <span class="c1"># z: 2 cm of road crown</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">PLAN_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">PLAN_END</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span> <span class="o">=</span> <span class="n">block</span>
+    <span class="n">stds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">66</span><span class="p">)</span>
+    <span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">0.1</span> <span class="o">+</span> <span class="mf">0.02</span> <span class="o">*</span> <span class="n">X_IDXS</span><span class="p">)</span>                   <span class="c1"># sigma grows with range</span>
+    <span class="n">stds</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span> <span class="o">=</span> <span class="n">stds</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">LANES_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">else</span> <span class="o">-</span><span class="mf">3.0</span>  <span class="c1"># host lines confident</span>
+
+<span class="n">lanes</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">parse_lines</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="n">near</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">far</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&gt;=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&lt;=</span> <span class="mi">40</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;host lane width      : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;y&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;y&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;host line probability: left </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, right </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;far </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left line z          : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;z&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m  &lt;- height, not sigma&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left sigma 5-20 m    : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;sigma&#39;</span><span class="p">][</span><span class="n">near</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left sigma 20-40 m   : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;sigma&#39;</span><span class="p">][</span><span class="n">far</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Последняя пара — не игрушечная деталь. Уверенность подмешивания в <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> сворачивает <span class="math notranslate nohighlight">\(\sigma\)</span> по
+дальности, и на настоящих данных σ примерно удваивается между этими двумя полосами, потому что на дуге
+внутренняя линия уходит из кадра и её дальние отсчёты — экстраполяция. Свернуть по слишком большой дальности
+— значит позволить «я так далеко не видел» забраковать линию, у которой ближняя половина в порядке.</p>
+<section id="id6">
+<h3>Выбор гипотезы плана<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
+<p>PLAN содержит пять гипотез по 991 float: 33 шага по времени × 15 столбцов средних, затем 33 × 15
+логарифмов σ, затем один логит выбора. Берите гипотезу с наибольшим логитом — <strong>не</strong> среднее по ним,
+которое усреднило бы два разных будущих в путь через бордюр.</p>
+<p>На точку 15 столбцов — это положение (0–2), скорость (3–5), нечто вроде ускорения (6–8), ориентация (9–11)
+и её скорость (12–14). Мы читаем <span class="math notranslate nohighlight">\(y\)</span> из столбца 1, <span class="math notranslate nohighlight">\(z\)</span> из 2, а рыск и его скорость из 11 и 14.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">PLAN_MHP_N</span><span class="p">,</span> <span class="n">PLAN_COLS</span><span class="p">,</span> <span class="n">PLAN_T</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">33</span>
+<span class="n">HYP_SIZE</span> <span class="o">=</span> <span class="n">PLAN_T</span> <span class="o">*</span> <span class="n">PLAN_COLS</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>        <span class="c1"># means, log-sigmas, one logit</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_plan</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+    <span class="n">logits</span> <span class="o">=</span> <span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">HYP_SIZE</span> <span class="o">+</span> <span class="n">HYP_SIZE</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">PLAN_MHP_N</span><span class="p">)]</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">logits</span><span class="p">))</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">best</span> <span class="o">*</span> <span class="n">HYP_SIZE</span>
+    <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">yaws</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">PLAN_T</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">PLAN_COLS</span>
+        <span class="n">xs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="n">yaws</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">11</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">best</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ys</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">yaws</span><span class="p">)</span>
+
+<span class="c1"># Give hypothesis 2 the winning logit and a gentle left arc; leave the others straight.</span>
+<span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">PLAN_MHP_N</span><span class="p">):</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">HYP_SIZE</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">base</span> <span class="o">+</span> <span class="n">HYP_SIZE</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.5</span> <span class="k">if</span> <span class="n">h</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="o">-</span><span class="mf">1.0</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="mf">0.004</span> <span class="k">if</span> <span class="n">h</span> <span class="o">==</span> <span class="mi">2</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">PLAN_T</span><span class="p">):</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="n">PLAN_COLS</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">X_IDXS</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span>
+        <span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">11</span><span class="p">]</span> <span class="o">=</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">x</span>
+
+<span class="n">best</span><span class="p">,</span> <span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">,</span> <span class="n">pyaw</span> <span class="o">=</span> <span class="n">parse_plan</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chosen hypothesis </span><span class="si">{</span><span class="n">best</span><span class="si">}</span><span class="s2">, y at 30 m = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">py</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m, &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;yaw there = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">pyaw</span><span class="p">))</span><span class="si">:</span><span class="s2">+.1f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="warning admonition">
+<p class="admonition-title">Выход модели — это форма, а не метры</p>
+<p>Камерная одометрия той же сети против скорости колёс даёт масштаб 0.888 — она занижает расстояния примерно
+на 11 %. Её <em>планируемая скорость</em> хуже: <code class="docutils literal notranslate"><span class="pre">plan_v0</span> <span class="pre">/</span> <span class="pre">v_ego</span></code> измерено 0.678, и отношение плывёт со скоростью,
+так что одной константой не лечится. Поэтому продольный планировщик вообще не использует скорость модели как
+цель.</p>
+</div>
+</section>
+</section>
+<section id="id7">
+<h2>Шаг 4: какой темп получится на самом деле<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<p>Разобранные головы становятся <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code>, и следующее важное число — как часто. Оно не равно
+<span class="math notranslate nohighlight">\(1000 / \text{работа}\)</span>.</p>
+<p>Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его в тот же момент, когда
+освобождается, — то есть по своей воле не простаивает никогда. Но цикл может начаться только когда кадр
+пришёл. Поэтому темп квантован целыми периодами камеры, <span class="math notranslate nohighlight">\(f = 1 / (T \lceil W/T \rceil)\)</span>, и глава
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> разбирает, что это делает с решениями об оптимизации. Измерено: период
+44 мс при 59 мс работы даёт 11.29 Гц, ровно два кадра камеры на один обработанный.</p>
+<div class="warning admonition">
+<p class="admonition-title">Политика отбрасывания</p>
+<p>Когда конвейер занят, ожидающий кадр <strong>перезаписывается</strong>, а не ставится в очередь. Измеренный темп падает.
+Это задача зрения и планирования, а не приглашение поднять веса CTE в MPC. С 6 августа 2026 бег пишет
+<code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, поэтому поздний кадр и медленный инференс наконец
+различимы.</p>
+</div>
+</section>
+<section id="id8">
+<h2>Шаг 5: что реально потребляет управление<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<p>После <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> видит полилинию (плюс шасси). Он <strong>не знает</strong>, пришёл путь из Supercombo, из карты или из скрипта реплея. Поэтому:</p>
+<ol class="arabic simple">
+<li><p>Сначала проверяйте линии и задержки.</p></li>
+<li><p>И только потом настраивайте параметры <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> / MPC / <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p></li>
+</ol>
+<p>Опциональный YOLO для знаков делит телефон с ORT — включайте его для демонстраций и <strong>выключайте</strong>, когда измеряете качество удержания полосы (<code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code>).</p>
+</section>
+<section id="id9">
+<h2>Границы учебной постановки<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p>Одна камера телефона (без слияния с широкоугольной).</p></li>
+<li><p>Входы desire и манёвров у нас часто нули.</p></li>
+<li><p>Supercombo в этом курсе не переобучается.</p></li>
+</ul>
+</section>
+<section id="id10">
+<h2>Код, который стоит пробежать<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code>, <code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code>, функции разбора в <code class="docutils literal notranslate"><span class="pre">scripts/core/supercombo_*.py</span></code>, наложение в <code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code>.</p>
+</section>
+<section id="id11">
+<h2>Задания<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>По бегу постройте темп зрения и <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> от времени (<code class="docutils literal notranslate"><span class="pre">latency.py</span></code> или PlotJuggler).</p></li>
+<li><p>Отметьте окна с темпом <span class="math notranslate nohighlight">\(&lt; 9\)</span> Гц. <strong>Не</strong> используйте их для парето-переборов контроллера.</p></li>
+<li><p>По желанию: прогоните офлайн-разбор одного JPEG с поставляемым warp и сравните <span class="math notranslate nohighlight">\(y\)</span> разметки на <span class="math notranslate nohighlight">\(x=10\)</span> м с записанной полилинией.</p></li>
+</ol>
+<div class="note admonition">
+<p class="admonition-title">Обсуждение — против детекции разметки в AAD</p>
+<p>В AAD вы обучаете сегментацию и делаете IPM. Здесь промышленная практика ближе к <strong>одной многозадачной сети</strong> плюс warp с учётом калибровки. Педагогический компромисс: меньше реализации восприятия, больше дисциплины в отношении <strong>контрактов, меток времени и режимов отказа</strong>, которые и определяют реальный телефонный ADAS.</p>
+</div>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Vision"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Coordinates.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Системы координат</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Localization/Overview.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Локализация: собираем оценщик по одному датчику</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Шаг 1: привести кадр к геометрии, которую ждёт модель</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит с одним кадром</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Шаг 2: запустить и решить, с какой точностью</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как выглядит здоровое состояние</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Выбор гипотезы плана</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: какой темп получится на самом деле</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Шаг 5: что реально потребляет управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Границы учебной постановки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Код, который стоит пробежать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задания</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1327 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MPC и fp &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Control/MPC_and_FP';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Предупреждения: FCW, AEB, LDW" href="../Safety/Warnings.html" />
+    <link rel="prev" title="Модель машины (недокрут)" href="VehicleModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
+<li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Control/MPC_and_FP.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>MPC и fp</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Обозначения состояния</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visionpilot">Семь шагов (мысленная модель VisionPilot)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cte-epsi-kappa">1. Измерить CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#delta">2. Предсказать траектории для пробного <span class="math notranslate nohighlight">\(\delta\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#j">3. Оценить через <span class="math notranslate nohighlight">\(J\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#delta-mathrm-ff">4. Построить <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">5. Решить (тёплый старт и градиент)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#swa-pid-hca">6. Применить первый отсчёт → ограничения → SWA → PID → HCA</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">7. Повторить на следующем кадре</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">До контроллера: слияние разметки и плана</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Зачем сливать?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#device-y">Формула (система device, <span class="math notranslate nohighlight">\(y\)</span> вправо)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-mpc-flowpilot">Модель <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC flowpilot в области времени)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-1">fp-1. Эталон во времени</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-2">fp-2. Динамика (состояние)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-3">fp-3. Стоимость</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-4">fp-4. Решение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-5">fp-5. Кривизна с поправкой на запаздывание (трюк с задержкой)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-6-kappa-star-to-pid-hca">fp-6. <span class="math notranslate nohighlight">\(\kappa^\star \to\)</span> угол колеса → PID → HCA</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-7">fp-7. Следующий кадр зрения</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где горизонт не помогает</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">1. Устойчивое смещение почти бесплатно в функции стоимости</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">2. Удлинять горизонт тоже не помогает</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">3. У плана, который оптимизируется, своё смещение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">4. А когда момент насыщается, всё это неважно</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Ручки на телефоне</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Честное сравнение</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="mpc-fp">
+<h1>MPC и fp<a class="headerlink" href="#mpc-fp" title="Ссылка на этот заголовок">#</a></h1>
+<p>Pure Pursuit выбирает <strong>один</strong> <span class="math notranslate nohighlight">\(\delta\)</span>, попадающий в точку взгляда.
+<strong>MPC</strong> оптимизирует <strong>короткую будущую траекторию</strong>, применяет первую команду и решает заново на следующем кадре.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">lane_keep_controller</span></code></p></th>
+<th class="head"><p>роль</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mpc</span></code></p></td>
+<td><p>MPC пути из VisionPilot (лучше всего для изучения стоимости и <span class="math notranslate nohighlight">\(\kappa\)</span>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
+<td><p>MPC в области времени, как у штатных систем (<strong>по умолчанию на дороге</strong>)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Приложение с разбором настоящих дуг: <code class="docutils literal notranslate"><span class="pre">docs/MPC_EXPLAINED.md</span></code>.</p>
+<ul class="simple">
+<li><p>VisionPilot <code class="docutils literal notranslate"><span class="pre">mpc</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_planning.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}20\)</span>, шаг по пути <span class="math notranslate nohighlight">\(ds\)</span>).</p></li>
+<li><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, сетка по времени → 2.5 с).</p></li>
+<li><p>Слияние пути (разметка ↔ план): <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> / <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>.</p></li>
+</ul>
+<section id="id1">
+<h2>Обозначения состояния<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>обозначение</p></th>
+<th class="head"><p>смысл</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>CTE</p></td>
+<td><p>поперечное смещение от центра полосы, м</p></td>
+</tr>
+<tr class="row-odd"><td><p>epsi</p></td>
+<td><p>ошибка курса относительно касательной к пути, рад</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(\kappa\)</span></p></td>
+<td><p>кривизна пути, 1/м</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(\delta\)</span></p></td>
+<td><p>угол переднего колеса, рад</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(L\)</span></p></td>
+<td><p>база (~2.64–2.67 м)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Прямая:</strong> CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\approx 0\)</span> → доминирует <strong>обратная связь</strong>.
+<strong>Дуга:</strong> доминирует упреждение от <span class="math notranslate nohighlight">\(\kappa\)</span>. Плохая или запоздавшая <span class="math notranslate nohighlight">\(\kappa\)</span> → снос наружу.</p>
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/57_run0801_curve.png"><img alt="../_images/57_run0801_curve.png" src="../_images/57_run0801_curve.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 12 </span><span class="caption-text">Когда <span class="math notranslate nohighlight">\(\kappa\)</span> планировщика отстаёт от кривизны по рыску, SWA недобирает и CTE растёт.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<hr class="docutils" />
+<section id="visionpilot">
+<h2>Семь шагов (мысленная модель VisionPilot)<a class="headerlink" href="#visionpilot" title="Ссылка на этот заголовок">#</a></h2>
+<p>Общие игрушечные константы для всех примеров ниже:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">L</span> <span class="o">=</span> <span class="mf">2.64</span>          <span class="c1"># wheelbase [m]</span>
+<span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>            <span class="c1"># horizon steps</span>
+<span class="n">DS</span> <span class="o">=</span> <span class="mf">0.5</span>          <span class="c1"># path step [m] (~1 s preview at ~10 m/s)</span>
+<span class="n">K_US</span> <span class="o">=</span> <span class="mf">0.0015</span>     <span class="c1"># understeer-ish term in VisionPilot ff</span>
+<span class="n">FF_SCALE</span> <span class="o">=</span> <span class="mf">2.0</span>
+<span class="n">W_DELTA</span> <span class="o">=</span> <span class="mf">45000.0</span> <span class="c1"># pin δ to δ_ff</span>
+<span class="n">W_DDELTA</span> <span class="o">=</span> <span class="mf">15000.0</span>
+</pre></div>
+</div>
+<section id="cte-epsi-kappa">
+<h3>1. Измерить CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span><a class="headerlink" href="#cte-epsi-kappa" title="Ссылка на этот заголовок">#</a></h3>
+<p>Разметка → полилиния центра полосы → квадратичная <span class="math notranslate nohighlight">\(y = a x^2 + b x + c\)</span> в системе машины.
+У машины (<span class="math notranslate nohighlight">\(x\approx 0\)</span>):</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\mathrm{CTE} \approx c\)</span> (поперечное смещение),</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathrm{epsi} \approx b\)</span> (курс относительно пути),</p></li>
+<li><p><span class="math notranslate nohighlight">\(\kappa \approx 2a\)</span> (кривизна подгонки).</p></li>
+</ul>
+<p>Если окно подгонки короткое или шумное, <span class="math notranslate nohighlight">\(\kappa\)</span> выходит <strong>малой и запоздавшей</strong>, и всю эту ошибку наследует вся упреждающая цепочка.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fit_lane_state</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quadratic fit y≈a x²+b x+c → (CTE, epsi, kappa) at x=0.&quot;&quot;&quot;</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">)</span>
+
+<span class="c1"># Toy centerline: gentle left arc in device frame (y right+)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">31</span><span class="p">)</span>
+<span class="n">kappa_true</span> <span class="o">=</span> <span class="mf">0.02</span>
+<span class="n">y</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_true</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mf">0.30</span>   <span class="c1"># also 30 cm off + slight epsi</span>
+<span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span> <span class="o">=</span> <span class="n">fit_lane_state</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CTE=</span><span class="si">{</span><span class="n">cte</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m, epsi=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, κ=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;(true κ=</span><span class="si">{</span><span class="n">kappa_true</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Вы должны получить CTE ≈ 0.3 м и <span class="math notranslate nohighlight">\(\kappa\)</span> около 0.02. На настоящем беге сравните κ из <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> с <code class="docutils literal notranslate"><span class="pre">yaw_rate</span> <span class="pre">/</span> <span class="pre">v</span></code>.</p>
+</section>
+<section id="delta">
+<h3>2. Предсказать траектории для пробного <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#delta" title="Ссылка на этот заголовок">#</a></h3>
+<p>VisionPilot катит <strong>по длине пути</strong>, а не по часам. Для кандидата <span class="math notranslate nohighlight">\(\delta\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+\mathrm{CTE} &amp;\leftarrow \mathrm{CTE} - \sin(\mathrm{epsi})\, ds, \\
+\mathrm{epsi} &amp;\leftarrow \mathrm{epsi} + \big(\kappa - \tfrac{\tan\delta}{L}\big)\, ds.
+\end{aligned}
+\end{split}\]</div>
+<ul class="simple">
+<li><p>Нос повёрнут относительно дороги (<span class="math notranslate nohighlight">\(\mathrm{epsi}\neq 0\)</span>) → CTE интегрируется.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\tan\delta/L\)</span> должен совпасть с <span class="math notranslate nohighlight">\(\kappa\)</span> дороги, иначе интегрируется ошибка курса.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">ds</span><span class="o">=</span><span class="n">DS</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return arrays (cte[0..n], epsi[0..n]) including the start state.&quot;&quot;&quot;</span>
+    <span class="n">cs</span><span class="p">,</span> <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">cte</span><span class="p">],</span> <span class="p">[</span><span class="n">epsi</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="n">cte</span> <span class="o">=</span> <span class="n">cte</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">ds</span>
+        <span class="n">epsi</span> <span class="o">=</span> <span class="n">epsi</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="n">ds</span>
+        <span class="n">cs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span>
+        <span class="n">es</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">es</span><span class="p">)</span>
+
+<span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span> <span class="o">=</span> <span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.02</span>
+<span class="n">delta_ff_kin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">delta</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;δ=0&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;δ=atan(Lκ)&quot;</span><span class="p">,</span> <span class="n">delta_ff_kin</span><span class="p">)]:</span>
+    <span class="n">cs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">12s</span><span class="si">}</span><span class="s2"> CTE@0=</span><span class="si">{</span><span class="n">cs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> → CTE@end=</span><span class="si">{</span><span class="n">cs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>При неверном <span class="math notranslate nohighlight">\(\delta\)</span> CTE растёт; геометрический <span class="math notranslate nohighlight">\(\delta\)</span> держит лучше. Это только <strong>предсказатель</strong> — какой <span class="math notranslate nohighlight">\(\delta\)</span> победит, решает стоимость.</p>
+</section>
+<section id="j">
+<h3>3. Оценить через <span class="math notranslate nohighlight">\(J\)</span><a class="headerlink" href="#j" title="Ссылка на этот заголовок">#</a></h3>
+<p>Меньше — лучше. Слагаемые в духе VisionPilot (упрощённо):</p>
+<div class="math notranslate nohighlight">
+\[
+J = \sum_s \Big(
+w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2}
++ W_\delta(\delta_s - \delta_{\mathrm{ff},s})^{2}
++ W_{\Delta}(\delta_s - \delta_{s-1})^{2}
+\Big).
+\]</div>
+<p>Веса растут с <span class="math notranslate nohighlight">\(|\kappa|\)</span> (<code class="docutils literal notranslate"><span class="pre">curve_factor</span> <span class="pre">=</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">20·κ</span></code>). Слагаемое <span class="math notranslate nohighlight">\(W_\delta{=}45000\)</span> огромно, поэтому оптимум прижимается к <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost</span><span class="p">(</span><span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+         <span class="n">cte_w_base</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">epsi_w_base</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">quartic</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Score a sequence of wheel angles (len N).&quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">)</span> <span class="o">==</span> <span class="n">N</span>
+    <span class="n">v2</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span>
+    <span class="n">curve</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">kappa</span><span class="p">)</span>
+    <span class="n">cte_w</span> <span class="o">=</span> <span class="n">cte_w_base</span> <span class="o">*</span> <span class="n">curve</span>
+    <span class="n">epsi_w</span> <span class="o">=</span> <span class="n">epsi_w_base</span> <span class="o">*</span> <span class="n">curve</span>
+    <span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span> <span class="o">=</span> <span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">delta</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">):</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">cte_w</span> <span class="o">*</span> <span class="n">cte</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">cte_w</span> <span class="o">*</span> <span class="n">quartic</span> <span class="o">*</span> <span class="n">cte</span><span class="o">**</span><span class="mi">4</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">epsi_w</span> <span class="o">*</span> <span class="n">epsi</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">delta_ff</span> <span class="o">=</span> <span class="n">FF_SCALE</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_US</span> <span class="o">*</span> <span class="n">v2</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">W_DELTA</span> <span class="o">*</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">delta_ff</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">j</span> <span class="o">+=</span> <span class="n">W_DDELTA</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">),</span> <span class="mf">25.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">deltas</span><span class="p">[</span><span class="n">s</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="c1"># one predict step</span>
+        <span class="n">cte</span> <span class="o">=</span> <span class="n">cte</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DS</span>
+        <span class="n">epsi</span> <span class="o">=</span> <span class="n">epsi</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="n">DS</span>
+    <span class="k">return</span> <span class="n">j</span>
+
+<span class="n">kappa</span> <span class="o">=</span> <span class="mf">0.02</span>
+<span class="n">delta_ff</span> <span class="o">=</span> <span class="n">FF_SCALE</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_US</span> <span class="o">*</span> <span class="mi">15</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">):</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">scale</span> <span class="o">*</span> <span class="n">delta_ff</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;δ=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">delta_ff</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°  J=</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Минимум ожидается около <code class="docutils literal notranslate"><span class="pre">scale=1</span></code> (<span class="math notranslate nohighlight">\(\delta\approx\delta_{\mathrm{ff}}\)</span>). Мысленно поставьте <code class="docutils literal notranslate"><span class="pre">W_DELTA=0</span></code>: порядок может перевернуться в сторону <span class="math notranslate nohighlight">\(\delta\)</span>, минимизирующего чистую CTE.</p>
+</section>
+<section id="delta-mathrm-ff">
+<h3>4. Построить <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span><a class="headerlink" href="#delta-mathrm-ff" title="Ссылка на этот заголовок">#</a></h3>
+<p>Упреждение — это руление, которое нужно, <strong>даже если вы уже по центру</strong>:</p>
+<div class="math notranslate nohighlight">
+\[
+\delta_{\mathrm{ff}} = f_{\mathrm{scale}}\big(\arctan(L\kappa) + K_{\mathrm{us}} v^{2}\kappa\big).
+\]</div>
+<p>Оно <strong>линейно по <span class="math notranslate nohighlight">\(\kappa\)</span></strong>. Недооценили <span class="math notranslate nohighlight">\(\kappa\)</span> → недокрутили дугу. На прямой <span class="math notranslate nohighlight">\(\kappa\approx 0\)</span> → <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\approx 0\)</span>, и машину везёт обратная связь.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">ff_scale</span><span class="o">=</span><span class="n">FF_SCALE</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">K_us</span><span class="o">=</span><span class="n">K_US</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">ff_scale</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_us</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">kappa</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">20.0</span><span class="p">)</span>
+    <span class="c1"># What if perception returns only 66% of true kappa?</span>
+    <span class="n">d_bad</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="mf">0.66</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">20.0</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;κ=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  δ_ff=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°  &quot;</span>
+          <span class="sa">f</span><span class="s2">&quot;if κ×0.66 → </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_bad</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>5. Решить (тёплый старт и градиент)<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
+<p>Затравка, затем шаги по конечным разностям или градиенту по последовательности <span class="math notranslate nohighlight">\(\delta\)</span> (в C++ около 80 итераций). На практике на дорожных бегах спуск почти не двигает затравку — <strong>качество затравки ≈ качество выхода</strong>.</p>
+<div class="math notranslate nohighlight">
+\[
+\delta_{\mathrm{seed}} = \delta_{\mathrm{ff}} + \underbrace{k_{\mathrm{cte}}\mathrm{CTE} + k_{\mathrm{epsi}}\mathrm{epsi}}_{\text{обратная связь, зажим ~±0.25 рад}}.
+\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k_cte_base</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">k_epsi</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
+    <span class="n">v2</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span>
+    <span class="n">k_cte</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">k_cte_base</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">v2</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">fb</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">k_cte</span> <span class="o">*</span> <span class="n">cte</span> <span class="o">+</span> <span class="n">k_epsi</span> <span class="o">*</span> <span class="n">epsi</span><span class="p">))</span>
+    <span class="n">d0</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">+</span> <span class="n">fb</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">d0</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">solve</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">iters</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mf">2e-4</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Tiny FD gradient descent on a shared δ (toy; C++ optimizes the sequence).&quot;&quot;&quot;</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="n">best</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iters</span><span class="p">):</span>
+        <span class="c1"># one shared angle for the demo</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">trial_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="o">+</span> <span class="n">step</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+        <span class="n">trial_m</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="o">-</span> <span class="n">step</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+        <span class="n">jp</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">trial_p</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">jm</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">trial_m</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="p">(</span><span class="n">jp</span> <span class="o">-</span> <span class="n">jm</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step</span><span class="p">)</span>
+        <span class="n">d_new</span> <span class="o">=</span> <span class="n">d</span> <span class="o">-</span> <span class="mf">5e-8</span> <span class="o">*</span> <span class="n">grad</span>          <span class="c1"># tiny step — cost is stiff in δ</span>
+        <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_new</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">best</span><span class="p">:</span>
+            <span class="n">best</span> <span class="o">=</span> <span class="n">j</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">best</span>
+
+<span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">18.0</span>
+<span class="n">seed</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+<span class="n">sol</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;seed </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">° → solved </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">°  J=</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;|Δδ|=</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">°  (often ~0 on road)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="swa-pid-hca">
+<h3>6. Применить первый отсчёт → ограничения → SWA → PID → HCA<a class="headerlink" href="#swa-pid-hca" title="Ссылка на этот заголовок">#</a></h3>
+<p>Взять команду чуть впереди по горизонту (задержка), затем зажать:</p>
+<ol class="arabic simple">
+<li><p>предел угла, растущий со скоростью,</p></li>
+<li><p>ограничение скорости изменения на кадр,</p></li>
+<li><p><span class="math notranslate nohighlight">\(\delta \times\)</span> <code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> → угол рулевого колеса,</p></li>
+<li><p>угловой PID → момент <span class="math notranslate nohighlight">\(\in[\pm 300]\)</span> cNm → <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> на CAN.</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">STEER_RATIO</span> <span class="o">=</span> <span class="mf">15.7</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_limits</span><span class="p">(</span><span class="n">delta_cmd</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">max_slew_deg</span><span class="o">=</span><span class="mf">8.0</span><span class="p">):</span>
+    <span class="c1"># soft VisionPilot-ish angle cap [deg]</span>
+    <span class="n">cap</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">25.0</span><span class="p">,</span> <span class="mf">8.0</span> <span class="o">+</span> <span class="n">v</span><span class="p">)))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="n">cap</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">cap</span><span class="p">,</span> <span class="n">delta_cmd</span><span class="p">))</span>
+    <span class="n">slew</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">max_slew_deg</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">delta_prev</span> <span class="o">-</span> <span class="n">slew</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">delta_prev</span> <span class="o">+</span> <span class="n">slew</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
+    <span class="n">swa</span> <span class="o">=</span> <span class="n">d</span> <span class="o">*</span> <span class="n">STEER_RATIO</span>
+    <span class="k">return</span> <span class="n">d</span><span class="p">,</span> <span class="n">swa</span>
+
+<span class="n">delta_plan</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sol</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># &quot;look ahead&quot; one sample</span>
+<span class="n">d_prev</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">apply_limits</span><span class="p">(</span><span class="n">delta_plan</span><span class="p">,</span> <span class="n">d_prev</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">18.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;wheel </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_out</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°  SWA </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°  &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;(PID→torque happens in LaneKeepService / PandaService)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Насыщение на ±300 cNm означает, что <strong>машина</strong> не может исполнить, а не что стоимость хотела больше. Отладочный флаг и индикация в интерфейсе: предел руления.</p>
+</section>
+<section id="id3">
+<h3>7. Повторить на следующем кадре<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
+<p>Новые <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (медиана ~80–90 мс на телефоне) → новые CTE/epsi/<span class="math notranslate nohighlight">\(\kappa\)</span> → снова шаг 1.
+MPC <strong>не</strong> гонит всю секунду в открытом контуре: применяется только первая команда, затем план выбрасывается и строится заново от <strong>измеренного</strong> состояния.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">one_phone_frame</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Steps 4→6 for one camera frame (measure assumed already done).&quot;&quot;&quot;</span>
+    <span class="n">deltas</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="c1"># real code runs gradient; seed≈solution on many bags</span>
+    <span class="n">d_plan</span> <span class="o">=</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">apply_limits</span><span class="p">(</span><span class="n">d_plan</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span>
+
+<span class="c1"># Structural MPC loop — new measurement every frame, plan discarded</span>
+<span class="n">delta_prev</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="c1"># step 1 would refresh cte, epsi, kappa from vision here</span>
+    <span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">18.0</span>
+    <span class="n">delta_prev</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">one_phone_frame</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;frame </span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s2">: δ=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta_prev</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°  SWA=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+
+<span class="c1"># Why κ quality matters more than &quot;more MPC iterations&quot;</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">command vs measured κ (CTE=epsi=0):&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">k_meas</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.013</span><span class="p">,</span> <span class="mf">0.008</span><span class="p">):</span>  <span class="c1"># truth, ×0.66, worse</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">k_meas</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  κ_meas=</span><span class="si">{</span><span class="n">k_meas</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> → δ_seed=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Применяется только первая команда; остальной горизонт выбрасывается. Если <span class="math notranslate nohighlight">\(\kappa\)</span> занижена на каждом кадре, то каждая затравка недобирает — спуск не может выдумать кривизну, которую шаг 1 никогда не измерил.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="id4">
+<h2>До контроллера: слияние разметки и плана<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>И <code class="docutils literal notranslate"><span class="pre">fp</span></code>, и <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">pp</span></code> следят за <strong>эталонной полилинией</strong> на топике <code class="docutils literal notranslate"><span class="pre">vision/path</span></code>.
+Эта полилиния — <strong>не</strong> сырая разметка и <strong>не</strong> сырой план Supercombo, а слияние в
+<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> (<code class="docutils literal notranslate"><span class="pre">topic_convert</span></code>, зеркало на Python <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>).</p>
+<section id="id5">
+<h3>Зачем сливать?<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>источник</p></th>
+<th class="head"><p>сильная сторона</p></th>
+<th class="head"><p>режим отказа</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Линии разметки</strong> (ближние Л/П)</p></td>
+<td><p>геометрический центр той полосы, в которой вы едете</p></td>
+<td><p>исчезают, σ взлетает на дугах и в дождь</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>План модели</strong> (<code class="docutils literal notranslate"><span class="pre">plan_x/y</span></code>)</p></td>
+<td><p>всегда есть, гладкий</p></td>
+<td><p>систематически <strong>срезает внутрь</strong> дуги (смещение уставки)</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Upstream (comma-two) доверяет разметке, когда уверен (<code class="docutils literal notranslate"><span class="pre">d_prob≈1</span></code>). Мы выносим пропорцию как
+<code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code> (поставляется <strong>0.6</strong>): даже при идеальных линиях 40 % смещения плана остаётся.</p>
+</section>
+<section id="device-y">
+<h3>Формула (система device, <span class="math notranslate nohighlight">\(y\)</span> вправо)<a class="headerlink" href="#device-y" title="Ссылка на этот заголовок">#</a></h3>
+<ol class="arabic simple">
+<li><p>Мягкие вероятности от ближних левой и правой (<code class="docutils literal notranslate"><span class="pre">lanes[1]</span></code>, <code class="docutils literal notranslate"><span class="pre">lanes[2]</span></code>), затем × уверенность по σ
+(медиана <code class="docutils literal notranslate"><span class="pre">y_std</span></code> на 5–40 м: полный вес при <span class="math notranslate nohighlight">\(\sigma\le\)</span> <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code> 0.3,
+ноль при <span class="math notranslate nohighlight">\(\sigma\ge\)</span> <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code> 1.5).</p></li>
+<li><p>Нужны обе линии и медианная ширина <span class="math notranslate nohighlight">\(\in[2.6, 4.6]\)</span> м → <strong>anchored</strong>.</p></li>
+<li><p>Середина полосы на каждом <span class="math notranslate nohighlight">\(x\)</span>:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+y_{\mathrm{lane}} = \frac{p_L(y_L + w/2) + p_R(y_R - w/2)}{p_L + p_R},\quad
+w=\mathrm{clip}(|y_L-y_R|).
+\]</div>
+<ol class="arabic simple" start="4">
+<li><p>Вес подмешивания (ИЛИ вероятностей в духе flowpilot, затем масштаб):</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+d_{\mathrm{prob}} = (p_L + p_R - p_L p_R)\cdot\texttt{path\_lane\_blend\_scale}.
+\]</div>
+<ol class="arabic simple" start="5">
+<li><p>Слияние с точками плана:</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+y = d_{\mathrm{prob}}\, y_{\mathrm{lane}} + (1 - d_{\mathrm{prob}})\, y_{\mathrm{plan}}.
+\]</div>
+<p>Если не anchored или <code class="docutils literal notranslate"><span class="pre">blend_scale=0</span></code> → <strong>только план</strong>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">soft_prob</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">min_p</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="n">min_p</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="n">p</span> <span class="o">-</span> <span class="n">min_p</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">min_p</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">std_conf</span><span class="p">(</span><span class="n">median_std</span><span class="p">,</span> <span class="n">good</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">bad</span><span class="o">=</span><span class="mf">1.5</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">median_std</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">if</span> <span class="n">median_std</span> <span class="o">&lt;=</span> <span class="n">good</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+    <span class="k">if</span> <span class="n">median_std</span> <span class="o">&gt;=</span> <span class="n">bad</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">bad</span> <span class="o">-</span> <span class="n">median_std</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">bad</span> <span class="o">-</span> <span class="n">good</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">blend_reference</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y_plan</span><span class="p">,</span> <span class="n">y_L</span><span class="p">,</span> <span class="n">y_R</span><span class="p">,</span> <span class="n">p_L</span><span class="p">,</span> <span class="n">p_R</span><span class="p">,</span>
+                    <span class="n">std_L</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">std_R</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">blend_scale</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                    <span class="n">w_min</span><span class="o">=</span><span class="mf">2.6</span><span class="p">,</span> <span class="n">w_max</span><span class="o">=</span><span class="mf">4.6</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return fused y(x). All arrays same length; device y right+.&quot;&quot;&quot;</span>
+    <span class="n">p_L</span> <span class="o">=</span> <span class="n">soft_prob</span><span class="p">(</span><span class="n">p_L</span><span class="p">)</span> <span class="o">*</span> <span class="n">std_conf</span><span class="p">(</span><span class="n">std_L</span><span class="p">)</span>
+    <span class="n">p_R</span> <span class="o">=</span> <span class="n">soft_prob</span><span class="p">(</span><span class="n">p_R</span><span class="p">)</span> <span class="o">*</span> <span class="n">std_conf</span><span class="p">(</span><span class="n">std_R</span><span class="p">)</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">5.0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="mf">40.0</span><span class="p">)</span>
+    <span class="n">w_med</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_R</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_L</span><span class="p">[</span><span class="n">sel</span><span class="p">])))</span> <span class="k">if</span> <span class="n">sel</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="n">anchored</span> <span class="o">=</span> <span class="p">(</span><span class="n">w_min</span> <span class="o">&lt;</span> <span class="n">w_med</span> <span class="o">&lt;</span> <span class="n">w_max</span><span class="p">)</span> <span class="ow">and</span> <span class="n">p_L</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">p_R</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">d_prob</span> <span class="o">=</span> <span class="p">(</span><span class="n">p_L</span> <span class="o">+</span> <span class="n">p_R</span> <span class="o">-</span> <span class="n">p_L</span> <span class="o">*</span> <span class="n">p_R</span><span class="p">)</span> <span class="o">*</span> <span class="n">blend_scale</span> <span class="k">if</span> <span class="n">anchored</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_L</span> <span class="o">-</span> <span class="n">y_R</span><span class="p">),</span> <span class="n">w_min</span><span class="p">,</span> <span class="n">w_max</span><span class="p">)</span>
+    <span class="n">y_lane</span> <span class="o">=</span> <span class="p">(</span><span class="n">p_L</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_L</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">p_R</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_R</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">w</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">p_L</span> <span class="o">+</span> <span class="n">p_R</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">d_prob</span> <span class="o">*</span> <span class="n">y_lane</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">d_prob</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_plan</span>
+    <span class="k">return</span> <span class="n">y</span><span class="p">,</span> <span class="n">d_prob</span><span class="p">,</span> <span class="n">anchored</span>
+
+<span class="c1"># Toy: plan cuts 40 cm inside; paint is centered</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
+<span class="n">y_plan</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.40</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="mf">40.0</span><span class="p">)</span>          <span class="c1"># drifts to −0.4 m at 40 m</span>
+<span class="n">y_L</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.75</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">y_R</span> <span class="o">=</span> <span class="o">+</span><span class="mf">1.75</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">):</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">ok</span> <span class="o">=</span> <span class="n">blend_reference</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y_plan</span><span class="p">,</span> <span class="n">y_L</span><span class="p">,</span> <span class="n">y_R</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">blend_scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;blend=</span><span class="si">{</span><span class="n">scale</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> anchored=</span><span class="si">{</span><span class="n">ok</span><span class="si">}</span><span class="s2"> d_prob=</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  &quot;</span>
+          <span class="sa">f</span><span class="s2">&quot;y(0)=</span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">  y(40)=</span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Ожидается: <code class="docutils literal notranslate"><span class="pre">blend=0</span></code> следует срезающему плану; <code class="docutils literal notranslate"><span class="pre">blend=1</span></code> сидит на середине полосы (<span class="math notranslate nohighlight">\(≈0\)</span>);
+<code class="docutils literal notranslate"><span class="pre">blend=0.6</span></code> посередине — поставляемое значение для телефона.</p>
+<div class="tip admonition">
+<p class="admonition-title">Ручки</p>
+<p><code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code>, <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code> / <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code>, <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code>
+(постоянный сдвиг после слияния). Поднимать подмешивание к 1.0 помогает дугам <strong>только если</strong> σ остаётся в
+«хорошей» полосе — иначе <span class="math notranslate nohighlight">\(d_{\mathrm{prob}}\to 0\)</span> и вы снова молча едете по плану.</p>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="fp-mpc-flowpilot">
+<h2>Модель <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC flowpilot в области времени)<a class="headerlink" href="#fp-mpc-flowpilot" title="Ссылка на этот заголовок">#</a></h2>
+<p>По умолчанию на дороге (<code class="docutils literal notranslate"><span class="pre">lane_keep_controller=fp</span></code>). Код: <code class="docutils literal notranslate"><span class="pre">lateral/lateral_mpc.cpp</span></code>,
+подключение в <code class="docutils literal notranslate"><span class="pre">LaneKeepService::stepFlowpilot</span></code>.</p>
+<p>Противоположность <span class="math notranslate nohighlight">\(\delta\)</span>-MPC VisionPilot в <strong>области пути</strong>:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>VisionPilot <code class="docutils literal notranslate"><span class="pre">mpc</span></code></p></th>
+<th class="head"><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>переменная решения</p></td>
+<td><p>угол колеса <span class="math notranslate nohighlight">\(\delta\)</span> по <span class="math notranslate nohighlight">\(s\)</span></p></td>
+<td><p>производная скорости рыска <span class="math notranslate nohighlight">\(u=\dot r\)</span> во <strong>времени</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>горизонт</p></td>
+<td><p><span class="math notranslate nohighlight">\(N{=}20\)</span>, <span class="math notranslate nohighlight">\(ds\sim 0.5\)</span> м</p></td>
+<td><p><span class="math notranslate nohighlight">\(N{=}16\)</span>, <span class="math notranslate nohighlight">\(t_i=10(i/32)^2\)</span> → <strong><span class="math notranslate nohighlight">\(T_f=2.5\)</span> с</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>выход</p></td>
+<td><p><span class="math notranslate nohighlight">\(\delta\)</span></p></td>
+<td><p>желаемая <strong>кривизна</strong> <span class="math notranslate nohighlight">\(\kappa^\star\)</span>, затем модель машины → <span class="math notranslate nohighlight">\(\delta\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>задержка</p></td>
+<td><p>взять <span class="math notranslate nohighlight">\(\delta_1\)</span></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">lagAdjustedCurvature</span></code> на <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="fp-1">
+<h3>fp-1. Эталон во времени<a class="headerlink" href="#fp-1" title="Ссылка на этот заголовок">#</a></h3>
+<p>Полилиния переворачивается в систему openpilot с <span class="math notranslate nohighlight">\(y\)</span> влево (<code class="docutils literal notranslate"><span class="pre">y</span> <span class="pre">\leftarrow</span> <span class="pre">-y</span></code>). Отсчёты берутся на расстояниях <span class="math notranslate nohighlight">\(v\cdot t_i\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+t_i = 10\left(\frac{i}{32}\right)^{2},\quad i=0\ldots 16.
+\]</div>
+<p>Строятся <span class="math notranslate nohighlight">\(y_{\mathrm{ref}}(t)\)</span>, <span class="math notranslate nohighlight">\(\psi_{\mathrm{ref}}(t)\)</span>, <span class="math notranslate nohighlight">\(r_{\mathrm{ref}}=\dot\psi_{\mathrm{ref}}\)</span>.
+Если головы ориентации Supercombo есть, <span class="math notranslate nohighlight">\(\psi\)</span> и <span class="math notranslate nohighlight">\(r\)</span> берутся из <code class="docutils literal notranslate"><span class="pre">plan_yaw</span></code> и <code class="docutils literal notranslate"><span class="pre">plan_yaw_rate</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">N_FP</span> <span class="o">=</span> <span class="mi">16</span>
+<span class="n">T_IDX_MAX</span> <span class="o">=</span> <span class="mf">32.0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="n">T_IDX_MAX</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;fp time grid [s]:&quot;</span><span class="p">,</span> <span class="p">[</span><span class="nb">round</span><span class="p">(</span><span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)])</span>
+<span class="c1"># 0, 0.156, 0.625, 1.406, 2.5</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sample_y_ref</span><span class="p">(</span><span class="n">poly_xy</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;poly_xy: Nx2 in left+ frame; return y_ref[0..N].&quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">poly_xy</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">poly_xy</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span>
+    <span class="n">y_ref</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">s</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">y_ref</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">y</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_ref</span><span class="p">)</span>
+
+<span class="c1"># Straight offset 0.25 m left in left+ frame</span>
+<span class="n">poly</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">40</span><span class="p">),</span> <span class="mf">0.25</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">40</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;y_ref@v=15:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">sample_y_ref</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)[::</span><span class="mi">4</span><span class="p">],</span> <span class="mi">3</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="fp-2">
+<h3>fp-2. Динамика (состояние)<a class="headerlink" href="#fp-2" title="Ссылка на этот заголовок">#</a></h3>
+<p>Состояние <span class="math notranslate nohighlight">\(x=(X,Y,\psi,r)\)</span>, управление <span class="math notranslate nohighlight">\(u=\dot r\)</span> (угловое ускорение рыска):</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+\dot X &amp;= v\cos\psi - R_{\mathrm{rot}}\sin\psi\cdot r,\\
+\dot Y &amp;= v\sin\psi + R_{\mathrm{rot}}\cos\psi\cdot r,\\
+\dot\psi &amp;= r,\\
+\dot r &amp;= u.
+\end{aligned}
+\end{split}\]</div>
+<p><span class="math notranslate nohighlight">\(R_{\mathrm{rot}}\approx L/2\)</span> в нашем конфиге. Машина начинается в начале координат; <span class="math notranslate nohighlight">\(r_0\)</span> засевается из геометрии пути при первом вызове.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">forward_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">r0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">R_rot</span><span class="o">=</span><span class="mf">1.32</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;u length N; return Y, psi, r trajectories length N+1.&quot;&quot;&quot;</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">psi</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">r0</span>
+    <span class="n">Ys</span><span class="p">,</span> <span class="n">psis</span><span class="p">,</span> <span class="n">rs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Y</span><span class="p">],</span> <span class="p">[</span><span class="n">psi</span><span class="p">],</span> <span class="p">[</span><span class="n">r</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span><span class="p">):</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">t_node</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="mf">1e-4</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span> <span class="o">+</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">-</span> <span class="n">R_rot</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">*</span> <span class="n">r</span><span class="p">)</span>
+        <span class="n">Y</span> <span class="o">=</span> <span class="n">Y</span> <span class="o">+</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">+</span> <span class="n">R_rot</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">*</span> <span class="n">r</span><span class="p">)</span>
+        <span class="n">psi</span> <span class="o">=</span> <span class="n">psi</span> <span class="o">+</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">r</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">r</span> <span class="o">+</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">Ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Y</span><span class="p">);</span> <span class="n">psis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">psi</span><span class="p">);</span> <span class="n">rs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">Ys</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">psis</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rs</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="fp-3">
+<h3>fp-3. Стоимость<a class="headerlink" href="#fp-3" title="Ссылка на этот заголовок">#</a></h3>
+<p>С <span class="math notranslate nohighlight">\(v_{\mathrm{off}}=v+\texttt{speed\_offset}\)</span> (по умолчанию +10):</p>
+<div class="math notranslate nohighlight">
+\[
+J = \sum_i \Big(
+w_y(Y_i-y_{\mathrm{ref}})^2
++ w_\psi v_{\mathrm{off}}^2(\psi_i-\psi_{\mathrm{ref}})^2
++ w_r v_{\mathrm{off}}^2(r_i-r_{\mathrm{ref}})^2
++ w_{\mathrm{jerk}}(v_{\mathrm{off}} u_i)^2
++ w_{\mathrm{srate}}(u_i/(v+0.1))^2
+\Big).
+\]</div>
+<p>Примерно поставляемые веса: <code class="docutils literal notranslate"><span class="pre">path_weight=1</span></code>, <code class="docutils literal notranslate"><span class="pre">heading_weight=0.11</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_jerk_weight=0.05</span></code>,
+<code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w_y</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w_psi</span><span class="o">=</span><span class="mf">0.11</span><span class="p">,</span> <span class="n">w_srate</span><span class="o">=</span><span class="mf">400.0</span><span class="p">,</span> <span class="n">speed_offset</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
+    <span class="n">Y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">forward_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="n">v_off</span> <span class="o">=</span> <span class="n">v</span> <span class="o">+</span> <span class="n">speed_offset</span>
+    <span class="n">j</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">psi_ref</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y_ref</span><span class="p">)</span>   <span class="c1"># toy: straight</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">w_y</span> <span class="o">*</span> <span class="p">(</span><span class="n">Y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">y_ref</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">j</span> <span class="o">+=</span> <span class="n">w_psi</span> <span class="o">*</span> <span class="p">(</span><span class="n">v_off</span> <span class="o">*</span> <span class="p">(</span><span class="n">psi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">psi_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N_FP</span><span class="p">:</span>
+            <span class="n">j</span> <span class="o">+=</span> <span class="n">w_srate</span> <span class="o">*</span> <span class="p">(</span><span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="k">return</span> <span class="n">j</span>
+
+<span class="n">v</span> <span class="o">=</span> <span class="mf">15.0</span>
+<span class="n">y_ref</span> <span class="o">=</span> <span class="n">sample_y_ref</span><span class="p">(</span><span class="n">poly</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+<span class="c1"># Path-only view (w_srate=0): small +u pulls Y toward +0.25</span>
+<span class="k">for</span> <span class="n">u0</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">):</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">N_FP</span><span class="p">,</span> <span class="n">u0</span><span class="p">)</span>
+    <span class="n">Y</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">forward_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="n">j_path</span> <span class="o">=</span> <span class="n">cost_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w_srate</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="n">j_full</span> <span class="o">=</span> <span class="n">cost_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w_srate</span><span class="o">=</span><span class="mf">400.0</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;u=</span><span class="si">{</span><span class="n">u0</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">  Y_end=</span><span class="si">{</span><span class="n">Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">  J_path=</span><span class="si">{</span><span class="n">j_path</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  J_full=</span><span class="si">{</span><span class="n">j_full</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><span class="math notranslate nohighlight">\(u{=}0.01\)</span> снижает стоимость пути и заканчивает около эталонных 0.25 м; полное <span class="math notranslate nohighlight">\(J\)</span> всё равно растёт из-за слагаемого по скорости — настоящий градиентный спуск балансирует оба (поставляется <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>).</p>
+</section>
+<section id="fp-4">
+<h3>fp-4. Решение<a class="headerlink" href="#fp-4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Тёплый старт по предыдущему <span class="math notranslate nohighlight">\(u\)</span>; около 50 итераций конечно-разностного градиентного спуска с линейным поиском (<code class="docutils literal notranslate"><span class="pre">gd_step=0.1</span></code>).
+Дух тот же, что у VisionPilot: хорошая затравка важна, горизонт короткий.</p>
+</section>
+<section id="fp-5">
+<h3>fp-5. Кривизна с поправкой на запаздывание (трюк с задержкой)<a class="headerlink" href="#fp-5" title="Ссылка на этот заголовок">#</a></h3>
+<p>После решения читается траектория скорости рыска <span class="math notranslate nohighlight">\(r(t)\)</span> и строится</p>
+<div class="math notranslate nohighlight">
+\[
+\kappa_0 = \frac{r(0)}{v},\qquad
+\kappa_{\mathrm{avg}} = \frac{\psi(t_d)}{v\, t_d},\qquad
+\kappa^\star = 2\kappa_{\mathrm{avg}} - \kappa_0,
+\]</div>
+<p>где <span class="math notranslate nohighlight">\(t_d=\texttt{fp\_steer\_delay\_s}\)</span> (поставляется <strong>0.35</strong> с), затем <span class="math notranslate nohighlight">\(\kappa^\star\)</span> ограничивается по скорости через
+<code class="docutils literal notranslate"><span class="pre">max_lateral_jerk</span> <span class="pre">/</span> <span class="pre">v²</span></code>. Это порт <code class="docutils literal notranslate"><span class="pre">get_lag_adjusted_curvature</span></code> из openpilot:
+командовать ту кривизну, которая нужна <strong>в момент, когда рейка действительно двинется</strong>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">lag_adjusted_kappa</span><span class="p">(</span><span class="n">psi_sol</span><span class="p">,</span> <span class="n">r_sol</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delay_s</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">dt_s</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span> <span class="n">max_jerk</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+    <span class="n">kappa0</span> <span class="o">=</span> <span class="n">r_sol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">v</span>
+    <span class="n">psi_d</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">delay_s</span><span class="p">,</span> <span class="n">ts</span><span class="p">,</span> <span class="n">psi_sol</span><span class="p">))</span>
+    <span class="n">avg</span> <span class="o">=</span> <span class="n">psi_d</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">delay_s</span><span class="p">)</span>
+    <span class="n">desired</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">avg</span> <span class="o">-</span> <span class="n">kappa0</span>
+    <span class="n">max_rate</span> <span class="o">=</span> <span class="n">max_jerk</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">desired</span><span class="p">,</span> <span class="n">kappa0</span> <span class="o">-</span> <span class="n">max_rate</span> <span class="o">*</span> <span class="n">dt_s</span><span class="p">,</span> <span class="n">kappa0</span> <span class="o">+</span> <span class="n">max_rate</span> <span class="o">*</span> <span class="n">dt_s</span><span class="p">))</span>
+
+<span class="c1"># Constant-r turn: psi(t)=r0*t → avg=kappa0 → κ*=kappa0 (no change)</span>
+<span class="n">r0</span> <span class="o">=</span> <span class="mf">0.02</span> <span class="o">*</span> <span class="mf">15.0</span>
+<span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+<span class="n">psi</span> <span class="o">=</span> <span class="n">r0</span> <span class="o">*</span> <span class="n">ts</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">r0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;steady turn κ*:&quot;</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">lag_adjusted_kappa</span><span class="p">(</span><span class="n">psi</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">),</span> <span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+<section id="fp-6-kappa-star-to-pid-hca">
+<h3>fp-6. <span class="math notranslate nohighlight">\(\kappa^\star \to\)</span> угол колеса → PID → HCA<a class="headerlink" href="#fp-6-kappa-star-to-pid-hca" title="Ссылка на этот заголовок">#</a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>κ*  →  vehicle_model (if lat_use_vehicle_model)  →  δ
+    →  angle slew / caps  →  × steer_ratio  →  angle-PID  →  HCA torque
+</pre></div>
+</div>
+<p>Знак: в системе device <span class="math notranslate nohighlight">\(y\)</span> вправо; сервис публикует <code class="docutils literal notranslate"><span class="pre">steer_rad</span> <span class="pre">=</span> <span class="pre">-steerFromCurvature(...)</span></code>.
+Детали масштабирования недокрута — в главе <a class="reference internal" href="VehicleModel.html"><span class="std std-doc">про модель машины</span></a>.</p>
+</section>
+<section id="fp-7">
+<h3>fp-7. Следующий кадр зрения<a class="headerlink" href="#fp-7" title="Ссылка на этот заголовок">#</a></h3>
+<p>Решаем заново с измеренным <code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> (а не с фиксированными 0.05). Угловой PID на телефоне идёт от
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> (около 100 Гц после приёма CAN за 10 мс); темп планировщика остаётся ограничен зрением (около 12.5 Гц).</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="id6">
+<h2>Где горизонт не помогает<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<p>Горизонт снимает информационный предел Pure Pursuit — он читает весь путь, а не одну точку. Но не всё, и три
+вещи, которые он не снимает, каждая была измерена, а не выведена из рассуждений.</p>
+<section id="id7">
+<h3>1. Устойчивое смещение почти бесплатно в функции стоимости<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">fp</span></code> сбрасывает состояние каждый кадр: <span class="math notranslate nohighlight">\(x_0 = [0, 0, 0, \dot\psi]\)</span>. Машина по определению находится точно на
+своём эталоне в нулевом узле. Значит наказать устойчивое смещение можно только через <em>дальние</em> узлы — и вот там
+сетка времени работает против вас.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">V</span> <span class="o">=</span> <span class="mf">15.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;node&#39;</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;t, s&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;distance, m&#39;</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;lateral reach, m&#39;</span><span class="si">:</span><span class="s2">&gt;17</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">):</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">V</span> <span class="o">*</span> <span class="n">t</span>
+    <span class="c1"># How far sideways can the car physically move by then, at a generous 3 m/s^2 of lateral accel?</span>
+    <span class="n">reach</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">t</span> <span class="o">*</span> <span class="n">t</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;7.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">&gt;12.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">reach</span><span class="si">:</span><span class="s2">&gt;17.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Прочитайте колонку доступного бокового смещения. За первые четыре узла машина не может сдвинуться боком больше
+чем на пару сантиметров, что бы руль ни делал, — поэтому 0.35 м смещения в этих узлах не стоимость, на которую
+оптимизатор может подействовать, а константа. Узлы, где боковое движение возможно, лежат достаточно далеко, и
+там доминирует ошибка кривизны.</p>
+<p>Измеренное следствие: машина сидела <strong>0.35 м внутри своего же эталона</strong> на дугах. И это не вес, который надо
+подстроить: прогоны в замкнутом контуре подтвердили, что ни <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight</span></code> (150 против 800), ни
+<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> (0.23 против 0.35) этого не меняют. Устойчивое смещение убирает интегральное слагаемое,
+которого в этой постановке нет, либо уже сдвинутый эталон — что и делает
+подмешивание разметки, несколькими разделами выше.</p>
+</section>
+<section id="id8">
+<h3>2. Удлинять горизонт тоже не помогает<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
+<p>Очевидный ответ — «взять N = 32, как у flowpilot, вместо наших 16». Проверено, и из этого не следует, потому
+что сетка квадратичная:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_second</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;our N=16: </span><span class="si">{</span><span class="n">first_second</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">N_FP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> nodes inside the first second, horizon </span><span class="si">{</span><span class="n">t_node</span><span class="p">(</span><span class="n">N_FP</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="n">first_second_32</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">33</span><span class="p">)</span> <span class="k">if</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="mf">32.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;N=32    : </span><span class="si">{</span><span class="n">first_second_32</span><span class="si">}</span><span class="s2"> of 33 nodes inside the first second, horizon &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mf">10.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="mi">32</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">32.0</span><span class="p">)</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">The near zone is already as densely sampled as theirs. Doubling N adds far nodes, which at equal&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;weights dilutes the near zone that actually matters, and costs about 4x more to solve because we&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;use gradient descent rather than acados.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id9">
+<h3>3. У плана, который оптимизируется, своё смещение<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h3>
+<p>MPC минимизирует расстояние до эталона. Если эталон неверен, он идеально следит за неверным. На дугах план
+модели сидит в <strong>+0.32 / −0.35 м</strong> от центра полосы, и попытка убрать это одним коэффициентом кривизны
+провалилась поучительно:</p>
+<ul class="simple">
+<li><p>параметризованный как постоянное расстояние (<span class="math notranslate nohighlight">\(50.2\kappa\)</span>), он был нестабилен даже внутри одного заезда —
+20.2 ниже 12 м/с против 77.2 выше;</p></li>
+<li><p>верная параметризация — упреждение по <em>времени</em>, <span class="math notranslate nohighlight">\(\tfrac{1}{2}\kappa(vT)^2\)</span>, и <span class="math notranslate nohighlight">\(T\)</span> действительно устойчиво
+по скорости: 0.71–1.03 с;</p></li>
+<li><p>но не воспроизводимо <strong>между</strong> заездами: 0.84 с на одном, 0.56 с на другом, потому что у двух заездов был
+разный выученный рыск камеры (+1.12° против +0.24°), а он меняет warp входа, поэтому сеть видит другое
+изображение и выдаёт другой план.</p></li>
+</ul>
+<p>Значит коэффициент нельзя запечь: на другой калибровке он добавит своё собственное смещение. Поэтому главным
+рычагом стало подмешивание разметки, которому не нужно ни одного настраиваемого числа.</p>
+</section>
+<section id="id10">
+<h3>4. А когда момент насыщается, всё это неважно<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h3>
+<p>На измеренных правых дугах момент сидел на потолке HCA ±300 cNm в <strong>65 % кадров</strong> (76 % на более раннем заезде,
+80 % внутри одного эпизода длиной 12.3 с при R = 130 м). Пока он насыщен, обратной связи нет вовсе: выход
+оптимизатора меняется, а рейка нет. Лечится это запросом меньшей кривизны, а не более усердным решением.</p>
+<div class="tip admonition">
+<p class="admonition-title">Что вынести из этого раздела</p>
+<p>Каждый предел выше — своего рода. Один структурный (нет интегрального слагаемого), один — не-результат
+(горизонт и так достаточно длинный), один вышестоящий (собственное смещение плана, связанное с калибровкой) и
+один физический (актуатор). Понять, на какой из них вы смотрите, — это и есть основная работа, и ни один из них
+не находится перебором весов.</p>
+</div>
+</section>
+</section>
+<section id="id11">
+<h2>Ручки на телефоне<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
+<p><strong>Общие и путь</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code>, <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code>, <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code>, <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_control_speed_mps</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_use_vehicle_model</span></code>, <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code></p></li>
+</ul>
+<p><strong><code class="docutils literal notranslate"><span class="pre">fp</span></code></strong></p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> — горизонт <span class="math notranslate nohighlight">\(\kappa\)</span> с поправкой на запаздывание.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight</span></code> — плавность <span class="math notranslate nohighlight">\(u\)</span>.</p></li>
+<li><p>Измеренный <code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> из метк времени.</p></li>
+</ol>
+<p><strong><code class="docutils literal notranslate"><span class="pre">mpc</span></code> (VisionPilot)</strong></p>
+<p><code class="docutils literal notranslate"><span class="pre">ff_scale</span></code>, <code class="docutils literal notranslate"><span class="pre">epsi_gain</span></code>, <code class="docutils literal notranslate"><span class="pre">cte_gain_*</span></code>, <code class="docutils literal notranslate"><span class="pre">mpc_kappa_yaw_blend</span></code>.</p>
+</section>
+<section id="id12">
+<h2>Честное сравнение<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
+<p>Одно окно бега, темп зрения <span class="math notranslate nohighlight">\(\gtrsim 9\)</span> Гц: |CTE| медиана/p95, |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|, прямая и дуга по отдельности.
+Инструмент: <code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span> <span class="pre">--vision-latency</span> <span class="pre">...</span></code> (умеет перебирать и <code class="docutils literal notranslate"><span class="pre">--blend</span></code>).</p>
+</section>
+<section id="id13">
+<h2>Задания<a class="headerlink" href="#id13" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Шаги 2–3 VisionPilot: какой <span class="math notranslate nohighlight">\(\delta\)</span> побеждает на дуге? Обнулите вес прижатия к <span class="math notranslate nohighlight">\(\delta\)</span> — победитель сдвинулся?</p></li>
+<li><p>Пример со слиянием: сколько от срезки плана в −0.4 м остаётся при <code class="docutils literal notranslate"><span class="pre">blend=0.6</span></code> на <code class="docutils literal notranslate"><span class="pre">y(40)</span></code>?</p></li>
+<li><p>Уроните σ разметки до 1.6 м в игрушечном примере слияния — чему равно <span class="math notranslate nohighlight">\(d_{\mathrm{prob}}\)</span>?</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fp</span></code>: измените <code class="docutils literal notranslate"><span class="pre">delay_s</span></code> с 0.1 до 0.35 на траектории с растущим <span class="math notranslate nohighlight">\(r\)</span>; как двигается <span class="math notranslate nohighlight">\(\kappa^\star\)</span>?</p></li>
+<li><p>По бегу: <code class="docutils literal notranslate"><span class="pre">pp</span></code> против <code class="docutils literal notranslate"><span class="pre">fp</span></code> против <code class="docutils literal notranslate"><span class="pre">mpc</span></code>; отключите модель машины один раз на дуге; переберите подмешивание 0.3 / 0.6 / 1.0.</p></li>
+</ol>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Control"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="VehicleModel.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Модель машины (недокрут)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Safety/Warnings.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Предупреждения: FCW, AEB, LDW</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Обозначения состояния</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visionpilot">Семь шагов (мысленная модель VisionPilot)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cte-epsi-kappa">1. Измерить CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#delta">2. Предсказать траектории для пробного <span class="math notranslate nohighlight">\(\delta\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#j">3. Оценить через <span class="math notranslate nohighlight">\(J\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#delta-mathrm-ff">4. Построить <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">5. Решить (тёплый старт и градиент)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#swa-pid-hca">6. Применить первый отсчёт → ограничения → SWA → PID → HCA</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">7. Повторить на следующем кадре</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">До контроллера: слияние разметки и плана</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Зачем сливать?</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#device-y">Формула (система device, <span class="math notranslate nohighlight">\(y\)</span> вправо)</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-mpc-flowpilot">Модель <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC flowpilot в области времени)</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-1">fp-1. Эталон во времени</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-2">fp-2. Динамика (состояние)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-3">fp-3. Стоимость</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-4">fp-4. Решение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-5">fp-5. Кривизна с поправкой на запаздывание (трюк с задержкой)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-6-kappa-star-to-pid-hca">fp-6. <span class="math notranslate nohighlight">\(\kappa^\star \to\)</span> угол колеса → PID → HCA</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-7">fp-7. Следующий кадр зрения</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где горизонт не помогает</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">1. Устойчивое смещение почти бесплатно в функции стоимости</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">2. Удлинять горизонт тоже не помогает</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">3. У плана, который оптимизируется, своё смещение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">4. А когда момент насыщается, всё это неважно</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Ручки на телефоне</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Честное сравнение</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,940 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Three calibrations, not one: intrinsics, vanishing point, model warp &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Calibration/IntrinsicsAndWarp';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Latency and Thermal" href="../Latency/Overview.html" />
+    <link rel="prev" title="Camera Calibration" href="Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Calibration/IntrinsicsAndWarp.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Three calibrations, not one: intrinsics, vanishing point, model warp</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-intrinsics-from-a-chessboard">Step 1: intrinsics from a chessboard</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-number-that-mattered-was-not-the-focal-length">The number that mattered was not the focal length</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-the-principal-point-is-deliberately-left-wrong">Why the principal point is deliberately left wrong</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-extrinsics-online-from-the-vanishing-point">Step 2: extrinsics online, from the vanishing point</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-geometry">The geometry</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-the-point-and-refusing-to">Finding the point, and refusing to</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-it-costs-to-start-wrong">What it costs to start wrong</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-the-model-warp-where-both-calibrations-are-consumed">Step 3: the model warp, where both calibrations are consumed</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-what-none-of-this-can-fix">Step 4: what none of this can fix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config">Config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="three-calibrations-not-one-intrinsics-vanishing-point-model-warp">
+<h1>Three calibrations, not one: intrinsics, vanishing point, model warp<a class="headerlink" href="#three-calibrations-not-one-intrinsics-vanishing-point-model-warp" title="Link to this heading">#</a></h1>
+<p>“Calibrate the camera” means three different things in this stack, done at three different times by three
+different mechanisms. Confusing them is the most common way to spend a day fixing the wrong one.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>#</p></th>
+<th class="head"><p>what</p></th>
+<th class="head"><p>what it answers</p></th>
+<th class="head"><p>when</p></th>
+<th class="head"><p>how</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p><strong>intrinsics</strong> <span class="math notranslate nohighlight">\(f_x, f_y, c_x, c_y\)</span></p></td>
+<td><p>how the lens maps directions to pixels</p></td>
+<td><p>once per phone, offline</p></td>
+<td><p>chessboard</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p><strong>extrinsics</strong> roll / pitch / yaw</p></td>
+<td><p>how the phone is aimed relative to the car</p></td>
+<td><p>every drive, continuously</p></td>
+<td><p>vanishing point, plus model pose</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p><strong>model warp</strong></p></td>
+<td><p>how to turn our frame into the frame the network was trained on</p></td>
+<td><p>every frame</p></td>
+<td><p>a homography built from 1 and 2</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Only the third one touches the network, and it consumes the other two. So an error in 1 or 2 does not look
+like a calibration error — it looks like the network being bad at its job.</p>
+<div class="note admonition">
+<p class="admonition-title">Why this chapter has real numbers in it</p>
+<p>Every value below was measured on this phone and this car, and several of them contradicted a reasonable
+expectation. Those are the interesting ones.</p>
+</div>
+<hr class="docutils" />
+<section id="step-1-intrinsics-from-a-chessboard">
+<h2>Step 1: intrinsics from a chessboard<a class="headerlink" href="#step-1-intrinsics-from-a-chessboard" title="Link to this heading">#</a></h2>
+<p>The pinhole model says a direction <span class="math notranslate nohighlight">\((X, Y, Z)\)</span> in camera coordinates lands at</p>
+<div class="math notranslate nohighlight">
+\[
+u = f_x \frac{X}{Z} + c_x, \qquad v = f_y \frac{Y}{Z} + c_y .
+\]</div>
+<p>Two focal lengths and a principal point, four numbers. A chessboard of known geometry, photographed from
+enough angles, over-determines them, and OpenCV solves for them along with lens distortion.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
+<span class="c1"># From a directory of stills, or straight from a recorded drive that happened to include the board.</span>
+python3<span class="w"> </span>camera_calib_chessboard.py<span class="w"> </span>--images<span class="w"> </span>~/calib_shots<span class="w"> </span>--pattern<span class="w"> </span>9x6
+python3<span class="w"> </span>camera_calib_chessboard.py<span class="w"> </span>--bag<span class="w"> </span>../../../../adas_logs/&lt;session&gt;<span class="w"> </span>--pattern<span class="w"> </span>9x6
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">--pattern</span></code> counts <strong>inner</strong> corners, so a board with 10×7 squares is <code class="docutils literal notranslate"><span class="pre">9x6</span></code>. The script also enforces view
+diversity: shots that are too similar add nothing, because what over-determines the focal length is seeing
+the board from genuinely different angles.</p>
+<p>The result on this phone, at 1280×720:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>quantity</p></th>
+<th class="head"><p>measured</p></th>
+<th class="head"><p>what was assumed before</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(f_x\)</span></p></td>
+<td><p><strong>993.4</strong></p></td>
+<td><p>951 (config), 930 (flowpilot)</p></td>
+</tr>
+<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(f_y\)</span></p></td>
+<td><p><strong>995.2</strong></p></td>
+<td><p>951</p></td>
+</tr>
+<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(c_x, c_y\)</span></p></td>
+<td><p>621.9, 376.9</p></td>
+<td><p>640, 360 (frame centre)</p></td>
+</tr>
+<tr class="row-odd"><td><p>reprojection RMS</p></td>
+<td><p>0.38 px</p></td>
+<td><p>—</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="the-number-that-mattered-was-not-the-focal-length">
+<h3>The number that mattered was not the focal length<a class="headerlink" href="#the-number-that-mattered-was-not-the-focal-length" title="Link to this heading">#</a></h3>
+<p>It is tempting to read that table as “the focal length was 4.5 % off”. The useful reading is different.
+Convert each candidate to a horizontal field of view:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">WIDTH</span> <span class="o">=</span> <span class="mf">1280.0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fov_deg</span><span class="p">(</span><span class="n">focal_px</span><span class="p">,</span> <span class="n">width_px</span><span class="o">=</span><span class="n">WIDTH</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Horizontal field of view implied by a focal length in pixels.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">width_px</span> <span class="o">/</span> <span class="n">focal_px</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;source&#39;</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;focal&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;FOV&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;config before&quot;</span><span class="p">,</span> <span class="mf">951.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;flowpilot assumption&quot;</span><span class="p">,</span> <span class="mf">930.0</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;chessboard, measured&quot;</span><span class="p">,</span> <span class="mf">993.4</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;comma EON, what it was trained on&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;—&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">65.2</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">f</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">fov_deg</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The measured 993.4 puts our field of view at 65.6°, against the 65.2° of the EON camera that Supercombo was
+trained on. The old 951 gave 67.9° and flowpilot’s assumption 69.1°.</p>
+<p>That is the whole argument. A network trained on one field of view and fed another sees a scene that is
+subtly stretched, and it has no way to tell you so — it just becomes worse at estimating distance. The
+target was never “the true focal length of this lens” in the abstract; it was “the number that makes our
+frame match the training distribution”.</p>
+<p>Measured consequence: camera odometry scale against wheel speed went <strong>0.844 → 0.888</strong>, which is the +4.5 %
+the focal change predicts, to the digit.</p>
+</section>
+<section id="why-the-principal-point-is-deliberately-left-wrong">
+<h3>Why the principal point is deliberately left wrong<a class="headerlink" href="#why-the-principal-point-is-deliberately-left-wrong" title="Link to this heading">#</a></h3>
+<p>The chessboard says the principal point is 18 px left and 17 px below centre. We ship 640, 360 anyway.
+That is not laziness, and the reason is worth understanding because it generalises.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">FX</span><span class="p">,</span> <span class="n">FY</span> <span class="o">=</span> <span class="mf">993.4</span><span class="p">,</span> <span class="mf">995.2</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">offset_as_angle</span><span class="p">(</span><span class="n">du_px</span><span class="p">,</span> <span class="n">dv_px</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="n">FX</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="n">FY</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A principal-point offset is indistinguishable from a small camera rotation.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">du_px</span> <span class="o">/</span> <span class="n">fx</span><span class="p">)),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">dv_px</span> <span class="o">/</span> <span class="n">fy</span><span class="p">))</span>
+
+<span class="n">dyaw</span><span class="p">,</span> <span class="n">dpitch</span> <span class="o">=</span> <span class="n">offset_as_angle</span><span class="p">(</span><span class="mf">640.0</span> <span class="o">-</span> <span class="mf">621.9</span><span class="p">,</span> <span class="mf">376.9</span> <span class="o">-</span> <span class="mf">360.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;principal point offset (18.1, 16.9) px  ==  yaw </span><span class="si">{</span><span class="n">dyaw</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">°, pitch </span><span class="si">{</span><span class="n">dpitch</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">The online extrinsics estimator has exactly those two degrees of freedom, so it absorbs the&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;offset within a minute of driving. Correcting it in the intrinsics as well double-counts it.&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Verified rather than assumed: fixing <span class="math notranslate nohighlight">\(c_x, c_y\)</span> <strong>without</strong> resetting the extrinsics estimate doubled lane
+<span class="math notranslate nohighlight">\(\sigma\)</span> from 0.25 to 0.55, measured on 90 frames with <code class="docutils literal notranslate"><span class="pre">bag_intrinsics_ab.py</span></code>. The two corrections were
+fighting each other. Fixing the principal point only makes sense together with a calibration reset, and even
+then it does not improve <span class="math notranslate nohighlight">\(\sigma\)</span> — it just moves the same information from one place to another.</p>
+<div class="tip admonition">
+<p class="admonition-title">The rule</p>
+<p>Before correcting a parameter, ask which other parameter already absorbs it. Two estimators for one
+physical quantity is worse than one wrong estimator, because now the error moves.</p>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="step-2-extrinsics-online-from-the-vanishing-point">
+<h2>Step 2: extrinsics online, from the vanishing point<a class="headerlink" href="#step-2-extrinsics-online-from-the-vanishing-point" title="Link to this heading">#</a></h2>
+<p>Intrinsics are a property of the lens and never change. The mounting angles change every time the phone is
+picked up — measured on two consecutive night drives, the learned yaw went from <strong>+1.67° to +0.10°</strong> and the
+pitch from −1.11° to −0.67°. No prior survives that, so the angles have to be estimated while driving.</p>
+<section id="the-geometry">
+<h3>The geometry<a class="headerlink" href="#the-geometry" title="Link to this heading">#</a></h3>
+<p>Parallel lines in the world meet at a single point in the image, and that point depends only on their
+direction — not on where the camera is. Lane lines are parallel and point where the road points, so their
+intersection tells you where the camera is aimed relative to the road.</p>
+<p>Given a vanishing point <span class="math notranslate nohighlight">\((u_i, v_i)\)</span>, the direction it corresponds to is
+<span class="math notranslate nohighlight">\(\hat r = \operatorname{norm}\big((u_i - c_x)/f_x,\ (v_i - c_y)/f_y,\ 1\big)\)</span>, and</p>
+<div class="math notranslate nohighlight">
+\[
+\mathrm{yaw} = -\arctan\frac{r_x}{r_z}, \qquad \mathrm{pitch} = \arcsin r_y .
+\]</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">CX</span><span class="p">,</span> <span class="n">CY</span> <span class="o">=</span> <span class="mf">640.0</span><span class="p">,</span> <span class="mf">360.0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pitch_yaw_from_vp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="n">FX</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="n">FY</span><span class="p">,</span> <span class="n">cx</span><span class="o">=</span><span class="n">CX</span><span class="p">,</span> <span class="n">cy</span><span class="o">=</span><span class="n">CY</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mirror of `getPitchYawFromVp` in utils/vanishing_point_calib.cpp.&quot;&quot;&quot;</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">u</span> <span class="o">-</span> <span class="n">cx</span><span class="p">)</span> <span class="o">/</span> <span class="n">fx</span><span class="p">,</span> <span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">cy</span><span class="p">)</span> <span class="o">/</span> <span class="n">fy</span><span class="p">,</span> <span class="mf">1.0</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="n">y</span> <span class="o">+</span> <span class="n">z</span> <span class="o">*</span> <span class="n">z</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">n</span><span class="p">,</span> <span class="n">y</span> <span class="o">/</span> <span class="n">n</span><span class="p">,</span> <span class="n">z</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">asin</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">y</span><span class="p">)))),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;vanishing point&#39;</span><span class="si">:</span><span class="s2">&gt;22</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;pitch&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;yaw&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">640.0</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">640.0</span><span class="p">,</span> <span class="mf">340.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">669.0</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">669.0</span><span class="p">,</span> <span class="mf">341.0</span><span class="p">)):</span>
+    <span class="n">p</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">pitch_yaw_from_vp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="sa">f</span><span class="s1">&#39;(</span><span class="si">{</span><span class="n">u</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">)&#39;</span><span class="si">:</span><span class="s2">&gt;22</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">p</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Mind the signs, because they are not the intuitive ones. With <span class="math notranslate nohighlight">\(\mathrm{yaw} = -\arctan(r_x/r_z)\)</span>, a
+vanishing point to the <strong>right</strong> of centre gives a <strong>negative</strong> yaw — so the +1.67° the estimator learned on
+the 08-04 run corresponds to a vanishing point 29 px to the <em>left</em>. Run the block and the third row shows
+−1.67° for a point on the right; the learned value is its mirror.</p>
+<p>And note the sensitivity: <strong>17 pixels is a degree</strong>. That is why the estimate averages over 50 samples and
+why a single frame is worthless.</p>
+</section>
+<section id="finding-the-point-and-refusing-to">
+<h3>Finding the point, and refusing to<a class="headerlink" href="#finding-the-point-and-refusing-to" title="Link to this heading">#</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fit_line_v_of_u</span><span class="p">(</span><span class="n">uv</span><span class="p">,</span> <span class="n">mean_residual_thresh</span><span class="o">=</span><span class="mf">25.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;v = m·u + c by least squares, rejected if the fit is not a line. Returns (m, c) or None.&quot;&quot;&quot;</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">uv</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">su</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">uv</span><span class="p">);</span> <span class="n">sv</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">uv</span><span class="p">)</span>
+    <span class="n">suu</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">uv</span><span class="p">);</span> <span class="n">suv</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">uv</span><span class="p">)</span>
+    <span class="n">den</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="n">suu</span> <span class="o">-</span> <span class="n">su</span> <span class="o">*</span> <span class="n">su</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">den</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">suv</span> <span class="o">-</span> <span class="n">su</span> <span class="o">*</span> <span class="n">sv</span><span class="p">)</span> <span class="o">/</span> <span class="n">den</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">sv</span> <span class="o">-</span> <span class="n">m</span> <span class="o">*</span> <span class="n">su</span><span class="p">)</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="n">resid</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">m</span> <span class="o">*</span> <span class="n">u</span> <span class="o">+</span> <span class="n">c</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">uv</span><span class="p">)</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">if</span> <span class="n">resid</span> <span class="o">&lt;=</span> <span class="n">mean_residual_thresh</span> <span class="k">else</span> <span class="kc">None</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">intersect</span><span class="p">(</span><span class="n">l1</span><span class="p">,</span> <span class="n">l2</span><span class="p">):</span>
+    <span class="p">(</span><span class="n">m1</span><span class="p">,</span> <span class="n">c1</span><span class="p">),</span> <span class="p">(</span><span class="n">m2</span><span class="p">,</span> <span class="n">c2</span><span class="p">)</span> <span class="o">=</span> <span class="n">l1</span><span class="p">,</span> <span class="n">l2</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">m1</span> <span class="o">-</span> <span class="n">m2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>                     <span class="c1"># parallel in the image: no usable vanishing point</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="p">(</span><span class="n">c2</span> <span class="o">-</span> <span class="n">c1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">m1</span> <span class="o">-</span> <span class="n">m2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">u</span><span class="p">,</span> <span class="n">m1</span> <span class="o">*</span> <span class="n">u</span> <span class="o">+</span> <span class="n">c1</span>
+
+<span class="c1"># Two lane lines converging up-and-right, as a right-aimed camera on a straight road would see them.</span>
+<span class="n">left</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">420.0</span><span class="p">,</span> <span class="mf">560.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">540.0</span><span class="p">,</span> <span class="mf">420.0</span><span class="p">)]</span>
+<span class="n">right</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">1000.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">900.0</span><span class="p">,</span> <span class="mf">560.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">800.0</span><span class="p">,</span> <span class="mf">420.0</span><span class="p">)]</span>
+<span class="n">li</span><span class="p">,</span> <span class="n">ri</span> <span class="o">=</span> <span class="n">fit_line_v_of_u</span><span class="p">(</span><span class="n">left</span><span class="p">),</span> <span class="n">fit_line_v_of_u</span><span class="p">(</span><span class="n">right</span><span class="p">)</span>
+<span class="n">vp</span> <span class="o">=</span> <span class="n">intersect</span><span class="p">(</span><span class="n">li</span><span class="p">,</span> <span class="n">ri</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;vanishing point </span><span class="si">{</span><span class="n">vp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">vp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">  -&gt;  pitch </span><span class="si">{</span><span class="n">pitch_yaw_from_vp</span><span class="p">(</span><span class="o">*</span><span class="n">vp</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">°, &quot;</span>
+      <span class="sa">f</span><span class="s2">&quot;yaw </span><span class="si">{</span><span class="n">pitch_yaw_from_vp</span><span class="p">(</span><span class="o">*</span><span class="n">vp</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+
+<span class="c1"># A curved &quot;line&quot; must be rejected: on a bend, lane lines are not parallel and their image intersection is</span>
+<span class="c1"># not a vanishing point. The gate is on the mean residual, so the bend has to be worth rejecting — a gentle</span>
+<span class="c1"># one passes, and that is a deliberate trade rather than an oversight.</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">pts</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;gentle bend&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">420.0</span><span class="p">,</span> <span class="mf">520.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">540.0</span><span class="p">,</span> <span class="mf">420.0</span><span class="p">)]),</span>
+                  <span class="p">(</span><span class="s2">&quot;real bend&quot;</span><span class="p">,</span> <span class="p">[(</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">700.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">420.0</span><span class="p">,</span> <span class="mf">470.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">540.0</span><span class="p">,</span> <span class="mf">420.0</span><span class="p">)])):</span>
+    <span class="n">fit</span> <span class="o">=</span> <span class="n">fit_line_v_of_u</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+    <span class="n">resid</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># recompute the residual to show how close to the 25 px threshold each case sits</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+        <span class="n">su</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">pts</span><span class="p">);</span> <span class="n">sv</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">pts</span><span class="p">)</span>
+        <span class="n">suu</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">pts</span><span class="p">);</span> <span class="n">suv</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">q</span> <span class="ow">in</span> <span class="n">pts</span><span class="p">)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">suv</span> <span class="o">-</span> <span class="n">su</span> <span class="o">*</span> <span class="n">sv</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">n</span> <span class="o">*</span> <span class="n">suu</span> <span class="o">-</span> <span class="n">su</span> <span class="o">*</span> <span class="n">su</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="p">(</span><span class="n">sv</span> <span class="o">-</span> <span class="n">m</span> <span class="o">*</span> <span class="n">su</span><span class="p">)</span> <span class="o">/</span> <span class="n">n</span>
+        <span class="n">resid</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">m</span> <span class="o">*</span> <span class="n">u</span> <span class="o">-</span> <span class="n">v</span> <span class="o">+</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">pts</span><span class="p">)</span> <span class="o">/</span> <span class="n">n</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">: mean residual </span><span class="si">{</span><span class="n">resid</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> px -&gt; </span><span class="si">{</span><span class="s1">&#39;accepted&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">fit</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;rejected&#39;</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Three refusals are built in, and each one exists because its absence produces a confidently wrong number:</p>
+<ul class="simple">
+<li><p><strong>the fit must be a line</strong> — mean residual ≤ 25 px. On a bend the lane lines are not parallel, so their
+image intersection is not a vanishing point at all;</p></li>
+<li><p><strong>the result must be plausible</strong> — <span class="math notranslate nohighlight">\(|\text{pitch}| \le 25°\)</span>, <span class="math notranslate nohighlight">\(|\text{yaw}| \le 15°\)</span>. A phone is not
+mounted sideways, and a sample outside that came from a bad fit;</p></li>
+<li><p><strong>it must be a consensus</strong> — samples accumulate to a history of 50, the mean is committed, and the history
+is cleared. One frame is a degree of noise; fifty frames is an estimate.</p></li>
+</ul>
+</section>
+<section id="what-it-costs-to-start-wrong">
+<h3>What it costs to start wrong<a class="headerlink" href="#what-it-costs-to-start-wrong" title="Link to this heading">#</a></h3>
+<p>Convergence takes 30–60 s of driving, and during that time the warp uses the config prior. That sounds
+dangerous and measures cheap:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">converge</span><span class="p">(</span><span class="n">prior_deg</span><span class="p">,</span> <span class="n">truth_deg</span><span class="p">,</span> <span class="n">tau_s</span><span class="p">,</span> <span class="n">t_s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">truth_deg</span> <span class="o">+</span> <span class="p">(</span><span class="n">prior_deg</span> <span class="o">-</span> <span class="n">truth_deg</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t_s</span> <span class="o">/</span> <span class="n">tau_s</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;t&#39;</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;yaw estimate&#39;</span><span class="si">:</span><span class="s2">&gt;14</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;lateral error at 20 m&#39;</span><span class="si">:</span><span class="s2">&gt;23</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">60</span><span class="p">):</span>
+    <span class="n">est</span> <span class="o">=</span> <span class="n">converge</span><span class="p">(</span><span class="mf">1.67</span><span class="p">,</span> <span class="mf">0.10</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>          <span class="c1"># prior from the previous mount, truth this drive</span>
+    <span class="n">err</span> <span class="o">=</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">est</span> <span class="o">-</span> <span class="mf">0.10</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">s </span><span class="si">{</span><span class="n">est</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">err</span><span class="si">:</span><span class="s2">&gt;21.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>On the measured run, the lateral offset on straights during the first 30 s was 0.02 m — so no gate on
+calibration status is needed. What <em>is</em> needed is the discipline not to judge lane-keep in the first minute.</p>
+<p>And a conclusion that surprised us: <strong>persisting the learned angles is nearly worthless.</strong> A prior from the
+previous mount is no better than the default, because the mount is not repeatable. What matters is
+convergence speed, not memory.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="step-3-the-model-warp-where-both-calibrations-are-consumed">
+<h2>Step 3: the model warp, where both calibrations are consumed<a class="headerlink" href="#step-3-the-model-warp-where-both-calibrations-are-consumed" title="Link to this heading">#</a></h2>
+<p>Supercombo does not take our frame. It takes a 512×256 image in a canonical geometry — openpilot’s
+“medmodel” frame, focal 910 px with the principal point 47.6 px below the top of the crop. Our job every
+frame is to produce that image from ours, taking the mounting angles out.</p>
+<div class="math notranslate nohighlight">
+\[
+\mathtt{warp} = K \cdot V \cdot R(\text{roll}, \text{pitch}, \text{yaw}) \cdot (K_{\text{med}} \cdot V)^{-1}
+\]</div>
+<p>Read it right to left, which is how it acts on a model-frame pixel: undo the canonical projection, rotate
+out the mounting angles, project through our real lens. <span class="math notranslate nohighlight">\(V\)</span> is <code class="docutils literal notranslate"><span class="pre">view_from_device</span></code>, the fixed permutation
+from device axes (x forward, y right, z down) to camera axes.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">MED_FL</span><span class="p">,</span> <span class="n">MED_CY</span> <span class="o">=</span> <span class="mf">910.0</span><span class="p">,</span> <span class="mf">47.6</span>
+<span class="n">MODEL_W</span><span class="p">,</span> <span class="n">MODEL_H</span> <span class="o">=</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">256</span>
+<span class="n">VIEW_FROM_DEVICE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+                             <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]])</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rot</span><span class="p">(</span><span class="n">roll</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">yaw</span><span class="p">):</span>
+    <span class="n">cr</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">cp</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">cy_</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">roll</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">roll</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">pitch</span><span class="p">),</span>
+                               <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">pitch</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">))</span>
+    <span class="n">Rz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">cy_</span><span class="p">,</span> <span class="o">-</span><span class="n">sy</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="n">sy</span><span class="p">,</span> <span class="n">cy_</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">Ry</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">cp</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">sp</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="n">sp</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">cp</span><span class="p">]])</span>
+    <span class="n">Rx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">cr</span><span class="p">,</span> <span class="o">-</span><span class="n">sr</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sr</span><span class="p">,</span> <span class="n">cr</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">Rz</span> <span class="o">@</span> <span class="n">Ry</span> <span class="o">@</span> <span class="n">Rx</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">model_to_camera</span><span class="p">(</span><span class="n">roll_deg</span><span class="p">,</span> <span class="n">pitch_deg</span><span class="p">,</span> <span class="n">yaw_deg</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="n">FX</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="n">FY</span><span class="p">,</span> <span class="n">cx</span><span class="o">=</span><span class="n">CX</span><span class="p">,</span> <span class="n">cy</span><span class="o">=</span><span class="n">CY</span><span class="p">):</span>
+    <span class="n">K</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">fx</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">cx</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">fy</span><span class="p">,</span> <span class="n">cy</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">K_med</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">MED_FL</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">MODEL_W</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">MED_FL</span><span class="p">,</span> <span class="n">MED_CY</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]])</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">rot</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">roll_deg</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">pitch_deg</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">yaw_deg</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">K</span> <span class="o">@</span> <span class="n">VIEW_FROM_DEVICE</span> <span class="o">@</span> <span class="n">R</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">K_med</span> <span class="o">@</span> <span class="n">VIEW_FROM_DEVICE</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">where_does_it_sample</span><span class="p">(</span><span class="n">warp</span><span class="p">,</span> <span class="n">u_model</span><span class="p">,</span> <span class="n">v_model</span><span class="p">):</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">warp</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">u_model</span><span class="p">,</span> <span class="n">v_model</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">p</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+<span class="n">centre</span> <span class="o">=</span> <span class="p">(</span><span class="n">MODEL_W</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">MODEL_H</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">roll</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">yaw</span><span class="p">)</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;08-04 mount&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.11</span><span class="p">,</span> <span class="mf">1.67</span><span class="p">)),</span>
+                                  <span class="p">(</span><span class="s2">&quot;08-06 mount&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.67</span><span class="p">,</span> <span class="mf">0.10</span><span class="p">)),</span>
+                                  <span class="p">(</span><span class="s2">&quot;stale prior on the 08-06 drive&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.11</span><span class="p">,</span> <span class="mf">1.67</span><span class="p">))):</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">where_does_it_sample</span><span class="p">(</span><span class="n">model_to_camera</span><span class="p">(</span><span class="n">roll</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">yaw</span><span class="p">),</span> <span class="o">*</span><span class="n">centre</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">:</span><span class="s2">&gt;31</span><span class="si">}</span><span class="s2">: model centre samples our pixel (</span><span class="si">{</span><span class="n">u</span><span class="si">:</span><span class="s2">7.1f</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">7.1f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Compare the first two rows: the same model pixel is taken from <strong>27 px apart</strong> in our frame depending only on
+how the phone happened to sit. The third row is the trap — it is the 08-04 angles used on the 08-06 drive,
+which is what a persisted prior would give you, and it samples 27 px away from where it should.</p>
+<p><strong>A 1.57° change in learned yaw moves where the model frame samples our image by tens of pixels</strong>, so the
+network sees a different picture and outputs a different plan.</p>
+<p>That is not an abstract worry. It is why two runs on the same road, with the phone remounted between them,
+cannot have their plan offsets compared: the perception configuration differs. This project drew a
+conclusion from exactly such a comparison once and had to walk it back.</p>
+</section>
+<hr class="docutils" />
+<section id="step-4-what-none-of-this-can-fix">
+<h2>Step 4: what none of this can fix<a class="headerlink" href="#step-4-what-none-of-this-can-fix" title="Link to this heading">#</a></h2>
+<p>Three quantities stay out of reach, and knowing which is which saves a lot of effort:</p>
+<p><strong>Roll is weakly observable.</strong> A vanishing point gives two angles, and roll is not one of them — a roll
+rotation moves the point along a line rather than to a distinguishable place. Estimates hover near zero;
+treat a large roll swing as a bug, not a measurement. This is the same hole that blocks
+<a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">paramsd</span></code></span></a>: road bank needs an orientation estimate from the accelerometer,
+which the planar filter does not have.</p>
+<p><strong>Camera height and forward position are not geometric here.</strong> From bags, the height estimate ranged 0.80 to
+0.98 against a tape-measured 1.1 m. Use the tape.</p>
+<p><strong>The metric scale is the network’s, not the lens’s.</strong> After the focal fix, camera odometry sits at 0.888 of
+wheel speed. Reaching 1.0 would need <span class="math notranslate nohighlight">\(f_x \approx 1119\)</span>, while the chessboard says 993 with 0.38 px of
+residual — so the remaining 11 % is a domain gap between our camera and the one the model was trained on,
+not a calibration error. It is the upper bound on everything measured through the model, and no tuning
+downstream escapes it.</p>
+</section>
+<hr class="docutils" />
+<section id="config">
+<h2>Config<a class="headerlink" href="#config" title="Link to this heading">#</a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;calibration&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;camera&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;position_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;x_forward&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;y_left&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;z_up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.1</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;rpy_deg&quot;</span><span class="p">:</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;roll&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;pitch&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">-1.8</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;yaw&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;intrinsics_prior&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;fx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">993.4</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;fy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">995.2</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">640.0</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">360.0</span><span class="p">,</span>
+<span class="w">                          </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1280</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">720</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> is a starting guess that the online estimator replaces within a minute; the intrinsics are not a
+guess and should not be edited without a chessboard. The principal point stays at frame centre on purpose —
+step 1.</p>
+</section>
+<section id="exercises">
+<h2>Exercises<a class="headerlink" href="#exercises" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Photograph a chessboard from ten angles and run the script. Compare your reprojection RMS to 0.38 px; if
+it is much worse, which of your shots is the problem, and how would you tell?</p></li>
+<li><p>Compute the field of view your measured focal implies. How far is it from 65.2°, and how much of the
+difference is the lens versus the crop your phone applies to the sensor?</p></li>
+<li><p>Take the vanishing-point code and feed it lane lines from a bend. Show that the line-fit gate rejects
+them, then remove the gate and plot the pitch it would have reported through the bend.</p></li>
+<li><p>Perturb the yaw fed to <code class="docutils literal notranslate"><span class="pre">model_to_camera</span></code> by 1° and compute how far the sampled pixel moves at the top of
+the model frame versus the bottom. Explain the difference.</p></li>
+<li><p>Measure, on a bag, how long the online estimate takes to come within 0.2° of its final value. Then argue
+whether the app should refuse to steer until then — and defend your answer with the 0.02 m of measured
+first-30-seconds offset.</p></li>
+</ol>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency and thermal</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Calibration"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Overview.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Camera Calibration</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Latency/Overview.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Latency and Thermal</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-1-intrinsics-from-a-chessboard">Step 1: intrinsics from a chessboard</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-number-that-mattered-was-not-the-focal-length">The number that mattered was not the focal length</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-the-principal-point-is-deliberately-left-wrong">Why the principal point is deliberately left wrong</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-extrinsics-online-from-the-vanishing-point">Step 2: extrinsics online, from the vanishing point</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-geometry">The geometry</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-the-point-and-refusing-to">Finding the point, and refusing to</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-it-costs-to-start-wrong">What it costs to start wrong</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-the-model-warp-where-both-calibrations-are-consumed">Step 3: the model warp, where both calibrations are consumed</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-what-none-of-this-can-fix">Step 4: what none of this can fix</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config">Config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

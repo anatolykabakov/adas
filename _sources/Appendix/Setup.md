@@ -8,18 +8,23 @@ Android ADAS root:
 cd <repository root>
 ```
 
-See also root [`README.md`](../../../README.md): APK build, `run_bag_vis.sh`, `run_sim.sh`, Java/C++/scripts layout.
+See also `README.md` at the repository root: APK build, `run_bag_vis.sh`, `run_sim.sh`, Java/C++/scripts layout.
 
 ## Build book (HTML)
 
 ```bash
-cd docs/book
+cd docs
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-jupyter-book build .
-# HTML → _build/html/index.html
+pip install -r book/requirements.txt
+./build_book.sh          # both languages: EN into _site, RU into _site/ru
+./build_book.sh --en     # English only, faster while writing
+./build_book.sh --check  # checks without building
 # Live: https://anatolykabakov.github.io/adas/ (CI deploy-book on main)
 ```
+
+The **ENG/RU** button at the top takes you to the same page in the other language. The `_site` and
+`_site/ru` layout is the contract the button relies on rather than an implementation detail, and the build
+script separately verifies that every page has a counterpart — otherwise the switch would land on a 404.
 
 ## Python for bag
 

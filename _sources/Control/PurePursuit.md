@@ -196,6 +196,77 @@ for i in range(80):  # 4 s
 print(f"after 4 s: y={y:.3f} m (should be near 0), yaw={math.degrees(th):.1f} deg")
 ```
 
+## Where one point stops being enough
+
+Pure Pursuit reduces the whole path to a single point. That is its charm and its ceiling, and the ceiling
+is easy to demonstrate: the law has no way to distinguish two paths that pass through the same look-ahead
+point and then do completely different things.
+
+```python
+import math
+
+L_WB = 2.64
+
+def pp_delta(tx, ty):
+    """Pure Pursuit: wheel angle to reach the target point (tx, ty), y right-positive."""
+    ld_sq = tx * tx + ty * ty
+    if ld_sq < 1e-6:
+        return 0.0
+    return math.atan2(2.0 * L_WB * ty, ld_sq)
+
+def path_point_at(kappa_near, kappa_far, ld, break_at=12.0):
+    """A path that bends one way up to `break_at` and another way beyond it."""
+    if ld <= break_at:
+        return ld, 0.5 * kappa_near * ld * ld
+    y_break = 0.5 * kappa_near * break_at * break_at
+    slope = kappa_near * break_at
+    d = ld - break_at
+    return ld, y_break + slope * d + 0.5 * kappa_far * d * d
+
+LD = 15.0
+print(f"{'path':>28} {'point at 15 m':>15} {'delta':>8}")
+for name, k_near, k_far in (("steady right bend", 0.006, 0.006),
+                            ("right, then straightens", 0.006, 0.0),
+                            ("right, then reverses", 0.006, -0.012)):
+    tx, ty = path_point_at(k_near, k_far, LD)
+    print(f"{name:>28} {f'({tx:.0f}, {ty:+.2f})':>15} {math.degrees(pp_delta(tx, ty)):>7.2f}°")
+```
+
+Run it and the three commands differ, which looks reassuring — until you notice *why*. They differ only
+because the far curvature happens to move the point at 15 m. Shorten the look-ahead and the difference
+vanishes; lengthen it and the near bend disappears instead. The law is reading one sample of a function
+and the sample position is a tuning parameter.
+
+```python
+print(f"{'look-ahead':>12} " + " ".join(f"{n:>12}" for n in ("steady", "straightens", "reverses")))
+for ld in (8.0, 12.0, 15.0, 20.0, 25.0):
+    row = []
+    for k_near, k_far in ((0.006, 0.006), (0.006, 0.0), (0.006, -0.012)):
+        tx, ty = path_point_at(k_near, k_far, ld)
+        row.append(math.degrees(pp_delta(tx, ty)))
+    spread = max(row) - min(row)
+    print(f"{ld:>10.0f} m " + " ".join(f"{v:>11.2f}°" for v in row) + f"   spread {spread:>5.2f}°")
+```
+
+At 8 m the three paths are indistinguishable — the break point is beyond the target, so the controller
+cannot know it is coming. At 25 m the spread is large but the near bend has stopped mattering, so the car
+will cut it. There is no look-ahead that reads both, because there is only one number to read.
+
+This is the argument for a horizon, and it is a different argument from the understeer one. Understeer is
+a *modelling* error you can correct with a better model of the same one-step law. This is an
+*information* limit of the law itself. [MPC](./MPC_and_FP.md) answers it by optimising over many points at
+once; the [vehicle model](./VehicleModel.md) chapter answers the other one first, because a horizon built
+on wrong kinematics just makes a confident wrong plan.
+
+```{admonition} Why Pure Pursuit is still in the tree
+:class: note
+It has no cost weights, no horizon, and one parameter with a physical meaning, which makes it the only
+controller here whose behaviour you can predict by hand. When a run looks wrong, switching to `pp` tells
+you whether the problem is in the controller or upstream of it. In offline replay it even holds the lane
+better than `fp` at every degradation level tried — while on the road the opposite is true, which is a
+finding about the replay, not about the controllers.
+```
+
 ## Integration
 
 ```text
@@ -210,12 +281,19 @@ vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID �
 2. Forgetting `steer_sign = -1`.
 3. Tuning on thermal 3 Hz windows.
 4. No understeer model at $v\sim 20$ m/s.
+5. Treating the look-ahead as a quality knob. It is a choice of **which part of the path to ignore** —
+   see above. If tuning it feels like a trade-off between cutting corners and reacting late, that is
+   because it is exactly that trade-off, and no value resolves it.
 
 ## Exercise
 
 1. Change `K_dd` in the toy loop: how does settling of $y$ change?
 2. Put TP at $(8, 0)$ vs $(8, 3)$: print $\delta$.
 3. Bag sweep: `bag_config_sweep.py` Pareto |CTE| vs |$\Delta$SWA|.
+4. In the look-ahead sweep above, find the distance that minimises the spread across the three paths.
+   Then explain why that distance is the *worst* choice rather than the best one.
+5. Add the understeer correction from the [vehicle model](./VehicleModel.md) to `pp_delta` and re-run the
+   sweep at 22 m/s. Does it change the information limit, or only the magnitudes?
 
 <!-- next-chapter -->
 ---
