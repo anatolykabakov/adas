@@ -1,160 +1,84 @@
 #pragma once
 
 #include <algorithm>
-#include <array>
 #include <cmath>
+
+#include <Eigen/Dense>
 
 #include "adas/utils/vehicle_model.h"
 
 namespace adas {
 
-/** Learns the vehicle parameters the lateral controller uses, instead of having them hand-tuned.
- *
- *  This is the portable part of upstream's `paramsd` (`docs/PARAMSD.md`): the two numbers that can be
- *  learned from steering angle, speed and yaw rate alone — tyre stiffness and steer ratio — plus the
- *  steering bias, for which we had no mechanism at all. Their nine-state filter also carries internal
- *  velocity and yaw-rate states and a road-roll state; we do not need those, because the roll comes from
- *  `RoadRollEstimator` as an input and the rest are measured directly on CAN.
- *
- *  ## Why it exists
- *
- *  `tire_stiffness_factor` is one constant, and the thing it represents is not constant. Measured on this
- *  car, `κ_fact/κ_kin` is 0.97 at 6–9 m/s, 0.80 at 12–15 and 0.54 at 21–26. A value chosen for the city
- *  under-commands the highway and vice versa: 0.50 measured right on urban arcs made a *replayed* urban arc
- *  worse. And two independent estimates disagreed about the direction — our 0.54 against comma's learned
- *  1.319 on the same car — which took a third sensor to resolve.
- *
- *  ## The measurement
- *
- *  Deliberately the controller's own function, `curvatureFromSteer`, so a learned `tire_stiffness_factor`
- *  means exactly what the consumer of it means. A parameter learned against a slightly different model than
- *  the one that uses it is worse than a hand-tuned constant, because it looks principled.
- *
- *      delta   = (SWA - offset) / steer_ratio
- *      kappa   = curvatureFromSteer(delta, v, L, slipFactor(tsf))
- *      yaw_pred(z down) = v * kappa + g * sin(roll) / v
- *
- *  The roll term is the reason this could not be built before. A banked road supplies part of the lateral
- *  acceleration for free, so at a given steering angle the car turns more than the flat-road model says. At
- *  20 m/s one degree of bank is 0.0086 rad/s of yaw rate — a few percent of a normal cornering rate, and a
- *  systematic error that lands entirely in the learned stiffness if it is not accounted for. There is a test
- *  for exactly that.
- *
- *  ## Signs
- *
- *  Everything inside is the z-down frame: positive yaw rate is a right turn, positive curvature is a right
- *  turn, positive roll tips the right side down. `chassis.yaw_rate` is ISO — z up, positive for a **left**
- *  turn — so it is negated on the way in. This project has already paid for that convention once, in the
- *  road-roll estimator, where a flipped sign reported a body-roll gradient of 116 deg/g instead of an error.
- *
- *  ## Jacobians
- *
- *  Numeric, by central difference. Three states at CAN rate cost nothing, and the analytic derivative
- *  through `slipFactor` — which itself divides by products of the stiffnesses — is exactly the kind of
- *  expression that is wrong for a month before anyone notices. The measurement function is the single source
- *  of truth; differentiating it numerically cannot disagree with it.
- */
 class ParamsLearner {
 public:
-  enum State { kStiffness = 0, kSteerRatio = 1, kAngleOffsetDeg = 2, kNumStates = 3 };
+  enum State {
+    kStiffness = 0,
+    kSteerRatio = 1,
+    kAngleOffset = 2,      //!< рад
+    kAngleOffsetFast = 3,  //!< рад
+    kU = 4,                //!< продольная скорость, м/с
+    kV = 5,                //!< боковая скорость, м/с
+    kYawRate = 6,          //!< рад/с, z вниз
+    kSteerAngle = 7,       //!< угол руля, рад
+    kRoadRoll = 8,         //!< рад
+    kNumStates = 9
+  };
 
   struct Config {
     VehicleModelParams vehicle{};
 
-    /** Starting point and how far the estimate may wander. Bounds are upstream's own sanity range for
-     *  stiffness; the steer-ratio range brackets the port value (15.7) and comma's learned 16.27. */
-    double stiffness_init = 0.64;
+    double rotational_inertia = 2468.4;
+
+    double stiffness_init = 1.0;
+    double steer_ratio_init = 15.7;
+    double angle_offset_init_deg = 0.0;
+
     double stiffness_min = 0.2;
     double stiffness_max = 5.0;
-    double steer_ratio_init = 15.7;
-
-    /** Sign relating the steering-wheel angle on CAN to the road-wheel angle in this frame, i.e. the
-     *  `vehicle.steer_sign` the controller already applies. Not cosmetic, and not something a filter can
-     *  absorb: with the wrong sign the prediction opposes the measurement, the innovation is roughly twice
-     *  the yaw rate on every corner, and the filter runs to whichever bounds reduce the predicted magnitude
-     *  and sits there. Measured on run 2026_08_06_00_36_42 with the sign missing: stiffness pinned at its
-     *  0.200 floor and steer ratio at its 20.0 ceiling, identical in all four quarters of the drive, while
-     *  `valid()` cheerfully returned true. On this car the CAN angle is positive for a **left** turn — the
-     *  regression of the measured ISO yaw rate against the kinematic prediction gives +0.824 at a
-     *  correlation of 0.987 — and this frame is positive for a right turn, so the sign is -1. */
-    double steer_sign = 1.0;
-    double steer_ratio_min = 12.0;
-    double steer_ratio_max = 20.0;
+    double steer_ratio_min = 0.0;  //!< 0 — взять 0.5·steer_ratio_init
+    double steer_ratio_max = 0.0;  //!< 0 — взять 2.0·steer_ratio_init
     double angle_offset_max_deg = 10.0;
 
-    /** Initial uncertainty. Generous on stiffness because that is the number in dispute; *tight* on steer
-     *  ratio, and the tightness is the whole design.
-     *
-     *  Stiffness and steer ratio are close to degenerate against a yaw-rate measurement. Both scale the
-     *  predicted curvature, and while their speed signatures differ — the ratio linearly, the stiffness
-     *  through 1/(1 - slip*v^2) — the difference over a normal drive's speed range is small enough that the
-     *  filter slides along the ridge instead of picking a point on it. Measured by replaying run
-     *  2026_08_06_00_36_42 with a 0.5 prior on the ratio: it wandered from 15.7 to 14.06 and dragged
-     *  stiffness to 0.374, and the pair predicted the yaw rate 3 % *worse* than the shipped constants while
-     *  reporting itself converged. With this prior instead the ratio stays near its mechanical value, the
-     *  stiffness lands at 0.603 +- 0.030 against a configured 0.64, and the residual improves by 1 %.
-     *
-     *  The lesson generalises past this filter: a state that the data cannot separate from another state is
-     *  not made observable by declaring it a state. Either constrain it by what is known independently — a
-     *  steering rack's ratio is a mechanical fact, known to a few percent — or do not estimate it. */
-    double stiffness_std_init = 0.5;
-    double steer_ratio_std_init = 0.1;
-    double angle_offset_std_init = 1.0;
+    double steer_sign = 1.0;
 
-    /** Random walk, per second. Slow: these are properties of a car, not of a corner. */
-    double stiffness_process_std = 0.005;
-    /** Two orders below the stiffness: a steering rack's ratio does not drift over a drive, and letting it
-     *  random-walk is how it slides down the degeneracy described under `steer_ratio_std_init`. */
-    double steer_ratio_process_std = 0.00005;
-    double angle_offset_process_std = 0.02;
+    double stiffness_process_std = 0.05 / 100.0;
+    double steer_ratio_process_std = 0.01;
+    double angle_offset_process_std_deg = 0.02;
+    double angle_offset_fast_process_std_deg = 0.25;
+    double u_process_std = 0.1;
+    double v_process_std = 0.01;
+    double yaw_rate_process_std_deg = 0.1;
+    double steer_angle_process_std_deg = 0.1;
+    double roll_process_std_deg = 1.0;
 
-    /** Yaw-rate measurement noise, rad/s. The ESP sensor was validated against the phone gyro at a ratio of
-     *  1.017 with no speed dependence, so it is trusted — this covers the model, not the sensor. */
+    double p_initial_scale = 1.0;
+    double stiffness_p0_std = 0.0;  //!< 0 — брать из Q
+    double steer_ratio_p0_std = 0.0;
+
     double yaw_rate_std = 0.02;
+    double steer_angle_std_deg = 0.05;
+    double angle_offset_fast_obs_std_deg = 10.0;
+    double steer_ratio_obs_std = 5.0;
+    double stiffness_obs_std = 0.5;
+    double speed_obs_std = 0.1;
+    double roll_obs_std_deg = 1.0;
 
-    /** Ceiling on each slow parameter's uncertainty — `paramsd`'s anti-growth device, ported as what it
-     *  actually is rather than as what it looks like.
-     *
-     *  Upstream writes it as "observe the state with its own current value at high noise". That form is
-     *  tempting to copy literally, and copying it literally is a bug: the innovation `z − x` is identically
-     *  zero, so the update cannot move the estimate and only shrinks the covariance. Applied once per
-     *  localizer message that is a harmless bound; applied on every CAN sample at 100 Hz it shrinks the
-     *  covariance a hundred times a second without a single bit of information arriving, the yaw-rate
-     *  measurement loses all gain, and the filter freezes near wherever it started. Measured on the
-     *  synthetic recovery test: a true stiffness of 0.45 came out as 0.515, pinned by the initial 0.64. It
-     *  also broke `valid()`, which read the shrunk sigma as convergence after ten minutes of straight road.
-     *
-     *  So it is a cap: sigma may never exceed this, and only real measurements may reduce it. */
-    double stiffness_std_max = 0.5;
-    double steer_ratio_std_max = 0.3;
+    double min_speed_ms = 1.0;
+    double max_steer_deg = 45.0;
+    double max_yaw_rate = 1.0;
+    double max_lateral_jerk = 0.0;  //!< 0 — не отбрасывать переходные процессы: модель динамическая
+    double max_roll_std_deg = 1.5;
 
-    /** Gates, all from `paramsd` unless noted. */
-    double min_speed_ms = 5.0;      //!< upstream uses 1; below 5 the yaw signal is mostly noise here
-    double max_steer_deg = 45.0;    //!< linear region of the tyre model
-    double max_yaw_rate = 1.0;      //!< rad/s
-    double max_lateral_jerk = 1.0;  //!< m/s^3; the model is steady-state
-    double max_roll_std_deg = 3.0;  //!< reject the roll input when it has not converged
+    double excited_swa_deg = 2.0;
+    int min_excited_samples = 500;
 
-    /** Use the road-bank input at all — and on this hardware the answer measured out as *no*.
-     *
-     *  The term is `g·sin(roll)/v`, and at 15 m/s one degree of bank is 0.0114 rad/s. The whole yaw-rate
-     *  residual of the flat model on run 2026_08_06_00_36_42 is 0.0065 rad/s. So a one-degree error in the
-     *  bank injects nearly twice the error the model already has, and the bank estimate from a windscreen-
-     *  mounted phone is good to 0.65° at best — that is its floor after ten seconds of averaging, where it
-     *  stops improving because the residual is the road's camber genuinely changing. Feeding it in raised the
-     *  residual from 0.0065 to 0.0104 rad/s, a 60 % degradation.
-     *
-     *  This is a negative result about the estimator built immediately before this one, and it is the honest
-     *  reading: `RoadRollEstimator` measures what it claims to measure, and what it measures is an order of
-     *  magnitude too coarse to help here. The correct conclusion is not to improve the roll estimate — a
-     *  0.1° bank estimate needs an IMU bolted to the chassis, not a phone on glass — but to notice that the
-     *  flat-road model is already better than the banked one, and that the bank therefore averages out over
-     *  a drive rather than biasing it. The synthetic tests still exercise both paths, because on a road with
-     *  a *known* bank the term is correct and the tests are what prove the sign is right.
-     *
-     *  Above `max_roll_std_deg` the road is taken as flat regardless, mirroring `paramsd`, which observes
-     *  zero roll at a 10° sigma when its localizer cannot be trusted rather than skipping the sample. */
     bool use_roll = false;
+
+    double stiffness_std_init = 0.0;
+    double steer_ratio_std_init = 0.0;
+    double angle_offset_std_init = 0.0;
+    double stiffness_std_max = 0.0;
+    double steer_ratio_std_max = 0.0;
   };
 
   ParamsLearner() : ParamsLearner(Config{}) {}
@@ -169,18 +93,37 @@ public:
 
   void reset()
   {
-    x_ = {cfg_.stiffness_init, cfg_.steer_ratio_init, 0.0};
-    p_ = {cfg_.stiffness_std_init * cfg_.stiffness_std_init, cfg_.steer_ratio_std_init * cfg_.steer_ratio_std_init,
-          cfg_.angle_offset_std_init * cfg_.angle_offset_std_init};
+    x_.setZero();
+    x_[kStiffness] = cfg_.stiffness_init;
+    x_[kSteerRatio] = cfg_.steer_ratio_init;
+    x_[kAngleOffset] = cfg_.angle_offset_init_deg * M_PI / 180.0;
+    x_[kU] = 10.0;
+
+    q_.setZero();
+    const double d2r = M_PI / 180.0;
+    q_[kStiffness] = sq(cfg_.stiffness_process_std);
+    q_[kSteerRatio] = sq(cfg_.steer_ratio_process_std);
+    q_[kAngleOffset] = sq(cfg_.angle_offset_process_std_deg * d2r);
+    q_[kAngleOffsetFast] = sq(cfg_.angle_offset_fast_process_std_deg * d2r);
+    q_[kU] = sq(cfg_.u_process_std);
+    q_[kV] = sq(cfg_.v_process_std);
+    q_[kYawRate] = sq(cfg_.yaw_rate_process_std_deg * d2r);
+    q_[kSteerAngle] = sq(cfg_.steer_angle_process_std_deg * d2r);
+    q_[kRoadRoll] = sq(cfg_.roll_process_std_deg * d2r);
+
+    p_ = (q_ * cfg_.p_initial_scale).asDiagonal();
+    if (cfg_.stiffness_p0_std > 0.0)
+      p_(kStiffness, kStiffness) = sq(cfg_.stiffness_p0_std);
+    if (cfg_.steer_ratio_p0_std > 0.0)
+      p_(kSteerRatio, kSteerRatio) = sq(cfg_.steer_ratio_p0_std);
     n_ = 0;
+    excited_ = 0;
     have_prev_ay_ = false;
     prev_ay_ = 0.0;
   }
 
-  /** One CAN sample. `yaw_rate_can` is `chassis.yaw_rate` as decoded (ISO, left-positive); `road_roll_deg`
-   *  and its sigma come from `RoadRollEstimator`. Returns true if the sample was used. */
   bool update(double speed_ms, double swa_deg, double yaw_rate_can, double road_roll_deg, double road_roll_std_deg,
-              double dt_s)
+              double dt_s, bool localizer_tick = true)
   {
     if (!(dt_s > 0.0) || dt_s > 1.0)
       return false;
@@ -191,127 +134,186 @@ public:
     if (std::abs(yaw_rate_can) > cfg_.max_yaw_rate)
       return false;
 
-    const double yaw_meas = -yaw_rate_can;  // ISO in, z-down inside; see the class comment
-    const double a_y = speed_ms * yaw_meas;
-    if (have_prev_ay_ && std::abs(a_y - prev_ay_) / dt_s > cfg_.max_lateral_jerk) {
+    const double yaw_meas = -yaw_rate_can;
+    if (cfg_.max_lateral_jerk > 0.0) {
+      const double a_y = speed_ms * yaw_meas;
+      if (have_prev_ay_ && std::abs(a_y - prev_ay_) / dt_s > cfg_.max_lateral_jerk) {
+        prev_ay_ = a_y;
+        return false;
+      }
       prev_ay_ = a_y;
-      return false;
+      have_prev_ay_ = true;
     }
-    prev_ay_ = a_y;
-    have_prev_ay_ = true;
 
-    // Roll only when it is worth having. Otherwise take the road as flat, which is what `paramsd` does by
-    // observing zero at a 10° sigma rather than dropping the sample.
-    const double roll = (cfg_.use_roll && std::isfinite(road_roll_deg) && road_roll_std_deg <= cfg_.max_roll_std_deg) ?
-                            road_roll_deg :
-                            0.0;
+    predict(dt_s);
 
-    // Random walk.
-    p_[kStiffness] += cfg_.stiffness_process_std * cfg_.stiffness_process_std * dt_s;
-    p_[kSteerRatio] += cfg_.steer_ratio_process_std * cfg_.steer_ratio_process_std * dt_s;
-    p_[kAngleOffsetDeg] += cfg_.angle_offset_process_std * cfg_.angle_offset_process_std * dt_s;
+    const double d2r = M_PI / 180.0;
+    observe(kSteerAngle, cfg_.steer_sign * swa_deg * d2r, sq(cfg_.steer_angle_std_deg * d2r));
+    observe(kU, speed_ms, sq(cfg_.speed_obs_std));
 
-    observeYawRate(speed_ms, swa_deg, roll, yaw_meas);
-    // Cap the slow parameters' uncertainty. See `stiffness_std_max` for why this is a ceiling and not a
-    // pseudo-measurement.
-    p_[kStiffness] = std::min(p_[kStiffness], cfg_.stiffness_std_max * cfg_.stiffness_std_max);
-    p_[kSteerRatio] = std::min(p_[kSteerRatio], cfg_.steer_ratio_std_max * cfg_.steer_ratio_std_max);
+    if (localizer_tick) {
+      observe(kYawRate, yaw_meas, sq(cfg_.yaw_rate_std));
+      const bool roll_ok = cfg_.use_roll && std::isfinite(road_roll_deg) && road_roll_std_deg <= cfg_.max_roll_std_deg;
+      observe(kRoadRoll, roll_ok ? road_roll_deg * d2r : 0.0,
+              sq((roll_ok ? std::max(road_roll_std_deg, 0.1) : 10.0) * d2r));
+      observe(kAngleOffsetFast, 0.0, sq(cfg_.angle_offset_fast_obs_std_deg * d2r));
+      observe(kStiffness, x_[kStiffness], sq(cfg_.stiffness_obs_std));
+      observe(kSteerRatio, x_[kSteerRatio], sq(cfg_.steer_ratio_obs_std));
+    }
 
     clampStates();
     if (n_ < 1'000'000)
       ++n_;
+    if (std::abs(swa_deg) > cfg_.excited_swa_deg && excited_ < 1'000'000)
+      ++excited_;
     return true;
   }
 
   double stiffnessFactor() const { return x_[kStiffness]; }
   double steerRatio() const { return x_[kSteerRatio]; }
-  double angleOffsetDeg() const { return x_[kAngleOffsetDeg]; }
-  double stiffnessStd() const { return std::sqrt(std::max(p_[kStiffness], 0.0)); }
-  double steerRatioStd() const { return std::sqrt(std::max(p_[kSteerRatio], 0.0)); }
-  double angleOffsetStdDeg() const { return std::sqrt(std::max(p_[kAngleOffsetDeg], 0.0)); }
+  double angleOffsetDeg() const { return x_[kAngleOffset] * 180.0 / M_PI; }
+  double angleOffsetTotalDeg() const { return (x_[kAngleOffset] + x_[kAngleOffsetFast]) * 180.0 / M_PI; }
+  double roadRollDeg() const { return x_[kRoadRoll] * 180.0 / M_PI; }
+  double yawRate() const { return x_[kYawRate]; }
+  double stiffnessStd() const { return std::sqrt(std::max(p_(kStiffness, kStiffness), 0.0)); }
+  double steerRatioStd() const { return std::sqrt(std::max(p_(kSteerRatio, kSteerRatio), 0.0)); }
+  double angleOffsetStdDeg() const { return std::sqrt(std::max(p_(kAngleOffset, kAngleOffset), 0.0)) * 180.0 / M_PI; }
   int sampleCount() const { return n_; }
+  double cov(int i, int j) const { return p_(i, j); }
 
-  /** Ready to be consumed.
-   *
-   *  Four kinds of check, and each one is here because the other three miss something. The count catches a
-   *  filter that has barely run; the sigma catches one that ran on straights, where the measurement carries
-   *  no information about stiffness and the covariance never shrinks. The bound checks are strict — `>` and
-   *  `<`, not `>=` — because clamping lands a saturated state exactly on its bound, and saturation is the
-   *  failure mode that most resembles success: the state stops moving and its sigma is small, which is what
-   *  convergence looks like from the outside. The steer-ratio bounds were missing from this list until a bag
-   *  replay with a flipped steering sign drove the ratio onto its ceiling and nothing here objected. */
+  int excitedCount() const { return excited_; }
+
   bool valid() const
   {
-    return n_ >= 500 && stiffnessStd() < 0.15 && x_[kStiffness] > cfg_.stiffness_min &&
-           x_[kStiffness] < cfg_.stiffness_max && x_[kSteerRatio] > cfg_.steer_ratio_min &&
-           x_[kSteerRatio] < cfg_.steer_ratio_max && std::abs(x_[kAngleOffsetDeg]) < cfg_.angle_offset_max_deg;
+    return n_ >= 500 && excited_ >= cfg_.min_excited_samples && stiffnessStd() < 0.15 &&
+           x_[kStiffness] > cfg_.stiffness_min && x_[kStiffness] < cfg_.stiffness_max &&
+           x_[kSteerRatio] > steerRatioMin() && x_[kSteerRatio] < steerRatioMax() &&
+           std::abs(angleOffsetDeg()) < cfg_.angle_offset_max_deg;
   }
 
-  /** The predicted yaw rate in the z-down frame for the current states. Public because the tests and the
-   *  offline replay need exactly the function the filter uses, not a re-derivation of it. */
   double predictYawRate(double speed_ms, double swa_deg, double roll_deg) const
-  {
-    return predictWith(x_, speed_ms, swa_deg, roll_deg);
-  }
-
-private:
-  using Vec = std::array<double, kNumStates>;
-
-  double predictWith(const Vec& x, double speed_ms, double swa_deg, double roll_deg) const
   {
     constexpr double kG = 9.81;
     const double v = std::max(speed_ms, 1e-3);
     VehicleModelParams p = cfg_.vehicle;
-    p.tire_stiffness_factor = std::max(x[kStiffness], 1e-3);
-    const double slip = slipFactor(p);
+    p.tire_stiffness_factor = std::max(x_[kStiffness], 1e-3);
     const double sign = cfg_.steer_sign < 0.0 ? -1.0 : 1.0;
-    const double delta = sign * (swa_deg - x[kAngleOffsetDeg]) * M_PI / 180.0 / std::max(x[kSteerRatio], 1e-3);
-    const double kappa = curvatureFromSteer(delta, v, p.wheelbase_m, slip);
-    return v * kappa + kG * std::sin(roll_deg * M_PI / 180.0) / v;
+    const double delta = sign * (swa_deg - angleOffsetDeg()) * M_PI / 180.0 / std::max(x_[kSteerRatio], 1e-3);
+    return v * curvatureFromSteer(delta, v, p.wheelbase_m, slipFactor(p)) + kG * std::sin(roll_deg * M_PI / 180.0) / v;
   }
 
-  void observeYawRate(double speed_ms, double swa_deg, double roll_deg, double yaw_meas)
-  {
-    const double h = predictWith(x_, speed_ms, swa_deg, roll_deg);
-    const double innov = yaw_meas - h;
+private:
+  using Vec = Eigen::Matrix<double, kNumStates, 1>;
+  using Mat = Eigen::Matrix<double, kNumStates, kNumStates>;
 
-    // Central-difference Jacobian; steps are a small fraction of each state's own scale.
-    const Vec step = {1e-3, 1e-2, 1e-2};
-    Vec jac{};
+  static constexpr double kMaxSubStepS = 0.002;
+
+  static double sq(double a) { return a * a; }
+  double steerRatioMin() const
+  {
+    return cfg_.steer_ratio_min > 0.0 ? cfg_.steer_ratio_min : 0.5 * cfg_.steer_ratio_init;
+  }
+  double steerRatioMax() const
+  {
+    return cfg_.steer_ratio_max > 0.0 ? cfg_.steer_ratio_max : 2.0 * cfg_.steer_ratio_init;
+  }
+
+  void baseStiffness(double& cF, double& cR) const
+  {
+    constexpr double kCivicMass = 1326.0 + 136.0;
+    constexpr double kCivicWheelbase = 2.70;
+    constexpr double kCivicC2F = kCivicWheelbase * 0.4;
+    constexpr double kCivicC2R = kCivicWheelbase - kCivicC2F;
+    const double wb = cfg_.vehicle.wheelbase_m;
+    const double aF = wb * cfg_.vehicle.center_to_front_frac;
+    const double aR = wb - aF;
+    cF = 192150.0 * cfg_.vehicle.mass_kg / kCivicMass * (aR / wb) / (kCivicC2R / kCivicWheelbase);
+    cR = 202500.0 * cfg_.vehicle.mass_kg / kCivicMass * (aF / wb) / (kCivicC2F / kCivicWheelbase);
+  }
+
+  Vec derivative(const Vec& x) const
+  {
+    constexpr double kG = 9.81;
+    Vec d = Vec::Zero();
+    const double u = std::max(x[kU], 1.0);
+    double cF0 = 0.0, cR0 = 0.0;
+    baseStiffness(cF0, cR0);
+    const double sf = std::max(x[kStiffness], 1e-3);
+    const double cF = sf * cF0, cR = sf * cR0;
+    const double m = cfg_.vehicle.mass_kg;
+    const double j = std::max(cfg_.rotational_inertia, 1e-3);
+    const double wb = cfg_.vehicle.wheelbase_m;
+    const double aF = wb * cfg_.vehicle.center_to_front_frac;
+    const double aR = wb - aF;
+    const double sR = std::max(x[kSteerRatio], 1e-3);
+
+    const double a00 = -(cF + cR) / (m * u);
+    const double a01 = -(cF * aF - cR * aR) / (m * u) - u;
+    const double a10 = -(cF * aF - cR * aR) / (j * u);
+    const double a11 = -(cF * aF * aF + cR * aR * aR) / (j * u);
+    const double b0 = cF / (m * sR);
+    const double b1 = cF * aF / (j * sR);
+    const double sa = x[kSteerAngle] - x[kAngleOffset] - x[kAngleOffsetFast];
+
+    d[kV] = a00 * x[kV] + a01 * x[kYawRate] + b0 * sa - kG * x[kRoadRoll];
+    d[kYawRate] = a10 * x[kV] + a11 * x[kYawRate] + b1 * sa;
+    return d;
+  }
+
+  Vec integrate(const Vec& x, double dt) const
+  {
+    const int sub = std::clamp(static_cast<int>(std::ceil(dt / kMaxSubStepS)), 1, 64);
+    const double h = dt / sub;
+    Vec y = x;
+    for (int i = 0; i < sub; ++i)
+      y += h * derivative(y);
+    return y;
+  }
+
+  void predict(double dt)
+  {
+    const Vec f = integrate(x_, dt);
+
+    static const Vec kStep = (Vec() << 1e-4, 1e-3, 1e-5, 1e-5, 1e-3, 1e-4, 1e-5, 1e-5, 1e-5).finished();
+    Mat F = Mat::Identity();  // столбцы заполняются ниже численно
     for (int i = 0; i < kNumStates; ++i) {
-      Vec hi = x_;
-      Vec lo = x_;
-      hi[i] += step[i];
-      lo[i] -= step[i];
-      jac[i] = (predictWith(hi, speed_ms, swa_deg, roll_deg) - predictWith(lo, speed_ms, swa_deg, roll_deg)) /
-               (2.0 * step[i]);
+      Vec hi = x_, lo = x_;
+      hi[i] += kStep[i];
+      lo[i] -= kStep[i];
+      F.col(i) = (integrate(hi, dt) - integrate(lo, dt)) / (2.0 * kStep[i]);
     }
 
-    // Diagonal covariance keeps this a few lines and costs little: the three parameters are not strongly
-    // correlated through a single scalar measurement, and pretending otherwise would need a real matrix.
-    double s = cfg_.yaw_rate_std * cfg_.yaw_rate_std;
-    for (int i = 0; i < kNumStates; ++i)
-      s += jac[i] * p_[i] * jac[i];
+    x_ = f;
+    p_ = F * p_ * F.transpose();
+    p_.diagonal() += q_ * dt;
+  }
+
+  void observe(int state, double z, double r)
+  {
+    const double s = p_(state, state) + r;
     if (!(s > 0.0))
       return;
-    for (int i = 0; i < kNumStates; ++i) {
-      const double k = p_[i] * jac[i] / s;
-      x_[i] += k * innov;
-      p_[i] = std::max((1.0 - k * jac[i]) * p_[i], 1e-12);
-    }
+    const Vec k = p_.col(state) / s;
+    x_ += k * (z - x_[state]);
+    p_ -= k * p_.row(state);
+    p_ = 0.5 * (p_ + p_.transpose()).eval();
   }
 
   void clampStates()
   {
     x_[kStiffness] = std::clamp(x_[kStiffness], cfg_.stiffness_min, cfg_.stiffness_max);
-    x_[kSteerRatio] = std::clamp(x_[kSteerRatio], cfg_.steer_ratio_min, cfg_.steer_ratio_max);
-    x_[kAngleOffsetDeg] = std::clamp(x_[kAngleOffsetDeg], -cfg_.angle_offset_max_deg, cfg_.angle_offset_max_deg);
+    x_[kSteerRatio] = std::clamp(x_[kSteerRatio], steerRatioMin(), steerRatioMax());
+    const double max_off = cfg_.angle_offset_max_deg * M_PI / 180.0;
+    x_[kAngleOffset] = std::clamp(x_[kAngleOffset], -max_off, max_off);
+    x_[kAngleOffsetFast] = std::clamp(x_[kAngleOffsetFast], -max_off, max_off);
   }
 
   Config cfg_{};
-  Vec x_{};
-  Vec p_{};
+  Vec x_ = Vec::Zero();
+  Vec q_ = Vec::Zero();
+  Mat p_ = Mat::Zero();
   int n_ = 0;
+  int excited_ = 0;
   bool have_prev_ay_ = false;
   double prev_ay_ = 0.0;
 };

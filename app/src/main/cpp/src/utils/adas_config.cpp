@@ -120,6 +120,12 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "center_force_turn_scale", cfg.topic_convert.center_force_turn_scale);
   setDouble(veh, "max_steer_deg", cfg.lane_keep.max_steer_deg);
   setDouble(veh, "max_torque_cnm", cfg.lane_keep.max_torque_cnm);
+  setBool(veh, "roll_compensation", cfg.lane_keep.roll_compensation);
+  setBool(veh, "dp_parity_pack", cfg.lane_keep.dp_parity_pack);
+  setString(veh, "fp_solver", cfg.lane_keep.fp_solver);
+  setBool(veh, "lane_mode_hysteresis", cfg.topic_convert.lane_mode_hysteresis);
+  setDouble(veh, "lane_mode_off_prob", cfg.topic_convert.lane_mode_off_prob);
+  setDouble(veh, "lane_mode_on_prob", cfg.topic_convert.lane_mode_on_prob);
   setDouble(veh, "pp_k_dd", cfg.lane_keep.pp_k_dd);
   setDouble(veh, "pp_ld_min", cfg.lane_keep.pp_ld_min);
   setDouble(veh, "pp_ld_max", cfg.lane_keep.pp_ld_max);
@@ -271,6 +277,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
   pl.steer_sign = cfg.lane_keep.steer_sign;
   setBool(loc, "learn_vehicle_params", cfg.localization.learn_vehicle_params);
+  setDouble(loc, "params_stiffness_p0_std", pl.stiffness_p0_std);
   setDouble(loc, "params_stiffness_process_std", pl.stiffness_process_std);
   setDouble(loc, "params_steer_ratio_process_std", pl.steer_ratio_process_std);
   setDouble(loc, "params_min_speed_ms", pl.min_speed_ms);

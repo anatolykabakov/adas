@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace adas {
 
@@ -114,7 +115,8 @@ public:
     bool active = false;
   };
 
-  Result update(bool active, double desired_swa_deg, double actual_swa_deg, double v_ego_mps, bool steering_pressed)
+  Result update(bool active, double desired_swa_deg, double actual_swa_deg, double v_ego_mps, bool steering_pressed,
+                double ff_swa_deg = std::numeric_limits<double>::quiet_NaN())
   {
     Result r;
     r.angle_des_deg = desired_swa_deg;
@@ -125,8 +127,8 @@ public:
       return r;
     }
 
-    // A floor on v² rather than a separate term, so the feedforward keeps a single gain.
-    const double ff = desired_swa_deg * (v_ego_mps * v_ego_mps + v_ff_floor_mps_ * v_ff_floor_mps_);
+    const double ff_angle = std::isfinite(ff_swa_deg) ? ff_swa_deg : desired_swa_deg;
+    const double ff = ff_angle * (v_ego_mps * v_ego_mps + v_ff_floor_mps_ * v_ff_floor_mps_);
     r.steer_norm = pid_.update(r.angle_error_deg, v_ego_mps, steering_pressed, ff);
     r.p = pid_.p();
     r.i = pid_.i();

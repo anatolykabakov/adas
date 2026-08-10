@@ -1,6 +1,27 @@
 add_subdirectory(panda)
 add_subdirectory(utils)
 
+set(ACADOS_OCP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lateral/acados_lat_ocp)
+file(
+  GLOB ACADOS_OCP_SRC ${ACADOS_OCP_DIR}/acados_solver_lat.c
+  ${ACADOS_OCP_DIR}/lat_model/*.c ${ACADOS_OCP_DIR}/lat_cost/*.c
+)
+add_library(adas_acados_lat STATIC ${ACADOS_OCP_SRC})
+set_target_properties(
+  adas_acados_lat
+  PROPERTIES POSITION_INDEPENDENT_CODE ON
+             C_STANDARD 99
+)
+target_include_directories(
+  adas_acados_lat
+  PUBLIC ${ACADOS_OCP_DIR}
+)
+target_link_libraries(
+  adas_acados_lat
+  PUBLIC acados::acados
+)
+set(ADAS_WITH_ACADOS ON)
+
 add_library(
   adas_app_common
   STATIC
@@ -57,6 +78,21 @@ target_include_directories(
   PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 )
+
+if(ADAS_WITH_ACADOS)
+  target_sources(
+    adas_app_common
+    PRIVATE lateral/acados_lat_mpc.cpp
+  )
+  target_link_libraries(
+    adas_app_common
+    PUBLIC adas_acados_lat
+  )
+  target_compile_definitions(
+    adas_app_common
+    PUBLIC ADAS_WITH_ACADOS
+  )
+endif()
 
 if(BUILD_FOR_ANDROID)
   target_compile_definitions(

@@ -44,6 +44,12 @@ public:
   /** Which GPS measurements are allowed through. Each one is separate because a fused estimate does not
    *  say which sensor carries it, and switching sources off one at a time is the only cheap way to find
    *  out what the filter would do without each. `Localization::Config::Sources` drives these. */
+  double max_gps_speed_mismatch_mps = 12.0;
+
+  int reseed_agree_count = 3;
+  double reseed_agree_radius_m = 8.0;
+  int gps_unphysical_count = 0;
+
   bool use_gps_position = true;
   bool use_gps_course = true;
   bool use_gps_velocity = true;
@@ -76,6 +82,10 @@ private:
   double odom_x_ = 0, odom_y_ = 0, odom_yaw_ = 0;
   double t_ = 0, last_gps_t_ = -1e9;
   int64_t last_gps_msg_us_ = -1;
+  double last_fix_x_ = 0, last_fix_y_ = 0, last_fix_t_ = -1e9;
+  bool have_last_fix_ = false;
+  double pending_x_ = 0, pending_y_ = 0;
+  int pending_agree_ = 0;
 
   std::vector<double> ref_x_, ref_y_;
   std::vector<double> odom_traj_x_, odom_traj_y_;

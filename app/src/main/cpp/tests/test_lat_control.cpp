@@ -159,27 +159,24 @@ TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
   std::remove(path.c_str());
 }
 
-TEST(AdasConfigLoad, FeedforwardDefaultsAreTheMeasuredOnes)
+TEST(AdasConfigLoad, FeedforwardDefaultsMatchUpstream)
 {
-  // With no config on the device the header defaults apply, and they must match the fitted values.
   AdasApp::Config cfg;
-  EXPECT_NEAR(cfg.lane_keep.pid_kf, 0.00015, 1e-12);
-  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, adas::kFeedforwardFloorMps, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_kf, 6e-5, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, 0.0, 1e-12);
 }
 
-TEST(LatControlPid, OldGainUnderdeliveredAtEverySpeed)
+TEST(LatControlPid, TheFittedGainAsksSeveralTimesMoreThanUpstream)
 {
-  // Regression on the reason for the change: 0.00006 without a floor under-delivered several-fold at
-  // every speed, which is what showed up as under-steer on arcs.
-  LatControlPid old_pid(0.0, 0.0, 0.00006, 50.0, 0.0);
-  LatControlPid now(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
+  LatControlPid upstream(0.0, 0.0, 6e-5, 50.0, 0.0);
+  LatControlPid fitted(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
 
   for (double v : {6.0, 10.0, 15.0, 21.0}) {
-    old_pid.reset();
-    now.reset();
-    const double was = old_pid.update(true, 1.0, 1.0, v, false).f;
-    const double is = now.update(true, 1.0, 1.0, v, false).f;
-    EXPECT_GT(is, 2.0 * was) << "v = " << v;
+    upstream.reset();
+    fitted.reset();
+    const double up = upstream.update(true, 1.0, 1.0, v, false).f;
+    const double fit = fitted.update(true, 1.0, 1.0, v, false).f;
+    EXPECT_GT(fit, 2.0 * up) << "v = " << v;
   }
 }
 
@@ -569,12 +566,10 @@ TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
 }
 
 // ── σ summary range ───────────────────────────────────────────────────────────────────────────
-//
 // Measured on run 2026_08_06_00_36_42: worst-line σ roughly doubles from the near half of the old
 // 5–40 m window to the far half (right arc 0.34 against 0.78) and quadruples past 40 m, because on a
 // bend the inner line leaves the frame and its far samples are extrapolation. A line whose near half
 // is good was therefore being vetoed by the part we had not seen.
-//
 // Blending weight is not published, so these tests read it the way it shows up on the road: the model
 // plan sits 1.0 m off the lane centre, and the reference lands between the two in proportion to the
 // weight. Reference at the plan means the lines were discarded.
@@ -659,4 +654,69 @@ TEST(ShippedConfig, LaneStdRangeIsTheNearField)
   EXPECT_GT(cfg.topic_convert.lane_std_range_m, 5.0);
   EXPECT_LE(cfg.topic_convert.lane_std_range_m, 25.0) << "past ~25 m sigma is dominated by extrapolation, see the "
                                                          "measured table";
+}
+
+
+namespace {
+
+ai::flow::adas::LaneLines frameWithProbs(float lp, float rp)
+{
+  ai::flow::adas::LaneLines ll = twoLineFrame(0.1f);
+  ll.mutable_lanes(1)->set_prob(lp);
+  ll.mutable_lanes(2)->set_prob(rp);
+  return ll;
+}
+
+}  // namespace
+
+TEST(DpParity, LanelessHysteresisFollowsUpstreamThresholds)
+{
+  adas::LanePathConfig cfg;
+  cfg.lane_mode_hysteresis = true;
+  adas::LaneFusionState state;
+  auto run = [&](float lp, float rp) {
+    auto ll = frameWithProbs(lp, rp);
+    return adas::laneLinesToPath(ll, cfg, &state).lanelines_active;
+  };
+
+  EXPECT_TRUE(run(0.9f, 0.9f)) << "обе уверенные — режим разметки";
+  EXPECT_TRUE(run(0.35f, 0.35f)) << "между 0.3 и 0.5 гистерезис держит прежний режим";
+  EXPECT_FALSE(run(0.2f, 0.2f)) << "обе ниже 0.3 — уходим на чистый план модели";
+  EXPECT_FALSE(run(0.45f, 0.45f)) << "чтобы вернуться, мало быть выше 0.3";
+  EXPECT_TRUE(run(0.55f, 0.1f)) << "одной выше 0.5 достаточно: у них OR, а не AND";
+}
+
+TEST(DpParity, LanelessModeStopsTheBlendEntirely)
+{
+  adas::LanePathConfig cfg;
+  cfg.lane_mode_hysteresis = true;
+  cfg.camera_offset_m = 0.0;
+  adas::LaneFusionState state;
+
+  auto confident = frameWithProbs(0.9f, 0.9f);
+  const double with_lines = pathYAt10m(adas::laneLinesToPath(confident, cfg, &state));
+  auto weak = frameWithProbs(0.1f, 0.1f);
+  const double laneless = pathYAt10m(adas::laneLinesToPath(weak, cfg, &state));
+
+  EXPECT_NEAR(laneless, 0.4, 1e-6) << "laneless — это ровно план модели, без следа разметки";
+  EXPECT_NE(with_lines, laneless);
+}
+
+TEST(DpParity, HysteresisOffKeepsPreviousBehaviour)
+{
+  adas::LanePathConfig cfg;
+  cfg.lane_mode_hysteresis = false;
+  adas::LaneFusionState state;
+  auto weak = frameWithProbs(0.1f, 0.1f);
+  EXPECT_TRUE(adas::laneLinesToPath(weak, cfg, &state).lanelines_active) << "флаг выключен — признак всегда истинный, "
+                                                                            "смешивание прежнее непрерывное";
+}
+
+TEST(DpParity, RollCompensationMatchesUpstreamFormula)
+{
+  const double sf = 0.0015, v = 20.0, roll = 0.05;
+  EXPECT_NEAR(adas::rollCompensationCurvature(roll, v, sf), 9.81 * roll / (1.0 / sf - v * v), 1e-12);
+  EXPECT_DOUBLE_EQ(adas::rollCompensationCurvature(roll, v, 0.0), 0.0) << "без сноса нечего вычитать";
+  EXPECT_GT(adas::rollCompensationCurvature(0.05, v, sf), 0.0) << "завал вправо тянет вправо";
+  EXPECT_LT(adas::rollCompensationCurvature(-0.05, v, sf), 0.0);
 }

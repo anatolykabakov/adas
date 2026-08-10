@@ -98,12 +98,12 @@ void VehicleEKF::applySpeedUpdate(double v_meas, double R)
 }
 
 VehicleEKF::GpsPosResult VehicleEKF::updateGps(double gps_x, double gps_y, double max_innovation,
-                                               double reseed_innovation)
+                                               double reseed_innovation, bool allow_reseed)
 {
   const Vec2 innov(gps_x - state_(0), gps_y - state_(1));
   const double mag = innov.norm();
 
-  if (mag > reseed_innovation || (mag > max_innovation && consecutive_gps_rejects_ >= 4)) {
+  if (allow_reseed && (mag > reseed_innovation || (mag > max_innovation && consecutive_gps_rejects_ >= 4))) {
     state_(0) = gps_x;
     state_(1) = gps_y;
     P_(0, 0) = std::max(P_(0, 0), 25.0);

@@ -83,3 +83,5 @@ docs/_site/
 
 # Ad-hoc plot output from the analysis scripts (--plot out.png)
 out.png
+
+app/src/main/cpp/third_party/*

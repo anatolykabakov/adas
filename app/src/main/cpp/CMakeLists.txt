@@ -14,6 +14,7 @@ find_package(cppzmq REQUIRED)
 find_package(libusb REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(acados REQUIRED)
 
 file(
   GLOB PROTO_FILES CONFIGURE_DEPENDS

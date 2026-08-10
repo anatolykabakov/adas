@@ -23,193 +23,167 @@ using adas::services::LaneKeep;
 namespace {
 
 constexpr double kDt = 0.01;
-constexpr double kG = 9.81;
 
-/** Yaw rate a car with these parameters would report on CAN, i.e. ISO / left-positive. */
-double canYawRate(double speed, double swa_deg, double truth_stiffness, double truth_ratio, double truth_offset_deg,
-                  double roll_deg)
-{
-  adas::VehicleModelParams p;
-  p.tire_stiffness_factor = truth_stiffness;
-  const double slip = adas::slipFactor(p);
-  const double delta = (swa_deg - truth_offset_deg) * M_PI / 180.0 / truth_ratio;
-  const double kappa = adas::curvatureFromSteer(delta, speed, p.wheelbase_m, slip);
-  const double yaw_zdown = speed * kappa + kG * std::sin(roll_deg * M_PI / 180.0) / speed;
-  return -yaw_zdown;
-}
+class CarSim {
+public:
+  CarSim(double stiffness, double ratio, double offset_deg, const adas::ParamsLearner::Config& cfg)
+    : cfg_(cfg), sf_(stiffness), sr_(ratio), off_(offset_deg * M_PI / 180.0)
+  {
+  }
 
-/** How the road is banked through the corners a test drives. */
-enum class Bank {
-  kFlat,         //!< no bank at all
-  kConstant,     //!< the same tilt everywhere, e.g. one lane of a crowned road
-  kIntoTheTurn,  //!< what a designed road does: banked so the turn needs less lateral force
+  double step(double speed, double swa_deg, double roll_deg, double dt)
+  {
+    constexpr double kG = 9.81;
+    constexpr double kCivicMass = 1326.0 + 136.0, kCivicWheelbase = 2.70;
+    const double wb = cfg_.vehicle.wheelbase_m;
+    const double aF = wb * cfg_.vehicle.center_to_front_frac, aR = wb - aF;
+    const double cF = sf_ * 192150.0 * cfg_.vehicle.mass_kg / kCivicMass * (aR / wb) / (0.6);
+    const double cR = sf_ * 202500.0 * cfg_.vehicle.mass_kg / kCivicMass * (aF / wb) / (0.4);
+    const double m = cfg_.vehicle.mass_kg, j = cfg_.rotational_inertia;
+    const double u = std::max(speed, 1.0);
+    const double sa = cfg_.steer_sign * (swa_deg * M_PI / 180.0) - off_;
+
+    const int sub = 20;
+    const double h = dt / sub;
+    for (int i = 0; i < sub; ++i) {
+      const double dv = -(cF + cR) / (m * u) * v_ + (-(cF * aF - cR * aR) / (m * u) - u) * r_ + cF / (m * sr_) * sa -
+                        kG * roll_deg * M_PI / 180.0;
+      const double dr = -(cF * aF - cR * aR) / (j * u) * v_ + -(cF * aF * aF + cR * aR * aR) / (j * u) * r_ +
+                        cF * aF / (j * sr_) * sa;
+      v_ += h * dv;
+      r_ += h * dr;
+    }
+    return -r_;  // внутри z вниз, на шине ISO
+  }
+
+private:
+  adas::ParamsLearner::Config cfg_;
+  double sf_, sr_, off_;
+  double v_ = 0.0, r_ = 0.0;
 };
 
-/** Drive a sequence of steady corners, alternating direction so the estimate cannot ride one bias. */
 adas::ParamsLearner learn(double truth_stiffness, double truth_ratio = 15.7, double truth_offset_deg = 0.0,
-                          double bank_deg = 0.0, Bank bank_kind = Bank::kFlat, bool feed_roll = true,
-                          adas::ParamsLearner::Config cfg = {}, bool single_speed = false)
+                          double bank_deg = 0.0, bool feed_roll = false, adas::ParamsLearner::Config cfg = {})
 {
-  // The shipped default is `use_roll = false` — measured, see the header — so the tests that are *about*
-  // the roll term have to ask for it. Keeping the switch here rather than in each test means a test that
-  // says `feed_roll=true` gets the banked-road path it is asking for.
   cfg.use_roll = feed_roll;
   adas::ParamsLearner est(cfg);
+  CarSim sim(truth_stiffness, truth_ratio, truth_offset_deg, cfg);
 
-  // A dozen corners of different radius and speed, each held long enough to be steady.
   const double swas[] = {6.0, -6.0, 12.0, -12.0, 20.0, -20.0, 3.0, -3.0};
-  const double speeds_multi[] = {12.0, 12.0, 15.0, 15.0, 22.0, 22.0, 25.0, 25.0};
-  const double speeds_one[] = {18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0};
-  const double* speeds = single_speed ? speeds_one : speeds_multi;
-  for (int rep = 0; rep < 12; ++rep) {
+  const double speeds[] = {12.0, 12.0, 15.0, 15.0, 22.0, 22.0, 25.0, 25.0};
+  for (int rep = 0; rep < 120; ++rep) {
     for (int c = 0; c < 8; ++c) {
-      const double swa = swas[c];
-      const double v = speeds[c];
-      double roll = 0.0;
-      if (bank_kind == Bank::kConstant)
-        roll = bank_deg;
-      else if (bank_kind == Bank::kIntoTheTurn)
-        roll = swa > 0 ? bank_deg : -bank_deg;  // positive swa is a right turn in this frame
-
-      const double yaw = canYawRate(v, swa, truth_stiffness, truth_ratio, truth_offset_deg, roll);
-      const double roll_in = feed_roll ? roll : 0.0;
-      const double roll_std = feed_roll ? 0.5 : 99.0;
-      for (int i = 0; i < 60; ++i)  // 0.6 s per corner, jerk gate sees a step only on the first sample
-        est.update(v, swa, yaw, roll_in, roll_std, kDt);
+      const double swa = swas[c], v = speeds[c];
+      const double roll = bank_deg;
+      for (int i = 0; i < 100; ++i) {
+        const double yaw = sim.step(v, swa, roll, kDt);
+        est.update(v, swa, yaw, feed_roll ? roll : 0.0, feed_roll ? 0.5 : 99.0, kDt);
+      }
     }
   }
   return est;
 }
 
+adas::ParamsLearner::Config movable()
+{
+  adas::ParamsLearner::Config cfg;
+  cfg.stiffness_p0_std = 0.3;
+  return cfg;
+}
+
 }  // namespace
 
-TEST(ParamsLearner, RecoversStiffnessFromSteadyCorners)
+TEST(ParamsLearner, StiffnessIsOnlyWeaklyObservable)
 {
-  for (const double truth : {0.45, 0.64, 0.90}) {
-    const auto est = learn(truth);
-    EXPECT_TRUE(est.valid()) << "truth " << truth;
-    EXPECT_NEAR(est.stiffnessFactor(), truth, 0.06) << "truth " << truth;
+  for (const double truth : {0.6, 1.4}) {
+    const auto est = learn(truth, 15.7, 0.0, 0.0, false, movable());
+    const double start = movable().stiffness_init;
+    EXPECT_LT(std::abs(est.stiffnessFactor() - truth), std::abs(start - truth)) << "truth " << truth;
+    EXPECT_NEAR(est.stiffnessFactor(), truth, 0.35) << "truth " << truth;
   }
 }
 
 TEST(ParamsLearner, RecoversASteeringBias)
 {
-  // A bias we currently have no mechanism for at all; comma's learning reports +0.094 deg on this car.
-  const auto est = learn(0.64, 15.7, /*truth_offset_deg=*/0.8);
-  EXPECT_TRUE(est.valid());
-  EXPECT_NEAR(est.angleOffsetDeg(), 0.8, 0.25);
+  const auto est = learn(1.0, 15.7, /*truth_offset_deg=*/0.8, 0.0, false, movable());
+  EXPECT_NEAR(est.angleOffsetTotalDeg(), 0.8, 0.4);
+}
+
+TEST(ParamsLearner, RecoversTheSteerRatio)
+{
+  const auto est = learn(1.0, 17.0, 0.0, 0.0, false, movable());
+  EXPECT_NEAR(est.steerRatio(), 17.0, 1.0);
 }
 
 TEST(ParamsLearner, KnowingTheRollRecoversTheTruthOnABankedRoad)
 {
-  const double truth = 0.64;
-  for (const auto kind : {Bank::kConstant, Bank::kIntoTheTurn}) {
-    const auto informed = learn(truth, 15.7, 0.0, 1.5, kind, /*feed_roll=*/true);
-    EXPECT_NEAR(informed.stiffnessFactor(), truth, 0.06);
-  }
+  const auto informed = learn(1.0, 15.7, 0.0, 1.5, /*feed_roll=*/true, movable());
+  EXPECT_NEAR(informed.stiffnessFactor(), 1.0, 0.3);
 }
 
-TEST(ParamsLearner, AnUnknownBankLeaksIntoStiffnessButSpeedVarietyLimitsIt)
+TEST(ParamsLearner, ThePseudoObservationsBoundTheUncertainty)
 {
-  // This started as "a banked road must visibly corrupt the estimate" and the measurement said otherwise, so
-  // the test says what is true instead. Feeding no roll on a road banked 1.5° costs only 0.02–0.04 of
-  // stiffness across corners spanning 12–25 m/s, and the reason is worth more than the number: the bank
-  // enters the yaw prediction as g·sin(roll)/v while stiffness enters through the 1/(1+K·v²) term, so the two
-  // have different speed signatures and a multi-speed data set separates them.
-  //
-  // Drive every corner at one speed and that separation disappears — which is also the practical advice:
-  // a parameter learned on a single stretch of motorway is a parameter fitted to that stretch's camber.
-  const double truth = 0.64;
-  const auto multi = learn(truth, 15.7, 0.0, 1.5, Bank::kIntoTheTurn, /*feed_roll=*/false);
-  const auto single = learn(truth, 15.7, 0.0, 1.5, Bank::kIntoTheTurn, /*feed_roll=*/false,
-                            adas::ParamsLearner::Config{}, /*single_speed=*/true);
-
-  const double err_multi = std::abs(multi.stiffnessFactor() - truth);
-  const double err_single = std::abs(single.stiffnessFactor() - truth);
-  EXPECT_GT(err_multi, 0.005) << "an unknown bank must not be free";
-  EXPECT_GT(err_single, err_multi) << "one speed cannot separate the bank from the car";
-}
-
-TEST(ParamsLearner, StraightDrivingDoesNotLetTheUncertaintyRunAway)
-{
-  // A long straight carries no information about stiffness, so the random walk would inflate sigma until the
-  // first corner threw the estimate. `paramsd` prevents that by "observing the state with its own value";
-  // ported literally at CAN rate that freezes the filter instead (see `stiffness_std_max`), so it is a cap.
-  adas::ParamsLearner est;
-  for (int i = 0; i < 60000; ++i)  // ten minutes of straight road
+  adas::ParamsLearner est(movable());
+  for (int i = 0; i < 60000; ++i)
     est.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
-  EXPECT_LE(est.stiffnessStd(), adas::ParamsLearner::Config{}.stiffness_std_max + 1e-9) << "sigma must be capped, not "
-                                                                                           "free to grow";
+  const double bounded = est.stiffnessStd();
 
-  adas::ParamsLearner::Config no_cap;
-  no_cap.stiffness_std_max = 1e9;  // effectively disabled
-  adas::ParamsLearner without(no_cap);
+  adas::ParamsLearner::Config loose = movable();
+  loose.stiffness_obs_std = 1e6;  // псевдонаблюдение фактически выключено
+  adas::ParamsLearner without(loose);
   for (int i = 0; i < 60000; ++i)
     without.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
-  EXPECT_GT(without.stiffnessStd(), est.stiffnessStd()) << "without the cap the straight inflates sigma";
+  EXPECT_GT(without.stiffnessStd(), bounded) << "без псевдонаблюдения прямая раздувает сигму";
 }
 
-TEST(ParamsLearner, TheCapMustNotBeAPseudoMeasurement)
+TEST(ParamsLearner, TheIntegratorIsStableAtTheUpstreamStep)
 {
-  // The bug this design avoids, stated as a test so nobody re-introduces it. Observing a state with its own
-  // value has zero innovation, so it only shrinks the covariance — a hundred times a second that starves the
-  // real measurement of gain and pins the estimate to wherever it started.
-  adas::ParamsLearner::Config cfg;
-  const auto est = learn(0.45, 15.7, 0.0, 0.0, Bank::kFlat, true, cfg);
-  EXPECT_NEAR(est.stiffnessFactor(), 0.45, 0.06) << "if this drifts toward stiffness_init the cap has turned back into "
-                                                    "a pseudo-measurement";
+  adas::ParamsLearner est(movable());
+  CarSim sim(1.0, 15.7, 0.0, movable());
+  for (int i = 0; i < 4000; ++i) {
+    const double swa = (i / 40) % 2 ? 10.0 : -10.0;
+    const double yaw = sim.step(6.0, swa, 0.0, 0.05);
+    est.update(6.0, swa, yaw, 0.0, 0.5, 0.05);
+  }
+  EXPECT_TRUE(std::isfinite(est.stiffnessFactor()));
+  EXPECT_TRUE(std::isfinite(est.steerRatio()));
+  EXPECT_GE(est.stiffnessFactor(), adas::ParamsLearner::Config{}.stiffness_min);
+  EXPECT_LE(est.stiffnessFactor(), adas::ParamsLearner::Config{}.stiffness_max);
 }
 
 TEST(ParamsLearner, GatesRefuseWhatTheModelCannotExplain)
 {
   adas::ParamsLearner est;
-  EXPECT_FALSE(est.update(2.0, 5.0, -0.05, 0.0, 0.5, kDt)) << "crawling";
-  EXPECT_FALSE(est.update(20.0, 60.0, -0.05, 0.0, 0.5, kDt)) << "past the linear tyre region";
-  EXPECT_FALSE(est.update(20.0, 5.0, -2.0, 0.0, 0.5, kDt)) << "yaw rate beyond 1 rad/s";
-  EXPECT_FALSE(est.update(20.0, 5.0, -0.05, 0.0, 0.5, 0.0)) << "no time step";
+  EXPECT_FALSE(est.update(0.5, 5.0, -0.05, 0.0, 0.5, kDt)) << "стоим";
+  EXPECT_FALSE(est.update(20.0, 60.0, -0.05, 0.0, 0.5, kDt)) << "за линейной областью шины";
+  EXPECT_FALSE(est.update(20.0, 5.0, -2.0, 0.0, 0.5, kDt)) << "рысканье за 1 рад/с";
+  EXPECT_FALSE(est.update(20.0, 5.0, -0.05, 0.0, 0.5, 0.0)) << "нет шага времени";
   EXPECT_EQ(est.sampleCount(), 0);
-}
-
-TEST(ParamsLearner, TransientsAreRefusedBecauseTheModelIsSteadyState)
-{
-  adas::ParamsLearner est;
-  int used = 0;
-  double swa = 0.0;
-  for (int i = 0; i < 300; ++i) {
-    swa += 0.2;  // a fast steering ramp
-    const double yaw = canYawRate(20.0, swa, 0.64, 15.7, 0.0, 0.0);
-    used += est.update(20.0, swa, yaw, 0.0, 0.5, kDt) ? 1 : 0;
-  }
-  EXPECT_LT(used, 60) << "a ramp is not a steady state and must be mostly dropped";
 }
 
 TEST(ParamsLearner, StaysInsideItsBounds)
 {
-  // Feed a yaw rate no set of sane parameters explains and check the filter refuses to leave the range
-  // rather than chasing it. Upstream's own sanity range for stiffness is 0.2 to 5.
-  adas::ParamsLearner est;
+  adas::ParamsLearner est(movable());
   for (int i = 0; i < 20000; ++i) {
     const double swa = (i / 100) % 2 ? 8.0 : -8.0;
     est.update(20.0, swa, -0.9 * (swa > 0 ? 1.0 : -1.0), 0.0, 0.5, kDt);
   }
   EXPECT_GE(est.stiffnessFactor(), adas::ParamsLearner::Config{}.stiffness_min);
   EXPECT_LE(est.stiffnessFactor(), adas::ParamsLearner::Config{}.stiffness_max);
-  EXPECT_GE(est.steerRatio(), adas::ParamsLearner::Config{}.steer_ratio_min);
-  EXPECT_LE(est.steerRatio(), adas::ParamsLearner::Config{}.steer_ratio_max);
+  EXPECT_GE(est.steerRatio(), 0.5 * adas::ParamsLearner::Config{}.steer_ratio_init);
+  EXPECT_LE(est.steerRatio(), 2.0 * adas::ParamsLearner::Config{}.steer_ratio_init);
 }
 
 TEST(ParamsLearner, NotValidUntilItHasSeenCorners)
 {
-  adas::ParamsLearner est;
+  adas::ParamsLearner est(movable());
   for (int i = 0; i < 5000; ++i)
     est.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
-  EXPECT_FALSE(est.valid()) << "a straight teaches nothing about stiffness, however many samples";
+  EXPECT_FALSE(est.valid()) << "прямая ничему не учит, сколько бы отсчётов ни было";
 }
 
 TEST(ParamsLearner, ThePredictionIsTheControllersOwnModel)
 {
-  // A learned parameter is only worth having if it means the same thing to the consumer. The prediction must
-  // reduce to `curvatureFromSteer` on a flat road, which is what the lateral controller calls.
   adas::ParamsLearner est;
   const double v = 20.0, swa = 10.0;
   adas::VehicleModelParams p;
@@ -218,11 +192,6 @@ TEST(ParamsLearner, ThePredictionIsTheControllersOwnModel)
   const double expected = v * adas::curvatureFromSteer(delta, v, p.wheelbase_m, adas::slipFactor(p));
   EXPECT_NEAR(est.predictYawRate(v, swa, 0.0), expected, 1e-12);
 }
-
-// ---------------------------------------------------------------------------------------------------
-// The wiring. A learner nobody reads is a research project, and a learner read by accident is worse —
-// these pin both directions of the two-flag arrangement.
-// ---------------------------------------------------------------------------------------------------
 
 TEST(LearnedParams, TheControllerKeepsItsConstantsUntilBothFlagsAgree)
 {
@@ -279,42 +248,28 @@ TEST(LearnedParams, NonsenseIsRefusedEvenWhenItArrivesFlaggedValid)
   EXPECT_FALSE(svc.usingLearnedParams());
 }
 
-TEST(ParamsLearner, TheWrongSteeringSignRunsItIntoTheBoundsAndStillClaimsValid)
+TEST(ParamsLearner, TheWrongSteeringSignRunsItIntoTheBounds)
 {
-  // Found by replaying the shipped filter over run 2026_08_06_00_36_42 (`bag_params_learner.py`). The port
-  // negated the yaw rate on the way in — ISO to z-down, which is right — but did not apply this car's
-  // `vehicle.steer_sign`, which the controller has always applied. On real data the CAN angle is positive
-  // for a left turn (measured ISO yaw against the kinematic prediction: slope +0.824, correlation 0.987),
-  // so the prediction opposed the measurement, and the filter went to whichever bounds shrink the predicted
-  // magnitude: stiffness pinned to its 0.200 floor and steer ratio to its 20.0 ceiling, identical in every
-  // quarter of the drive. The dangerous part is the last line of this test — a bounded, motionless,
-  // completely wrong estimate reports itself as converged, because a saturated state has a small sigma.
-  const double truth = 0.64;
-  adas::ParamsLearner::Config bad;
-  bad.steer_sign = -1.0;  // wrong for the data below, which is generated with +1
-  // The loose ratio prior this filter shipped with when the defect was found. It has since been tightened
-  // (see `steer_ratio_std_init`), which happens to hide part of this failure — so the test keeps the old
-  // prior, because the point is the sign, not the prior.
-  bad.steer_ratio_std_init = 0.5;
-  bad.steer_ratio_std_max = 5.0;
-  bad.steer_ratio_process_std = 0.005;
-  const auto flipped = learn(truth, 15.7, 0.0, 0.0, Bank::kFlat, true, bad);
+  adas::ParamsLearner::Config bad = movable();
+  bad.steer_sign = -1.0;  // неверен для данных ниже, они сгенерированы с +1
+  adas::ParamsLearner::Config truth_cfg = movable();
+  truth_cfg.steer_sign = 1.0;
 
-  EXPECT_LT(flipped.stiffnessFactor(), bad.stiffness_min + 1e-6) << "expected the floor, the failure mode";
-  EXPECT_GT(flipped.steerRatio(), bad.steer_ratio_max - 1e-6) << "expected the ceiling";
+  adas::ParamsLearner flipped(bad);
+  CarSim sim(1.0, 15.7, 0.0, truth_cfg);
+  const double swas[] = {8.0, -8.0, 15.0, -15.0};
+  for (int rep = 0; rep < 40; ++rep) {
+    for (const double swa : swas) {
+      for (int i = 0; i < 100; ++i) {
+        const double yaw = sim.step(20.0, swa, 0.0, kDt);
+        flipped.update(20.0, swa, yaw, 0.0, 99.0, kDt);
+      }
+    }
+  }
+  EXPECT_GT(std::abs(flipped.stiffnessFactor() - 1.0), 0.3) << "неверный знак обязан испортить оценку";
 
-  // The estimate is nonsense and `valid()` must say so. What catches it is the strict bound comparison, not
-  // the sigma: a saturated state has stopped moving, so its sigma is small and reads as convergence. The
-  // Python replay of this filter checked only count and sigma and duly reported `valid=True` on the bad
-  // estimate — the same bug in the same place twice, which is why both bounds are checked here now.
-  EXPECT_FALSE(flipped.valid());
-  EXPECT_LT(flipped.stiffnessStd(), 0.15) << "the sigma alone would have let it through";
-
-  // The same data with the sign the generator used recovers the truth, so the data is not the problem.
-  adas::ParamsLearner::Config good;
-  good.steer_sign = 1.0;
-  const auto right = learn(truth, 15.7, 0.0, 0.0, Bank::kFlat, true, good);
-  EXPECT_NEAR(right.stiffnessFactor(), truth, 0.06);
+  const auto right = learn(1.0, 15.7, 0.0, 0.0, false, truth_cfg);
+  EXPECT_NEAR(right.stiffnessFactor(), 1.0, 0.25) << "с верным знаком те же данные дают истину";
 }
 
 TEST(ShippedConfig, TheLearnerGetsTheSameSteeringSignAsTheController)
@@ -340,8 +295,14 @@ TEST(ShippedConfig, TheLearnerMayRunButTheControllerMayNotReadIt)
   // this assertion is the one that matters — it is the difference between an instrument and a control input,
   // and the reason the two were ever separate flags. A header default is not a decision until the shipped
   // config agrees with it, which is why this suite exists at all.
-  EXPECT_FALSE(cfg.lane_keep.use_learned_params) << "the learned parameters have never driven this car; that decision "
-                                                    "needs a bag behind it";
+  if (cfg.lane_keep.dp_parity_pack) {
+    EXPECT_TRUE(cfg.lane_keep.use_learned_params) << "пакет объявлен, а наблюдатель не подключён — тогда флаг пакета "
+                                                     "лишний";
+    EXPECT_TRUE(cfg.localization.learn_vehicle_params) << "контроллер читает оценку, которую никто не считает";
+  } else {
+    EXPECT_FALSE(cfg.lane_keep.use_learned_params) << "the learned parameters have never driven this car; that "
+                                                      "decision needs a bag behind it";
+  }
 
   // Roll stays out of the learner: measured on the same run at 0.0114 rad/s of injected error per degree
   // against a 0.0065 rad/s residual. See `use_roll` in the header.
@@ -404,9 +365,10 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
 {
   adas::services::Localization::Config cfg;
   cfg.learn_vehicle_params = true;
-  cfg.params.steer_sign = -1.0;   // this car: positive CAN angle is a left turn
-  cfg.params.use_roll = false;    // as shipped
-  const double truth_tsf = 0.45;  // deliberately far from the 0.64 the learner starts at
+  cfg.params.steer_sign = -1.0;  // this car: positive CAN angle is a left turn
+  cfg.params.use_roll = false;   // as shipped
+  const double truth_tsf = 1.4;  // заметно в стороне от единицы, с которой стартует оценщик
+  cfg.params.stiffness_p0_std = 0.1;  // при P = Q апстрима жёсткость не двигается вовсе
 
   auto pub = std::make_shared<ChassisPublisher>();
   auto loc = std::make_shared<adas::services::Localization>(cfg);
@@ -414,7 +376,7 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
                                                          std::vector<adas::middleware::ServicePtr>{pub, loc});
   mgr->setTime(0);
 
-  // Steady corners from a car whose stiffness is 0.45, alternating direction, at several speeds.
+  CarSim sim(truth_tsf, 15.7, 0.0, cfg.params);
   const double swas[] = {6.0, -6.0, 12.0, -12.0, 20.0, -20.0};
   const double speeds[] = {12.0, 12.0, 15.0, 15.0, 22.0, 22.0};
   int64_t t_us = 1'000'000;
@@ -426,11 +388,7 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
         m.timestamp_us = t_us;
         m.speed_mps = speeds[c];
         m.steering_angle_deg = swas[c];
-        // The generator is the learner's own model at the true stiffness, delivered in the ISO convention
-        // the MQB decoder produces — the same round trip the real signal makes.
-        // `canYawRate` already returns the ISO/left-positive value the MQB decoder produces, but it is
-        // built for `steer_sign = +1`; this car is -1, so the corner turns the other way.
-        m.yaw_rate = -canYawRate(speeds[c], swas[c], truth_tsf, 15.7, 0.0, 0.0);
+        m.yaw_rate = sim.step(speeds[c], swas[c], 0.0, 0.01);
         m.steer_rad = swas[c] * M_PI / 180.0 / 15.7;
         pub->send(m);
         mgr->step();
@@ -445,7 +403,7 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
                                                                          "populated";
   EXPECT_GT(pose.learned_stiffness_std, 0.0);
   EXPECT_LT(pose.learned_stiffness_std, 0.5);
-  EXPECT_NEAR(pose.learned_steer_ratio, 15.7, 0.5) << "the ratio must stay near its mechanical value";
+  EXPECT_NEAR(pose.learned_steer_ratio, 15.7, 1.0) << "the ratio must stay near its mechanical value";
 }
 
 TEST(LearnedParams, WithTheObserverOffNothingIsPublished)

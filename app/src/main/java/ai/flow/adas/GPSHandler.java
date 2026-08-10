@@ -78,13 +78,21 @@ public class GPSHandler implements LocationListener {
 
         long currentTime = TimeUtil.nowMs();
         try {
+            final float accuracy = location.hasAccuracy() ? location.getAccuracy() : 0.0f;
+            int satellites = 0;
+            if (location.getExtras() != null) {
+                satellites = location.getExtras().getInt("satellites", 0);
+            }
             ZMQMessage locationMessage = ProtoUtils.createGPSLocationMessage(
                     location.getLatitude(),
                     location.getLongitude(),
                     location.getAltitude(),
                     location.getSpeed(),
                     location.getBearing(),
-                    currentTime);
+                    currentTime,
+                    accuracy,
+                    satellites,
+                    LocationManager.GPS_PROVIDER.equals(location.getProvider()));
             locationMessage = locationMessage.toBuilder().setTopic("sensors/gps/location").build();
 
             ZMQMessage dataMessage = ProtoUtils.createGPSDataMessage(

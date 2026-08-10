@@ -166,6 +166,8 @@ fi
 # redirection inside `run-as pkg sh -c "cat > ..."` is blocked by SELinux (Permission denied),
 # while read and `cp` with the same run-as are allowed — verified on OnePlus 7T / Android 12.
 # Write to a temp file first, then mv — a mid-write failure will not leave a broken config.
+adb "${SERIAL[@]}" shell run-as "$PKG" mkdir -p "$(dirname "$REMOTE")"
+
 STAGE="/data/local/tmp/adas_config_push.json"
 adb "${SERIAL[@]}" push "$TMP/merged.json" "$STAGE" >/dev/null
 adb "${SERIAL[@]}" shell run-as "$PKG" cp "$STAGE" "${REMOTE}.tmp"

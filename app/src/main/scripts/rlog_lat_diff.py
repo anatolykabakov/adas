@@ -332,6 +332,18 @@ def load_route(route: Path, max_segments: int | None, want_model: bool):
     return events, car_params, len(segs), damaged
 
 
+def apply_overrides(cfg_veh, sets):
+    """Правки на время прогона, поверх прочитанного `config.json`.
+
+    Сравнивать варианты, переписывая боевой файл, — верный способ уехать на дорогу с настройкой от
+    последнего эксперимента; здесь она живёт только в этом процессе и печатается в шапке.
+    """
+    for item in sets or []:
+        key, _, value = item.partition("=")
+        cfg_veh[key.strip()] = float(value)
+    return cfg_veh
+
+
 def build_app(core, cfg_veh, cp, args):
     """Configure the app as it *ships*, not as its constructor defaults.
 
@@ -628,6 +640,13 @@ def main() -> int:
         help="recompute the setpoint between frames as upstream does at 100 Hz (lat_recompute_setpoint)",
     )
     ap.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="KEY=VALUE",
+        help="переопределить vehicle.* только на этот прогон, не трогая config.json",
+    )
+    ap.add_argument(
         "--no-integrator",
         action="store_true",
         help="run our PID with ki=0 — the only fair way to compare torque in an open-loop replay",
@@ -643,7 +662,9 @@ def main() -> int:
     cfg = json.loads(
         (Path(__file__).resolve().parents[1] / "assets" / "config.json").read_text()
     )
-    veh = cfg["vehicle"]
+    veh = apply_overrides(cfg["vehicle"], args.set)
+    if args.set:
+        print("переопределено на этот прогон: " + ", ".join(args.set))
     print(
         f"маршрутов: {len(routes)}, эталон: {args.reference}, "
         f"контроллер {args.controller or veh.get('lane_keep_controller')}, "

@@ -14,6 +14,9 @@ TopicConvert::TopicConvert(Config config) : config_(config), steer_ratio_(config
   path_cfg_.lane_blend_scale = config.path_lane_blend_scale;
   path_cfg_.camera_offset_m = config.path_camera_offset_m;
   path_cfg_.lane_std_good_m = config.lane_std_good_m;
+  path_cfg_.lane_mode_hysteresis = config.lane_mode_hysteresis;
+  path_cfg_.lane_mode_off_prob = config.lane_mode_off_prob;
+  path_cfg_.lane_mode_on_prob = config.lane_mode_on_prob;
   path_cfg_.lane_std_bad_m = config.lane_std_bad_m;
   path_cfg_.lane_std_range_m = config.lane_std_range_m;
   path_cfg_.lane_width_min_m = config.lane_width_min_m;
@@ -149,6 +152,8 @@ void TopicConvert::onGps(const ai::flow::adas::ZMQMessage& msg)
   auto sample = gps_proj_.project(t_us, g.latitude(), g.longitude(), ok_fix, g.speed(), g.bearing());
   if (!sample.valid)
     return;
+  sample.accuracy_m = g.horizontal_accuracy();
+  sample.satellites = g.satellites_used();
   publish(topics::kGpsLocation, sample);
 }
 

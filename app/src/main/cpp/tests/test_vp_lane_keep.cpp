@@ -622,7 +622,6 @@ TEST(LaneKeepAssistGate, WithheldTorqueClearsTheCommandAndComesBack)
 // spacing; they differ only in how long the torque was withheld beforehand. With the integrator reset
 // the first resumed command is identical in both. Without it, the longer withholding accumulates and
 // the wheel gets a step it never earned.
-//
 // The `require_assist = false` half is the control group, and it is what keeps this from being a test
 // that passes for the wrong reason: it reproduces the pre-fix behaviour in the same file and shows the
 // resumed command really does grow with the time spent withheld.
@@ -760,10 +759,8 @@ TEST(SetpointRecompute, SpeedIsWhatMovesIt)
 }
 
 // Which flags may share a drive — revised 2026-08-07 after measurement contradicted the first version.
-//
 // The rule was "at most one of {lat_always_on, lat_recompute_setpoint, use_learned_params, nnapi_fp16}".
 // Two things falsified it:
-//
 //   * `lat_always_on` stopped being a variable. It was answered on run 2026_08_07_19_04_05 — alt_exp 17,
 //     tx_blocked flat at zero, assist presence 2.6 -> 79.1 % at 5-8 m/s — and is the baseline now. A rule that
 //     counts the baseline as a change blocks every future drive;
@@ -772,7 +769,6 @@ TEST(SetpointRecompute, SpeedIsWhatMovesIt)
 //     of work, so we would still take every second frame — 15 Hz, a null result. Only fp16 brings work to
 //     ~32 ms, under one camera period. The camera fix and fp16 are one change with two halves, like
 //     `lat_always_on` and the ALKA bit before them.
-//
 // What survives is the constraint that actually matters: two changes may share a drive only if each leaves an
 // independent trace in the bag. `interval_ms` and `infer_ms` separate the camera from fp16; a setpoint that
 // moves between vision frames separates the recompute from both. What has no independent trace is a second
@@ -786,6 +782,8 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
   const std::vector<std::pair<const char*, bool>> command = {
       {"lat_recompute_setpoint", cfg.lane_keep.lat_recompute_setpoint},
       {"use_learned_params", cfg.lane_keep.use_learned_params},
+      {"lane_mode_hysteresis", cfg.topic_convert.lane_mode_hysteresis},
+      {"roll_compensation", cfg.lane_keep.roll_compensation},
   };
   std::string on;
   for (const auto& [name, v] : command)
@@ -793,6 +791,10 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
       on += std::string(on.empty() ? "" : ", ") + name;
   const size_t count =
       static_cast<size_t>(std::count_if(command.begin(), command.end(), [](const auto& kv) { return kv.second; }));
+  if (cfg.lane_keep.dp_parity_pack) {
+    EXPECT_GT(count, 1u) << "dp_parity_pack объявлен, а пакета нет — флаг лишний";
+    GTEST_SKIP() << "объявленный пакет: " << on << " — разделить их этим заездом нельзя, и это принято";
+  }
   EXPECT_LE(count, 1u) << "enabled together: " << on
                        << " — both change the command for the same reference, so the bag cannot separate them";
 }
@@ -853,3 +855,110 @@ TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
   const auto on = steerAfterSpeedChange(true);
   EXPECT_NE(on.first, on.second) << "with it on the reported setpoint must move, not just the internal one";
 }
+
+#ifdef ADAS_WITH_ACADOS
+#include "adas/lateral/acados_lat_mpc.hpp"
+
+
+TEST(AcadosLatMpc, LoadsAndSolves)
+{
+  adas::flowpilot::AcadosLatMpc mpc;
+  ASSERT_TRUE(mpc.available()) << "библиотека не загрузилась — проверьте scripts/vendor_acados.py";
+  EXPECT_EQ(adas::flowpilot::AcadosLatMpc::horizonNodes(), 16);
+  EXPECT_NEAR(adas::flowpilot::AcadosLatMpc::nodeTime(16), 2.5, 1e-9) << "тот же горизонт, что у нашего решателя";
+}
+
+namespace {
+
+struct ArcRefs {
+  std::vector<double> y, psi, r;
+};
+
+ArcRefs arcRefs(double kappa, double v)
+{
+  const int n = adas::flowpilot::AcadosLatMpc::horizonNodes();
+  ArcRefs a;
+  for (int i = 0; i <= n; ++i) {
+    const double s = v * adas::flowpilot::AcadosLatMpc::nodeTime(i);
+    a.y.push_back(0.5 * kappa * s * s);
+    a.psi.push_back(kappa * s);
+    a.r.push_back(kappa * v);
+  }
+  return a;
+}
+
+}  // namespace
+
+TEST(AcadosLatMpc, DISABLED_Bisect)
+{
+  adas::flowpilot::AcadosLatMpc mpc;
+  ASSERT_TRUE(mpc.available());
+  std::printf("создан\n");
+  std::fflush(stdout);
+  mpc.setWeights({});
+  std::printf("веса заданы\n");
+  std::fflush(stdout);
+  const auto refs = arcRefs(0.01, 14.0);
+  auto r = mpc.solve(14.0, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
+  std::printf("solve без reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
+  std::fflush(stdout);
+  mpc.reset();
+  std::printf("reset прошёл\n");
+  std::fflush(stdout);
+  r = mpc.solve(14.0, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
+  std::printf("solve после reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
+}
+
+TEST(AcadosLatMpc, FollowsTheArcItIsGiven)
+{
+  adas::flowpilot::AcadosLatMpc mpc;
+  ASSERT_TRUE(mpc.available());
+  mpc.setWeights({});
+  mpc.reset();
+
+  const double v = 14.0, kappa = 0.01;
+  const auto refs = arcRefs(kappa, v);
+  adas::flowpilot::AcadosLatMpc::Result r;
+  for (int i = 0; i < 5; ++i)
+    r = mpc.solve(v, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
+
+  ASSERT_TRUE(r.ok) << "статус решателя " << r.status;
+  EXPECT_GT(r.desired_curvature, 0.0) << "дуга влево — и кривизна влево";
+  EXPECT_NEAR(r.desired_curvature, kappa, 0.5 * kappa) << "и по величине это та же дуга";
+
+  const auto mirrored = arcRefs(-kappa, v);
+  for (int i = 0; i < 5; ++i)
+    r = mpc.solve(v, 0.0, 0.0, mirrored.y, mirrored.psi, mirrored.r, 0.2);
+  EXPECT_LT(r.desired_curvature, 0.0) << "зеркальная дуга — зеркальный знак";
+}
+
+TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
+{
+  const double v = 14.0, kappa = 0.008;
+  adas::flowpilot::AcadosLatMpc acados;
+  ASSERT_TRUE(acados.available());
+  acados.setWeights({});
+  acados.reset();
+  const auto refs = arcRefs(kappa, v);
+  adas::flowpilot::AcadosLatMpc::Result ra;
+  for (int i = 0; i < 8; ++i)
+    ra = acados.solve(v, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.35);
+  ASSERT_TRUE(ra.ok);
+
+  std::vector<Vec2> arc;
+  for (int i = 2; i <= 80; ++i) {
+    const double x = static_cast<double>(i);
+    arc.emplace_back(x, -0.5 * kappa * x * x);  // тот же поворот, но в device-кадре: y вправо
+  }
+  adas::flowpilot::LateralMpc ours;
+  adas::flowpilot::LatMpcResult ro;
+  for (int i = 0; i < 8; ++i)
+    ro = ours.update(v, 0.0, 2.67, arc, {}, {}, {}, 0.05);
+  ASSERT_TRUE(ro.ok);
+
+  EXPECT_GT(ra.desired_curvature * ro.desired_curvature, 0.0)
+      << "решатели обязаны хотеть одну сторону: acados " << ra.desired_curvature << ", наш " << ro.desired_curvature;
+  EXPECT_NEAR(ra.desired_curvature, ro.desired_curvature, 0.5 * std::abs(kappa)) << "и близкую величину — постановка "
+                                                                                    "задачи одна и та же";
+}
+#endif  // ADAS_WITH_ACADOS

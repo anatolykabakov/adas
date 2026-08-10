@@ -88,4 +88,9 @@ message LaneKeepDebug {
 
   bool assist_allowed = 84;
   bool assist_known = 85;
+
+  // Режим слияния: true — разметка подмешивается, false — едем по чистому плану модели.
+  bool lanelines_active = 86;
+  // Крен дороги, применённый к требуемой кривизне, в градусах; 0 когда оценка невалидна.
+  double road_roll_deg = 87;
 }

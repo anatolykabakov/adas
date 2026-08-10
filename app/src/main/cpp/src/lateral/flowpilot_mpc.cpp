@@ -225,6 +225,50 @@ double LateralMpc::lagAdjustedCurvature(double v, const std::array<double, N + 1
   return desired;
 }
 
+bool LateralMpc::sampleRefs(const std::vector<Vec2>& polyline_ego, double v_in,
+                            const std::vector<Vec2>& plan_poly_device, const std::vector<double>& plan_yaw_device,
+                            const std::vector<double>& plan_yaw_rate_device, std::vector<double>& y_ref_out,
+                            std::vector<double>& psi_ref_out, std::vector<double>& r_ref_out)
+{
+  if (polyline_ego.size() < 4)
+    return false;
+  const double v = std::max(v_in, kMinSpeed);
+
+  std::vector<Vec2> poly_left;
+  poly_left.reserve(polyline_ego.size());
+  for (const auto& p : polyline_ego) {
+    if (p.x() < 0.3)
+      continue;
+    poly_left.emplace_back(p.x(), -p.y());
+  }
+  if (poly_left.size() < 2)
+    return false;
+
+  std::vector<Vec2> plan_left;
+  plan_left.reserve(plan_poly_device.size());
+  for (const auto& p : plan_poly_device)
+    plan_left.emplace_back(p.x(), -p.y());
+  std::vector<double> yaw_left(plan_yaw_device.size());
+  std::vector<double> rate_left(plan_yaw_rate_device.size());
+  for (size_t i = 0; i < plan_yaw_device.size(); ++i)
+    yaw_left[i] = -plan_yaw_device[i];
+  for (size_t i = 0; i < plan_yaw_rate_device.size(); ++i)
+    rate_left[i] = -plan_yaw_rate_device[i];
+
+  std::array<double, N + 1> y_ref{}, psi_ref{}, r_ref{};
+  const bool have_orientation =
+      plan_left.size() >= 2 && yaw_left.size() == plan_left.size() && rate_left.size() == yaw_left.size();
+  if (have_orientation)
+    buildRefsWithOrientation(poly_left, v, plan_left, yaw_left, rate_left, y_ref, psi_ref, r_ref);
+  else
+    buildRefs(poly_left, v, y_ref, psi_ref, r_ref);
+
+  y_ref_out.assign(y_ref.begin(), y_ref.end());
+  psi_ref_out.assign(psi_ref.begin(), psi_ref.end());
+  r_ref_out.assign(r_ref.begin(), r_ref.end());
+  return true;
+}
+
 LatMpcResult LateralMpc::update(double speed_mps, double yaw_rate, double Lf, const std::vector<Vec2>& polyline_ego,
                                 const std::vector<Vec2>& plan_poly_device, const std::vector<double>& plan_yaw_device,
                                 const std::vector<double>& plan_yaw_rate_device, double dt_s)

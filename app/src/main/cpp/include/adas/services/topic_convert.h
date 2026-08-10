@@ -31,6 +31,10 @@ public:
     double center_force_gain = 0.0;
     double center_force_max_m = 0.8;
     double center_force_turn_scale = 0.7;
+
+    bool lane_mode_hysteresis = true;
+    double lane_mode_off_prob = 0.3;
+    double lane_mode_on_prob = 0.5;
   };
 
   TopicConvert() : TopicConvert(Config{}) {}

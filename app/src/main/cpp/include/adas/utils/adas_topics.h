@@ -63,6 +63,7 @@ struct LanePathMsg {
   std::vector<double> plan_yaw_rate;  // rad/s
 
   bool lane_anchored = false;
+  bool lanelines_active = true;
   double lane_width_m = 0.0;
 
   double center_force_m = 0.0;
@@ -86,6 +87,8 @@ struct GpsSample {
   double vy = 0.0;
   bool course_valid = false;
   bool valid = false;
+  double accuracy_m = 0.0;
+  int satellites = 0;
 };
 
 struct RawImuSample {

@@ -203,6 +203,14 @@ android_ndk_triple() {
 conan_install() {
     local -a args=(-of "$CPP_DIR/$BUILD_DIR" --build=missing -s "build_type=$BUILD_TYPE")
 
+    if [ -d "$CPP_DIR/recipes" ]; then
+        local recipe
+        for recipe in "$CPP_DIR"/recipes/*/; do
+            [ -f "$recipe/conanfile.py" ] || continue
+            conan export "$recipe" >/dev/null
+        done
+    fi
+
     if [ "$BUILD_TARGET" = "android" ]; then
         local clang_ver=14
         if [ -x "$NDK_PATH/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" ]; then
@@ -310,7 +318,10 @@ build_linux() {
         TEST_EXECUTABLE="$BUILD_DIR/tests/adas_tests"
         if [ -f "$TEST_EXECUTABLE" ]; then
             cd "$BUILD_DIR"
-            if ./tests/adas_tests; then
+            if (
+                if [ -f conanrun.sh ]; then . ./conanrun.sh; fi
+                ./tests/adas_tests
+            ); then
                 print_success "All tests passed"
             else
                 exit_code=$?
@@ -419,6 +430,7 @@ copy_to_jnilibs() {
     print_status "Copying libraries to jniLibs ($ABI)..."
     rm -rf "$JNI_LIBS_DIR"
     mkdir -p "$JNI_LIBS_DIR"
+
 
     local copied=0
     if [ -d "$CONAN_RUNTIME_DEPLOY_DIR" ]; then

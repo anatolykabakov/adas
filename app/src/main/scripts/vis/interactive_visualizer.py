@@ -20,7 +20,8 @@ UI:
   - timeline scrub + play/pause
 
 The map is anchored by the first GNSS fix of the run, so a bag without GNSS shows no map.
-Lane counts come from the ``.admap.lanes.npz`` sidecar (``python3 -m mapmatch.osm_lanes``).
+Lane counts come from the ``.admap.lanes.npz`` sidecar (``python3 -m mapmatch.osm_lanes``),
+speed limits from ``.admap.maxspeed.npz`` (``python3 -m mapmatch.osm_maxspeed``).
 
 Usage:
   python3 vis/interactive_visualizer.py /path/to/2026_07_18_09_45_15
@@ -52,7 +53,14 @@ from tkinter import filedialog, messagebox, ttk
 
 from vis.android_bag_player import AndroidBagPlayer
 from vis import incidents as incident_marks
-from vis.osm_layer import OsmLayer, lane_counts, lane_offsets, transform_to_world
+from vis.osm_layer import (
+    OsmLayer,
+    lane_counts,
+    lane_offsets,
+    point_features,
+    speed_limits,
+    transform_to_world,
+)
 from vis.road_bev import warp_to_road
 from core.frames import DRAW_Y_SIGN
 from core.gps_utils import calculate_initial_heading_from_gps, gps_to_local_coords
@@ -165,6 +173,8 @@ class InteractiveVisualizer:
         # OSM background + segment zoom
         self.osm = OsmLayer(Path(osm_map) if osm_map else None)
         self.osm_lane_counts: dict = {}
+        self.osm_speed_limits: dict = {}
+        self.osm_points = None
         self._osm_line = None
         self._osm_wide_line = None
         self._osm_texts: List[Any] = []
@@ -744,6 +754,8 @@ class InteractiveVisualizer:
         ("osm", "OSM"),
         ("bands", "Surf"),
         ("osm_lanes", "Lanes"),
+        ("osm_speed", "Limits"),
+        ("osm_points", "Signs"),
         ("streets", "Names"),
         ("road", "Road"),
     )
@@ -899,6 +911,8 @@ class InteractiveVisualizer:
             self._set_osm_status("no map", self.osm.error or "map unavailable")
             return False
         self.osm_lane_counts = lane_counts(self.osm.map_path)
+        self.osm_speed_limits = speed_limits(self.osm.map_path)
+        self.osm_points = point_features(self.osm.map_path)
         for name, (x, y) in list(self.trajectories.items()):
             if x is not None and len(x):
                 self.trajectories[name] = self.osm.to_map(x, y)
@@ -1018,7 +1032,11 @@ class InteractiveVisualizer:
         rails_x: List[float] = []
         rails_y: List[float] = []
         with_lanes = half_m <= 120.0 and self._layer_on("osm_lanes")
+        with_speed = (
+            half_m <= 200.0 and self._layer_on("osm_speed") and self.osm_speed_limits
+        )
         with_bands = self._layer_on("bands")
+        speed_labels: list = []
         for eid in self.osm.edges(x0, y0, x1, y1):
             px, py = self.osm.edge_polyline(eid)
             if len(px) < 2:
@@ -1028,6 +1046,11 @@ class InteractiveVisualizer:
                 xs, ys = by_lanes.setdefault(n, ([], []))
                 xs.extend(px.tolist() + [np.nan])
                 ys.extend(py.tolist() + [np.nan])
+            if with_speed:
+                kmh = self.osm_speed_limits.get(eid)
+                if kmh:
+                    mid = len(px) // 2
+                    speed_labels.append((float(px[mid]), float(py[mid]), kmh))
             if with_lanes and n > 1:
                 for lx, ly in lane_offsets(px, py, n, self.LANE_WIDTH_M):
                     rails_x.extend(lx.tolist() + [np.nan])
@@ -1054,6 +1077,94 @@ class InteractiveVisualizer:
                 label="OSM lanes",
             )
             self._osm_wide_line.append(rails)
+        self._draw_osm_points(x0, y0, x1, y1, half_m)
+        for lx, ly, kmh in speed_labels:
+            self._osm_wide_line.append(
+                self.ax_trajectory.text(
+                    lx,
+                    ly,
+                    str(kmh),
+                    color="#b3261e",
+                    fontsize=8.5,
+                    fontweight="bold",
+                    ha="center",
+                    va="center",
+                    zorder=3,
+                    bbox=dict(
+                        boxstyle="circle,pad=0.28", fc="white", ec="#b3261e", lw=1.6
+                    ),
+                )
+            )
+
+    POINT_STYLE = {
+        "stop": ("8", "#c62828", "white", 9),
+        "give_way": ("v", "white", "#c62828", 11),
+        "crossing": ("s", "#1565c0", "white", 7),
+        "calming": ("_", "#5d4037", "#5d4037", 10),
+        "camera": ("*", "#6a1b9a", "white", 10),
+        "sign": ("^", "#2e7d32", "white", 8),
+    }
+
+    SIGNAL_LAMPS = (("#d32f2f", 1.0), ("#f9a825", 0.0), ("#388e3c", -1.0))
+
+    def _draw_osm_points(self, x0, y0, x1, y1, half_m: float) -> None:
+        """Traffic lights, stop lines, crossings and calming near the visible window.
+
+        Drawn only close in: at map scale 45k markers say nothing and cost a redraw.
+        """
+        if self.osm_points is None or half_m > 300.0 or not self._layer_on("osm_points"):
+            return
+        px, py, kind, _detail = self.osm_points
+        inside = (px >= x0) & (px <= x1) & (py >= y0) & (py <= y1)
+        if not inside.any():
+            return
+
+        for name, (marker, face, edge, size) in self.POINT_STYLE.items():
+            sel = inside & (kind == name)
+            if not sel.any():
+                continue
+            (art,) = self.ax_trajectory.plot(
+                px[sel],
+                py[sel],
+                linestyle="none",
+                marker=marker,
+                markersize=size,
+                markerfacecolor=face,
+                markeredgecolor=edge,
+                markeredgewidth=0.9,
+                zorder=4,
+                label=f"OSM {name}",
+            )
+            self._osm_wide_line.append(art)
+
+        sel = inside & (kind == "signal")
+        if sel.any():
+            step = max(0.6, half_m * 0.012)
+            sx, sy = px[sel], py[sel]
+            (body,) = self.ax_trajectory.plot(
+                sx,
+                sy,
+                linestyle="none",
+                marker="s",
+                markersize=11,
+                markerfacecolor="#263238",
+                markeredgecolor="#263238",
+                zorder=4,
+                label="OSM signal",
+            )
+            self._osm_wide_line.append(body)
+            for color, offset in self.SIGNAL_LAMPS:
+                (lamp,) = self.ax_trajectory.plot(
+                    sx,
+                    sy + offset * step,
+                    linestyle="none",
+                    marker="o",
+                    markersize=2.6,
+                    markerfacecolor=color,
+                    markeredgecolor="none",
+                    zorder=5,
+                )
+                self._osm_wide_line.append(lamp)
 
     def _meters_to_points(self, width_m: float, half_m: float) -> float:
         """Line width in points for a band that should span ``width_m`` on the ground."""

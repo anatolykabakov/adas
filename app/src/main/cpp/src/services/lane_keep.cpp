@@ -37,15 +37,20 @@ LaneKeep::LaneKeep(Config p)
 
 void LaneKeep::configure()
 {
+  makeSolver();
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
   subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onLanes(m); });
-  if (config_.use_learned_params) {
+  if (config_.use_learned_params || config_.roll_compensation) {
     subscribe<ai::flow::adas::ZMQMessage>(topics::kLocalizationPose, [this](const ai::flow::adas::ZMQMessage& m) {
       if (!m.has_localization_pose())
         return;
       const auto& p = m.localization_pose();
-      setLearnedParams(p.learned_params_valid(), p.learned_stiffness_factor(), p.learned_steer_ratio(),
-                       p.learned_angle_offset_deg());
+      if (config_.use_learned_params) {
+        setLearnedParams(p.learned_params_valid(), p.learned_stiffness_factor(), p.learned_steer_ratio(),
+                         p.learned_angle_offset_deg());
+      }
+      road_roll_valid_ = p.road_roll_valid();
+      road_roll_rad_ = road_roll_valid_ ? p.road_roll_deg() * M_PI / 180.0 : 0.0;
     });
   }
   subscribe<ai::flow::adas::ZMQMessage>(topics::kPandaHealth, [this](const ai::flow::adas::ZMQMessage& m) {
@@ -110,6 +115,8 @@ void LaneKeep::registerParameters()
 
 void LaneKeep::reset()
 {
+  if (solver_)
+    solver_->reset();
   last_ = LaneKeepOutput{};
   have_chassis_ = false;
   have_desired_ = false;
@@ -146,7 +153,8 @@ bool LaneKeep::recomputeSetpoint(LaneKeepOutput& out)
     return false;
 
   const double Lf = config_.mpc_Lf > 1e-3 ? config_.mpc_Lf : config_.wheelbase_m;
-  double steer = -steerFromCurvature(*k, chassis_.speed_mps, Lf, slipFactorOrZero());
+  double steer =
+      -steerFromCurvature(curvatureWithRoll(*k, chassis_.speed_mps), chassis_.speed_mps, Lf, slipFactorOrZero());
   const double lim = mpcMaxSteerRad(chassis_.speed_mps);
   if (lim > 1e-6)
     steer = std::clamp(steer, -lim, lim);
@@ -161,7 +169,8 @@ bool LaneKeep::recomputeSetpoint(LaneKeepOutput& out)
   last_mpc_steer_rad_ = steer;
   have_mpc_prev_ = true;
 
-  desired_swa_deg_ = steer_sign_ * (steer * 180.0 / M_PI) * effectiveSteerRatio() + effectiveAngleOffsetDeg();
+  desired_swa_no_offset_deg_ = steer_sign_ * (steer * 180.0 / M_PI) * effectiveSteerRatio();
+  desired_swa_deg_ = desired_swa_no_offset_deg_ + effectiveAngleOffsetDeg();
   // Written into the caller's `out`, not into `last_`: `updateTorqueFromAngle` copies `last_` before this
   // runs and assigns it back afterwards, so touching `last_` here would be silently discarded — and the bag
   // would report the once-per-frame setpoint while the PID chased the recomputed one. That is exactly the
@@ -193,10 +202,13 @@ void LaneKeep::setController(std::string controller)
 {
   if (controller == "mpc")
     config_.controller = "mpc";
+  else if (controller == "fp_acados")
+    config_.controller = "fp_acados";
   else if (controller == "fp" || controller == "flowpilot")
     config_.controller = "fp";
   else
     config_.controller = "pp";
+  makeSolver();
   kappa_rate_.reset();
   lat_.reset();
   fp_mpc_.reset();
@@ -210,7 +222,7 @@ void LaneKeep::setController(std::string controller)
   last_frame_ts_us_ = 0;
   frame_dt_s_ = config_.vision_nominal_dt_s;
   last_chassis_ts_us_ = 0;
-  LOGI("LaneKeep: controller → %s", config_.controller.c_str());
+  LOGI("LaneKeep: controller → %s", solverName());
 }
 
 void LaneKeep::setPurePursuit(double k_dd, double ld_min, double ld_max, double shift)
@@ -282,6 +294,13 @@ void LaneKeep::onChassis(const ChassisSample& msg)
     updateTorqueFromAngle();
 }
 
+double LaneKeep::curvatureWithRoll(double kappa, double speed_mps) const
+{
+  if (!config_.roll_compensation || !road_roll_valid_)
+    return kappa;
+  return kappa - rollCompensationCurvature(road_roll_rad_, speed_mps, slipFactorOrZero());
+}
+
 double LaneKeep::slipFactorOrZero() const
 {
   if (!config_.lat_use_vehicle_model)
@@ -317,6 +336,8 @@ void LaneKeep::onLanes(const LanePathMsg& msg)
   const double speed = have_chassis_ ? chassis_.speed_mps : 0.0;
   auto out = step(speed, msg);
   out.dbg.lane_anchored = msg.lane_anchored;
+  out.dbg.lanelines_active = msg.lanelines_active;
+  out.dbg.road_roll_deg = road_roll_valid_ ? road_roll_rad_ * 180.0 / M_PI : 0.0;
   out.dbg.lane_width_m = msg.lane_width_m;
   out.dbg.lane_offset_m = msg.lane_offset_m;
   out.dbg.center_force_m = msg.center_force_m;
@@ -356,11 +377,13 @@ void LaneKeep::onLanes(const LanePathMsg& msg)
     // The learned angle offset is where the steering column actually reads zero, so it is added to the
     // commanded angle rather than subtracted: the learner solved `delta = (SWA - offset) / ratio`, and this
     // is that relation run the other way.
-    desired_swa_deg_ = steer_sign_ * (out.steer_rad * 180.0 / M_PI) * effectiveSteerRatio() + effectiveAngleOffsetDeg();
+    desired_swa_no_offset_deg_ = steer_sign_ * (out.steer_rad * 180.0 / M_PI) * effectiveSteerRatio();
+    desired_swa_deg_ = desired_swa_no_offset_deg_ + effectiveAngleOffsetDeg();
     have_desired_ = true;
   } else {
     have_desired_ = false;
     desired_swa_deg_ = 0.0;
+    desired_swa_no_offset_deg_ = 0.0;
     lat_.reset();
   }
 
@@ -389,11 +412,6 @@ void LaneKeep::updateTorqueFromAngle()
   }
   last_pid_us_ = now_us;
 
-  // Before the gates, because a recomputed setpoint is what they should be gating on, and after the rate
-  // update so `frame_dt_s_` is the one this tick used. Only touches `desired_swa_deg_` — the reference path
-  // itself still comes once per vision frame, which is the same split upstream has between its 20 Hz plan
-  // and its 100 Hz setpoint. So this does not smooth the frame boundary; it smooths the interval between
-  // boundaries, and only through speed.
   if (config_.lat_recompute_setpoint)
     recomputeSetpoint(out);
 
@@ -411,15 +429,8 @@ void LaneKeep::updateTorqueFromAngle()
     }
   }
 
-  // Turn signal: hand the wheel back. Checked after the staleness gate so whichever fired first is
-  // what the status reports.
-  // The state machine must run on every tick, including ticks where the status is already "blinker"
-  // — otherwise the falling-edge timer never starts and the resume delay is measured from the wrong
-  // moment. Only the status assignment is conditional.
   if (config_.lka_suppress_on_blinker && have_chassis_) {
     const bool on = chassis_.left_blinker || chassis_.right_blinker;
-    // An explicit "armed" flag rather than a zero timestamp: zero is a legal timestamp, and simulated
-    // time starts at zero, so the release timer never armed and the resume delay was never exercised.
     if (on) {
       blinker_off_armed_ = false;
     } else if (!blinker_off_armed_ && blinker_suppressed_) {
@@ -477,8 +488,8 @@ void LaneKeep::updateTorqueFromAngle()
 
   const bool active = steer_output_enabled_ && have_desired_ && have_chassis_ && out.has_target && out.status == "ok" &&
                       (!config_.lat_require_assist || assist);
-  const auto lat =
-      lat_.update(active, desired_swa_deg_, chassis_.steering_angle_deg, chassis_.speed_mps, chassis_.steering_pressed);
+  const auto lat = lat_.update(active, desired_swa_deg_, chassis_.steering_angle_deg, chassis_.speed_mps,
+                               chassis_.steering_pressed, desired_swa_no_offset_deg_);
 
   out.desired_swa_deg = lat.angle_des_deg;
   out.actual_swa_deg = lat.angle_act_deg;
@@ -578,6 +589,8 @@ void LaneKeep::publishLaneKeepDebug(const LaneKeepOutput& out)
   d->set_p_mpc_kappa_yaw_blend(config_.mpc_kappa_yaw_blend);
 
   d->set_lane_anchored(out.dbg.lane_anchored);
+  d->set_lanelines_active(out.dbg.lanelines_active);
+  d->set_road_roll_deg(out.dbg.road_roll_deg);
   d->set_lane_width_m(out.dbg.lane_width_m);
   d->set_lane_offset_m(out.dbg.lane_offset_m);
   d->set_center_force_m(out.dbg.center_force_m);
@@ -615,6 +628,323 @@ void LaneKeep::publishSteer(const LaneKeepOutput& out)
   publish(topics::kSteerCommand, zmq);
 }
 
+class LaneKeep::PpSolver final : public lateral::Solver {
+public:
+  explicit PpSolver(LaneKeep& o) : o_(o) {}
+  const char* name() const override { return "pp"; }
+  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  {
+    const auto& poly = in.path->polyline;
+    LaneKeepOutput out;
+    out.controller = "pp";
+    out.dbg.speed_mps = in.speed_mps;
+    out.dbg.n_points = static_cast<int>(poly.size());
+    if (poly.size() < 2) {
+      out.status = "no_polyline";
+      return out;
+    }
+
+    const auto pp = o_.pp_.compute(poly, in.speed_mps);
+    out.steer_rad = pp.steer_rad;
+    out.dbg.pp_steer_raw_rad = pp.steer_rad;
+    const double lim = o_.activeMaxSteerRad();
+    out.dbg.max_steer_rad = lim;
+    if (lim > 1e-6)
+      out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
+    out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
+    out.lookahead_m = pp.lookahead_m;
+    out.curvature = pp.curvature();
+    if (pp.target_ego) {
+      out.has_target = true;
+      out.target_x = pp.target_ego->x();
+      out.target_y = pp.target_ego->y();
+    }
+    out.status = "ok";
+    return out;
+  }
+
+private:
+  LaneKeep& o_;
+};
+
+class LaneKeep::VisionPilotSolver final : public lateral::Solver {
+public:
+  explicit VisionPilotSolver(LaneKeep& o) : o_(o) {}
+  const char* name() const override { return "mpc"; }
+  void reset() override { o_.kappa_rate_.reset(); }
+  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  {
+    const auto& poly = in.path->polyline;
+    LaneKeepOutput out;
+    out.controller = "mpc";
+    out.dbg.speed_mps = in.speed_mps;
+    out.dbg.n_points = static_cast<int>(poly.size());
+
+    const auto lat = estimatePathLateralState(poly);
+    out.cte_m = lat.cte_m;
+    out.epsi_rad = lat.epsi_rad;
+    out.curvature = lat.kappa;
+    out.dbg.mpc_kappa_path = lat.kappa;
+    out.target_x = lat.cte_m;
+    out.target_y = lat.epsi_rad;
+
+    if (!lat.valid) {
+      out.status = lat.n_points < 5 ? "no_polyline" : "bad_fit";
+      return out;
+    }
+
+    const double Lf = o_.config_.mpc_Lf > 1e-3 ? o_.config_.mpc_Lf : o_.config_.wheelbase_m;
+
+    double cte = lat.cte_m;
+    double epsi = lat.epsi_rad;
+    const double cte_alpha = o_.emaAlpha(o_.config_.mpc_cte_ema_alpha);
+    if (cte_alpha < 1.0 - 1e-6) {
+      o_.cte_ema_ = o_.cte_ema_init_ ? (cte_alpha * cte + (1.0 - cte_alpha) * o_.cte_ema_) : cte;
+      o_.cte_ema_init_ = true;
+      cte = o_.cte_ema_;
+    }
+    const double epsi_alpha = o_.emaAlpha(o_.config_.mpc_epsi_ema_alpha);
+    if (epsi_alpha < 1.0 - 1e-6) {
+      o_.epsi_ema_ = o_.epsi_ema_init_ ? (epsi_alpha * epsi + (1.0 - epsi_alpha) * o_.epsi_ema_) : epsi;
+      o_.epsi_ema_init_ = true;
+      epsi = o_.epsi_ema_;
+    }
+    out.cte_m = cte;
+    out.epsi_rad = epsi;
+    out.target_x = cte;
+    out.target_y = epsi;
+
+    double kappa = lat.kappa;
+    const double alpha = o_.config_.mpc_kappa_yaw_blend;
+    if (alpha > 1e-6 && o_.have_chassis_ && in.speed_mps > o_.config_.mpc_kappa_yaw_min_speed) {
+      const double kappa_yaw = o_.chassis_.yaw_rate / in.speed_mps;
+      out.dbg.mpc_kappa_yaw = kappa_yaw;
+      kappa = (1.0 - alpha) * lat.kappa + alpha * kappa_yaw;
+    }
+    const double kappa_alpha = o_.emaAlpha(o_.config_.mpc_kappa_ema_alpha);
+    if (kappa_alpha < 1.0 - 1e-6) {
+      o_.kappa_ema_ = o_.kappa_ema_init_ ? (kappa_alpha * kappa + (1.0 - kappa_alpha) * o_.kappa_ema_) : kappa;
+      o_.kappa_ema_init_ = true;
+      kappa = o_.kappa_ema_;
+    }
+    out.curvature = kappa;
+    out.dbg.mpc_kappa_used = kappa;
+
+    const double dkappa_ds = o_.kappa_rate_.update(kappa, in.speed_mps, o_.frame_dt_s_);
+    out.dbg.mpc_dkappa_ds = dkappa_ds;
+    const auto kappa_sched = visionpilot::build_kappa_schedule(Lf, epsi, kappa, dkappa_ds);
+
+    Eigen::VectorXd v_sched(static_cast<int>(visionpilot::N));
+    for (int i = 0; i < (int)visionpilot::N; ++i)
+      v_sched[i] = in.speed_mps;
+
+    Eigen::VectorXd state(3);
+    state << cte, epsi, kappa;
+    const auto deltas = o_.mpc_.compute_steering(Lf, state, v_sched, kappa_sched);
+
+    double delta_vp = 0.0;
+    if (deltas.size() > 1)
+      delta_vp = deltas[1];
+    else if (!deltas.empty())
+      delta_vp = deltas[0];
+
+    out.steer_rad = -delta_vp;
+    out.dbg.mpc_delta_vp_rad = out.steer_rad;
+    const double lim = o_.mpcMaxSteerRad(in.speed_mps);
+    out.dbg.mpc_max_steer_rad = lim;
+    if (lim > 1e-6)
+      out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
+    out.dbg.mpc_delta_clamped_rad = out.steer_rad;
+
+    if (o_.config_.mpc_rate_limit_deg > 1e-9 && o_.have_mpc_prev_) {
+      const double v_eff = std::max(in.speed_mps, o_.config_.mpc_rate_min_speed);
+      const double dkappa_max = o_.config_.mpc_max_lateral_jerk / (v_eff * v_eff) * o_.frame_dt_s_;
+      const double rate_ceil = o_.config_.mpc_rate_limit_deg * M_PI / 180.0;
+      const double rate = std::min(dkappa_max * Lf, rate_ceil);
+      const double d = std::clamp(out.steer_rad - o_.last_mpc_steer_rad_, -rate, rate);
+      out.steer_rad = o_.last_mpc_steer_rad_ + d;
+    }
+    o_.last_mpc_steer_rad_ = out.steer_rad;
+    o_.have_mpc_prev_ = true;
+
+    out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
+    out.has_target = true;
+    out.status = "ok";
+    return out;
+  }
+
+private:
+  LaneKeep& o_;
+};
+
+class LaneKeep::FlowPilotSolver final : public lateral::Solver {
+public:
+  FlowPilotSolver(LaneKeep& o, std::unique_ptr<lateral::KappaSolver> kappa) : o_(o), kappa_(std::move(kappa)) {}
+  const char* name() const override { return "fp"; }
+  const char* kappaSolverName() const { return kappa_->name(); }
+  void reset() override { kappa_->reset(); }
+  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  {
+    LaneKeepOutput out;
+    out.controller = "fp";
+    const auto& poly = in.path->polyline;
+    out.dbg.speed_mps = in.speed_mps;
+    out.dbg.n_points = static_cast<int>(poly.size());
+
+    const auto lat = estimatePathLateralState(poly);
+    out.cte_m = lat.cte_m;
+    out.epsi_rad = lat.epsi_rad;
+    out.curvature = lat.kappa;
+    out.dbg.mpc_kappa_path = lat.kappa;
+    out.target_x = lat.cte_m;
+    out.target_y = lat.epsi_rad;
+
+    if (poly.size() < 4) {
+      out.status = "no_polyline";
+      return out;
+    }
+
+    const double Lf = o_.config_.mpc_Lf > 1e-3 ? o_.config_.mpc_Lf : o_.config_.wheelbase_m;
+    flowpilot::LatMpcConfig fcfg;
+    fcfg.max_lateral_jerk = o_.config_.mpc_max_lateral_jerk;
+    fcfg.steering_rate_weight = std::max(0.0, o_.config_.fp_steering_rate_weight);
+    fcfg.steer_delay_s = std::max(0.05, o_.config_.fp_steer_delay_s);
+
+    fcfg.rotation_radius = std::max(0.0, 0.5 * o_.config_.wheelbase_m);
+    o_.fp_mpc_.setConfig(fcfg);
+
+    std::vector<Vec2> plan_poly = in.path->plan_poly;
+    if (std::abs(o_.config_.cam_y_left_m) > 1e-12) {
+      for (auto& p : plan_poly)
+        p.y() -= o_.config_.cam_y_left_m;
+    }
+
+    const double yaw = o_.have_chassis_ ? o_.chassis_.yaw_rate : 0.0;
+
+    double kappa_cmd = 0.0;
+    double kappa_rate = 0.0;
+    if (!kappa_->solve(in, poly, plan_poly, yaw, Lf, kappa_cmd, kappa_rate)) {
+      out.status = "bad_fit";
+      return out;
+    }
+
+    out.curvature = kappa_cmd;
+    out.dbg.mpc_kappa_used = kappa_cmd;
+    out.dbg.mpc_dkappa_ds = kappa_rate;
+
+    out.steer_rad =
+        -steerFromCurvature(o_.curvatureWithRoll(kappa_cmd, in.speed_mps), in.speed_mps, Lf, o_.slipFactorOrZero());
+    out.dbg.mpc_delta_vp_rad = out.steer_rad;
+    const double lim = o_.mpcMaxSteerRad(in.speed_mps);
+    out.dbg.mpc_max_steer_rad = lim;
+    if (lim > 1e-6)
+      out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
+    out.dbg.mpc_delta_clamped_rad = out.steer_rad;
+
+    if (o_.config_.steer_slew_limit_deg > 1e-9 && o_.have_mpc_prev_) {
+      const double ceil = o_.config_.steer_slew_limit_deg * M_PI / 180.0;
+      const double d = std::clamp(out.steer_rad - o_.last_mpc_steer_rad_, -ceil, ceil);
+      out.steer_rad = o_.last_mpc_steer_rad_ + d;
+    }
+    o_.last_mpc_steer_rad_ = out.steer_rad;
+    o_.have_mpc_prev_ = true;
+
+    out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
+    out.has_target = true;
+    out.status = "ok";
+    return out;
+  }
+
+private:
+  LaneKeep& o_;
+  std::unique_ptr<lateral::KappaSolver> kappa_;
+};
+
+class LaneKeep::GradKappaSolver final : public lateral::KappaSolver {
+public:
+  explicit GradKappaSolver(LaneKeep& o) : o_(o) {}
+  const char* name() const override { return "grad"; }
+  void reset() override { o_.fp_mpc_.reset(); }
+  bool solve(const lateral::SolverInput& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly,
+             double yaw, double Lf, double& kappa, double& kappa_rate) override
+  {
+    const auto sol = o_.fp_mpc_.update(in.speed_mps, yaw, Lf, poly, plan_poly, in.path->plan_yaw,
+                                       in.path->plan_yaw_rate, o_.frame_dt_s_);
+    if (!sol.ok)
+      return false;
+    kappa = sol.desired_curvature;
+    kappa_rate = sol.desired_curvature_rate;
+    return true;
+  }
+
+private:
+  LaneKeep& o_;
+};
+
+#ifdef ADAS_WITH_ACADOS
+class LaneKeep::AcadosKappaSolver final : public lateral::KappaSolver {
+public:
+  explicit AcadosKappaSolver(LaneKeep& o) : o_(o) {}
+  const char* name() const override { return "acados"; }
+  bool available() const override { return o_.acados_mpc_.available(); }
+  void reset() override { o_.acados_mpc_.reset(); }
+  bool solve(const lateral::SolverInput& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly,
+             double yaw, double Lf, double& kappa, double& kappa_rate) override
+  {
+    (void)Lf;
+    std::vector<double> y_ref, psi_ref, r_ref;
+    if (!flowpilot::LateralMpc::sampleRefs(poly, in.speed_mps, plan_poly, in.path->plan_yaw, in.path->plan_yaw_rate,
+                                           y_ref, psi_ref, r_ref))
+      return false;
+    o_.acados_mpc_.setWeights({1.0, 0.11, 0.0, 0.05, std::max(0.0, o_.config_.fp_steering_rate_weight)});
+    const auto a = o_.acados_mpc_.solve(in.speed_mps, std::max(0.0, 0.5 * o_.config_.wheelbase_m), yaw, y_ref, psi_ref,
+                                        r_ref, std::max(0.05, o_.config_.fp_steer_delay_s));
+    if (!a.ok)
+      return false;
+    kappa = a.desired_curvature;
+    kappa_rate = a.desired_curvature_rate;
+    return true;
+  }
+
+private:
+  LaneKeep& o_;
+};
+#endif
+
+void LaneKeep::makeSolver()
+{
+  if (config_.controller == "mpc") {
+    solver_ = std::make_unique<VisionPilotSolver>(*this);
+    return;
+  }
+  if (config_.controller != "fp") {
+    solver_ = std::make_unique<PpSolver>(*this);
+    return;
+  }
+
+  std::unique_ptr<lateral::KappaSolver> kappa;
+#ifdef ADAS_WITH_ACADOS
+  if (config_.fp_solver == "acados") {
+    auto a = std::make_unique<AcadosKappaSolver>(*this);
+    if (a->available())
+      kappa = std::move(a);
+    else
+      LOGW("LaneKeep: fp_solver=acados недоступен, работает grad");
+  }
+#endif
+  if (!kappa)
+    kappa = std::make_unique<GradKappaSolver>(*this);
+  solver_ = std::make_unique<FlowPilotSolver>(*this, std::move(kappa));
+}
+
+const char* LaneKeep::solverName() const { return solver_ ? solver_->name() : config_.controller.c_str(); }
+
+const char* LaneKeep::kappaSolverName() const
+{
+  const auto* fp = dynamic_cast<const FlowPilotSolver*>(solver_.get());
+  return fp ? fp->kappaSolverName() : "";
+}
+
 LaneKeepOutput LaneKeep::step(double speed_mps, const LanePathMsg& path)
 {
   const double gate_on = config_.min_control_speed_mps + std::max(0.0, config_.min_control_speed_hyst_mps);
@@ -637,227 +967,25 @@ LaneKeepOutput LaneKeep::step(double speed_mps, const LanePathMsg& path)
   speed_gate_open_ = true;
 
   updateFrameDt(path);
+  if (!solver_)
+    makeSolver();
 
-  auto run = [this, speed_mps, &path](const std::vector<Vec2>& poly) {
-    if (useFlowpilot()) {
-      LanePathMsg p = path;
-      p.polyline = poly;
-      return stepFlowpilot(speed_mps, p);
-    }
-    if (useMpc())
-      return stepMpc(speed_mps, poly);
-    return stepPp(speed_mps, poly);
-  };
+  lateral::SolverInput in;
+  in.speed_mps = speed_mps;
+  in.yaw_rate = have_chassis_ ? chassis_.yaw_rate : 0.0;
+  in.have_chassis = have_chassis_;
+  in.frame_dt_s = frame_dt_s_;
 
-  if (std::abs(config_.cam_y_left_m) < 1e-12)
-    return run(path.polyline);
+  if (std::abs(config_.cam_y_left_m) < 1e-12) {
+    in.path = &path;
+    return solver_->solve(in);
+  }
 
-  std::vector<Vec2> shifted = path.polyline;
-  for (auto& p : shifted)
+  LanePathMsg shifted = path;
+  for (auto& p : shifted.polyline)
     p.y() -= config_.cam_y_left_m;
-  return run(shifted);
-}
-
-LaneKeepOutput LaneKeep::stepPp(double speed_mps, const std::vector<Vec2>& polyline_ego)
-{
-  LaneKeepOutput out;
-  out.controller = "pp";
-  out.dbg.speed_mps = speed_mps;
-  out.dbg.n_points = static_cast<int>(polyline_ego.size());
-  if (polyline_ego.size() < 2) {
-    out.status = "no_polyline";
-    return out;
-  }
-
-  const auto pp = pp_.compute(polyline_ego, speed_mps);
-  out.steer_rad = pp.steer_rad;
-  out.dbg.pp_steer_raw_rad = pp.steer_rad;
-  const double lim = activeMaxSteerRad();
-  out.dbg.max_steer_rad = lim;
-  if (lim > 1e-6)
-    out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
-  out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
-  out.lookahead_m = pp.lookahead_m;
-  out.curvature = pp.curvature();
-  if (pp.target_ego) {
-    out.has_target = true;
-    out.target_x = pp.target_ego->x();
-    out.target_y = pp.target_ego->y();
-  }
-  out.status = "ok";
-  return out;
-}
-
-LaneKeepOutput LaneKeep::stepMpc(double speed_mps, const std::vector<Vec2>& polyline_ego)
-{
-  LaneKeepOutput out;
-  out.controller = "mpc";
-  out.dbg.speed_mps = speed_mps;
-  out.dbg.n_points = static_cast<int>(polyline_ego.size());
-
-  const auto lat = estimatePathLateralState(polyline_ego);
-  out.cte_m = lat.cte_m;
-  out.epsi_rad = lat.epsi_rad;
-  out.curvature = lat.kappa;
-  out.dbg.mpc_kappa_path = lat.kappa;
-  out.target_x = lat.cte_m;
-  out.target_y = lat.epsi_rad;
-
-  if (!lat.valid) {
-    out.status = lat.n_points < 5 ? "no_polyline" : "bad_fit";
-    return out;
-  }
-
-  const double Lf = config_.mpc_Lf > 1e-3 ? config_.mpc_Lf : config_.wheelbase_m;
-
-  double cte = lat.cte_m;
-  double epsi = lat.epsi_rad;
-  const double cte_alpha = emaAlpha(config_.mpc_cte_ema_alpha);
-  if (cte_alpha < 1.0 - 1e-6) {
-    cte_ema_ = cte_ema_init_ ? (cte_alpha * cte + (1.0 - cte_alpha) * cte_ema_) : cte;
-    cte_ema_init_ = true;
-    cte = cte_ema_;
-  }
-  const double epsi_alpha = emaAlpha(config_.mpc_epsi_ema_alpha);
-  if (epsi_alpha < 1.0 - 1e-6) {
-    epsi_ema_ = epsi_ema_init_ ? (epsi_alpha * epsi + (1.0 - epsi_alpha) * epsi_ema_) : epsi;
-    epsi_ema_init_ = true;
-    epsi = epsi_ema_;
-  }
-  out.cte_m = cte;
-  out.epsi_rad = epsi;
-  out.target_x = cte;
-  out.target_y = epsi;
-
-  double kappa = lat.kappa;
-  const double alpha = config_.mpc_kappa_yaw_blend;
-  if (alpha > 1e-6 && have_chassis_ && speed_mps > config_.mpc_kappa_yaw_min_speed) {
-    const double kappa_yaw = chassis_.yaw_rate / speed_mps;
-    out.dbg.mpc_kappa_yaw = kappa_yaw;
-    kappa = (1.0 - alpha) * lat.kappa + alpha * kappa_yaw;
-  }
-  const double kappa_alpha = emaAlpha(config_.mpc_kappa_ema_alpha);
-  if (kappa_alpha < 1.0 - 1e-6) {
-    kappa_ema_ = kappa_ema_init_ ? (kappa_alpha * kappa + (1.0 - kappa_alpha) * kappa_ema_) : kappa;
-    kappa_ema_init_ = true;
-    kappa = kappa_ema_;
-  }
-  out.curvature = kappa;
-  out.dbg.mpc_kappa_used = kappa;
-
-  const double dkappa_ds = kappa_rate_.update(kappa, speed_mps, frame_dt_s_);
-  out.dbg.mpc_dkappa_ds = dkappa_ds;
-  const auto kappa_sched = visionpilot::build_kappa_schedule(Lf, epsi, kappa, dkappa_ds);
-
-  Eigen::VectorXd v_sched(static_cast<int>(visionpilot::N));
-  for (int i = 0; i < (int)visionpilot::N; ++i)
-    v_sched[i] = speed_mps;
-
-  Eigen::VectorXd state(3);
-  state << cte, epsi, kappa;
-  const auto deltas = mpc_.compute_steering(Lf, state, v_sched, kappa_sched);
-
-  double delta_vp = 0.0;
-  if (deltas.size() > 1)
-    delta_vp = deltas[1];
-  else if (!deltas.empty())
-    delta_vp = deltas[0];
-
-  out.steer_rad = -delta_vp;
-  out.dbg.mpc_delta_vp_rad = out.steer_rad;
-  const double lim = mpcMaxSteerRad(speed_mps);
-  out.dbg.mpc_max_steer_rad = lim;
-  if (lim > 1e-6)
-    out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
-  out.dbg.mpc_delta_clamped_rad = out.steer_rad;
-
-  if (config_.mpc_rate_limit_deg > 1e-9 && have_mpc_prev_) {
-    const double v_eff = std::max(speed_mps, config_.mpc_rate_min_speed);
-    const double dkappa_max = config_.mpc_max_lateral_jerk / (v_eff * v_eff) * frame_dt_s_;
-    const double rate_ceil = config_.mpc_rate_limit_deg * M_PI / 180.0;
-    const double rate = std::min(dkappa_max * Lf, rate_ceil);
-    const double d = std::clamp(out.steer_rad - last_mpc_steer_rad_, -rate, rate);
-    out.steer_rad = last_mpc_steer_rad_ + d;
-  }
-  last_mpc_steer_rad_ = out.steer_rad;
-  have_mpc_prev_ = true;
-
-  out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
-  out.has_target = true;
-  out.status = "ok";
-  return out;
-}
-
-LaneKeepOutput LaneKeep::stepFlowpilot(double speed_mps, const LanePathMsg& path)
-{
-  LaneKeepOutput out;
-  out.controller = "fp";
-  const auto& polyline_ego = path.polyline;
-  out.dbg.speed_mps = speed_mps;
-  out.dbg.n_points = static_cast<int>(polyline_ego.size());
-
-  const auto lat = estimatePathLateralState(polyline_ego);
-  out.cte_m = lat.cte_m;
-  out.epsi_rad = lat.epsi_rad;
-  out.curvature = lat.kappa;
-  out.dbg.mpc_kappa_path = lat.kappa;
-  out.target_x = lat.cte_m;
-  out.target_y = lat.epsi_rad;
-
-  if (polyline_ego.size() < 4) {
-    out.status = "no_polyline";
-    return out;
-  }
-
-  const double Lf = config_.mpc_Lf > 1e-3 ? config_.mpc_Lf : config_.wheelbase_m;
-  flowpilot::LatMpcConfig fcfg;
-  fcfg.max_lateral_jerk = config_.mpc_max_lateral_jerk;
-  fcfg.steering_rate_weight = std::max(0.0, config_.fp_steering_rate_weight);
-  fcfg.steer_delay_s = std::max(0.05, config_.fp_steer_delay_s);
-
-  fcfg.rotation_radius = std::max(0.0, 0.5 * config_.wheelbase_m);
-  fp_mpc_.setConfig(fcfg);
-
-  std::vector<Vec2> plan_poly = path.plan_poly;
-  if (std::abs(config_.cam_y_left_m) > 1e-12) {
-    for (auto& p : plan_poly)
-      p.y() -= config_.cam_y_left_m;
-  }
-
-  const double yaw = have_chassis_ ? chassis_.yaw_rate : 0.0;
-  const auto sol =
-      fp_mpc_.update(speed_mps, yaw, Lf, polyline_ego, plan_poly, path.plan_yaw, path.plan_yaw_rate, frame_dt_s_);
-  if (!sol.ok) {
-    out.status = "bad_fit";
-    return out;
-  }
-
-  const double kappa_cmd = sol.desired_curvature;
-
-  out.curvature = kappa_cmd;
-  out.dbg.mpc_kappa_used = kappa_cmd;
-  out.dbg.mpc_dkappa_ds = sol.desired_curvature_rate;
-
-  out.steer_rad = -steerFromCurvature(kappa_cmd, speed_mps, Lf, slipFactorOrZero());
-  out.dbg.mpc_delta_vp_rad = out.steer_rad;
-  const double lim = mpcMaxSteerRad(speed_mps);
-  out.dbg.mpc_max_steer_rad = lim;
-  if (lim > 1e-6)
-    out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
-  out.dbg.mpc_delta_clamped_rad = out.steer_rad;
-
-  if (config_.steer_slew_limit_deg > 1e-9 && have_mpc_prev_) {
-    const double ceil = config_.steer_slew_limit_deg * M_PI / 180.0;
-    const double d = std::clamp(out.steer_rad - last_mpc_steer_rad_, -ceil, ceil);
-    out.steer_rad = last_mpc_steer_rad_ + d;
-  }
-  last_mpc_steer_rad_ = out.steer_rad;
-  have_mpc_prev_ = true;
-
-  out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
-  out.has_target = true;
-  out.status = "ok";
-  return out;
+  in.path = &shifted;
+  return solver_->solve(in);
 }
 
 }  // namespace services

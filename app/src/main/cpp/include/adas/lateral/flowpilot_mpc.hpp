@@ -22,6 +22,9 @@ struct LatMpcConfig {
   double rotation_radius = 0.0;
   int gd_iters = 50;
   double gd_step = 0.1;
+
+  bool riccati_solver = true;
+  int riccati_iters = 8;
 };
 
 struct LatMpcResult {
@@ -49,24 +52,11 @@ public:
                       const std::vector<Vec2>& plan_poly_device = {}, const std::vector<double>& plan_yaw_device = {},
                       const std::vector<double>& plan_yaw_rate_device = {}, double dt_s = kDefaultDtS);
 
-  /** The setpoint again, from the last solved trajectory but at the *current* speed.
-   *
-   *  Upstream calls `get_lag_adjusted_curvature` at 100 Hz on a plan that updates at 20 Hz
-   *  (`controlsd.py:730`), so the setpoint follows the plan's own trajectory between frames instead of
-   *  standing still. We solved once per vision frame and held the answer for 78 ms: median setpoint jump
-   *  0.107° against their 0.0067° per 10 ms, p99 **2.48°** and 3.78° at 5–12 m/s. For an actuator limited to
-   *  200 cNm/s a step and a ramp are not the same request.
-   *
-   *  Nothing is re-solved here. The held trajectory is `psi_sol`/`r_sol`; what is re-evaluated is every place
-   *  the speed enters — `kappa0 = r_sol[0]/v`, `avg_kappa = psi(delay)/(v·delay)`, and the curvature-rate
-   *  ceiling `MAX_LATERAL_JERK/v²`. Be clear about the scope: between frames only the speed moves, so this
-   *  does **not** remove the jump a new solve brings at the frame boundary. It removes the part of the jerk
-   *  that comes from freezing the setpoint while the car accelerates or brakes — which is largest exactly on
-   *  bend entry and exit.
-   *
-   *  Safe to call at any rate because the clamp is referenced to the plan's own `kappa0`, not to the previous
-   *  output, so repeated calls do not ratchet. Empty until a solve has succeeded, cleared by `reset()`. */
   std::optional<double> curvatureAtSpeed(double speed_mps, double dt_s) const;
+
+  static bool sampleRefs(const std::vector<Vec2>& polyline_ego, double v, const std::vector<Vec2>& plan_poly_device,
+                         const std::vector<double>& plan_yaw_device, const std::vector<double>& plan_yaw_rate_device,
+                         std::vector<double>& y_ref, std::vector<double>& psi_ref, std::vector<double>& r_ref);
 
 private:
   LatMpcConfig cfg_;

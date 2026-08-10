@@ -21,6 +21,7 @@ class AdasCppConan(ConanFile):
         self.requires("libusb/1.0.26")
         self.requires("jsoncpp/1.9.6")
         self.requires("eigen/3.4.0")
+        self.requires("acados/0.1.8")
         if self.options.tests:
             self.requires("gtest/1.14.0")
         if self.options.python_bindings:

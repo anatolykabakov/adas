@@ -111,7 +111,9 @@ public class ProtoUtils {
 
     public static Messages.ZMQMessage createGPSLocationMessage(double latitude, double longitude,
                                                               double altitude, float speed,
-                                                              float bearing, long timestamp) {
+                                                              float bearing, long timestamp,
+                                                              float accuracy, int satellites,
+                                                              boolean hasFix) {
         Messages.ZMQMessage zmqMessage = Messages.ZMQMessage.newBuilder()
             .setTimestamp(timestamp)
             .setTopic("sensors/gps/location")
@@ -124,7 +126,9 @@ public class ProtoUtils {
         gpsBuilder.setAltitude(altitude);
         gpsBuilder.setSpeed(speed);
         gpsBuilder.setBearing(bearing);
-        gpsBuilder.setFixType(Gps.GPSLocation.FixType.FIX_3D);
+        gpsBuilder.setHorizontalAccuracy(accuracy);
+        gpsBuilder.setSatellitesUsed(satellites);
+        gpsBuilder.setFixType(hasFix ? Gps.GPSLocation.FixType.FIX_3D : Gps.GPSLocation.FixType.NO_FIX);
 
         return zmqMessage.toBuilder()
             .setGpsLocation(gpsBuilder.build())

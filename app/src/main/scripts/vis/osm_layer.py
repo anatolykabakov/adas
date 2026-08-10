@@ -171,6 +171,34 @@ def lane_counts(admap: Path) -> dict:
     return {int(k): int(v) for k, v in zip(data["edge"], data["lanes"])}
 
 
+def speed_limits(admap: Path) -> dict:
+    """Speed limits per edge from the sidecar produced by ``mapmatch.osm_maxspeed`` (if any).
+
+    Forward and backward are stored apart because a two-way road can carry different limits; the
+    visualizer draws the forward one, which is what the car on that edge is subject to.
+    """
+    side = admap.with_suffix(admap.suffix + ".maxspeed.npz")
+    if not side.is_file():
+        return {}
+    data = np.load(side, allow_pickle=True)
+    return {
+        int(e): int(v) for e, v in zip(data["edge"], data["forward_kmh"]) if int(v) > 0
+    }
+
+
+def point_features(admap: Path):
+    """Point features from the sidecar produced by ``mapmatch.osm_points`` (if any).
+
+    Returned as arrays rather than a dict: the visualizer filters them by the visible window on every
+    redraw, and 45k points is where a per-point Python loop starts to show.
+    """
+    side = admap.with_suffix(admap.suffix + ".points.npz")
+    if not side.is_file():
+        return None
+    d = np.load(side, allow_pickle=True)
+    return d["x"], d["y"], d["kind"], d["detail"]
+
+
 def transform_to_world(
     poly: Sequence[Sequence[float]],
     x: float,
