@@ -252,7 +252,7 @@ adas::LanePathConfig pathCfg(double blend, double camera_offset_m)
 
 TEST(TopicConvert, CameraOffsetShiftsPathRight)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   for (int i = 0; i < 33; ++i) {
     const double x = i * 3.0;
     ll.add_x(x);
@@ -289,7 +289,7 @@ TEST(TopicConvert, CameraOffsetShiftsPathRight)
 TEST(TopicConvert, LaneBlendRequiresBothHostLines)
 {
   auto make = [](bool left_ok, bool right_ok, double width) {
-    ai::flow::adas::LaneLines ll;
+    adas::proto::LaneLines ll;
     for (int i = 0; i < 33; ++i) {
       const double x = i * 3.0;
       ll.add_x(x);
@@ -332,9 +332,9 @@ TEST(TopicConvert, LaneBlendRequiresBothHostLines)
 
 namespace {
 
-ai::flow::adas::LaneLines twoLineFrame(float sigma_m, float lane_width_m = 3.5f)
+adas::proto::LaneLines twoLineFrame(float sigma_m, float lane_width_m = 3.5f)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   auto* left = ll.add_lanes();
   (void)left;
   auto* l = ll.add_lanes();
@@ -407,9 +407,9 @@ TEST(LaneBlend, FramesWithoutSigmasAreNotPenalised)
 
 namespace {
 
-ai::flow::adas::LaneLines offsetLaneFrame(double centre_y, double kappa = 0.0, double width = 3.3)
+adas::proto::LaneLines offsetLaneFrame(double centre_y, double kappa = 0.0, double width = 3.3)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   ll.add_lanes();
   auto* l = ll.add_lanes();
   auto* r = ll.add_lanes();
@@ -579,9 +579,9 @@ namespace {
 constexpr double kStdRangePlanY = 1.0;
 
 /** Straight lane centred on 0, plan offset by `kStdRangePlanY`, σ growing with range. */
-ai::flow::adas::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
+adas::proto::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   for (int lane = 0; lane < 4; ++lane) {
     auto* l = ll.add_lanes();
     l->set_prob(lane == 1 || lane == 2 ? 0.99f : 0.05f);
@@ -611,7 +611,7 @@ adas::LanePathConfig stdRangeCfg(double range_m)
   return cfg;
 }
 
-double referenceY(const ai::flow::adas::LaneLines& ll, const adas::LanePathConfig& cfg)
+double referenceY(const adas::proto::LaneLines& ll, const adas::LanePathConfig& cfg)
 {
   const auto out = adas::laneLinesToPath(ll, cfg);
   return out.polyline.size() >= 2 ? out.polyline[1].y() : std::nan("");
@@ -656,12 +656,11 @@ TEST(ShippedConfig, LaneStdRangeIsTheNearField)
                                                          "measured table";
 }
 
-
 namespace {
 
-ai::flow::adas::LaneLines frameWithProbs(float lp, float rp)
+adas::proto::LaneLines frameWithProbs(float lp, float rp)
 {
-  ai::flow::adas::LaneLines ll = twoLineFrame(0.1f);
+  adas::proto::LaneLines ll = twoLineFrame(0.1f);
   ll.mutable_lanes(1)->set_prob(lp);
   ll.mutable_lanes(2)->set_prob(rp);
   return ll;

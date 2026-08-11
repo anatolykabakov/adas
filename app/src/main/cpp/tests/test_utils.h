@@ -66,9 +66,9 @@ public:
     return data;
   }
 
-  static ai::flow::adas::ZMQMessage createTestIMUMessage(const TestIMUData& data)
+  static adas::proto::ZMQMessage createTestIMUMessage(const TestIMUData& data)
   {
-    ai::flow::adas::ZMQMessage zmq_msg;
+    adas::proto::ZMQMessage zmq_msg;
     zmq_msg.set_topic("imuData");
     zmq_msg.set_timestamp(data.timestamp);
 
@@ -87,14 +87,14 @@ public:
     return zmq_msg;
   }
 
-  static std::vector<uint8_t> serializeMessage(const ai::flow::adas::ZMQMessage& msg)
+  static std::vector<uint8_t> serializeMessage(const adas::proto::ZMQMessage& msg)
   {
     std::string serialized;
     msg.SerializeToString(&serialized);
     return std::vector<uint8_t>(serialized.begin(), serialized.end());
   }
 
-  static bool verifyIMUData(const ai::flow::adas::ZMQMessage& message, const TestIMUData& expectedData)
+  static bool verifyIMUData(const adas::proto::ZMQMessage& message, const TestIMUData& expectedData)
   {
     if (!message.has_imu_data()) {
       return false;
@@ -113,7 +113,7 @@ public:
             std::abs(imuData.mag_z() - expectedData.mag_z) < 0.001f && imuData.timestamp() == expectedData.timestamp);
   }
 
-  static bool parseMessage(const std::vector<uint8_t>& data, ai::flow::adas::ZMQMessage& msg)
+  static bool parseMessage(const std::vector<uint8_t>& data, adas::proto::ZMQMessage& msg)
   {
     std::string serialized(data.begin(), data.end());
     return msg.ParseFromString(serialized);

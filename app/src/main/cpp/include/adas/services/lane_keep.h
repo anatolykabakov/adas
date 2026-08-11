@@ -16,6 +16,7 @@
 #include "adas/lateral/visionpilot_mpc.hpp"
 #include "adas/lateral/flowpilot_mpc.hpp"
 #include "adas/lateral/lateral_solver.h"
+#include "adas/lateral/planner.hpp"
 #ifdef ADAS_WITH_ACADOS
 #include "adas/lateral/acados_lat_mpc.hpp"
 #endif
@@ -67,6 +68,10 @@ struct LaneKeepOutput {
     bool lane_anchored = false;
     bool lanelines_active = true;
     double road_roll_deg = 0.0;
+    std::string kappa_solver;
+    double pid_p = 0.0;
+    double pid_i = 0.0;
+    double pid_f = 0.0;
     double lane_width_m = 0.0;
     double lane_offset_m = 0.0;
     double center_force_m = 0.0;
@@ -262,9 +267,6 @@ public:
 private:
   void onChassis(const ChassisSample& msg);
   void onLanes(const LanePathMsg& msg);
-  void publishLaneKeep(const LaneKeepOutput& out);
-  void publishLaneKeepDebug(const LaneKeepOutput& out);
-  void publishSteer(const LaneKeepOutput& out);
   void updateTorqueFromAngle();
 
   void updateFrameDt(const LanePathMsg& msg);
@@ -288,6 +290,18 @@ private:
   double emaAlpha(double alpha_at_nominal) const;
 
   double slipFactorOrZero() const;
+  lateral::VehicleParams vehicleParams() const
+  {
+    lateral::VehicleParams v;
+    v.wheelbase_m = config_.wheelbase_m;
+    v.steer_ratio = effectiveSteerRatio();
+    v.tire_stiffness_factor = effectiveStiffnessFactor();
+    v.use_vehicle_model = config_.lat_use_vehicle_model;
+    v.steer_sign = steer_sign_;
+    v.road_roll_rad = road_roll_rad_;
+    v.road_roll_valid = road_roll_valid_;
+    return v;
+  }
   double curvatureWithRoll(double kappa, double speed_mps) const;
   double activeMaxSteerRad() const;
   double mpcMaxSteerRad(double speed_mps) const;
@@ -301,7 +315,7 @@ private:
   void makeSolver();
 
   Config config_;
-  std::unique_ptr<lateral::Solver> solver_;
+  std::unique_ptr<lateral::IPlanner> solver_;
   PurePursuit pp_;
   LatControlPid lat_;
   visionpilot::LateralPlanner mpc_;

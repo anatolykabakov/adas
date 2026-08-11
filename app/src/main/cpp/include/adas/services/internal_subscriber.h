@@ -19,8 +19,8 @@ namespace adas {
 // from it. Note that `LaneKeepOutput.steer_norm` is *not* a substitute: on the vision path it carries the
 // geometric normalisation of the commanded road-wheel angle, and only the chassis path fills it with the
 // angle-PID output.
-using HostOutMsg = std::variant<LaneKeepOutput, LocalizationPose, CameraCalibrationState,
-                                ai::flow::adas::SafetyWarnState, ai::flow::adas::SteerCommand>;
+using HostOutMsg = std::variant<LaneKeepOutput, LocalizationPose, CameraCalibrationState, adas::proto::SafetyWarnState,
+                                adas::proto::SteerCommand>;
 
 namespace services {
 

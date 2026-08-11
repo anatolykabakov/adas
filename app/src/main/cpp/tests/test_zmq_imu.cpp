@@ -42,7 +42,7 @@ TEST(ZMQIMUTest, StartAdasAppAndConnect)
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
   LOGI("Connections established, preparing to send message");
 
-  ai::flow::adas::ZMQMessage zmq_msg;
+  adas::proto::ZMQMessage zmq_msg;
   zmq_msg.set_topic("imuData");
   zmq_msg.set_timestamp(
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
@@ -90,7 +90,7 @@ TEST(ZMQIMUTest, StartAdasAppAndConnect)
   std::string message_data(static_cast<char*>(msg.data()), msg.size());
   EXPECT_FALSE(message_data.empty()) << "Message should not be empty";
 
-  ai::flow::adas::ZMQMessage received_msg;
+  adas::proto::ZMQMessage received_msg;
   EXPECT_TRUE(received_msg.ParseFromString(message_data)) << "Should be able to parse received protobuf message";
 
   EXPECT_TRUE(received_msg.has_imu_data()) << "Received message should contain IMU data";

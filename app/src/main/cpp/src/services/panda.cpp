@@ -38,10 +38,10 @@ void Panda::configure()
 
     initializePanda();
 
-    subscribe<ai::flow::adas::ZMQMessage>(adas::topics::kSteerCommand,
-                                          [this](const ai::flow::adas::ZMQMessage& m) { steerCommandCallback(m); });
-    subscribe<ai::flow::adas::ZMQMessage>(adas::topics::kLongPlan,
-                                          [this](const ai::flow::adas::ZMQMessage& m) { longPlanCallback(m); });
+    subscribe<adas::proto::ZMQMessage>(adas::topics::kSteerCommand,
+                                       [this](const adas::proto::ZMQMessage& m) { steerCommandCallback(m); });
+    subscribe<adas::proto::ZMQMessage>(adas::topics::kLongPlan,
+                                       [this](const adas::proto::ZMQMessage& m) { longPlanCallback(m); });
 
     scheduleTimer(
         10, [this] { pandaRxCallback(); }, "rx");
@@ -65,7 +65,7 @@ void Panda::initializePanda()
   LOGI("Panda instance created successfully");
 }
 
-void Panda::steerCommandCallback(const ai::flow::adas::ZMQMessage& msg)
+void Panda::steerCommandCallback(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_steer_command())
     return;
@@ -77,7 +77,7 @@ void Panda::steerCommandCallback(const ai::flow::adas::ZMQMessage& msg)
   hca_cmd_ts_ms_ = utils::getCurrentTimestamp();
 }
 
-void Panda::longPlanCallback(const ai::flow::adas::ZMQMessage& msg)
+void Panda::longPlanCallback(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_long_plan())
     return;

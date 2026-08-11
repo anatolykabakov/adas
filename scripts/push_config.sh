@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-PKG="ai.flow.adas"
+PKG="adas.app"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSET="${PROJECT_DIR}/app/src/main/assets/config.json"
 # Absolute path: `run-as pkg sh -c` does not start in the app directory, and a relative

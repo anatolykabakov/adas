@@ -383,7 +383,7 @@ void lat_acados_create_5_set_nlp_in(lat_solver_capsule* capsule, const int N, do
     ocp_nlp_in * nlp_in = capsule->nlp_in;
 
     // set up time_steps
-    
+
 
     if (new_time_steps) {
         lat_acados_update_time_steps(capsule, N, new_time_steps);
@@ -414,7 +414,7 @@ void lat_acados_create_5_set_nlp_in(lat_solver_capsule* capsule, const int N, do
     {
         ocp_nlp_dynamics_model_set(nlp_config, nlp_dims, nlp_in, i, "expl_vde_forw", &capsule->forw_vde_casadi[i]);
         ocp_nlp_dynamics_model_set(nlp_config, nlp_dims, nlp_in, i, "expl_ode_fun", &capsule->expl_ode_fun[i]);
-    
+
     }
 
     /**** Cost ****/
@@ -488,7 +488,7 @@ void lat_acados_create_5_set_nlp_in(lat_solver_capsule* capsule, const int N, do
     free(lubx0);
     // idxbxe_0
     int* idxbxe_0 = malloc(4 * sizeof(int));
-    
+
     idxbxe_0[0] = 0;
     idxbxe_0[1] = 1;
     idxbxe_0[2] = 2;
@@ -507,13 +507,13 @@ void lat_acados_create_5_set_nlp_in(lat_solver_capsule* capsule, const int N, do
 
     // x
     int* idxbx = malloc(NBX * sizeof(int));
-    
+
     idxbx[0] = 2;
     idxbx[1] = 3;
     double* lubx = calloc(2*NBX, sizeof(double));
     double* lbx = lubx;
     double* ubx = lubx + NBX;
-    
+
     lbx[0] = -1.5707963267948966;
     ubx[0] = 1.5707963267948966;
     lbx[1] = -0.8726646259971648;
@@ -641,7 +641,7 @@ void lat_acados_create_7_set_nlp_out(lat_solver_capsule* capsule)
     double* x0 = xu0;
 
     // initialize with x0
-    
+
 
 
     double* u0 = xu0 + NX;
@@ -816,10 +816,10 @@ int lat_acados_update_params(lat_solver_capsule* capsule, int stage, double *p, 
     {
         capsule->forw_vde_casadi[stage].set_param(capsule->forw_vde_casadi+stage, p);
         capsule->expl_ode_fun[stage].set_param(capsule->expl_ode_fun+stage, p);
-    
+
 
         // constraints
-    
+
 
         // cost
         if (stage == 0)
@@ -844,7 +844,7 @@ int lat_acados_update_params(lat_solver_capsule* capsule, int stage, double *p, 
         capsule->cost_y_e_fun_jac_ut_xt.set_param(&capsule->cost_y_e_fun_jac_ut_xt, p);
         capsule->cost_y_e_hess.set_param(&capsule->cost_y_e_hess, p);
         // constraints
-    
+
     }
 
 
@@ -855,7 +855,7 @@ int lat_acados_update_params(lat_solver_capsule* capsule, int stage, double *p, 
 
 int lat_acados_solve(lat_solver_capsule* capsule)
 {
-    // solve NLP 
+    // solve NLP
     int solver_status = ocp_nlp_solve(capsule->nlp_solver, capsule->nlp_in, capsule->nlp_out);
 
     return solver_status;
@@ -925,7 +925,7 @@ void lat_acados_print_stats(lat_solver_capsule* capsule)
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "stat_n", &stat_n);
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "stat_m", &stat_m);
 
-    
+
     double stat[1200];
     ocp_nlp_get(capsule->nlp_config, capsule->nlp_solver, "statistics", stat);
 
@@ -941,4 +941,3 @@ void lat_acados_print_stats(lat_solver_capsule* capsule)
         printf("\n");
     }
 }
-

@@ -40,7 +40,7 @@ void MiddlewareStats::tick()
     warned_lagging_ = false;
   }
 
-  ai::flow::adas::ZMQMessage zmq;
+  adas::proto::ZMQMessage zmq;
   const int64_t ts_ms = static_cast<int64_t>(snap.timestamp_us / 1000ULL);
   zmq.set_timestamp(ts_ms);
   zmq.set_topic(topics::kMiddlewareStats);

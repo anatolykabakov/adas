@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ai.flow.adas;
+package adas.proto;
 
 option java_outer_classname = "LocalizationOuter";
 

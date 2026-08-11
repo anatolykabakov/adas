@@ -409,37 +409,37 @@ PYBIND11_MODULE(core, m)
 
   // The actuation command: what CarController would have been handed. `torque_cnm` is signed cNm before the
   // MQB rate/driver limiter, `enabled` is the app's own lateral gate.
-  py::class_<ai::flow::adas::SteerCommand>(m, "SteerCommand")
-      .def_property_readonly("torque_cnm", &ai::flow::adas::SteerCommand::torque_cnm)
-      .def_property_readonly("enabled", &ai::flow::adas::SteerCommand::enabled)
-      .def_property_readonly("capture_ts_ms", &ai::flow::adas::SteerCommand::capture_ts_ms)
-      .def_property_readonly("vision_ts_ms", &ai::flow::adas::SteerCommand::vision_ts_ms)
-      .def_property_readonly("chassis_ts_ms", &ai::flow::adas::SteerCommand::chassis_ts_ms)
-      .def_property_readonly("publish_ts_ms", &ai::flow::adas::SteerCommand::publish_ts_ms);
+  py::class_<adas::proto::SteerCommand>(m, "SteerCommand")
+      .def_property_readonly("torque_cnm", &adas::proto::SteerCommand::torque_cnm)
+      .def_property_readonly("enabled", &adas::proto::SteerCommand::enabled)
+      .def_property_readonly("capture_ts_ms", &adas::proto::SteerCommand::capture_ts_ms)
+      .def_property_readonly("vision_ts_ms", &adas::proto::SteerCommand::vision_ts_ms)
+      .def_property_readonly("chassis_ts_ms", &adas::proto::SteerCommand::chassis_ts_ms)
+      .def_property_readonly("publish_ts_ms", &adas::proto::SteerCommand::publish_ts_ms);
 
-  py::class_<ai::flow::adas::SafetyWarnState>(m, "SafetyWarnState")
-      .def_property_readonly("timestamp", &ai::flow::adas::SafetyWarnState::timestamp)
-      .def_property_readonly("accel_ms2", &ai::flow::adas::SafetyWarnState::accel_ms2)
-      .def_property_readonly("cte_m", &ai::flow::adas::SafetyWarnState::cte_m)
-      .def_property_readonly("cte_rate_ms", &ai::flow::adas::SafetyWarnState::cte_rate_ms)
-      .def_property_readonly("epsi_rad", &ai::flow::adas::SafetyWarnState::epsi_rad)
-      .def_property_readonly("kappa", &ai::flow::adas::SafetyWarnState::kappa)
-      .def_property_readonly("lateral_valid", &ai::flow::adas::SafetyWarnState::lateral_valid)
-      .def_property_readonly("v_ego", &ai::flow::adas::SafetyWarnState::v_ego)
-      .def_property_readonly("lead_d", &ai::flow::adas::SafetyWarnState::lead_d)
-      .def_property_readonly("lead_v", &ai::flow::adas::SafetyWarnState::lead_v)
-      .def_property_readonly("lead_prob", &ai::flow::adas::SafetyWarnState::lead_prob)
-      .def_property_readonly("has_lead", &ai::flow::adas::SafetyWarnState::has_lead)
-      .def_property_readonly("ttc_s", &ai::flow::adas::SafetyWarnState::ttc_s)
-      .def_property_readonly("a_req_ms2", &ai::flow::adas::SafetyWarnState::a_req_ms2)
-      .def_property_readonly("threat_valid", &ai::flow::adas::SafetyWarnState::threat_valid)
-      .def_property_readonly("driver_steering", &ai::flow::adas::SafetyWarnState::driver_steering)
-      .def_property_readonly("lane_anchored", &ai::flow::adas::SafetyWarnState::lane_anchored)
-      .def_property_readonly("fcw", &ai::flow::adas::SafetyWarnState::fcw)
-      .def_property_readonly("aeb", &ai::flow::adas::SafetyWarnState::aeb)
-      .def_property_readonly("lldw", &ai::flow::adas::SafetyWarnState::lldw)
-      .def_property_readonly("rldw", &ai::flow::adas::SafetyWarnState::rldw)
-      .def_property_readonly("status", &ai::flow::adas::SafetyWarnState::status);
+  py::class_<adas::proto::SafetyWarnState>(m, "SafetyWarnState")
+      .def_property_readonly("timestamp", &adas::proto::SafetyWarnState::timestamp)
+      .def_property_readonly("accel_ms2", &adas::proto::SafetyWarnState::accel_ms2)
+      .def_property_readonly("cte_m", &adas::proto::SafetyWarnState::cte_m)
+      .def_property_readonly("cte_rate_ms", &adas::proto::SafetyWarnState::cte_rate_ms)
+      .def_property_readonly("epsi_rad", &adas::proto::SafetyWarnState::epsi_rad)
+      .def_property_readonly("kappa", &adas::proto::SafetyWarnState::kappa)
+      .def_property_readonly("lateral_valid", &adas::proto::SafetyWarnState::lateral_valid)
+      .def_property_readonly("v_ego", &adas::proto::SafetyWarnState::v_ego)
+      .def_property_readonly("lead_d", &adas::proto::SafetyWarnState::lead_d)
+      .def_property_readonly("lead_v", &adas::proto::SafetyWarnState::lead_v)
+      .def_property_readonly("lead_prob", &adas::proto::SafetyWarnState::lead_prob)
+      .def_property_readonly("has_lead", &adas::proto::SafetyWarnState::has_lead)
+      .def_property_readonly("ttc_s", &adas::proto::SafetyWarnState::ttc_s)
+      .def_property_readonly("a_req_ms2", &adas::proto::SafetyWarnState::a_req_ms2)
+      .def_property_readonly("threat_valid", &adas::proto::SafetyWarnState::threat_valid)
+      .def_property_readonly("driver_steering", &adas::proto::SafetyWarnState::driver_steering)
+      .def_property_readonly("lane_anchored", &adas::proto::SafetyWarnState::lane_anchored)
+      .def_property_readonly("fcw", &adas::proto::SafetyWarnState::fcw)
+      .def_property_readonly("aeb", &adas::proto::SafetyWarnState::aeb)
+      .def_property_readonly("lldw", &adas::proto::SafetyWarnState::lldw)
+      .def_property_readonly("rldw", &adas::proto::SafetyWarnState::rldw)
+      .def_property_readonly("status", &adas::proto::SafetyWarnState::status);
 
   py::class_<adas::CameraCalibrationState>(m, "CameraCalibrationState")
       .def_readonly("timestamp_us", &adas::CameraCalibrationState::timestamp_us)
@@ -543,7 +543,7 @@ PYBIND11_MODULE(core, m)
       .def(
           "publish_lane_lines",
           [](AdasApp& self, py::bytes serialized) {
-            ai::flow::adas::LaneLines ll;
+            adas::proto::LaneLines ll;
             const std::string data = serialized;
             if (!ll.ParseFromString(data))
               throw std::invalid_argument("publish_lane_lines: not a LaneLines message");

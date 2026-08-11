@@ -1,6 +1,6 @@
 """Flowpilot / Android ModelCalibWarp — camera K + RPY → model 512×256 warp.
 
-Matches ``ai.flow.adas.vision.ModelCalibWarp`` (medmodel FL=910, cy=47.6).
+Matches ``adas.app.vision.ModelCalibWarp`` (medmodel FL=910, cy=47.6).
 Homography maps **model pixel → camera pixel** (same as TransformCL).
 """
 

@@ -1006,8 +1006,8 @@ static bool openclReady()
   return ok;
 }
 
-JNIEXPORT jboolean JNICALL Java_ai_flow_adas_vision_SupercomboThneedRunner_nativeInit(JNIEnv* env, jclass,
-                                                                                      jbyteArray modelData, jint outLen)
+JNIEXPORT jboolean JNICALL Java_adas_app_vision_SupercomboThneedRunner_nativeInit(JNIEnv* env, jclass,
+                                                                                  jbyteArray modelData, jint outLen)
 {
   if (!openclReady()) {
     return JNI_FALSE;
@@ -1042,9 +1042,9 @@ JNIEXPORT jboolean JNICALL Java_ai_flow_adas_vision_SupercomboThneedRunner_nativ
   return thneed != NULL ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT jfloat JNICALL Java_ai_flow_adas_vision_SupercomboThneedRunner_nativeExecute(JNIEnv* env, jclass,
-                                                                                       jfloatArray input,
-                                                                                       jfloatArray output)
+JNIEXPORT jfloat JNICALL Java_adas_app_vision_SupercomboThneedRunner_nativeExecute(JNIEnv* env, jclass,
+                                                                                   jfloatArray input,
+                                                                                   jfloatArray output)
 {
   if (thneed == NULL)
     return -1.0f;

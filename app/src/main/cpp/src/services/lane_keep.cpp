@@ -1,5 +1,9 @@
 #include "adas/services/lane_keep.h"
 
+#include "adas/lateral/convert.hpp"
+#include "adas/lateral/limits.hpp"
+#include "adas/utils/proto_convert.h"
+
 #include <cmath>
 
 #include "messages.pb.h"
@@ -41,7 +45,7 @@ void LaneKeep::configure()
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
   subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onLanes(m); });
   if (config_.use_learned_params || config_.roll_compensation) {
-    subscribe<ai::flow::adas::ZMQMessage>(topics::kLocalizationPose, [this](const ai::flow::adas::ZMQMessage& m) {
+    subscribe<adas::proto::ZMQMessage>(topics::kLocalizationPose, [this](const adas::proto::ZMQMessage& m) {
       if (!m.has_localization_pose())
         return;
       const auto& p = m.localization_pose();
@@ -53,7 +57,7 @@ void LaneKeep::configure()
       road_roll_rad_ = road_roll_valid_ ? p.road_roll_deg() * M_PI / 180.0 : 0.0;
     });
   }
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kPandaHealth, [this](const ai::flow::adas::ZMQMessage& m) {
+  subscribe<adas::proto::ZMQMessage>(topics::kPandaHealth, [this](const adas::proto::ZMQMessage& m) {
     if (!m.has_panda_health())
       return;
     assist_allowed_ = m.panda_health().lat_actuation_allowed();
@@ -252,12 +256,8 @@ double LaneKeep::activeMaxSteerRad() const
 
 double LaneKeep::mpcMaxSteerRad(double speed_mps) const
 {
-  const double ceil_deg = std::min(config_.mpc_max_steer_deg, 25.0);
-  const double lo_deg = std::clamp(config_.mpc_low_speed_steer_deg, 1.0, ceil_deg);
-  const double slope = std::max(config_.mpc_steer_deg_per_mps, 0.0);
-  const double v = std::max(0.0, speed_mps);
-  const double lim_deg = std::clamp(lo_deg + slope * v, lo_deg, ceil_deg);
-  return lim_deg * M_PI / 180.0;
+  return lateral::maxSteerRad(
+      speed_mps, {config_.mpc_max_steer_deg, config_.mpc_low_speed_steer_deg, config_.mpc_steer_deg_per_mps});
 }
 
 void LaneKeep::updateChassisDt(const ChassisSample& msg)
@@ -278,11 +278,7 @@ void LaneKeep::updateChassisDt(const ChassisSample& msg)
 
 double LaneKeep::emaAlpha(double alpha_at_nominal) const
 {
-  if (!(alpha_at_nominal < 1.0 - 1e-9) || alpha_at_nominal <= 0.0)
-    return alpha_at_nominal;
-  const double nominal = std::max(config_.vision_nominal_dt_s, 1e-3);
-  const double tau = -nominal / std::log(1.0 - alpha_at_nominal);
-  return std::clamp(1.0 - std::exp(-frame_dt_s_ / tau), 1e-3, 1.0);
+  return lateral::emaAlpha(alpha_at_nominal, config_.vision_nominal_dt_s, frame_dt_s_);
 }
 
 void LaneKeep::onChassis(const ChassisSample& msg)
@@ -296,20 +292,10 @@ void LaneKeep::onChassis(const ChassisSample& msg)
 
 double LaneKeep::curvatureWithRoll(double kappa, double speed_mps) const
 {
-  if (!config_.roll_compensation || !road_roll_valid_)
-    return kappa;
-  return kappa - rollCompensationCurvature(road_roll_rad_, speed_mps, slipFactorOrZero());
+  return lateral::curvatureWithRoll(kappa, speed_mps, vehicleParams(), config_.roll_compensation);
 }
 
-double LaneKeep::slipFactorOrZero() const
-{
-  if (!config_.lat_use_vehicle_model)
-    return 0.0;
-  VehicleModelParams p;
-  p.wheelbase_m = config_.wheelbase_m;
-  p.tire_stiffness_factor = effectiveStiffnessFactor();
-  return slipFactor(p);
-}
+double LaneKeep::slipFactorOrZero() const { return lateral::slipFactorOrZero(vehicleParams()); }
 
 void LaneKeep::updateFrameDt(const LanePathMsg& msg)
 {
@@ -394,10 +380,11 @@ void LaneKeep::onLanes(const LanePathMsg& msg)
   }
   out.dbg.steer_output_enabled = steer_output_enabled_;
   last_ = out;
-  publishLaneKeep(last_);
+  publish(topics::kLaneKeep, createLaneKeepState(last_, static_cast<int64_t>(now()), max_torque_cnm_));
 
   updateTorqueFromAngle();
-  publishLaneKeepDebug(last_);
+  publish(topics::kLaneKeepDebug,
+          createLaneKeepDebug(last_, static_cast<int64_t>(now()), max_torque_cnm_, frame_dt_s_, config_));
 }
 
 void LaneKeep::updateTorqueFromAngle()
@@ -495,147 +482,23 @@ void LaneKeep::updateTorqueFromAngle()
   out.actual_swa_deg = lat.angle_act_deg;
   out.angle_error_deg = lat.angle_error_deg;
   out.steer_norm = lat.steer_norm;
+  out.dbg.pid_p = lat.p;
+  out.dbg.pid_i = lat.i;
+  out.dbg.pid_f = lat.f;
+  out.dbg.kappa_solver = kappaSolverName();
   last_ = out;
-  publishSteer(out);
+  publish(topics::kSteerCommand,
+          createSteerCommand(out, static_cast<int64_t>(now()), max_torque_cnm_, steer_output_enabled_, have_desired_));
 }
 
-void LaneKeep::publishLaneKeep(const LaneKeepOutput& out)
-{
-  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
-  const int64_t capture_ms = out.capture_ts_us / 1000;
-  const int64_t vision_ms = out.vision_ts_us / 1000;
-  const int64_t chassis_ms = out.chassis_ts_us / 1000;
-
-  ai::flow::adas::ZMQMessage lk_zmq;
-  lk_zmq.set_timestamp(publish_ms);
-  lk_zmq.set_topic(topics::kLaneKeep);
-  auto* lk = lk_zmq.mutable_lane_keep();
-  lk->set_timestamp(publish_ms);
-  lk->set_steer_rad(out.steer_rad);
-  lk->set_steer_norm(out.steer_norm);
-  lk->set_throttle(0.0);
-  lk->set_brake(0.0);
-  lk->set_lookahead_m(out.lookahead_m);
-  lk->set_target_x(out.target_x);
-  lk->set_target_y(out.target_y);
-  lk->set_has_target(out.has_target);
-  lk->set_curvature(out.curvature);
-  lk->set_status(out.status + ":" + out.controller);
-
-  const int torque_cnm = static_cast<int>(std::lround(out.steer_norm * max_torque_cnm_));
-  lk->set_torque_cnm(torque_cnm);
-  lk->set_torque_saturated(std::abs(torque_cnm) >= static_cast<int>(std::lround(0.99 * max_torque_cnm_)));
-  lk->set_capture_ts_ms(capture_ms);
-  lk->set_vision_ts_ms(vision_ms);
-  lk->set_chassis_ts_ms(chassis_ms);
-  lk->set_publish_ts_ms(publish_ms);
-  publish(topics::kLaneKeep, lk_zmq);
-}
-
-void LaneKeep::publishLaneKeepDebug(const LaneKeepOutput& out)
-{
-  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
-
-  ai::flow::adas::ZMQMessage zmq;
-  zmq.set_timestamp(publish_ms);
-  zmq.set_topic(topics::kLaneKeepDebug);
-  auto* d = zmq.mutable_lane_keep_debug();
-  d->set_timestamp(publish_ms);
-  d->set_controller(out.controller);
-  d->set_status(out.status);
-  d->set_has_target(out.has_target);
-
-  d->set_speed_mps(out.dbg.speed_mps);
-  d->set_n_points(out.dbg.n_points);
-  d->set_cam_y_left_m(config_.cam_y_left_m);
-
-  d->set_pp_lookahead_m(out.lookahead_m);
-  d->set_pp_target_x(out.target_x);
-  d->set_pp_target_y(out.target_y);
-  d->set_pp_curvature(out.curvature);
-  d->set_pp_steer_raw_rad(out.dbg.pp_steer_raw_rad);
-
-  d->set_mpc_cte_m(out.cte_m);
-  d->set_mpc_epsi_rad(out.epsi_rad);
-  d->set_mpc_kappa_path(out.dbg.mpc_kappa_path);
-  d->set_mpc_kappa_yaw(out.dbg.mpc_kappa_yaw);
-  d->set_mpc_kappa_used(out.dbg.mpc_kappa_used);
-  d->set_mpc_dkappa_ds(out.dbg.mpc_dkappa_ds);
-  d->set_mpc_delta_vp_rad(out.dbg.mpc_delta_vp_rad);
-  d->set_mpc_delta_clamped_rad(out.dbg.mpc_delta_clamped_rad);
-  d->set_mpc_max_steer_rad(out.dbg.mpc_max_steer_rad);
-
-  d->set_steer_rad(out.steer_rad);
-  d->set_steer_norm(out.steer_norm);
-  d->set_slew_clipped(out.dbg.slew_clipped);
-  d->set_max_steer_rad(out.dbg.max_steer_rad);
-  d->set_desired_swa_deg(out.desired_swa_deg);
-  d->set_actual_swa_deg(out.actual_swa_deg);
-  d->set_angle_error_deg(out.angle_error_deg);
-  d->set_torque_cnm(static_cast<int>(std::lround(out.steer_norm * max_torque_cnm_)));
-  d->set_steer_output_enabled(out.dbg.steer_output_enabled);
-  d->set_assist_allowed(out.dbg.assist_allowed);
-  d->set_assist_known(out.dbg.assist_known);
-  d->set_frame_dt_ms(frame_dt_s_ * 1000.0);
-
-  d->set_p_k_dd(config_.pp_k_dd);
-  d->set_p_ld_min(config_.pp_ld_min);
-  d->set_p_ld_max(config_.pp_ld_max);
-  d->set_p_ld_curv_gain(config_.pp_ld_curv_gain);
-  d->set_p_max_steer_deg(config_.max_steer_deg);
-  d->set_p_max_torque_cnm(static_cast<int>(std::lround(max_torque_cnm_)));
-  d->set_p_mpc_epsi_gain(config_.mpc_epsi_gain);
-  d->set_p_mpc_ff_scale(config_.mpc_ff_scale);
-  d->set_p_mpc_kappa_yaw_blend(config_.mpc_kappa_yaw_blend);
-
-  d->set_lane_anchored(out.dbg.lane_anchored);
-  d->set_lanelines_active(out.dbg.lanelines_active);
-  d->set_road_roll_deg(out.dbg.road_roll_deg);
-  d->set_lane_width_m(out.dbg.lane_width_m);
-  d->set_lane_offset_m(out.dbg.lane_offset_m);
-  d->set_center_force_m(out.dbg.center_force_m);
-  d->set_p_lane_blend_scale(out.dbg.p_lane_blend_scale);
-  d->set_p_camera_offset_m(out.dbg.p_camera_offset_m);
-  d->set_p_center_force_gain(out.dbg.p_center_force_gain);
-
-  d->set_capture_ts_ms(out.capture_ts_us / 1000);
-  d->set_vision_ts_ms(out.vision_ts_us / 1000);
-  d->set_chassis_ts_ms(out.chassis_ts_us / 1000);
-  d->set_publish_ts_ms(publish_ms);
-
-  publish(topics::kLaneKeepDebug, zmq);
-}
-
-void LaneKeep::publishSteer(const LaneKeepOutput& out)
-{
-  const int64_t publish_ms = static_cast<int64_t>(now()) / 1000;
-  const int64_t capture_ms = out.capture_ts_us / 1000;
-  const int64_t vision_ms = out.vision_ts_us / 1000;
-  const int64_t chassis_ms = out.chassis_ts_us / 1000;
-
-  ai::flow::adas::ZMQMessage zmq;
-  zmq.set_timestamp(publish_ms);
-  zmq.set_topic(topics::kSteerCommand);
-  auto* cmd = zmq.mutable_steer_command();
-  const int torque = static_cast<int>(std::lround(out.steer_norm * max_torque_cnm_));
-  const bool en = steer_output_enabled_ && out.has_target && out.status == "ok" && have_desired_;
-  cmd->set_torque_cnm(en ? torque : 0);
-  cmd->set_enabled(en);
-  cmd->set_capture_ts_ms(capture_ms);
-  cmd->set_vision_ts_ms(vision_ms);
-  cmd->set_chassis_ts_ms(chassis_ms);
-  cmd->set_publish_ts_ms(publish_ms);
-  publish(topics::kSteerCommand, zmq);
-}
-
-class LaneKeep::PpSolver final : public lateral::Solver {
+class LaneKeep::PpSolver final : public lateral::IPlanner {
 public:
   explicit PpSolver(LaneKeep& o) : o_(o) {}
   const char* name() const override { return "pp"; }
-  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  lateral::Output update(const lateral::Input& in) override
   {
-    const auto& poly = in.path->polyline;
-    LaneKeepOutput out;
+    const auto& poly = in.polyline_ego;
+    lateral::Output out;
     out.controller = "pp";
     out.dbg.speed_mps = in.speed_mps;
     out.dbg.n_points = static_cast<int>(poly.size());
@@ -667,15 +530,15 @@ private:
   LaneKeep& o_;
 };
 
-class LaneKeep::VisionPilotSolver final : public lateral::Solver {
+class LaneKeep::VisionPilotSolver final : public lateral::IPlanner {
 public:
   explicit VisionPilotSolver(LaneKeep& o) : o_(o) {}
   const char* name() const override { return "mpc"; }
   void reset() override { o_.kappa_rate_.reset(); }
-  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  lateral::Output update(const lateral::Input& in) override
   {
-    const auto& poly = in.path->polyline;
-    LaneKeepOutput out;
+    const auto& poly = in.polyline_ego;
+    lateral::Output out;
     out.controller = "mpc";
     out.dbg.speed_mps = in.speed_mps;
     out.dbg.n_points = static_cast<int>(poly.size());
@@ -716,8 +579,8 @@ public:
 
     double kappa = lat.kappa;
     const double alpha = o_.config_.mpc_kappa_yaw_blend;
-    if (alpha > 1e-6 && o_.have_chassis_ && in.speed_mps > o_.config_.mpc_kappa_yaw_min_speed) {
-      const double kappa_yaw = o_.chassis_.yaw_rate / in.speed_mps;
+    if (alpha > 1e-6 && in.have_chassis && in.speed_mps > o_.config_.mpc_kappa_yaw_min_speed) {
+      const double kappa_yaw = in.yaw_rate / in.speed_mps;
       out.dbg.mpc_kappa_yaw = kappa_yaw;
       kappa = (1.0 - alpha) * lat.kappa + alpha * kappa_yaw;
     }
@@ -730,7 +593,7 @@ public:
     out.curvature = kappa;
     out.dbg.mpc_kappa_used = kappa;
 
-    const double dkappa_ds = o_.kappa_rate_.update(kappa, in.speed_mps, o_.frame_dt_s_);
+    const double dkappa_ds = o_.kappa_rate_.update(kappa, in.speed_mps, in.frame_dt_s);
     out.dbg.mpc_dkappa_ds = dkappa_ds;
     const auto kappa_sched = visionpilot::build_kappa_schedule(Lf, epsi, kappa, dkappa_ds);
 
@@ -758,7 +621,7 @@ public:
 
     if (o_.config_.mpc_rate_limit_deg > 1e-9 && o_.have_mpc_prev_) {
       const double v_eff = std::max(in.speed_mps, o_.config_.mpc_rate_min_speed);
-      const double dkappa_max = o_.config_.mpc_max_lateral_jerk / (v_eff * v_eff) * o_.frame_dt_s_;
+      const double dkappa_max = o_.config_.mpc_max_lateral_jerk / (v_eff * v_eff) * in.frame_dt_s;
       const double rate_ceil = o_.config_.mpc_rate_limit_deg * M_PI / 180.0;
       const double rate = std::min(dkappa_max * Lf, rate_ceil);
       const double d = std::clamp(out.steer_rad - o_.last_mpc_steer_rad_, -rate, rate);
@@ -777,17 +640,17 @@ private:
   LaneKeep& o_;
 };
 
-class LaneKeep::FlowPilotSolver final : public lateral::Solver {
+class LaneKeep::FlowPilotSolver final : public lateral::IPlanner {
 public:
   FlowPilotSolver(LaneKeep& o, std::unique_ptr<lateral::KappaSolver> kappa) : o_(o), kappa_(std::move(kappa)) {}
   const char* name() const override { return "fp"; }
   const char* kappaSolverName() const { return kappa_->name(); }
   void reset() override { kappa_->reset(); }
-  LaneKeepOutput solve(const lateral::SolverInput& in) override
+  lateral::Output update(const lateral::Input& in) override
   {
-    LaneKeepOutput out;
+    lateral::Output out;
     out.controller = "fp";
-    const auto& poly = in.path->polyline;
+    const auto& poly = in.polyline_ego;
     out.dbg.speed_mps = in.speed_mps;
     out.dbg.n_points = static_cast<int>(poly.size());
 
@@ -813,17 +676,11 @@ public:
     fcfg.rotation_radius = std::max(0.0, 0.5 * o_.config_.wheelbase_m);
     o_.fp_mpc_.setConfig(fcfg);
 
-    std::vector<Vec2> plan_poly = in.path->plan_poly;
-    if (std::abs(o_.config_.cam_y_left_m) > 1e-12) {
-      for (auto& p : plan_poly)
-        p.y() -= o_.config_.cam_y_left_m;
-    }
-
-    const double yaw = o_.have_chassis_ ? o_.chassis_.yaw_rate : 0.0;
+    const double yaw = in.have_chassis ? in.yaw_rate : 0.0;
 
     double kappa_cmd = 0.0;
     double kappa_rate = 0.0;
-    if (!kappa_->solve(in, poly, plan_poly, yaw, Lf, kappa_cmd, kappa_rate)) {
+    if (!kappa_->solve(in, poly, in.plan_poly, yaw, Lf, kappa_cmd, kappa_rate)) {
       out.status = "bad_fit";
       return out;
     }
@@ -865,11 +722,11 @@ public:
   explicit GradKappaSolver(LaneKeep& o) : o_(o) {}
   const char* name() const override { return "grad"; }
   void reset() override { o_.fp_mpc_.reset(); }
-  bool solve(const lateral::SolverInput& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly,
-             double yaw, double Lf, double& kappa, double& kappa_rate) override
+  bool solve(const lateral::Input& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly, double yaw,
+             double Lf, double& kappa, double& kappa_rate) override
   {
-    const auto sol = o_.fp_mpc_.update(in.speed_mps, yaw, Lf, poly, plan_poly, in.path->plan_yaw,
-                                       in.path->plan_yaw_rate, o_.frame_dt_s_);
+    const auto sol =
+        o_.fp_mpc_.update(in.speed_mps, yaw, Lf, poly, in.plan_poly, in.plan_yaw, in.plan_yaw_rate, in.frame_dt_s);
     if (!sol.ok)
       return false;
     kappa = sol.desired_curvature;
@@ -888,13 +745,13 @@ public:
   const char* name() const override { return "acados"; }
   bool available() const override { return o_.acados_mpc_.available(); }
   void reset() override { o_.acados_mpc_.reset(); }
-  bool solve(const lateral::SolverInput& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly,
-             double yaw, double Lf, double& kappa, double& kappa_rate) override
+  bool solve(const lateral::Input& in, const std::vector<Vec2>& poly, const std::vector<Vec2>& plan_poly, double yaw,
+             double Lf, double& kappa, double& kappa_rate) override
   {
     (void)Lf;
     std::vector<double> y_ref, psi_ref, r_ref;
-    if (!flowpilot::LateralMpc::sampleRefs(poly, in.speed_mps, plan_poly, in.path->plan_yaw, in.path->plan_yaw_rate,
-                                           y_ref, psi_ref, r_ref))
+    if (!flowpilot::LateralMpc::sampleRefs(poly, in.speed_mps, in.plan_poly, in.plan_yaw, in.plan_yaw_rate, y_ref,
+                                           psi_ref, r_ref))
       return false;
     o_.acados_mpc_.setWeights({1.0, 0.11, 0.0, 0.05, std::max(0.0, o_.config_.fp_steering_rate_weight)});
     const auto a = o_.acados_mpc_.solve(in.speed_mps, std::max(0.0, 0.5 * o_.config_.wheelbase_m), yaw, y_ref, psi_ref,
@@ -970,22 +827,13 @@ LaneKeepOutput LaneKeep::step(double speed_mps, const LanePathMsg& path)
   if (!solver_)
     makeSolver();
 
-  lateral::SolverInput in;
-  in.speed_mps = speed_mps;
-  in.yaw_rate = have_chassis_ ? chassis_.yaw_rate : 0.0;
-  in.have_chassis = have_chassis_;
-  in.frame_dt_s = frame_dt_s_;
+  const lateral::Input in =
+      lateral::inputFromMessages(path, speed_mps, have_chassis_ ? chassis_.yaw_rate : 0.0, have_chassis_, frame_dt_s_,
+                                 config_.cam_y_left_m, vehicleParams());
 
-  if (std::abs(config_.cam_y_left_m) < 1e-12) {
-    in.path = &path;
-    return solver_->solve(in);
-  }
-
-  LanePathMsg shifted = path;
-  for (auto& p : shifted.polyline)
-    p.y() -= config_.cam_y_left_m;
-  in.path = &shifted;
-  return solver_->solve(in);
+  LaneKeepOutput out;
+  lateral::applyToOutput(solver_->update(in), out);
+  return out;
 }
 
 }  // namespace services

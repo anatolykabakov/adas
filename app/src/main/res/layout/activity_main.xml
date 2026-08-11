@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    tools:context="ai.flow.adas.MainActivity">
+    tools:context="adas.app.MainActivity">
 
     <TextureView
         android:id="@+id/textureView"
@@ -16,7 +16,7 @@
         app:layout_constraintStart_toEndOf="@id/flowStrip"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ai.flow.adas.vision.LaneOverlayView
+    <adas.app.vision.LaneOverlayView
         android:id="@+id/laneOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"

@@ -69,8 +69,8 @@ public:
   }
   bool speedIsAState() const { return speed_is_state_; }
 
-  GpsPosResult updateGps(double gps_x, double gps_y, double max_innovation = 50.0,
-                         double reseed_innovation = 100.0, bool allow_reseed = true);
+  GpsPosResult updateGps(double gps_x, double gps_y, double max_innovation = 50.0, double reseed_innovation = 100.0,
+                         bool allow_reseed = true);
 
   bool updateGpsYaw(double yaw_enu, double R_yaw = 0.05, bool force = false);
 

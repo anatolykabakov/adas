@@ -136,9 +136,8 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
 
     const double acc = gps->accuracy_m > 0.0 ? gps->accuracy_m : 0.0;
     const double max_innov = acc > 0.0 ? std::clamp(4.0 * acc, 10.0, 60.0) : 25.0;
-    const auto pos =
-        use_gps_position ? ekf_.updateGps(gps->x, gps->y, max_innov, 50.0, may_reseed)
-                         : VehicleEKF::GpsPosResult::Accepted;
+    const auto pos = use_gps_position ? ekf_.updateGps(gps->x, gps->y, max_innov, 50.0, may_reseed) :
+                                        VehicleEKF::GpsPosResult::Accepted;
     if (pos != VehicleEKF::GpsPosResult::Rejected) {
       last_gps_t_ = t_;
 

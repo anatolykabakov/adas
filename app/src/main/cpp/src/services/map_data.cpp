@@ -66,10 +66,9 @@ void MapData::configure()
 {
   map_loaded_ = loadMap();
 
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kGpsData,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onGpsData(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kLocalizationPose,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onPose(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kGpsData, [this](const adas::proto::ZMQMessage& m) { onGpsData(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kLocalizationPose,
+                                     [this](const adas::proto::ZMQMessage& m) { onPose(m); });
 
   const auto period_ms = static_cast<uint64_t>(std::max(1.0, 1000.0 / std::max(0.1, config_.update_hz)));
   scheduleTimer(
@@ -96,7 +95,7 @@ void MapData::reset()
   route_ = mapmatch::RouteAhead{};
 }
 
-void MapData::onGpsData(const ai::flow::adas::ZMQMessage& msg)
+void MapData::onGpsData(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_gps_data() || !map_loaded_)
     return;
@@ -136,7 +135,7 @@ void MapData::onGpsData(const ai::flow::adas::ZMQMessage& msg)
   gps_course_valid_ = std::isfinite(gps_bearing_deg_) && gps_speed_mps_ > 2.0;
 }
 
-void MapData::onPose(const ai::flow::adas::ZMQMessage& msg)
+void MapData::onPose(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_localization_pose())
     return;
@@ -175,7 +174,7 @@ bool MapData::currentPosition(double& x, double& y, double& yaw) const
   return true;
 }
 
-void MapData::fillLocalMap(ai::flow::adas::MapLocalState& out, double x, double y)
+void MapData::fillLocalMap(adas::proto::MapLocalState& out, double x, double y)
 {
   const double r = config_.local_map_radius_m;
   out.set_has_local_map(true);
@@ -201,7 +200,7 @@ void MapData::onTick()
     return;
 
   const auto t_us = static_cast<int64_t>(now());
-  ai::flow::adas::ZMQMessage zmq;
+  adas::proto::ZMQMessage zmq;
   zmq.set_timestamp(t_us / 1000);
   zmq.set_topic(topics::kMapLocal);
   auto* m = zmq.mutable_map_local();

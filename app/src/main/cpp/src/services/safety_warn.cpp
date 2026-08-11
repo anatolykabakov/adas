@@ -11,11 +11,10 @@ namespace services {
 void SafetyWarn::configure()
 {
   subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onPath(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kVisionModelLong,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onModelLong(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kVisionModelLong,
+                                     [this](const adas::proto::ZMQMessage& m) { onModelLong(m); });
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kSteerCommand,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onSteer(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kSteerCommand, [this](const adas::proto::ZMQMessage& m) { onSteer(m); });
   scheduleTimer(
       50, [this] { tick(); }, "tick");
   LOGI("SafetyWarn: path + model_long + chassis → %s (FCW/AEB/LDW, no actuation)", topics::kSafetyWarn);
@@ -47,7 +46,7 @@ void SafetyWarn::reset()
   rebuildLatches();
 }
 
-void SafetyWarn::onSteer(const ai::flow::adas::ZMQMessage& msg)
+void SafetyWarn::onSteer(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_steer_command())
     return;
@@ -75,7 +74,7 @@ void SafetyWarn::onPath(const LanePathMsg& msg)
   lane_anchored_ = msg.lane_anchored;
 }
 
-void SafetyWarn::onModelLong(const ai::flow::adas::ZMQMessage& msg)
+void SafetyWarn::onModelLong(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_model_long_plan())
     return;
@@ -158,7 +157,7 @@ void SafetyWarn::tick()
   const bool lldw = lldw_latch_.update(raw_lldw);
   const bool rldw = rldw_latch_.update(raw_rldw);
 
-  ai::flow::adas::ZMQMessage zmq;
+  adas::proto::ZMQMessage zmq;
   const int64_t ms = utils::getCurrentTimestamp();
   zmq.set_timestamp(ms);
   zmq.set_topic(topics::kSafetyWarn);

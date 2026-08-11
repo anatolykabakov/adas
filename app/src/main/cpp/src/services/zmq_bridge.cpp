@@ -44,8 +44,8 @@ void ZmqBridge::initSockets()
   LOGI("✓ ZMQ PUB bound %s (outbound)", endpoint_out_.c_str());
 
   for (const auto& topic_name : kZmqOutboundTopics) {
-    subscribe<ai::flow::adas::ZMQMessage>(
-        topic_name, [this, topic_name](const ai::flow::adas::ZMQMessage& msg) { onInternalMessage(topic_name, msg); });
+    subscribe<adas::proto::ZMQMessage>(
+        topic_name, [this, topic_name](const adas::proto::ZMQMessage& msg) { onInternalMessage(topic_name, msg); });
   }
 }
 
@@ -82,7 +82,7 @@ void ZmqBridge::processInbound()
     payload.assign(static_cast<const char*>(frame0.data()), frame0.size());
   }
 
-  ai::flow::adas::ZMQMessage message;
+  adas::proto::ZMQMessage message;
   if (!message.ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
     LOGE("Failed to deserialize inbound ZMQ payload (%zu bytes)", payload.size());
     return;
@@ -103,14 +103,14 @@ void ZmqBridge::processInbound()
   publish(topic, message);
 }
 
-void ZmqBridge::onInternalMessage(const std::string& topic_name, const ai::flow::adas::ZMQMessage& msg)
+void ZmqBridge::onInternalMessage(const std::string& topic_name, const adas::proto::ZMQMessage& msg)
 {
   if (!pub_out_)
     return;
 
   std::string serialized;
   if (msg.topic().empty()) {
-    ai::flow::adas::ZMQMessage tmp;
+    adas::proto::ZMQMessage tmp;
     tmp.CopyFrom(msg);
     tmp.set_topic(topic_name);
     if (!tmp.SerializeToString(&serialized)) {

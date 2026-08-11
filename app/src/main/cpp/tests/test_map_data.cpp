@@ -35,11 +35,11 @@ public:
 
   void configure() override
   {
-    subscribe<ai::flow::adas::ZMQMessage>(adas::topics::kMapLocal,
-                                          [this](const ai::flow::adas::ZMQMessage& m) { msgs.push_back(m); });
+    subscribe<adas::proto::ZMQMessage>(adas::topics::kMapLocal,
+                                       [this](const adas::proto::ZMQMessage& m) { msgs.push_back(m); });
   }
 
-  std::vector<ai::flow::adas::ZMQMessage> msgs;
+  std::vector<adas::proto::ZMQMessage> msgs;
 };
 
 class Injector : public adas::middleware::Service {
@@ -49,7 +49,7 @@ public:
 
   void gps(int64_t t_ms, double lat, double lon, double speed, double bearing)
   {
-    ai::flow::adas::ZMQMessage m;
+    adas::proto::ZMQMessage m;
     m.set_topic(adas::topics::kGpsData);
     m.set_timestamp(t_ms);
     auto* g = m.mutable_gps_data();
@@ -63,7 +63,7 @@ public:
 
   void pose(int64_t t_ms, double x, double y, double yaw, double v)
   {
-    ai::flow::adas::ZMQMessage m;
+    adas::proto::ZMQMessage m;
     m.set_topic(adas::topics::kLocalizationPose);
     m.set_timestamp(t_ms);
     auto* p = m.mutable_localization_pose();

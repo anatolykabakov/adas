@@ -49,8 +49,6 @@ private:
   void onCameraOdometry(const CameraOdometrySample& msg);
   void onChassis(const ChassisSample& msg);
   void syncLastFromPose(int64_t timestamp_us);
-  void publishState(int64_t timestamp_us);
-  void publishDebug(int64_t timestamp_us, const char* source);
 
   Config config_;
   PoseCalibrator pose_calib_;

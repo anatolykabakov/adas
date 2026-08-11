@@ -1,5 +1,7 @@
 #include "adas/services/long_plan.h"
 
+#include "adas/utils/proto_convert.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -11,8 +13,8 @@ namespace services {
 
 void LongPlan::configure()
 {
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kVisionModelLong,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onModelLong(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kVisionModelLong,
+                                     [this](const adas::proto::ZMQMessage& m) { onModelLong(m); });
   subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
   subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onPath(m); });
   scheduleTimer(
@@ -37,7 +39,7 @@ void LongPlan::onPath(const LanePathMsg& msg)
   have_path_ = path_.size() >= 3;
 }
 
-void LongPlan::onModelLong(const ai::flow::adas::ZMQMessage& msg)
+void LongPlan::onModelLong(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_model_long_plan())
     return;
@@ -76,24 +78,7 @@ void LongPlan::tick()
 
   const longplan::Plan plan = longplan::compute(config_, in);
 
-  ai::flow::adas::ZMQMessage zmq;
-  const int64_t ms = utils::getCurrentTimestamp();
-  zmq.set_timestamp(ms);
-  zmq.set_topic(topics::kLongPlan);
-  auto* lp = zmq.mutable_long_plan();
-  lp->set_timestamp(ms);
-  lp->set_v_ego(in.v_ego);
-  lp->set_v_target(plan.v_target);
-  lp->set_a_target(plan.a_target);
-  lp->set_lead_d(in.lead.d_rel);
-  lp->set_lead_v(in.lead.v_lead);
-  lp->set_lead_prob(in.lead.prob);
-  lp->set_has_lead(plan.has_lead);
-  lp->set_source(plan.source);
-  lp->set_v_curv(plan.v_curv);
-  lp->set_kappa_ahead(plan.kappa_ahead);
-  lp->set_status(plan.status);
-  publish(topics::kLongPlan, zmq);
+  publish(topics::kLongPlan, createLongPlan(in, plan, utils::getCurrentTimestamp()));
 }
 
 }  // namespace services

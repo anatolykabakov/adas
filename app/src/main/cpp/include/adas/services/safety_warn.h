@@ -28,9 +28,9 @@ public:
 
 private:
   void onPath(const LanePathMsg& msg);
-  void onModelLong(const ai::flow::adas::ZMQMessage& msg);
+  void onModelLong(const adas::proto::ZMQMessage& msg);
   void onChassis(const ChassisSample& msg);
-  void onSteer(const ai::flow::adas::ZMQMessage& msg);
+  void onSteer(const adas::proto::ZMQMessage& msg);
   void tick();
   void rebuildLatches();
 
@@ -43,7 +43,7 @@ private:
   bool lane_anchored_ = false;
   double last_cte_m_ = 0.0;
   int64_t last_path_ts_us_ = 0;
-  ai::flow::adas::ModelLongPlan model_{};
+  adas::proto::ModelLongPlan model_{};
   bool have_model_ = false;
   /** Last `controls/steer` with enabled = true; LDW is suppressed while it is fresh. */
   int64_t lat_active_ts_us_ = 0;

@@ -327,7 +327,7 @@ public:
 
   void configure() override
   {
-    subscribe<ai::flow::adas::ZMQMessage>(adas::topics::kSteerCommand, [this](const ai::flow::adas::ZMQMessage& m) {
+    subscribe<adas::proto::ZMQMessage>(adas::topics::kSteerCommand, [this](const adas::proto::ZMQMessage& m) {
       if (!m.has_steer_command())
         return;
       last_enabled = m.steer_command().enabled();
@@ -858,7 +858,6 @@ TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
 
 #ifdef ADAS_WITH_ACADOS
 #include "adas/lateral/acados_lat_mpc.hpp"
-
 
 TEST(AcadosLatMpc, LoadsAndSolves)
 {

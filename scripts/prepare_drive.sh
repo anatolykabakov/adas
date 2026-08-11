@@ -86,7 +86,7 @@ for s in "${SETS[@]}"; do args+=(--set "$s"); done
 
 echo
 echo "=== проверка на устройстве"
-adb shell run-as ai.flow.adas cat /data/data/ai.flow.adas/files/config.json | python3 -c '
+adb shell run-as adas.app cat /data/data/adas.app/files/config.json | python3 -c '
 import json, sys
 c = json.load(sys.stdin)
 cam, veh = c["calibration"]["camera"], c["vehicle"]

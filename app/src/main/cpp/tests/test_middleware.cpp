@@ -278,12 +278,12 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
   sub.set(zmq::sockopt::rcvtimeo, 100);
   sub.connect(ep_out);
 
-  ai::flow::adas::ZMQMessage out;
+  adas::proto::ZMQMessage out;
   out.set_topic("safety/warn");
   out.mutable_safety_warn()->set_fcw(true);
   out.mutable_safety_warn()->set_ttc_s(1.75f);
 
-  ai::flow::adas::ZMQMessage got;
+  adas::proto::ZMQMessage got;
   bool received = false;
   for (int attempt = 0; attempt < 100 && !received; ++attempt) {
     mw->setTime(attempt * 10'000);

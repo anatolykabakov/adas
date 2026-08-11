@@ -156,11 +156,11 @@ void AdasApp::publishLanes(const adas::LanePathMsg& lanes)
     middleware_->publish(adas::topics::kVisionPath, lanes);
 }
 
-void AdasApp::publishLaneLines(const ai::flow::adas::LaneLines& lanes)
+void AdasApp::publishLaneLines(const adas::proto::LaneLines& lanes)
 {
   if (!middleware_)
     return;
-  ai::flow::adas::ZMQMessage zmq;
+  adas::proto::ZMQMessage zmq;
   zmq.set_timestamp(lanes.timestamp());
   zmq.set_topic(adas::topics::kVisionLanes);
   *zmq.mutable_lane_lines() = lanes;

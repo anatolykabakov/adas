@@ -24,8 +24,8 @@ static std::string jstringToStd(JNIEnv* env, jstring value)
 
 extern "C" {
 
-JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStart(JNIEnv* env, jclass, jint fd, jstring dbcPath,
-                                                                    jstring configPath, jstring mapPath)
+JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStart(JNIEnv* env, jclass, jint fd, jstring dbcPath,
+                                                                jstring configPath, jstring mapPath)
 {
   const std::string dbc_path = jstringToStd(env, dbcPath);
   const std::string config_path = jstringToStd(env, configPath);
@@ -61,7 +61,7 @@ JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStart(JNIEnv* env,
   }
 }
 
-JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStop(JNIEnv*, jclass)
+JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStop(JNIEnv*, jclass)
 {
   if (adas_app) {
     adas_app->stop();
@@ -69,7 +69,7 @@ JNIEXPORT void JNICALL Java_ai_flow_adas_AdasAppHandler_nativeStop(JNIEnv*, jcla
   }
 }
 
-JNIEXPORT jint JNICALL Java_ai_flow_adas_AdasAppHandler_nativeUpdateParams(JNIEnv* env, jclass, jstring jsonParams)
+JNIEXPORT jint JNICALL Java_adas_app_AdasAppHandler_nativeUpdateParams(JNIEnv* env, jclass, jstring jsonParams)
 {
   if (!adas_app)
     return -1;
@@ -100,9 +100,11 @@ JNIEXPORT jint JNICALL Java_ai_flow_adas_AdasAppHandler_nativeUpdateParams(JNIEn
   return static_cast<jint>(adas_app->updateParams(params));
 }
 
-JNIEXPORT jboolean JNICALL Java_ai_flow_adas_vision_ModelCalibWarp_nativeWarpYuvToFrame6(
-    JNIEnv* env, jclass, jbyteArray yArr, jbyteArray uArr, jbyteArray vArr, jint width, jint height, jfloatArray mArr,
-    jfloatArray outArr)
+JNIEXPORT jboolean JNICALL Java_adas_app_vision_ModelCalibWarp_nativeWarpYuvToFrame6(JNIEnv* env, jclass,
+                                                                                     jbyteArray yArr, jbyteArray uArr,
+                                                                                     jbyteArray vArr, jint width,
+                                                                                     jint height, jfloatArray mArr,
+                                                                                     jfloatArray outArr)
 {
   if (!yArr || !uArr || !vArr || !mArr || !outArr || width <= 0 || height <= 0)
     return JNI_FALSE;

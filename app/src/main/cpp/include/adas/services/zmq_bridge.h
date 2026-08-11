@@ -52,7 +52,7 @@ private:
   void initSockets();
   void zmqPollTimerCallback();
   void processInbound();
-  void onInternalMessage(const std::string& topic_name, const ai::flow::adas::ZMQMessage& msg);
+  void onInternalMessage(const std::string& topic_name, const adas::proto::ZMQMessage& msg);
 
   Config config_;
   std::string endpoint_in_ = kZmqEndpointIn;

@@ -40,7 +40,7 @@ public:
   virtual CarStateView stateView() const = 0;
 
   /** The full decoded state for the bag, as the shared `CarState` message. */
-  virtual const ai::flow::adas::CarState& carState() const = 0;
+  virtual const adas::proto::CarState& carState() const = 0;
 
   // --- writing to the bus ----------------------------------------------------------------------
 

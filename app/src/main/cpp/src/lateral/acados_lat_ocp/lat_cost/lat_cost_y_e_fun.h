@@ -31,7 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.;
  */
 
-
 #ifndef lat_Y_E_COST
 #define lat_Y_E_COST
 
@@ -39,28 +38,26 @@
 extern "C" {
 #endif
 
-
-int lat_cost_y_e_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int lat_cost_y_e_fun_work(int *, int *, int *, int *);
-const int *lat_cost_y_e_fun_sparsity_in(int);
-const int *lat_cost_y_e_fun_sparsity_out(int);
+int lat_cost_y_e_fun(const real_t** arg, real_t** res, int* iw, real_t* w, void* mem);
+int lat_cost_y_e_fun_work(int*, int*, int*, int*);
+const int* lat_cost_y_e_fun_sparsity_in(int);
+const int* lat_cost_y_e_fun_sparsity_out(int);
 int lat_cost_y_e_fun_n_in(void);
 int lat_cost_y_e_fun_n_out(void);
 
-int lat_cost_y_e_fun_jac_ut_xt(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int lat_cost_y_e_fun_jac_ut_xt_work(int *, int *, int *, int *);
-const int *lat_cost_y_e_fun_jac_ut_xt_sparsity_in(int);
-const int *lat_cost_y_e_fun_jac_ut_xt_sparsity_out(int);
+int lat_cost_y_e_fun_jac_ut_xt(const real_t** arg, real_t** res, int* iw, real_t* w, void* mem);
+int lat_cost_y_e_fun_jac_ut_xt_work(int*, int*, int*, int*);
+const int* lat_cost_y_e_fun_jac_ut_xt_sparsity_in(int);
+const int* lat_cost_y_e_fun_jac_ut_xt_sparsity_out(int);
 int lat_cost_y_e_fun_jac_ut_xt_n_in(void);
 int lat_cost_y_e_fun_jac_ut_xt_n_out(void);
 
-int lat_cost_y_e_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void *mem);
-int lat_cost_y_e_hess_work(int *, int *, int *, int *);
-const int *lat_cost_y_e_hess_sparsity_in(int);
-const int *lat_cost_y_e_hess_sparsity_out(int);
+int lat_cost_y_e_hess(const real_t** arg, real_t** res, int* iw, real_t* w, void* mem);
+int lat_cost_y_e_hess_work(int*, int*, int*, int*);
+const int* lat_cost_y_e_hess_sparsity_in(int);
+const int* lat_cost_y_e_hess_sparsity_out(int);
 int lat_cost_y_e_hess_n_in(void);
 int lat_cost_y_e_hess_n_out(void);
-
 
 #ifdef __cplusplus
 } /* extern "C" */

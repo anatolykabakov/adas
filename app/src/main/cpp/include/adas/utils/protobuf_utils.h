@@ -14,7 +14,7 @@
 namespace utils {
 int64_t getCurrentTimestamp();
 
-ai::flow::adas::ZMQMessage createCANMessage(const std::vector<can_frame>& frames);
-ai::flow::adas::ZMQMessage createHealthMessage(const health_t& health);
-ai::flow::adas::ZMQMessage createCarStateMessage(const ai::flow::adas::CarState& state);
+adas::proto::ZMQMessage createCANMessage(const std::vector<can_frame>& frames);
+adas::proto::ZMQMessage createHealthMessage(const health_t& health);
+adas::proto::ZMQMessage createCarStateMessage(const adas::proto::CarState& state);
 }  // namespace utils

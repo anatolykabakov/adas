@@ -24,7 +24,7 @@ public:
   const Config& config() const { return config_; }
 
 private:
-  void onModelLong(const ai::flow::adas::ZMQMessage& msg);
+  void onModelLong(const adas::proto::ZMQMessage& msg);
   void onChassis(const ChassisSample& msg);
   void onPath(const LanePathMsg& msg);
   void tick();
@@ -32,7 +32,7 @@ private:
   Config config_;
   ChassisSample chassis_{};
   bool have_chassis_ = false;
-  ai::flow::adas::ModelLongPlan model_{};
+  adas::proto::ModelLongPlan model_{};
   bool have_model_ = false;
   std::vector<Vec2> path_{};
   bool have_path_ = false;

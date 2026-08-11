@@ -12,9 +12,9 @@ int64_t getCurrentTimestamp()
   return static_cast<int64_t>(ts.tv_sec) * 1000LL + ts.tv_nsec / 1000000LL;
 }
 
-ai::flow::adas::ZMQMessage createCANMessage(const std::vector<can_frame>& frames)
+adas::proto::ZMQMessage createCANMessage(const std::vector<can_frame>& frames)
 {
-  ai::flow::adas::ZMQMessage zmq_msg;
+  adas::proto::ZMQMessage zmq_msg;
   zmq_msg.set_topic("can/rx");
 
   auto current_timestamp = getCurrentTimestamp();
@@ -36,9 +36,9 @@ ai::flow::adas::ZMQMessage createCANMessage(const std::vector<can_frame>& frames
   return zmq_msg;
 }
 
-ai::flow::adas::ZMQMessage createHealthMessage(const health_t& health)
+adas::proto::ZMQMessage createHealthMessage(const health_t& health)
 {
-  ai::flow::adas::ZMQMessage zmq_msg;
+  adas::proto::ZMQMessage zmq_msg;
   zmq_msg.set_topic("panda/health");
 
   auto current_timestamp = getCurrentTimestamp();
@@ -87,9 +87,9 @@ ai::flow::adas::ZMQMessage createHealthMessage(const health_t& health)
   return zmq_msg;
 }
 
-ai::flow::adas::ZMQMessage createCarStateMessage(const ai::flow::adas::CarState& state)
+adas::proto::ZMQMessage createCarStateMessage(const adas::proto::CarState& state)
 {
-  ai::flow::adas::ZMQMessage zmq_msg;
+  adas::proto::ZMQMessage zmq_msg;
   zmq_msg.set_topic("vehicle/state");
   zmq_msg.set_timestamp(state.timestamp());
   *zmq_msg.mutable_car_state() = state;

@@ -80,12 +80,12 @@ tasks.register('syncTrafficYoloModel', Copy) {
 }
 
 android {
-    namespace 'ai.flow.adas'
+    namespace 'adas.app'
     compileSdk 34
     buildToolsVersion "34.0.0"
 
     defaultConfig {
-        applicationId "ai.flow.adas"
+        applicationId "adas.app"
         minSdk 24
         targetSdk 34
         versionCode 1

@@ -171,7 +171,7 @@ void Localization::publishPose(int64_t timestamp_us)
   pose.ekf_y = loc_.ekfY().empty() ? pose.y : loc_.ekfY().back();
   last_pose_ = pose;
 
-  ai::flow::adas::ZMQMessage zmq;
+  adas::proto::ZMQMessage zmq;
   zmq.set_timestamp(timestamp_us / 1000);
   zmq.set_topic(topics::kLocalizationPose);
   auto* p = zmq.mutable_localization_pose();

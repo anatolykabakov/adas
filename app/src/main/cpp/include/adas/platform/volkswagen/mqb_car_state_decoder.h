@@ -42,8 +42,8 @@ public:
     return d;
   }
 
-  ai::flow::adas::CarState& state() { return state_; }
-  const ai::flow::adas::CarState& state() const { return state_; }
+  adas::proto::CarState& state() { return state_; }
+  const adas::proto::CarState& state() const { return state_; }
 
   uint8_t epsHcaStatus() const { return eps_hca_status_; }
   const LdwStockValues& ldwStock() const { return ldw_stock_; }
@@ -54,7 +54,7 @@ public:
 
 private:
   DBSParser* dbc_ = nullptr;
-  ai::flow::adas::CarState state_;
+  adas::proto::CarState state_;
   bool dirty_ = false;
   /** Filtered speed and acceleration from the raw wheel-speed average — see `SpeedFilter` for what
    *  the unfiltered finite difference looked like. */

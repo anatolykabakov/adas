@@ -88,7 +88,7 @@ public:
   void publishChassis(const adas::ChassisSample& chassis);
   void publishLanes(const adas::LanePathMsg& lanes);
 
-  void publishLaneLines(const ai::flow::adas::LaneLines& lanes);
+  void publishLaneLines(const adas::proto::LaneLines& lanes);
   void publishGps(const adas::GpsSample& gps);
   void publishImu(const adas::ImuSample& imu);
   void publishLaneUv(const adas::LaneUvMsg& uv);

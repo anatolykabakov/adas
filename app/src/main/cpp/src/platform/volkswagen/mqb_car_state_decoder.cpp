@@ -168,18 +168,18 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame)
         std::memcpy(gra_stock_.data, frame.dat.data(), 8);
         gra_stock_.valid = true;
       }
-      auto set_btn = [&](const char* name, void (ai::flow::adas::CarState::*setter)(bool)) {
+      auto set_btn = [&](const char* name, void (adas::proto::CarState::*setter)(bool)) {
         if (auto v = dbc_->extractSignal(frame, name)) {
           (state_.*setter)(*v > 0.5);
           dirty_ = true;
         }
       };
-      set_btn("GRA_Hauptschalter", &ai::flow::adas::CarState::set_cruise_main_switch);
-      set_btn("GRA_Tip_Setzen", &ai::flow::adas::CarState::set_cruise_set);
-      set_btn("GRA_Tip_Wiederaufnahme", &ai::flow::adas::CarState::set_cruise_resume);
-      set_btn("GRA_Abbrechen", &ai::flow::adas::CarState::set_cruise_cancel);
-      set_btn("GRA_Tip_Hoch", &ai::flow::adas::CarState::set_cruise_accel);
-      set_btn("GRA_Tip_Runter", &ai::flow::adas::CarState::set_cruise_decel);
+      set_btn("GRA_Hauptschalter", &adas::proto::CarState::set_cruise_main_switch);
+      set_btn("GRA_Tip_Setzen", &adas::proto::CarState::set_cruise_set);
+      set_btn("GRA_Tip_Wiederaufnahme", &adas::proto::CarState::set_cruise_resume);
+      set_btn("GRA_Abbrechen", &adas::proto::CarState::set_cruise_cancel);
+      set_btn("GRA_Tip_Hoch", &adas::proto::CarState::set_cruise_accel);
+      set_btn("GRA_Tip_Runter", &adas::proto::CarState::set_cruise_decel);
       if (auto gap = dbc_->extractSignal(frame, "GRA_Verstellung_Zeitluecke")) {
         state_.set_cruise_gap_adjust(static_cast<int32_t>(*gap));
         dirty_ = true;

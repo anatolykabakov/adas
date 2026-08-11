@@ -39,15 +39,14 @@ void TopicConvert::setLaneBlendScale(double scale)
 
 void TopicConvert::configure()
 {
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kVisionLanes,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onVisionLanes(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kVehicleState,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onVehicleState(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kImu, [this](const ai::flow::adas::ZMQMessage& m) { onImu(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kGpsLocation,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onGps(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kCameraOdometry,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onCameraOdometry(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kVisionLanes,
+                                     [this](const adas::proto::ZMQMessage& m) { onVisionLanes(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kVehicleState,
+                                     [this](const adas::proto::ZMQMessage& m) { onVehicleState(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kImu, [this](const adas::proto::ZMQMessage& m) { onImu(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kGpsLocation, [this](const adas::proto::ZMQMessage& m) { onGps(m); });
+  subscribe<adas::proto::ZMQMessage>(topics::kCameraOdometry,
+                                     [this](const adas::proto::ZMQMessage& m) { onCameraOdometry(m); });
   registerParameters();
   LOGI("TopicConvert: lanes/state/imu/gps/cam_odo → path/chassis/imu_raw/gps(ENU)/cam_odo");
 }
@@ -114,7 +113,7 @@ void TopicConvert::reset()
   fusion_.reset();
 }
 
-void TopicConvert::onVisionLanes(const ai::flow::adas::ZMQMessage& msg)
+void TopicConvert::onVisionLanes(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_lane_lines()) {
     LOGW("vision/lanes without lane_lines payload");
@@ -127,28 +126,28 @@ void TopicConvert::onVisionLanes(const ai::flow::adas::ZMQMessage& msg)
   publish(topics::kVisionPath, path);
 }
 
-void TopicConvert::onVehicleState(const ai::flow::adas::ZMQMessage& msg)
+void TopicConvert::onVehicleState(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_car_state())
     return;
   publish(topics::kVehicleChassis, carStateToChassis(msg.car_state(), steer_ratio_));
 }
 
-void TopicConvert::onImu(const ai::flow::adas::ZMQMessage& msg)
+void TopicConvert::onImu(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_imu_data())
     return;
   publish(topics::kImuRaw, imuToRaw(msg.imu_data()));
 }
 
-void TopicConvert::onGps(const ai::flow::adas::ZMQMessage& msg)
+void TopicConvert::onGps(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_gps_location())
     return;
   const auto& g = msg.gps_location();
   const int64_t t_us = g.timestamp() * 1000;
   const bool ok_fix =
-      g.fix_type() != ai::flow::adas::GPSLocation::NO_FIX && g.fix_type() != ai::flow::adas::GPSLocation::TIME_ONLY;
+      g.fix_type() != adas::proto::GPSLocation::NO_FIX && g.fix_type() != adas::proto::GPSLocation::TIME_ONLY;
   auto sample = gps_proj_.project(t_us, g.latitude(), g.longitude(), ok_fix, g.speed(), g.bearing());
   if (!sample.valid)
     return;
@@ -157,9 +156,9 @@ void TopicConvert::onGps(const ai::flow::adas::ZMQMessage& msg)
   publish(topics::kGpsLocation, sample);
 }
 
-void TopicConvert::onLaneUv(const ai::flow::adas::ZMQMessage&) {}
+void TopicConvert::onLaneUv(const adas::proto::ZMQMessage&) {}
 
-void TopicConvert::onCameraOdometry(const ai::flow::adas::ZMQMessage& msg)
+void TopicConvert::onCameraOdometry(const adas::proto::ZMQMessage& msg)
 {
   if (!msg.has_camera_odometry())
     return;

@@ -49,12 +49,12 @@ public:
   void registerParameters();
 
 private:
-  void onVisionLanes(const ai::flow::adas::ZMQMessage& msg);
-  void onVehicleState(const ai::flow::adas::ZMQMessage& msg);
-  void onImu(const ai::flow::adas::ZMQMessage& msg);
-  void onGps(const ai::flow::adas::ZMQMessage& msg);
-  void onLaneUv(const ai::flow::adas::ZMQMessage& msg);
-  void onCameraOdometry(const ai::flow::adas::ZMQMessage& msg);
+  void onVisionLanes(const adas::proto::ZMQMessage& msg);
+  void onVehicleState(const adas::proto::ZMQMessage& msg);
+  void onImu(const adas::proto::ZMQMessage& msg);
+  void onGps(const adas::proto::ZMQMessage& msg);
+  void onLaneUv(const adas::proto::ZMQMessage& msg);
+  void onCameraOdometry(const adas::proto::ZMQMessage& msg);
 
   Config config_;
   LanePathConfig path_cfg_;

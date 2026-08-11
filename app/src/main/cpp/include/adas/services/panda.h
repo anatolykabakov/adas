@@ -57,8 +57,8 @@ private:
   void pandaRxCallback();
   void pandaStateCallback();
   void carControllerCallback();
-  void steerCommandCallback(const ai::flow::adas::ZMQMessage& msg);
-  void longPlanCallback(const ai::flow::adas::ZMQMessage& msg);
+  void steerCommandCallback(const adas::proto::ZMQMessage& msg);
+  void longPlanCallback(const adas::proto::ZMQMessage& msg);
   void initializePanda();
   void publishCarState();
   volkswagen::CruiseButtonCmd computeCruiseButtons(const volkswagen::CarStateView& cs);

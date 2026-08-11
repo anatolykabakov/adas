@@ -52,7 +52,7 @@ void applyCameraOffset(LanePathMsg& msg, double camera_offset_m)
     p.y() += camera_offset_m;
 }
 
-double medianLaneStd(const ai::flow::adas::LanePolyline& lane, const ai::flow::adas::LaneLines& ll, double range_m)
+double medianLaneStd(const adas::proto::LanePolyline& lane, const adas::proto::LaneLines& ll, double range_m)
 {
   std::vector<double> stds;
   const int n = std::min(lane.y_std_size(), ll.x_size());
@@ -134,7 +134,7 @@ QuadFit fitAtZero(const std::vector<double>& xs, const std::vector<double>& ys, 
 
 }  // namespace
 
-LanePathMsg laneLinesToPath(const ai::flow::adas::LaneLines& ll, const LanePathConfig& cfg, LaneFusionState* state)
+LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConfig& cfg, LaneFusionState* state)
 {
   LanePathMsg out;
   const int64_t capture_ms = ll.capture_ts_ms() > 0 ? ll.capture_ts_ms() : ll.timestamp();
@@ -305,7 +305,7 @@ LanePathMsg laneLinesToPath(const ai::flow::adas::LaneLines& ll, const LanePathC
   return out;
 }
 
-ChassisSample carStateToChassis(const ai::flow::adas::CarState& cs, double steer_ratio)
+ChassisSample carStateToChassis(const adas::proto::CarState& cs, double steer_ratio)
 {
   ChassisSample s;
   s.timestamp_us = cs.timestamp() * 1000;
@@ -320,7 +320,7 @@ ChassisSample carStateToChassis(const ai::flow::adas::CarState& cs, double steer
   return s;
 }
 
-RawImuSample imuToRaw(const ai::flow::adas::IMUData& imu)
+RawImuSample imuToRaw(const adas::proto::IMUData& imu)
 {
   RawImuSample s;
   s.timestamp_us = imu.timestamp() * 1000;
@@ -334,7 +334,7 @@ RawImuSample imuToRaw(const ai::flow::adas::IMUData& imu)
   return s;
 }
 
-CameraOdometrySample cameraOdometryToSample(const ai::flow::adas::CameraOdometry& odom)
+CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& odom)
 {
   CameraOdometrySample s;
   s.timestamp_us = odom.timestamp() * 1000;

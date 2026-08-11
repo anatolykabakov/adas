@@ -15,12 +15,21 @@ from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
 from conan.tools.files import copy, get, rmdir
 
 SUBMODULES = {
-    "blasfeo": ("giaf/blasfeo", "edf92b396adddd9e548b9786f87ad290a0971329",
-                "84825c30e0a68eca6da8d4009f157f4278ef0f607347af853eb49a331b67ac0d"),
-    "hpipm": ("giaf/hpipm", "7f8e8de828be86b6ae3d373e8e56f9f3b1fd45aa",
-              "8a19f998fbcf4d5ec68dbcc9e42bfe668feef873bb26e094990c766e4b54f505"),
-    "qpoases": ("acados/qpOASES", "77ce8944825d6857c606655ed60ced5ea30017a5",
-                "87b3df618d2adcba89feabc44b30234805389a6e10da7495149f209e6d4e1bca"),
+    "blasfeo": (
+        "giaf/blasfeo",
+        "edf92b396adddd9e548b9786f87ad290a0971329",
+        "84825c30e0a68eca6da8d4009f157f4278ef0f607347af853eb49a331b67ac0d",
+    ),
+    "hpipm": (
+        "giaf/hpipm",
+        "7f8e8de828be86b6ae3d373e8e56f9f3b1fd45aa",
+        "8a19f998fbcf4d5ec68dbcc9e42bfe668feef873bb26e094990c766e4b54f505",
+    ),
+    "qpoases": (
+        "acados/qpOASES",
+        "77ce8944825d6857c606655ed60ced5ea30017a5",
+        "87b3df618d2adcba89feabc44b30234805389a6e10da7495149f209e6d4e1bca",
+    ),
 }
 ACADOS_SHA256 = "aa43680f9dc626a77bfc56664f1454cb1926464499b6fb02ac780533c438525d"
 GITHUB = "https://github.com"
@@ -52,7 +61,9 @@ class AcadosConan(ConanFile):
 
     @property
     def _mirror(self):
-        return self.conf.get("user.acados:mirror", default=DEFAULT_MIRROR, check_type=str).rstrip("/")
+        return self.conf.get(
+            "user.acados:mirror", default=DEFAULT_MIRROR, check_type=str
+        ).rstrip("/")
 
     def _auto_target(self):
         if self.settings.arch == "armv8":
@@ -63,7 +74,9 @@ class AcadosConan(ConanFile):
 
     def validate(self):
         if self.settings.os not in ("Linux", "Android"):
-            raise ConanInvalidConfiguration(f"поддерживаются Linux и Android, не {self.settings.os}")
+            raise ConanInvalidConfiguration(
+                f"поддерживаются Linux и Android, не {self.settings.os}"
+            )
 
     def layout(self):
         cmake_layout(self, src_folder="src")
@@ -75,11 +88,20 @@ class AcadosConan(ConanFile):
         return urls
 
     def source(self):
-        get(self, self._urls(f"acados/acados/archive/refs/tags/v{self.version}.tar.gz"),
-            sha256=ACADOS_SHA256, strip_root=True)
+        get(
+            self,
+            self._urls(f"acados/acados/archive/refs/tags/v{self.version}.tar.gz"),
+            sha256=ACADOS_SHA256,
+            strip_root=True,
+        )
         for name, (repo, commit, sha) in SUBMODULES.items():
-            get(self, self._urls(f"{repo}/archive/{commit}.tar.gz"), sha256=sha, strip_root=True,
-                destination=os.path.join(self.source_folder, "external", name))
+            get(
+                self,
+                self._urls(f"{repo}/archive/{commit}.tar.gz"),
+                sha256=sha,
+                strip_root=True,
+                destination=os.path.join(self.source_folder, "external", name),
+            )
 
     def generate(self):
         tc = CMakeToolchain(self)
@@ -112,7 +134,12 @@ class AcadosConan(ConanFile):
 
     def package(self):
         CMake(self).install()
-        copy(self, "LICENSE", self.source_folder, os.path.join(self.package_folder, "licenses"))
+        copy(
+            self,
+            "LICENSE",
+            self.source_folder,
+            os.path.join(self.package_folder, "licenses"),
+        )
         for stale in ("cmake", "lib/cmake"):
             rmdir(self, os.path.join(self.package_folder, stale))
 
@@ -121,7 +148,11 @@ class AcadosConan(ConanFile):
         if self.options.qpoases:
             libs.insert(1, "qpOASES_e")
         self.cpp_info.libs = libs
-        self.cpp_info.includedirs = ["include", "include/blasfeo/include", "include/hpipm/include"]
+        self.cpp_info.includedirs = [
+            "include",
+            "include/blasfeo/include",
+            "include/hpipm/include",
+        ]
         if self.settings.os in ("Linux", "Android"):
             self.cpp_info.system_libs = ["m"]
         self.cpp_info.set_property("cmake_file_name", "acados")

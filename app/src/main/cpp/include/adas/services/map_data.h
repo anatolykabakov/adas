@@ -83,13 +83,13 @@ public:
   const mapmatch::RouteAhead& lastRoute() const { return route_; }
 
 private:
-  void onGpsData(const ai::flow::adas::ZMQMessage& msg);
-  void onPose(const ai::flow::adas::ZMQMessage& msg);
+  void onGpsData(const adas::proto::ZMQMessage& msg);
+  void onPose(const adas::proto::ZMQMessage& msg);
   void onTick();
 
   bool loadMap();
   bool currentPosition(double& x, double& y, double& yaw) const;
-  void fillLocalMap(ai::flow::adas::MapLocalState& out, double x, double y);
+  void fillLocalMap(adas::proto::MapLocalState& out, double x, double y);
 
   Config config_;
   mapmatch::RoadMap map_;

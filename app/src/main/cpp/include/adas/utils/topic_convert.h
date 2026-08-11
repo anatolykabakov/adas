@@ -40,13 +40,13 @@ struct LaneFusionState {
   void reset() { *this = LaneFusionState{}; }
 };
 
-LanePathMsg laneLinesToPath(const ai::flow::adas::LaneLines& ll, const LanePathConfig& cfg = {},
+LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConfig& cfg = {},
                             LaneFusionState* state = nullptr);
 
-ChassisSample carStateToChassis(const ai::flow::adas::CarState& cs, double steer_ratio = 15.7);
+ChassisSample carStateToChassis(const adas::proto::CarState& cs, double steer_ratio = 15.7);
 
-RawImuSample imuToRaw(const ai::flow::adas::IMUData& imu);
+RawImuSample imuToRaw(const adas::proto::IMUData& imu);
 
-CameraOdometrySample cameraOdometryToSample(const ai::flow::adas::CameraOdometry& odom);
+CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& odom);
 
 }  // namespace adas
