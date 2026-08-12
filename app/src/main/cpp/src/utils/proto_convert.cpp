@@ -1,13 +1,83 @@
 #include "adas/utils/proto_convert.h"
 
-namespace adas {
-
-adas::proto::ZMQMessage createTrafficVision(const traffic::State& state, const traffic::Assessment& a, int64_t now_ms)
+namespace utils {
+adas::proto::CANData createCANMessage(const std::vector<can_frame>& frames, int64_t now_ms)
 {
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(now_ms);
-  zmq.set_topic(topics::kTrafficVision);
-  auto* s = zmq.mutable_traffic_vision();
+  const int64_t current_timestamp = now_ms;
+
+  adas::proto::CANData msg;
+  auto* can_data = &msg;
+  can_data->set_timestamp(current_timestamp);
+
+  for (const auto& frame : frames) {
+    auto* can_frame = can_data->add_frames();
+    can_frame->set_address(frame.address);
+    can_frame->set_data(frame.dat);
+    can_frame->set_bus_time(frame.busTime);
+    can_frame->set_src(frame.src);
+  }
+
+  return msg;
+}
+
+adas::proto::PandaHealth createHealthMessage(const health_t& health, int64_t now_ms)
+{
+  const int64_t current_timestamp = now_ms;
+
+  adas::proto::PandaHealth msg;
+  auto* health_data = &msg;
+  health_data->set_timestamp(current_timestamp);
+
+  health_data->set_uptime_pkt(health.uptime_pkt);
+
+  health_data->set_controls_allowed(health.controls_allowed_pkt);
+  health_data->set_safety_mode(health.safety_mode_pkt);
+  health_data->set_safety_param(health.safety_param_pkt);
+  health_data->set_fault_status(health.fault_status_pkt);
+
+  health_data->set_voltage_mv(health.voltage_pkt);
+  health_data->set_current_ma(health.current_pkt);
+  health_data->set_power_save_enabled(health.power_save_enabled_pkt);
+
+  health_data->set_tx_blocked(health.safety_tx_blocked_pkt);
+  health_data->set_tx_overflow(health.tx_buffer_overflow_pkt);
+  health_data->set_rx_invalid(health.safety_rx_invalid_pkt);
+  health_data->set_rx_overflow(health.rx_buffer_overflow_pkt);
+  health_data->set_rx_checks_invalid(health.safety_rx_checks_invalid_pkt);
+
+  health_data->set_faults_pkt(health.faults_pkt);
+  health_data->set_spi_error_count(health.spi_checksum_error_count_pkt);
+
+  health_data->set_ignition_line(health.ignition_line_pkt);
+  health_data->set_ignition_can(health.ignition_can_pkt);
+
+  health_data->set_car_harness_status(health.car_harness_status_pkt);
+
+  health_data->set_heartbeat_lost(health.heartbeat_lost_pkt);
+
+  health_data->set_alternative_experience(health.alternative_experience_pkt);
+
+  health_data->set_interrupt_load(health.interrupt_load_pkt);
+
+  health_data->set_fan_power(health.fan_power);
+
+  health_data->set_sbu1_voltage_mv(health.sbu1_voltage_mV);
+  health_data->set_sbu2_voltage_mv(health.sbu2_voltage_mV);
+  health_data->set_som_reset_triggered(health.som_reset_triggered != 0);
+
+  return msg;
+}
+
+adas::proto::CarState createCarStateMessage(const adas::proto::CarState& state) { return state; }
+
+}  // namespace utils
+
+namespace adas {
+adas::proto::TrafficVisionState createTrafficVision(const traffic::State& state, const traffic::Assessment& a,
+                                                    int64_t now_ms)
+{
+  adas::proto::TrafficVisionState msg;
+  auto* s = &msg;
   s->set_timestamp(now_ms);
   s->set_speed_limit_kmh(state.speed_limit_kmh);
   s->set_speed_limit_age_ms(a.speed_limit_age_ms);
@@ -20,15 +90,13 @@ adas::proto::ZMQMessage createTrafficVision(const traffic::State& state, const t
   s->set_status(state.status);
   s->set_speed_limit_label(state.speed_limit_label);
   s->set_n_dets(state.n_dets);
-  return zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createCameraCalibState(const CameraCalibrationState& state, int64_t timestamp_us)
+adas::proto::CameraCalibrationState createCameraCalibState(const CameraCalibrationState& state, int64_t timestamp_us)
 {
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(timestamp_us / 1000);
-  zmq.set_topic(topics::kCameraCalib);
-  auto* c = zmq.mutable_camera_calib();
+  adas::proto::CameraCalibrationState msg;
+  auto* c = &msg;
   c->set_timestamp(timestamp_us / 1000);
   c->set_roll_deg(state.roll_deg);
   c->set_pitch_deg(state.pitch_deg);
@@ -45,17 +113,15 @@ adas::proto::ZMQMessage createCameraCalibState(const CameraCalibrationState& sta
   c->set_has_vp(state.has_vp);
   c->set_cal_percent(state.cal_percent);
   c->set_cal_status(state.cal_status);
-  return zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createCameraCalibDebug(const CameraCalibrationState& state, const PoseCalibrator& pose,
-                                               const VanishingPointCalibrator& vp, int64_t timestamp_us,
-                                               const char* source)
+adas::proto::CameraCalibDebug createCameraCalibDebug(const CameraCalibrationState& state, const PoseCalibrator& pose,
+                                                     const VanishingPointCalibrator& vp, int64_t timestamp_us,
+                                                     const char* source)
 {
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(timestamp_us / 1000);
-  zmq.set_topic(topics::kCameraCalibDebug);
-  auto* d = zmq.mutable_camera_calib_debug();
+  adas::proto::CameraCalibDebug msg;
+  auto* d = &msg;
   d->set_timestamp(timestamp_us / 1000);
   d->set_source(source ? source : "none");
   d->set_status(PoseCalibrator::statusName(pose.status()));
@@ -99,15 +165,13 @@ adas::proto::ZMQMessage createCameraCalibDebug(const CameraCalibrationState& sta
   d->set_vp_history(vp.historySize());
   d->set_vp_success(vp.success());
 
-  return zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createLongPlan(const longplan::Input& in, const longplan::Plan& plan, int64_t now_ms)
+adas::proto::LongPlanState createLongPlan(const longplan::Input& in, const longplan::Plan& plan, int64_t now_ms)
 {
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(now_ms);
-  zmq.set_topic(topics::kLongPlan);
-  auto* lp = zmq.mutable_long_plan();
+  adas::proto::LongPlanState msg;
+  auto* lp = &msg;
   lp->set_timestamp(now_ms);
   lp->set_v_ego(in.v_ego);
   lp->set_v_target(plan.v_target);
@@ -120,20 +184,18 @@ adas::proto::ZMQMessage createLongPlan(const longplan::Input& in, const longplan
   lp->set_v_curv(plan.v_curv);
   lp->set_kappa_ahead(plan.kappa_ahead);
   lp->set_status(plan.status);
-  return zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createLaneKeepState(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm)
+adas::proto::LaneKeepState createLaneKeepState(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm)
 {
   const int64_t publish_ms = static_cast<int64_t>(now_us) / 1000;
   const int64_t capture_ms = out.capture_ts_us / 1000;
   const int64_t vision_ms = out.vision_ts_us / 1000;
   const int64_t chassis_ms = out.chassis_ts_us / 1000;
 
-  adas::proto::ZMQMessage lk_zmq;
-  lk_zmq.set_timestamp(publish_ms);
-  lk_zmq.set_topic(topics::kLaneKeep);
-  auto* lk = lk_zmq.mutable_lane_keep();
+  adas::proto::LaneKeepState msg;
+  auto* lk = &msg;
   lk->set_timestamp(publish_ms);
   lk->set_steer_rad(out.steer_rad);
   lk->set_steer_norm(out.steer_norm);
@@ -153,18 +215,16 @@ adas::proto::ZMQMessage createLaneKeepState(const LaneKeepOutput& out, int64_t n
   lk->set_vision_ts_ms(vision_ms);
   lk->set_chassis_ts_ms(chassis_ms);
   lk->set_publish_ts_ms(publish_ms);
-  return lk_zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createLaneKeepDebug(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
-                                            double frame_dt_s, const services::LaneKeep::Config& config)
+adas::proto::LaneKeepDebug createLaneKeepDebug(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
+                                               double frame_dt_s, const services::LaneKeep::Config& config)
 {
   const int64_t publish_ms = static_cast<int64_t>(now_us) / 1000;
 
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(publish_ms);
-  zmq.set_topic(topics::kLaneKeepDebug);
-  auto* d = zmq.mutable_lane_keep_debug();
+  adas::proto::LaneKeepDebug msg;
+  auto* d = &msg;
   d->set_timestamp(publish_ms);
   d->set_controller(out.controller);
   d->set_status(out.status);
@@ -231,21 +291,19 @@ adas::proto::ZMQMessage createLaneKeepDebug(const LaneKeepOutput& out, int64_t n
   d->set_vision_ts_ms(out.vision_ts_us / 1000);
   d->set_chassis_ts_ms(out.chassis_ts_us / 1000);
   d->set_publish_ts_ms(publish_ms);
-  return zmq;
+  return msg;
 }
 
-adas::proto::ZMQMessage createSteerCommand(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
-                                           bool steer_output_enabled, bool have_desired)
+adas::proto::SteerCommand createSteerCommand(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
+                                             bool steer_output_enabled, bool have_desired)
 {
   const int64_t publish_ms = static_cast<int64_t>(now_us) / 1000;
   const int64_t capture_ms = out.capture_ts_us / 1000;
   const int64_t vision_ms = out.vision_ts_us / 1000;
   const int64_t chassis_ms = out.chassis_ts_us / 1000;
 
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(publish_ms);
-  zmq.set_topic(topics::kSteerCommand);
-  auto* cmd = zmq.mutable_steer_command();
+  adas::proto::SteerCommand msg;
+  auto* cmd = &msg;
   const int torque = static_cast<int>(std::lround(out.steer_norm * max_torque_cnm));
   const bool en = steer_output_enabled && out.has_target && out.status == "ok" && have_desired;
   cmd->set_torque_cnm(en ? torque : 0);
@@ -254,7 +312,7 @@ adas::proto::ZMQMessage createSteerCommand(const LaneKeepOutput& out, int64_t no
   cmd->set_vision_ts_ms(vision_ms);
   cmd->set_chassis_ts_ms(chassis_ms);
   cmd->set_publish_ts_ms(publish_ms);
-  return zmq;
+  return msg;
 }
 
 LaneKeepOutput laneKeepFromProto(const adas::proto::LaneKeepState& p, int64_t timestamp_us)
@@ -269,7 +327,6 @@ LaneKeepOutput laneKeepFromProto(const adas::proto::LaneKeepState& p, int64_t ti
   o.has_target = p.has_target();
   o.curvature = p.curvature();
   o.status = p.status();
-  // Published as "ok:mpc" / "ok:pp" (see LaneKeep::publishLaneKeep).
   const auto colon = o.status.find(':');
   if (colon != std::string::npos) {
     o.controller = o.status.substr(colon + 1);
@@ -297,6 +354,19 @@ LocalizationPose localizationFromProto(const adas::proto::LocalizationPose& p, i
   o.odom_y = p.odom_y();
   o.ekf_x = p.ekf_x();
   o.ekf_y = p.ekf_y();
+  // Крен и выученные параметры: публикующая сторона их заполняет, а здесь они терялись, поэтому
+  // всё, что читает позу через `InternalSubscriber` — реплеи и pyadas — видело нули там, где
+  // контроллер уже ехал на выученных числах.
+  o.road_roll_deg = p.road_roll_deg();
+  o.road_roll_std_deg = p.road_roll_std_deg();
+  o.road_roll_valid = p.road_roll_valid();
+  o.learned_stiffness_factor = p.learned_stiffness_factor();
+  o.learned_steer_ratio = p.learned_steer_ratio();
+  o.learned_angle_offset_deg = p.learned_angle_offset_deg();
+  o.learned_stiffness_std = p.learned_stiffness_std();
+  o.learned_steer_ratio_std = p.learned_steer_ratio_std();
+  o.learned_params_valid = p.learned_params_valid();
+  o.learned_sample_count = p.learned_sample_count();
   return o;
 }
 
@@ -318,6 +388,289 @@ CameraCalibrationState cameraCalibFromProto(const adas::proto::CameraCalibration
   o.vp_v = p.vp_v();
   o.has_vp = p.has_vp();
   return o;
+}
+
+adas::proto::MiddlewareStats createMiddlewareStats(const adas::middleware::MiddlewareSnapshot& snap)
+{
+  const int64_t ts_ms = static_cast<int64_t>(snap.timestamp_us / 1000ULL);
+  adas::proto::MiddlewareStats msg;
+  auto* st = &msg;
+  st->set_timestamp(ts_ms);
+  st->set_dropped_total(snap.dropped_total);
+  st->set_services(snap.services);
+  st->set_running(snap.running);
+  st->set_any_lagging(snap.any_lagging);
+
+  for (const auto& s : snap.services_timing) {
+    auto* t = st->add_services_timing();
+    t->set_name(s.name);
+    t->set_running(s.running);
+    t->set_messages_processed(s.messages_processed);
+    t->set_timers_fired(s.timers_fired);
+    t->set_exceptions(s.exceptions);
+    t->set_dropped(s.dropped);
+    t->set_inbox_depth(s.inbox_depth);
+    t->set_backlog_depth(s.backlog_depth);
+    t->set_last_cb_ms(s.last_cb_ms);
+    t->set_mean_cb_ms(s.mean_cb_ms);
+    t->set_max_cb_ms(s.max_cb_ms);
+    t->set_period_ms(s.period_ms);
+    t->set_last_dt_ms(s.last_dt_ms);
+    t->set_mean_dt_ms(s.mean_dt_ms);
+    t->set_max_dt_ms(s.max_dt_ms);
+    t->set_lagging(s.lagging);
+    for (const auto& tm : s.timers) {
+      auto* tt = t->add_timers();
+      tt->set_name(tm.name);
+      tt->set_period_ms(tm.period_ms);
+      tt->set_last_dt_ms(tm.last_dt_ms);
+      tt->set_mean_dt_ms(tm.mean_dt_ms);
+      tt->set_max_dt_ms(tm.max_dt_ms);
+      tt->set_lagging(tm.lagging);
+      tt->set_fired(tm.fired);
+    }
+  }
+
+  return msg;
+}
+
+adas::proto::LocalizationPose createLocalizationPose(const LocalizationPose& pose, int64_t timestamp_us)
+{
+  adas::proto::LocalizationPose msg;
+  auto* p = &msg;
+  p->set_timestamp(timestamp_us / 1000);
+  p->set_x(pose.x);
+  p->set_y(pose.y);
+  p->set_yaw(pose.yaw);
+  p->set_road_roll_deg(pose.road_roll_deg);
+  p->set_road_roll_std_deg(pose.road_roll_std_deg);
+  p->set_road_roll_valid(pose.road_roll_valid);
+  p->set_learned_stiffness_factor(pose.learned_stiffness_factor);
+  p->set_learned_steer_ratio(pose.learned_steer_ratio);
+  p->set_learned_angle_offset_deg(pose.learned_angle_offset_deg);
+  p->set_learned_stiffness_std(pose.learned_stiffness_std);
+  p->set_learned_steer_ratio_std(pose.learned_steer_ratio_std);
+  p->set_learned_params_valid(pose.learned_params_valid);
+  p->set_learned_sample_count(pose.learned_sample_count);
+  p->set_v(pose.v);
+  p->set_yaw_rate(pose.yaw_rate);
+  p->set_odom_x(pose.odom_x);
+  p->set_odom_y(pose.odom_y);
+  p->set_ekf_x(pose.ekf_x);
+  p->set_ekf_y(pose.ekf_y);
+  return msg;
+}
+
+adas::proto::SafetyWarnState createSafetyWarn(const safety::PlannerInput& in, const safety::SafetyPlan& plan,
+                                              const SafetyWarnFlags& w, int64_t ms)
+{
+  adas::proto::SafetyWarnState msg;
+  auto* sw = &msg;
+  sw->set_timestamp(ms);
+  sw->set_accel_ms2(static_cast<float>(plan.acceleration_ms2));
+  sw->set_cte_m(static_cast<float>(in.lateral.cte_m));
+  sw->set_epsi_rad(static_cast<float>(in.lateral.epsi_rad));
+  sw->set_kappa(static_cast<float>(in.lateral.kappa));
+  sw->set_lateral_valid(in.lateral.valid);
+  sw->set_v_ego(static_cast<float>(in.ego_speed_ms));
+  sw->set_lead_d(static_cast<float>(w.lead_d));
+  sw->set_lead_v(static_cast<float>(w.lead_v));
+  sw->set_lead_prob(static_cast<float>(w.lead_prob));
+  sw->set_has_lead(w.has_lead);
+  sw->set_fcw(w.fcw);
+  sw->set_aeb(w.aeb);
+  sw->set_lldw(w.lldw);
+  sw->set_rldw(w.rldw);
+  sw->set_cte_rate_ms(static_cast<float>(in.lateral.cte_rate_ms));
+  sw->set_ttc_s(static_cast<float>(plan.threat.valid ? plan.threat.ttc_s : 0.0));
+  sw->set_a_req_ms2(static_cast<float>(plan.threat.valid ? plan.threat.a_req_ms2 : 0.0));
+  sw->set_threat_valid(plan.threat.valid);
+  sw->set_driver_steering(in.driver_steering);
+  sw->set_lane_anchored(in.lateral.lane_anchored);
+  sw->set_status(w.status);
+  return msg;
+}
+
+ChassisSample carStateToChassis(const adas::proto::CarState& cs, double steer_ratio)
+{
+  ChassisSample s;
+  s.timestamp_us = cs.timestamp() * 1000;
+  s.speed_mps = cs.v_ego();
+  s.yaw_rate = cs.yaw_rate();
+  s.steering_angle_deg = cs.steering_angle_deg();
+  s.steering_pressed = cs.steering_pressed();
+  s.left_blinker = cs.left_blinker();
+  s.right_blinker = cs.right_blinker();
+  const double ratio = std::max(steer_ratio, 1e-3);
+  s.steer_rad = (cs.steering_angle_deg() * M_PI / 180.0) / ratio;
+  return s;
+}
+
+RawImuSample imuToRaw(const adas::proto::IMUData& imu)
+{
+  RawImuSample s;
+  s.timestamp_us = imu.timestamp() * 1000;
+  s.ax = imu.accel_x();
+  s.ay = imu.accel_y();
+  s.az = imu.accel_z();
+  s.gx = imu.gyro_x();
+  s.gy = imu.gyro_y();
+  s.gz = imu.gyro_z();
+  s.valid = true;
+  return s;
+}
+
+CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& odom)
+{
+  CameraOdometrySample s;
+  s.timestamp_us = odom.timestamp() * 1000;
+  for (int i = 0; i < 3; ++i) {
+    s.trans(i) = (i < odom.trans_size()) ? odom.trans(i) : 0.0;
+    s.rot(i) = (i < odom.rot_size()) ? odom.rot(i) : 0.0;
+    s.trans_std(i) = (i < odom.trans_std_size()) ? odom.trans_std(i) : 1.0;
+    s.rot_std(i) = (i < odom.rot_std_size()) ? odom.rot_std(i) : 1.0;
+  }
+  s.valid = odom.trans_size() >= 3 && odom.rot_size() >= 3;
+  return s;
+}
+
+adas::proto::LanePath createLanePath(const LanePathMsg& path)
+{
+  adas::proto::LanePath msg;
+  msg.set_timestamp(path.timestamp_us / 1000);
+  msg.set_capture_ts_ms(path.capture_ts_us / 1000);
+  msg.set_infer_ts_ms(path.infer_ts_us / 1000);
+  msg.set_frame_id(path.frame_id);
+  for (const auto& p : path.polyline) {
+    auto* pt = msg.add_polyline();
+    pt->set_x(p.x());
+    pt->set_y(p.y());
+  }
+  for (const auto& p : path.plan_poly) {
+    auto* pt = msg.add_plan_poly();
+    pt->set_x(p.x());
+    pt->set_y(p.y());
+  }
+  for (const double v : path.plan_yaw)
+    msg.add_plan_yaw(v);
+  for (const double v : path.plan_yaw_rate)
+    msg.add_plan_yaw_rate(v);
+  msg.set_lane_anchored(path.lane_anchored);
+  msg.set_lanelines_active(path.lanelines_active);
+  msg.set_lane_width_m(path.lane_width_m);
+  msg.set_center_force_m(path.center_force_m);
+  msg.set_lane_offset_m(path.lane_offset_m);
+  msg.set_p_lane_blend_scale(path.p_lane_blend_scale);
+  msg.set_p_camera_offset_m(path.p_camera_offset_m);
+  msg.set_p_center_force_gain(path.p_center_force_gain);
+  return msg;
+}
+
+LanePathMsg lanePathFromProto(const adas::proto::LanePath& msg)
+{
+  LanePathMsg path;
+  path.timestamp_us = msg.timestamp() * 1000;
+  path.capture_ts_us = msg.capture_ts_ms() * 1000;
+  path.infer_ts_us = msg.infer_ts_ms() * 1000;
+  path.frame_id = msg.frame_id();
+  path.polyline.reserve(msg.polyline_size());
+  for (const auto& p : msg.polyline())
+    path.polyline.push_back({p.x(), p.y()});
+  path.plan_poly.reserve(msg.plan_poly_size());
+  for (const auto& p : msg.plan_poly())
+    path.plan_poly.push_back({p.x(), p.y()});
+  path.plan_yaw.assign(msg.plan_yaw().begin(), msg.plan_yaw().end());
+  path.plan_yaw_rate.assign(msg.plan_yaw_rate().begin(), msg.plan_yaw_rate().end());
+  path.lane_anchored = msg.lane_anchored();
+  path.lanelines_active = msg.lanelines_active();
+  path.lane_width_m = msg.lane_width_m();
+  path.center_force_m = msg.center_force_m();
+  path.lane_offset_m = msg.lane_offset_m();
+  path.p_lane_blend_scale = msg.p_lane_blend_scale();
+  path.p_camera_offset_m = msg.p_camera_offset_m();
+  path.p_center_force_gain = msg.p_center_force_gain();
+  return path;
+}
+
+adas::proto::CarState carStateFromChassis(const ChassisSample& chassis)
+{
+  adas::proto::CarState cs;
+  cs.set_timestamp(chassis.timestamp_us / 1000);
+  cs.set_v_ego(chassis.speed_mps);
+  cs.set_yaw_rate(chassis.yaw_rate);
+  cs.set_steering_angle_deg(chassis.steering_angle_deg);
+  cs.set_steering_pressed(chassis.steering_pressed);
+  cs.set_left_blinker(chassis.left_blinker);
+  cs.set_right_blinker(chassis.right_blinker);
+  return cs;
+}
+
+adas::proto::MapLocalState createMapLocal(const MapLocalInputs& in)
+{
+  constexpr double kDeg = M_PI / 180.0;
+
+  adas::proto::MapLocalState m;
+  m.set_timestamp(in.timestamp_us / 1000);
+  m.set_map_loaded(true);
+  m.set_pose_gps_gap_m(static_cast<float>(in.pose_gps_gap_m));
+  if (!in.positioned || in.route == nullptr)
+    return m;
+
+  const mapmatch::RouteAhead& route = *in.route;
+  m.set_lat(in.lat);
+  m.set_lon(in.lon);
+  m.set_map_x(in.map_x);
+  m.set_map_y(in.map_y);
+  m.set_yaw(in.yaw);
+  m.set_speed_mps(static_cast<float>(in.speed_mps));
+  m.set_matched(route.matched);
+  m.set_build_ms(static_cast<float>(in.build_ms));
+  if (!route.matched)
+    return m;
+
+  m.set_match_dist_m(static_cast<float>(route.match_dist_m));
+  m.set_heading_delta_deg(static_cast<float>(route.heading_delta_rad / kDeg));
+  m.set_road_name(route.road_name);
+  m.set_route_step_m(static_cast<float>(in.route_step_m));
+  m.set_route_length_m(static_cast<float>(route.length_m));
+  m.set_route_node_spacing_m(static_cast<float>(route.node_spacing_m));
+
+  m.mutable_route_x()->Reserve(static_cast<int>(route.x_m_pts.size()));
+  m.mutable_route_y()->Reserve(static_cast<int>(route.y_m_pts.size()));
+  m.mutable_route_kappa()->Reserve(static_cast<int>(route.kappa.size()));
+  for (std::size_t i = 0; i < route.x_m_pts.size(); ++i) {
+    m.add_route_x(static_cast<float>(route.x_m_pts[i]));
+    m.add_route_y(static_cast<float>(route.y_m_pts[i]));
+    m.add_route_kappa(static_cast<float>(i < route.kappa.size() ? route.kappa[i] : 0.0));
+  }
+
+  for (const auto& t : route.turns) {
+    auto* s = m.add_turns();
+    s->set_start_m(static_cast<float>(t.start_m));
+    s->set_end_m(static_cast<float>(t.end_m));
+    s->set_kappa(static_cast<float>(t.kappa));
+    s->set_speed_mps(static_cast<float>(t.speed_mps));
+    s->set_sign(t.sign);
+  }
+
+  for (const auto& t : route.turns) {
+    if (t.start_m <= 0.5 && t.end_m > 0.0) {
+      m.set_turn_speed_valid(true);
+      m.set_turn_speed_mps(static_cast<float>(t.speed_mps));
+      m.set_turn_speed_end_m(static_cast<float>(t.end_m));
+      m.set_turn_speed_sign(t.sign);
+      break;
+    }
+  }
+  for (const auto& t : route.turns) {
+    if (t.start_m > 0.5) {
+      m.set_next_turn_valid(true);
+      m.set_next_turn_speed_mps(static_cast<float>(t.speed_mps));
+      m.set_next_turn_distance_m(static_cast<float>(t.start_m));
+      break;
+    }
+  }
+  return m;
 }
 
 }  // namespace adas

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package adas.proto;
+
+// Опорная линия для поперечного контура: результат разбора разметки и плана модели.
+//
+// Отдельным сообщением, а не внутренним состоянием одного сервиса, по двум причинам. Её строит
+// один потребитель разметки, а нужна она троим — планеру удержания, продольному планеру и
+// предупреждателю; пересчитывать её трижды означало бы три копии фильтра ширины полосы. И она
+// попадает в запись заезда: без неё по багу видно вход (LaneLines) и выход (SteerCommand), но не
+// то, по чему машина ехала.
+message LanePathPoint {
+  double x = 1;
+  double y = 2;
+}
+
+message LanePath {
+  int64 timestamp = 1;
+  int64 capture_ts_ms = 2;
+  int64 infer_ts_ms = 3;
+  int32 frame_id = 4;
+
+  // Опорная линия в системе машины: x вперёд, y влево.
+  repeated LanePathPoint polyline = 5;
+
+  // План модели и его углы — то, что пришло из зрения без смешивания с разметкой.
+  repeated LanePathPoint plan_poly = 6;
+  repeated double plan_yaw = 7;       // рад
+  repeated double plan_yaw_rate = 8;  // рад/с
+
+  bool lane_anchored = 9;
+  bool lanelines_active = 10;
+  double lane_width_m = 11;
+
+  // Смещение центрирующей силы и положение в полосе — вход и следствие одного и того же расчёта.
+  double center_force_m = 12;
+  double lane_offset_m = 13;
+
+  // Настройки, с которыми линия построена: без них по записи не отличить смену поведения от
+  // смены конфигурации.
+  double p_lane_blend_scale = 14;
+  double p_camera_offset_m = 15;
+  double p_center_force_gain = 16;
+}

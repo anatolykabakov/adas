@@ -25,14 +25,8 @@ import matplotlib
 matplotlib.use("Agg")
 
 from vis.android_bag_player import AndroidBagPlayer
-from core.gps_utils import calculate_initial_heading_from_gps, gps_to_local_coords
-from core.imu_utils import process_imu_for_odometry
+from core.gps_utils import gps_to_local_coords
 from vis.plotting import plot_trajectory
-from vis.trajectory_calculators import (
-    calculate_trajectory,
-    calculate_trajectory_ekf,
-    calculate_trajectory_imu,
-)
 
 # VW MQB GE_Fahrstufe → name used by VehicleModel
 _GEAR_NAME = {
@@ -65,7 +59,7 @@ def extract_vehicle_series(
     gear: List = []
     for ts, msg in player.get_topic_msgs("vehicle/state"):
         ws = msg.wheel_speeds
-        # calculate_trajectory expects vr, vl, hr, hl (= fr, fl, rr, rl)
+        # wheel speed order: vr, vl, hr, hl (= fr, fl, rr, rl)
         wheel.append(
             [
                 ts,
@@ -103,7 +97,12 @@ def extract_imu(player: AndroidBagPlayer) -> Optional[np.ndarray]:
 
 
 def extract_gps(player: AndroidBagPlayer) -> Optional[np.ndarray]:
-    """(N, 6): timestamp, lat, lon, alt, speed, bearing_deg. Prefer sensors/gps/location."""
+    """(N, 8): timestamp, lat, lon, alt, speed, bearing_deg, horizontal_accuracy_m, satellites.
+
+    The last two columns are what tells a 10 m fix from a 153 m one. Without them the offline EKF
+    admits every fix at the same weight and the accuracy gate in the filter can never fire, so the
+    replayed track tangles where the receiver degraded while the on-device pose did not.
+    """
     topic = (
         "sensors/gps/location"
         if "sensors/gps/location" in player.topics
@@ -122,9 +121,64 @@ def extract_gps(player: AndroidBagPlayer) -> Optional[np.ndarray]:
                 float(msg.altitude),
                 float(msg.speed),
                 bearing,
+                float(getattr(msg, "horizontal_accuracy", 0.0) or 0.0),
+                float(getattr(msg, "satellites_used", 0) or 0),
             ]
         )
     return np.asarray(rows, dtype=np.float64) if rows else None
+
+
+def extract_pose(player: AndroidBagPlayer) -> Optional[np.ndarray]:
+    """(N, 3): timestamp, east_m, north_m — the pose the device published, straight from the bag."""
+    topic = "localization/pose"
+    if topic not in player.topics:
+        return None
+    rows = [[ts, float(m.x), float(m.y)] for ts, m in player.get_topic_msgs(topic)]
+    return np.asarray(rows, dtype=np.float64) if rows else None
+
+
+def extract_camera_calib(player: AndroidBagPlayer) -> Optional[np.ndarray]:
+    """(N, 5): timestamp, pitch_deg, yaw_deg, height_m, converged — the mounting the car actually used."""
+    topic = "calibration/camera"
+    if topic not in player.topics:
+        return None
+    rows = [
+        [
+            ts,
+            float(m.pitch_deg),
+            float(m.yaw_deg),
+            float(m.camera_height_m),
+            1.0 if bool(m.calibration_success) else 0.0,
+        ]
+        for ts, m in player.get_topic_msgs(topic)
+    ]
+    return np.asarray(rows, dtype=np.float64) if rows else None
+
+
+def align_pose_to_gps_frame(
+    pose: np.ndarray, gps_data: np.ndarray, max_acc: float = 10.0
+):
+    """Rigid shift of a recorded pose into the panel's GPS-anchored frame.
+
+    The device anchors its ENU plane at its own origin, not at the first fix in this bag, so the two
+    frames differ by a constant translation — 436 m on 2026_08_11_09_49_43, constant to 0.3 m over
+    1236 s. Drawing them together without this reads as a huge localisation error that is not there.
+    Only fixes at or below ``max_acc`` are used, since bad fixes would bias the offset itself.
+    """
+    if pose is None or gps_data is None or len(pose) < 2 or len(gps_data) < 2:
+        return pose
+    x_gps, y_gps = gps_to_local_coords(gps_data, origin_idx=0)
+    acc = gps_data[:, 6] if gps_data.shape[1] >= 7 else np.zeros(len(gps_data))
+    k = (acc > 0) & (acc <= max_acc)
+    if k.sum() < 5:
+        k = np.ones(len(gps_data), dtype=bool)
+    tg = gps_data[k, 0]
+    dx = float(np.median(np.interp(tg, pose[:, 0], pose[:, 1]) - x_gps[k]))
+    dy = float(np.median(np.interp(tg, pose[:, 0], pose[:, 2]) - y_gps[k]))
+    out = pose.copy()
+    out[:, 1] -= dx
+    out[:, 2] -= dy
+    return out
 
 
 def print_summary(player: AndroidBagPlayer) -> None:
@@ -141,101 +195,32 @@ def print_summary(player: AndroidBagPlayer) -> None:
 
 
 def build_trajectories(
-    wheel: List,
-    steering: List,
-    gear: List,
+    player: AndroidBagPlayer,
     gps_data: Optional[np.ndarray],
-    imu_data: Optional[np.ndarray],
     output_dir: str,
 ) -> None:
-    initial_yaw = 0.0
-    if gps_data is not None and len(gps_data) >= 2:
-        initial_yaw = calculate_initial_heading_from_gps(gps_data, n_points=5)
-        print(
-            f"Initial heading from GPS: {np.degrees(initial_yaw):.1f}° "
-            f"(yaw={initial_yaw:.3f} rad)"
-        )
+    """Plot what the bag holds: the GNSS fixes and the pose the device published.
 
+    Odometry, an IMU track and an offline EKF were computed here before. Each re-derived the drive from
+    Python with its own inputs and tuning, and the EKF one published fixes without their accuracy, so it
+    admitted 150 m fixes at full weight and tangled where the device's own pose ran clean.
+    """
     x_gps = y_gps = None
     if gps_data is not None and len(gps_data) > 0:
-        print("Converting GPS to local frame...")
         x_gps, y_gps = gps_to_local_coords(gps_data, origin_idx=0)
-        print(f"GPS trajectory: {len(x_gps)} points")
+        print(f"GPS: {len(x_gps)} points")
 
-    x_imu = y_imu = x_ekf = y_ekf = None
-    x_fusion = y_fusion = x_gps_fusion = y_gps_fusion = None
+    pose = align_pose_to_gps_frame(extract_pose(player), gps_data)
+    x_pose = pose[:, 1] if pose is not None else None
+    y_pose = pose[:, 2] if pose is not None else None
+    if pose is not None:
+        print(f"Pose: {len(pose)} points")
 
-    if (
-        imu_data is not None
-        and len(imu_data) > 0
-        and wheel
-        and gps_data is not None
-        and len(gps_data) > 0
-    ):
-        print("\nProcessing IMU...")
-        try:
-            imu_processed = process_imu_for_odometry(
-                imu_data,
-                np.array(wheel),
-                speed_threshold_orientation=0.1,
-                speed_threshold_bias=0.5,
-                time_window_sec=20.0,
-                invert_yaw_rate=True,
-            )
-            print("IMU trajectory...")
-            x_imu, y_imu = calculate_trajectory_imu(
-                wheel,
-                imu_processed["yaw_rate"],
-                imu_processed["imu_calibrated"][:, 0],
-                initial_yaw=initial_yaw,
-            )
-            print(f"IMU trajectory: {len(x_imu)} points")
-
-            print("EKF trajectory...")
-            x_ekf, y_ekf, _ekf = calculate_trajectory_ekf(
-                wheel,
-                steering,
-                gear,
-                imu_processed["yaw_rate"],
-                imu_processed["imu_calibrated"][:, 0],
-                gps_data,
-                wheelbase=2.636,
-                initial_yaw=initial_yaw,
-                alpha_imu=0.7,
-                gps_update_interval=1.0,
-                imu_update_interval=0.01,
-            )
-            print(f"EKF trajectory: {len(x_ekf)} points")
-        except Exception as e:
-            print(f"Warning: IMU/EKF failed: {e}")
-            import traceback
-
-            traceback.print_exc()
-            x_imu = y_imu = x_ekf = y_ekf = None
-
-    if not wheel:
-        print("No vehicle/state wheel data — skip trajectory plot")
+    if x_gps is None and x_pose is None:
+        print("No GNSS and no pose in the bag — skip trajectory plot")
         return
 
-    print("Odometry (steering) trajectory...")
-    x_odom, y_odom = calculate_trajectory(
-        wheel, steering, gear, wheelbase=2.636, initial_yaw=initial_yaw
-    )
-    plot_trajectory(
-        x_odom,
-        y_odom,
-        x_gps,
-        y_gps,
-        x_imu,
-        y_imu,
-        x_fusion,
-        y_fusion,
-        x_gps_fusion,
-        y_gps_fusion,
-        x_ekf,
-        y_ekf,
-        output_dir,
-    )
+    plot_trajectory(x_gps, y_gps, x_pose, y_pose, output_dir)
     print(f"Saved trajectory → {output_dir}/trajectory.png")
 
 
@@ -310,18 +295,13 @@ def main() -> int:
         if args.summary_only:
             return 0
 
-        wheel, steering, gear = extract_vehicle_series(player)
+        # print_summary already lists every topic with its message count, and wheel / steering / IMU
+        # series are no longer needed here: nothing is re-derived from them.
         gps_data = extract_gps(player)
-        imu_data = extract_imu(player)
-        print(
-            f"Extracted: wheel={len(wheel)} steering={len(steering)} "
-            f"gear={len(gear)} gps={0 if gps_data is None else len(gps_data)} "
-            f"imu={0 if imu_data is None else len(imu_data)}"
-        )
 
         do_plot = args.plot_trajectory and not args.no_plot_trajectory
         if do_plot:
-            build_trajectories(wheel, steering, gear, gps_data, imu_data, args.output)
+            build_trajectories(player, gps_data, args.output)
         maybe_dump_first_image(player, args.output)
 
     return 0

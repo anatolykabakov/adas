@@ -13,7 +13,6 @@ extern "C" {
 namespace adas {
 namespace flowpilot {
 namespace {
-
 constexpr int kN = LAT_N;
 constexpr int kNx = LAT_NX;
 constexpr int kNp = LAT_NP;

@@ -15,9 +15,7 @@
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
 namespace adas {
-
 namespace services {
-
 class Panda : public adas::middleware::Service {
 public:
   struct Config {
@@ -27,21 +25,7 @@ public:
     double cruise_deadband_ms = 0.70;
     int cruise_tip_cooldown_ms = 200;
     double cruise_tip_step_ms = 1.0 / 3.6;
-    /** Always-on lateral: steer while the cruise **main switch** is on, instead of only while the stock
-     *  cruise is actually engaged.
-     *
-     *  This is upstream's ATL/ALKA (`controlsd.py:677` plus `alternativeExperience |= ALKA`) and it is the
-     *  single largest measured divergence from dragonpilot on this car. `controls_allowed` for MQB follows
-     *  `TSK_06.TSK_Status ∈ {3,4,5}`, and the stock VW cruise drops below ~30 km/h and on brake — so on run
-     *  2026_08_06_18_27_12 the assist was present in 2.6 % of frames at 5–8 m/s and 18.3 % at 8–12, exactly
-     *  where the driver reported having to correct the wheel. On the same car dragonpilot steered 64.3 % of
-     *  frames with `controls_allowed` false, with real torque applied in 96.3 % of them.
-     *
-     *  One flag drives both halves on purpose. The panda bit without the gate changes nothing; the gate
-     *  without the bit makes the panda discard our HCA frames. Splitting them is how the two come to
-     *  disagree. */
     bool lat_always_on = false;
-    /** Wheel-speed filtering and the wheel-radius correction — see `utils/speed_filter.h`. */
     adas::SpeedFilter::Config speed_filter{};
   };
 
@@ -57,17 +41,17 @@ private:
   void pandaRxCallback();
   void pandaStateCallback();
   void carControllerCallback();
-  void steerCommandCallback(const adas::proto::ZMQMessage& msg);
-  void longPlanCallback(const adas::proto::ZMQMessage& msg);
+  void steerCommandCallback(const adas::proto::SteerCommand& cmd);
+  void longPlanCallback(const adas::proto::LongPlanState& lp);
   void initializePanda();
-  void publishCarState();
+  void publishCarState(int64_t now_ms);
   volkswagen::CruiseButtonCmd computeCruiseButtons(const volkswagen::CarStateView& cs);
   bool assistAllowed(const volkswagen::CarStateView& cs) const;
 
   Config config_;
   int usb_fd_;
   std::string dbc_path_;
-  std::shared_ptr<::Panda> panda_;  ///< the USB device, not this service
+  std::shared_ptr<::Panda> panda_;
   std::unique_ptr<DBSParser> dbc_;
 
   volkswagen::MqbCarStateDecoder decoder_;
@@ -83,8 +67,6 @@ private:
   int64_t long_plan_ts_ms_ = 0;
   bool cruise_was_engaged_ = false;
   double cruise_v_set_ = 0.0;
-  /** Speed the driver had when they engaged cruise — the ceiling for the whole engagement. The
-   *  assistant may only hand speed back and restore it, never ask for more than was chosen. */
   double cruise_v_set_ceiling_ = 0.0;
   int64_t cruise_cooldown_until_ms_ = 0;
   bool cruise_hold_tip_up_ = false;

@@ -6,17 +6,19 @@
 #include <cmath>
 
 #include "adas/utils/logger.h"
-#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/math_utils.h"
 
 namespace adas {
 namespace services {
-
 void LongPlan::configure()
 {
-  subscribe<adas::proto::ZMQMessage>(topics::kVisionModelLong,
-                                     [this](const adas::proto::ZMQMessage& m) { onModelLong(m); });
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
-  subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onPath(m); });
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::LanePath>(
+      topics::kVisionPath, [this](const adas::proto::LanePath& payload) { onPath(lanePathFromProto(payload)); });
+  subscribe<adas::proto::ModelLongPlan>(topics::kVisionModelLong,
+                                        [this](const adas::proto::ModelLongPlan& m) { onModelLong(m); });
   scheduleTimer(
       50, [this] { tick(); }, "tick");
   LOGI("LongPlan: %s + chassis → %s (coast envelope %.2f m/s^2, plan_v %s)", topics::kVisionModelLong,
@@ -39,11 +41,9 @@ void LongPlan::onPath(const LanePathMsg& msg)
   have_path_ = path_.size() >= 3;
 }
 
-void LongPlan::onModelLong(const adas::proto::ZMQMessage& msg)
+void LongPlan::onModelLong(const adas::proto::ModelLongPlan& payload)
 {
-  if (!msg.has_model_long_plan())
-    return;
-  model_ = msg.model_long_plan();
+  model_ = payload;
   have_model_ = true;
 }
 
@@ -62,9 +62,6 @@ void LongPlan::tick()
   in.v_ego = std::max(0.0, chassis_.speed_mps);
   in.path = have_path_ ? &path_ : nullptr;
 
-  // Only `lead0`. `lead1` and `lead2` are the model's predictions at +2 s and +4 s, so taking the
-  // most probable of the three targets a vehicle that is not there yet — the same defect that was
-  // fixed in the warning path on 2026-08-02 and left standing here until run 2026_08_06_00_36_42.
   const auto& lead = model_.lead0();
   in.lead.prob = lead.prob();
   in.lead.d_rel = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
@@ -78,7 +75,7 @@ void LongPlan::tick()
 
   const longplan::Plan plan = longplan::compute(config_, in);
 
-  publish(topics::kLongPlan, createLongPlan(in, plan, utils::getCurrentTimestamp()));
+  publish(topics::kLongPlan, createLongPlan(in, plan, nowMs()));
 }
 
 }  // namespace services

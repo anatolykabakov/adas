@@ -63,8 +63,7 @@ from vis.osm_layer import (
 )
 from vis.road_bev import warp_to_road
 from core.frames import DRAW_Y_SIGN
-from core.gps_utils import calculate_initial_heading_from_gps, gps_to_local_coords
-from core.imu_utils import process_imu_for_odometry
+from core.gps_utils import gps_to_local_coords
 from core.lane_projection import (
     CameraIntrinsics,
     intrinsics_from_messages,
@@ -75,11 +74,6 @@ from core.path_fusion import (
     plan_orientation_from_lanes,
 )
 from core.supercombo_compare import draw_bag_lanes, make_overlay_geometry
-from vis.trajectory_calculators import (
-    calculate_trajectory,
-    calculate_trajectory_ekf,
-    calculate_trajectory_imu,
-)
 from core.lane_keep import (
     DEFAULTS,
     LaneKeepResult,
@@ -92,6 +86,9 @@ from core.viz_params_ui import load_camera_priors
 from vis.visualizer import (
     _UNIT_TO_DEG,
     extract_gps,
+    extract_pose,
+    extract_camera_calib,
+    align_pose_to_gps_frame,
     extract_imu,
     extract_vehicle_series,
 )
@@ -141,6 +138,8 @@ class InteractiveVisualizer:
 
         self.imu_data: Optional[np.ndarray] = None
         self.gps_data: Optional[np.ndarray] = None
+        self.pose_data: Optional[np.ndarray] = None
+        self.calib_data: Optional[np.ndarray] = None
         self.wheel_data: Optional[np.ndarray] = None
         self.steering_data: Optional[np.ndarray] = None
         self.gear_data: Optional[np.ndarray] = None
@@ -164,8 +163,11 @@ class InteractiveVisualizer:
         self._overlay_yaw_deg = ap.yaw_deg
         self._overlay_roll_deg = ap.roll_deg
         self._overlay_height_m = ap.height_m
-        self._overlay_cam_x = ap.cam_x
-        self._overlay_cam_y = ap.cam_y_left
+        # VisionPipeline.setCalib takes three angles and the intrinsics — no mount offset. The device's
+        # road frame is therefore anchored at the camera, and the lanes in the bag are already in it.
+        # Adding a translation on the way back would be a shift the forward transform never applied.
+        self._overlay_cam_x = 0.0
+        self._overlay_cam_y = 0.0
 
         self.playing = False
         self.play_speed = 1.0
@@ -365,6 +367,10 @@ class InteractiveVisualizer:
             self.gear_data = np.array(gear, dtype=object) if gear else None
             self.imu_data = extract_imu(self.player)
             self.gps_data = extract_gps(self.player)
+            self.pose_data = align_pose_to_gps_frame(
+                extract_pose(self.player), self.gps_data
+            )
+            self.calib_data = extract_camera_calib(self.player)
             self._load_camera_frames()
             self._load_bag_lanes()
             self._load_bag_lane_keep()
@@ -372,8 +378,7 @@ class InteractiveVisualizer:
             self._load_intrinsics()
             self.load_camera_calibration()
 
-            self.trajectories = {}
-            self.calculate_trajectories()
+            self.build_trajectories()
             # Before plotting: anchoring the map re-projects the trajectories into its frame.
             self._ensure_osm()
             self._compute_headings()
@@ -542,68 +547,27 @@ class InteractiveVisualizer:
             f"{self.intrinsics.width}x{self.intrinsics.height}"
         )
 
-    def calculate_trajectories(self) -> None:
-        print("\nCalculating trajectories…")
-        if self.wheel_data is None or len(self.wheel_data) == 0:
-            print("No wheel data")
-            return
+    def build_trajectories(self) -> None:
+        """Trajectories the bag actually contains: the GNSS fixes and the pose the device published.
 
-        initial_yaw = 0.0
-        if self.gps_data is not None and len(self.gps_data) >= 2:
-            initial_yaw = calculate_initial_heading_from_gps(self.gps_data, n_points=5)
-            print(f"Initial GPS heading: {np.degrees(initial_yaw):.1f}°")
-
+        Nothing is re-derived here. Odometry, an IMU track and an offline EKF used to be recomputed from
+        Python, and each carried its own inputs and tuning — the EKF one published fixes without their
+        accuracy, so it admitted 150 m fixes at full weight and tangled where the device's own pose ran
+        clean. A viewer that shows a reconstruction next to a recording invites reading the
+        reconstruction's defects as the car's.
+        """
+        self.trajectories = {}
         if self.gps_data is not None and len(self.gps_data) > 0:
             x_gps, y_gps = gps_to_local_coords(self.gps_data, origin_idx=0)
             self.trajectories["GPS"] = (x_gps, y_gps)
+            print(f"GPS: {len(x_gps)} pts")
 
-        wheel = self.wheel_data
-        steering = self.steering_data
-        gear = self.gear_data
+        if self.pose_data is not None and len(self.pose_data) > 0:
+            self.trajectories["Поза"] = (self.pose_data[:, 1], self.pose_data[:, 2])
+            print(f"Поза: {len(self.pose_data)} pts")
 
-        x_odom, y_odom = calculate_trajectory(
-            wheel, steering, gear, wheelbase=DEFAULTS.wheelbase, initial_yaw=initial_yaw
-        )
-        self.trajectories["Odometry"] = (x_odom, y_odom)
-        print(f"Odometry: {len(x_odom)} pts")
-
-        if self.imu_data is not None and len(self.imu_data) > 0:
-            try:
-                imu_processed = process_imu_for_odometry(
-                    self.imu_data,
-                    wheel,
-                    speed_threshold_orientation=0.1,
-                    speed_threshold_bias=0.5,
-                    time_window_sec=20.0,
-                    invert_yaw_rate=True,
-                )
-                x_imu, y_imu = calculate_trajectory_imu(
-                    wheel,
-                    imu_processed["yaw_rate"],
-                    imu_processed["imu_calibrated"][:, 0],
-                    initial_yaw=initial_yaw,
-                )
-                self.trajectories["IMU"] = (x_imu, y_imu)
-                print(f"IMU: {len(x_imu)} pts")
-
-                if self.gps_data is not None and len(self.gps_data) > 0:
-                    x_ekf, y_ekf, _ = calculate_trajectory_ekf(
-                        wheel,
-                        steering,
-                        gear,
-                        imu_processed["yaw_rate"],
-                        imu_processed["imu_calibrated"][:, 0],
-                        self.gps_data,
-                        wheelbase=DEFAULTS.wheelbase,
-                        initial_yaw=initial_yaw,
-                    )
-                    self.trajectories["EKF"] = (x_ekf, y_ekf)
-                    print(f"EKF: {len(x_ekf)} pts")
-            except Exception as e:
-                print(f"IMU/EKF failed: {e}")
-                import traceback
-
-                traceback.print_exc()
+        if not self.trajectories:
+            print("В беге нет ни фиксов ГНСС, ни позы — рисовать нечего")
 
     def plot_trajectories(self) -> None:
         self.ax_trajectory.clear()
@@ -612,10 +576,8 @@ class InteractiveVisualizer:
         self._bare_axes()
 
         styles = {
-            "Odometry": {"color": "blue", "linestyle": "-", "linewidth": 2, "alpha": 0.7},
             "GPS": {"color": "red", "linestyle": "--", "linewidth": 2, "alpha": 0.7},
-            "IMU": {"color": "green", "linestyle": "-.", "linewidth": 1.5, "alpha": 0.6},
-            "EKF": {"color": "orange", "linestyle": "-", "linewidth": 2.5, "alpha": 0.9},
+            "Поза": {"color": "orange", "linestyle": "-", "linewidth": 2.5, "alpha": 0.9},
         }
         self.traj_lines = {}
         for name, (x, y) in self.trajectories.items():
@@ -719,7 +681,7 @@ class InteractiveVisualizer:
         opts = ttk.Frame(parent)
         opts.pack(fill=tk.X, pady=(2, 0))
         self.traj_vars = {}
-        for name in ("GPS", "Odometry", "IMU", "EKF"):
+        for name in ("GPS", "Поза"):
             var = tk.BooleanVar(value=True)
             self.traj_vars[name] = var
             ttk.Checkbutton(
@@ -1175,7 +1137,7 @@ class InteractiveVisualizer:
     # ------------------------------------------------------------ detail layer
 
     def _reference_trajectory(self) -> Optional[Tuple[np.ndarray, np.ndarray]]:
-        return self.trajectories.get("EKF") or self.trajectories.get("Odometry")
+        return self.trajectories.get("Поза") or self.trajectories.get("GPS")
 
     def _ego_position(self, index: int) -> Optional[Tuple[float, float]]:
         traj = self._reference_trajectory()
@@ -1676,8 +1638,8 @@ class InteractiveVisualizer:
         self._overlay_yaw_deg = ap.yaw_deg
         self._overlay_roll_deg = ap.roll_deg
         self._overlay_height_m = ap.height_m
-        self._overlay_cam_x = ap.cam_x
-        self._overlay_cam_y = ap.cam_y_left
+        self._overlay_cam_x = 0.0
+        self._overlay_cam_y = 0.0
         source = "assets"
 
         path = self.bag_dir / "calib_rpy.json" if self.bag_dir is not None else None
@@ -1699,13 +1661,24 @@ class InteractiveVisualizer:
                     self._overlay_yaw_deg = angle("yaw", ap.yaw_deg)
                     self._overlay_roll_deg = angle("roll", ap.roll_deg)
                     self._overlay_height_m = float(data.get("camera_height", ap.height_m))
-                    self._overlay_cam_x = float(data.get("cam_x", ap.cam_x))
-                    self._overlay_cam_y = float(data.get("cam_y_left", ap.cam_y_left))
                     source = path.name
                 else:
                     print(f"Ignored {path} pitch={pitch:.1f}° (expect ≤2°)")
             except (OSError, ValueError) as e:
                 print(f"Failed to load {path}: {e}")
+
+        # The bag itself outranks both. `calibration/camera` is what the on-device calibrator had
+        # converged to while driving, and the overlay is only honest if it draws with that geometry:
+        # asset priors carry yaw +0.5° where 2026_08_11_09_49_43 converged to -1.68°, and 2.2° of yaw
+        # moves a point 50 m ahead by 1.9 m — a whole lane, which reads as a broken overlay.
+        if self.calib_data is not None and len(self.calib_data) > 0:
+            ok = self.calib_data[self.calib_data[:, 4] > 0.5]
+            row = ok[-1] if len(ok) else None
+            if row is not None:
+                self._overlay_pitch_deg = float(row[1])
+                self._overlay_yaw_deg = float(row[2])
+                self._overlay_height_m = float(row[3])
+                source = "bag calibration/camera"
 
         print(
             f"Camera calib from {source}: "

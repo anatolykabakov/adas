@@ -27,11 +27,7 @@
 
 namespace adas {
 namespace middleware {
-
 namespace detail {
-
-// Free function (not a class static): NDK clang fails to link static template members
-// used above their definition.
 template <typename T>
 inline bool parseParamText(const std::string& text, T& out)
 {
@@ -139,6 +135,8 @@ protected:
   size_t getQueueSize() const;
 
   uint64_t now() const;
+
+  int64_t nowMs() const { return static_cast<int64_t>(now() / 1000); }
 
   Manager* middleware() const { return bus_; }
 

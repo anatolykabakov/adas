@@ -203,8 +203,16 @@ def project_iso_xyz(
     x_min: float = 1.5,
     y_sign: float = 1.0,
     margin: float = 80.0,
+    keep_gaps: bool = False,
 ) -> list:
-    """ISO ego XYZ → image pixel list via AAD CameraGeometry."""
+    """ISO ego XYZ → image pixel list via AAD CameraGeometry.
+
+    With ``keep_gaps`` a point outside the frame becomes ``None`` instead of vanishing from the list.
+    Silently dropping it makes the two surviving neighbours adjacent, and a polyline drawer then joins
+    them with a straight line across the whole image — the near field of a 0…192 m lane diverges
+    laterally (a 1.5 m line sits at ±422 px at x=1.69 m on a 640-wide frame), so those joins looked
+    like lane lines lying far off the road.
+    """
     xs = np.asarray(xs, dtype=np.float64)
     ys = y_sign * np.asarray(ys, dtype=np.float64)
     zs = np.asarray(zs, dtype=np.float64)
@@ -220,10 +228,14 @@ def project_iso_xyz(
     pts = []
     for i in range(uv.shape[0]):
         if cam[i, 2] <= 0.2:
+            if keep_gaps:
+                pts.append(None)
             continue
         u, v = float(uv[i, 0]), float(uv[i, 1])
         if -margin <= u < w + margin and -margin <= v < h + margin:
             pts.append((int(round(u)), int(round(v))))
+        elif keep_gaps:
+            pts.append(None)
     return pts
 
 

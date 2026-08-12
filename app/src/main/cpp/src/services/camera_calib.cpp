@@ -9,7 +9,6 @@
 
 namespace adas {
 namespace services {
-
 CameraCalib::CameraCalib(Config config)
   : config_(config)
   , pose_calib_(config.pitch_deg, config.yaw_deg, config.height_m)
@@ -31,9 +30,11 @@ CameraCalib::CameraCalib(Config config)
 
 void CameraCalib::configure()
 {
-  subscribe<CameraOdometrySample>(topics::kCameraOdometry,
-                                  [this](const CameraOdometrySample& m) { onCameraOdometry(m); });
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::CameraOdometry>(
+      topics::kCameraOdometry, [this](const adas::proto::CameraOdometry& payload) { onCameraOdometryProto(payload); });
   subscribe<LaneUvMsg>(topics::kCalibLaneUv, [this](const LaneUvMsg& m) { onLaneUv(m); });
   LOGI("CameraCalib: %s + chassis (+ optional %s) → %s + %s", topics::kCameraOdometry, topics::kCalibLaneUv,
        topics::kCameraCalib, topics::kCameraCalibDebug);
@@ -81,6 +82,13 @@ void CameraCalib::setEstimate(double pitch_deg, double yaw_deg)
 void CameraCalib::setVEgo(double v_ego_mps) { pose_calib_.setVEgo(v_ego_mps); }
 
 void CameraCalib::onChassis(const ChassisSample& msg) { pose_calib_.setVEgo(msg.speed_mps); }
+
+void CameraCalib::onCameraOdometryProto(const adas::proto::CameraOdometry& odom)
+{
+  const auto sample = cameraOdometryToSample(odom);
+  if (sample.valid)
+    onCameraOdometry(sample);
+}
 
 void CameraCalib::onCameraOdometry(const CameraOdometrySample& msg) { updateFromPose(msg); }
 

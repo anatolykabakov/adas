@@ -8,7 +8,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct RoadEdge {
   std::uint32_t node_a = 0;
   std::uint32_t node_b = 0;

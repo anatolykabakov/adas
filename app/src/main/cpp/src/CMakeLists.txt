@@ -1,5 +1,4 @@
 add_subdirectory(panda)
-add_subdirectory(utils)
 
 set(ACADOS_OCP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lateral/acados_lat_ocp)
 file(
@@ -20,7 +19,6 @@ target_link_libraries(
   adas_acados_lat
   PUBLIC acados::acados
 )
-set(ADAS_WITH_ACADOS ON)
 
 add_library(
   adas_app_common
@@ -29,13 +27,12 @@ add_library(
   services/zmq_bridge.cpp
   services/panda.cpp
   services/lane_keep.cpp
+  services/lane_keep_gates.cpp
   services/long_plan.cpp
   services/safety_warn.cpp
   services/traffic_sign.cpp
   services/localization.cpp
   services/camera_calib.cpp
-  services/topic_convert.cpp
-  services/imu_calib.cpp
   services/internal_subscriber.cpp
   services/middleware_stats.cpp
   platform/volkswagen/mqbcan.cpp
@@ -49,19 +46,21 @@ add_library(
   mapmatch/fit.cpp
   mapmatch/search.cpp
   mapmatch/window_search.cpp
-  utils/protobuf_utils.cpp
   utils/can_parser.cc
-  lateral/pp.cpp
   utils/path_lateral_state.cpp
+  lateral/pp_planner.cpp
+  lateral/vp_planner.cpp
+  lateral/fp_planner.cpp
+  lateral/kappa_solver.cpp
   lateral/visionpilot_mpc.cpp
   lateral/flowpilot_mpc.cpp
   utils/vehicle_ekf.cpp
   utils/online_localizer.cpp
   utils/vanishing_point_calib.cpp
   utils/pose_calibrator.cpp
-  utils/topic_convert.cpp
   utils/imu_calibrator.cpp
   utils/adas_config.cpp
+  utils/lane_path.cpp
   utils/proto_convert.cpp
 )
 target_link_libraries(
@@ -79,20 +78,14 @@ target_include_directories(
          $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 )
 
-if(ADAS_WITH_ACADOS)
-  target_sources(
-    adas_app_common
-    PRIVATE lateral/acados_lat_mpc.cpp
-  )
-  target_link_libraries(
-    adas_app_common
-    PUBLIC adas_acados_lat
-  )
-  target_compile_definitions(
-    adas_app_common
-    PUBLIC ADAS_WITH_ACADOS
-  )
-endif()
+target_sources(
+  adas_app_common
+  PRIVATE lateral/acados_lat_mpc.cpp
+)
+target_link_libraries(
+  adas_app_common
+  PUBLIC adas_acados_lat
+)
 
 if(BUILD_FOR_ANDROID)
   target_compile_definitions(

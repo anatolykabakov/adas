@@ -23,7 +23,6 @@ static std::string jstringToStd(JNIEnv* env, jstring value)
 }
 
 extern "C" {
-
 JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStart(JNIEnv* env, jclass, jint fd, jstring dbcPath,
                                                                 jstring configPath, jstring mapPath)
 {
@@ -37,9 +36,6 @@ JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStart(JNIEnv* env, jcl
     LOGW("JNI nativeStart: config load failed (%s), continuing with defaults", config_path.c_str());
   }
 
-  // An APK asset has no path until Java unpacks it, so `map.path` in the config names the asset and this is
-  // where it landed. Empty means the `map_data` node is off and Java did not unpack it — leave the config
-  // value alone so a hand-pushed `/sdcard/adas_maps/` copy still works.
   if (!map_path.empty()) {
     cfg.map_data.map_path = map_path;
   }
@@ -149,5 +145,4 @@ JNIEXPORT jboolean JNICALL Java_adas_app_vision_ModelCalibWarp_nativeWarpYuvToFr
   env->ReleaseFloatArrayElements(outArr, out, 0);
   return JNI_TRUE;
 }
-
-}  // extern "C"
+}

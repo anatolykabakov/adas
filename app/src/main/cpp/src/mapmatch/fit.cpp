@@ -10,7 +10,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 thread_local std::vector<double> g_route_x, g_route_y;
 
 double distSqToSegment(double px, double py, double ax, double ay, double bx, double by, double* qx, double* qy)

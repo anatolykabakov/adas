@@ -5,11 +5,9 @@
 #include <set>
 
 #include "adas/utils/logger.h"
-#include "adas/utils/protobuf_utils.h"
 
 namespace volkswagen {
 namespace {
-
 const std::set<uint32_t> kAllowedCanFrames = {
     0x0B2, 0x086, 0x09F, 0x0AD, 0x0FD, 0x101, 0x106, 0x120, 0x121,
     0x122, 0x126, 0x12B, 0x12E, 0x30C, 0x397, 0x3BE, 0x3DB,
@@ -43,7 +41,7 @@ CarStateView MqbCarStateDecoder::toCarStateView() const
   return cs;
 }
 
-void MqbCarStateDecoder::updateFromFrame(const can_frame& frame)
+void MqbCarStateDecoder::updateFromFrame(const can_frame& frame, int64_t now_ms)
 {
   if (!dbc_)
     return;
@@ -76,7 +74,7 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame)
         ws->set_rr(rr_ms);
 
         const double v_raw = (fl_ms + fr_ms + rl_ms + rr_ms) * 0.25;
-        const int64_t now = utils::getCurrentTimestamp();
+        const int64_t now = now_ms;
         const double dt_s = prev_v_ts_ms_ > 0 && now > prev_v_ts_ms_ ? (now - prev_v_ts_ms_) * 1e-3 : 0.0;
         prev_v_ts_ms_ = now;
         speed_filter_.update(v_raw, dt_s);

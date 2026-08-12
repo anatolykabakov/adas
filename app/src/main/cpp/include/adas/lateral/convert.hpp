@@ -7,9 +7,8 @@
 
 namespace adas {
 namespace lateral {
-
-/** Сообщения middleware -> вход планера. Сюда же уезжает сдвиг опоры на смещение камеры: планер
- *  получает готовую опору в ego-кадре и про камеру не знает. */
+/** Middleware messages -> planner input. The camera offset is applied here so the planner gets a
+ *  reference already in the ego frame and knows nothing about the camera. */
 inline Input inputFromMessages(const LanePathMsg& path, double speed_mps, double yaw_rate, bool have_chassis,
                                double frame_dt_s, double cam_y_left_m, const VehicleParams& vehicle)
 {
@@ -36,13 +35,14 @@ inline Input inputFromMessages(const LanePathMsg& path, double speed_mps, double
   return in;
 }
 
-/** Выход планера -> публикуемая структура сервиса. */
+/** Planner output -> the structure the service publishes. */
 inline void applyToOutput(const Output& src, LaneKeepOutput& dst)
 {
   dst.status = src.status;
   dst.controller = src.controller;
   dst.steer_rad = src.steer_rad;
   dst.steer_norm = src.steer_norm;
+  dst.max_steer_rad = src.max_steer_rad;
   dst.curvature = src.curvature;
   dst.cte_m = src.cte_m;
   dst.epsi_rad = src.epsi_rad;

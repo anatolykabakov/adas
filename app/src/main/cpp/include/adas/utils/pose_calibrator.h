@@ -11,7 +11,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 class PoseCalibrator {
 public:
   enum Status { Uncalibrated = 0, Calibrated = 1, Invalid = 2, Recalibrating = 3 };

@@ -8,7 +8,6 @@
 
 namespace adas {
 namespace lateral {
-
 struct SteerLimits {
   double mpc_max_steer_deg = 25.0;
   double low_speed_steer_deg = 8.0;
@@ -34,8 +33,8 @@ inline double curvatureWithRoll(double kappa, double speed_mps, const VehiclePar
   return kappa - rollCompensationCurvature(v.road_roll_rad, speed_mps, slipFactorOrZero(v));
 }
 
-/** Потолок угла руля растёт со скоростью: на месте рейка упирается в сопротивление шин, на трассе
- *  большой угол не нужен и опасен. */
+/** The steering ceiling grows with speed: at a standstill the rack fights tyre scrub, and at speed
+ *  a large angle is both unnecessary and dangerous. */
 inline double maxSteerRad(double speed_mps, const SteerLimits& lim)
 {
   const double ceil_deg = std::min(lim.mpc_max_steer_deg, 25.0);
@@ -45,8 +44,8 @@ inline double maxSteerRad(double speed_mps, const SteerLimits& lim)
   return lim_deg * M_PI / 180.0;
 }
 
-/** Постоянная времени фильтра задаётся в долях кадра при номинальном темпе зрения; при другом
- *  темпе тот же коэффициент означал бы другое сглаживание. */
+/** The filter time constant is given as a fraction of a frame at the nominal vision rate; at a
+ *  different rate the same coefficient would mean different smoothing. */
 inline double emaAlpha(double alpha_at_nominal, double nominal_dt_s, double frame_dt_s)
 {
   if (!(alpha_at_nominal < 1.0 - 1e-9) || alpha_at_nominal <= 0.0)

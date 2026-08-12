@@ -6,33 +6,40 @@
 #include <Eigen/Core>
 
 namespace visionpilot {
+/**
+ * @brief Solver weights and gains.
+ *
+ * These used to be globals with setters: whoever called one changed the behaviour of every instance
+ * at once, and a drive configuration could not tell you which weights it drove with, because the
+ * last setter call won. They now belong to the instance and come from the planner configuration.
+ */
+struct Params {
+  std::size_t N = 20;
 
-extern std::size_t N;
+  double cte_weight_base = 20.0;
+  double cte_quartic_scale = 5.0;
 
-extern double g_cte_weight_base;
-extern double g_cte_quartic_scale;
-void set_cost_weights(double cte_weight_base, double cte_quartic_scale);
-
-extern double g_epsi_gain;
-extern double g_ff_scale;
-void set_warm_start_gains(double epsi_gain, double ff_scale);
-
-extern double g_cte_gain_base;
-void set_cte_gain_base(double base);
-
-extern double g_cte_gain_floor;
-void set_cte_gain_floor(double floor);
+  double epsi_gain = 0.5;
+  double ff_scale = 2.0;
+  double cte_gain_base = 0.6;
+  double cte_gain_floor = 0.0;
+};
 
 class LateralPlanner {
 public:
-  LateralPlanner();
+  explicit LateralPlanner(Params params = {});
   ~LateralPlanner();
+
+  const Params& params() const { return params_; }
 
   std::vector<double> compute_steering(double Lf, const Eigen::VectorXd& state, const Eigen::VectorXd& v_schedule,
                                        const Eigen::VectorXd& kappa_schedule);
+
+private:
+  Params params_;
 };
 
-Eigen::VectorXd build_kappa_schedule(double Lf, double epsi, double kappa, double dkappa_ds);
+Eigen::VectorXd build_kappa_schedule(double Lf, double epsi, double kappa, double dkappa_ds, std::size_t N);
 
 class KappaRateFilter {
 public:

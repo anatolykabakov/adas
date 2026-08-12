@@ -5,7 +5,6 @@
 
 namespace adas {
 namespace traffic {
-
 struct Config {
   int64_t speed_limit_hold_ms = 30000;
   int64_t tfl_hold_ms = 2000;
@@ -17,7 +16,7 @@ struct State {
   std::string speed_limit_label;
   int64_t speed_limit_ts_ms = 0;
 
-  int tfl_color = 0;  //!< значение TrafficLightColor; типом proto здесь не пользуемся
+  int tfl_color = 0;
   float tfl_conf = 0.f;
   int64_t tfl_ts_ms = 0;
 
@@ -33,8 +32,8 @@ struct Assessment {
   int tfl_age_ms = -1;
 };
 
-/** Забыть то, что перестало быть правдой: знак, увиденный полминуты назад, и светофор, который уже
- *  сменился. Без этого состояние живёт вечно и врёт тем увереннее, чем дольше едем. */
+/** Forget what stopped being true: the sign is behind us, the light is out of view, the signal
+ *  changed. Without this the state lives forever and lies from a stale observation. */
 inline void expire(State& s, int64_t now_ms, const Config& cfg)
 {
   if (s.speed_limit_kmh > 0 && s.speed_limit_ts_ms > 0 && (now_ms - s.speed_limit_ts_ms) > cfg.speed_limit_hold_ms) {

@@ -10,7 +10,6 @@
 #include "adas/utils/vehicle_ekf.h"
 
 namespace adas {
-
 class OnlineLocalizer {
 public:
   OnlineLocalizer(double wheelbase = 2.636, double gps_noise_pos = 0.5, double gps_update_interval = 0.2,
@@ -41,33 +40,22 @@ public:
   double cam_odo_R = 0.05;
   bool invert_cam_yaw_rate = false;
 
-  /** Which GPS measurements are allowed through. Each one is separate because a fused estimate does not
-   *  say which sensor carries it, and switching sources off one at a time is the only cheap way to find
-   *  out what the filter would do without each. `Localization::Config::Sources` drives these. */
   double max_gps_speed_mismatch_mps = 12.0;
 
   int reseed_agree_count = 3;
   double reseed_agree_radius_m = 8.0;
+  double max_gps_accuracy_m = 25.0;
+  bool scale_gps_noise_by_accuracy = true;
   int gps_unphysical_count = 0;
 
   bool use_gps_position = true;
   bool use_gps_course = true;
   bool use_gps_velocity = true;
 
-  /** Variance of the GPS velocity measurement.
-   *
-   *  It was 1.0, i.e. an assumed 1 m/s of noise, and at that value the measurement is decorative: the
-   *  wheel speed arrives twenty times more often with an assumed 0.1 m/s, so GPS velocity contributed
-   *  about one part in eight thousand and the fused speed was the wheel speed to six decimals.
-   *
-   *  Measured, Doppler is far better than 1 m/s. The residual between GNSS Doppler and the
-   *  scale-corrected wheel speed is 0.066-0.101 m/s median on two runs, and that residual contains both
-   *  sensors plus the 1 Hz sampling — so 0.1 m/s is a fair bound for Doppler alone, not 1.0.
-   *
-   *  A caveat that keeps this from being tightened further: `updateGpsVel` observes
-   *  `[vx, vy] = v·[cos ψ, sin ψ]`, so it corrects heading as well as speed. Making it very confident
-   *  would let it fight the yaw-rate chain. 0.1 m/s is where the evidence is; below that, measure first. */
   double gps_vel_R = 0.1 * 0.1;
+
+public:
+  int gpsRejectedAccuracy() const { return gps_rejected_accuracy_; }
 
 private:
   void record(double rx, double ry, double ox, double oy, double ex, double ey);
@@ -75,6 +63,8 @@ private:
 
   VehicleEKF ekf_;
   double wheelbase_ = 2.636;
+  double gps_noise_pos_ = 0.5;
+  int gps_rejected_accuracy_ = 0;
   double gps_update_interval_ = 0.2;
   bool imu_every_step_ = true;
   bool initialized_ = false;

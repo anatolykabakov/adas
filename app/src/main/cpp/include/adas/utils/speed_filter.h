@@ -3,7 +3,6 @@
 #include <cmath>
 
 namespace adas {
-
 /** Two-state (speed, acceleration) Kalman filter over the CAN wheel speed.
  *
  *  Why this exists. The decoder used to publish `v_ego` as the raw four-wheel average and `a_ego` as a
@@ -29,22 +28,12 @@ namespace adas {
 class SpeedFilter {
 public:
   struct Config {
-    /** Multiplier on the raw wheel-speed average. 1.0 leaves the signal as the car reports it;
-     *  0.988 is what the GNSS Doppler comparison asks for. Kept at 1.0 by default so the correction
-     *  arrives as its own deliberate change rather than silently. */
     double wheel_speed_factor = 1.0;
 
-    /** Acceleration random walk, m/s² per sqrt(s). 1.5 lets the estimate follow a real launch or a
-     *  brake application within a few tenths of a second without chasing quantisation. */
     double accel_process_noise = 1.5;
 
-    /** Wheel-speed measurement noise, m/s. `ESP_VL_Radgeschw_02` is quantised at 0.0075 km/h, but the
-     *  four-wheel average carries far more than quantisation — road texture, steering, tyre scrub — so
-     *  0.05 reflects what the signal actually does, not its resolution. */
     double speed_measurement_noise = 0.05;
 
-    /** A jump larger than this is a re-engagement or a decoder gap, not motion: reseed instead of
-     *  integrating a fictional acceleration. Same idea as upstream's 2.0 m/s guard. */
     double reseed_jump_ms = 2.0;
   };
 
@@ -81,10 +70,8 @@ public:
       return;
     }
 
-    // Predict: constant acceleration over dt.
     v_ += a_ * dt_s;
     const double q = cfg_.accel_process_noise * cfg_.accel_process_noise * dt_s;
-    // P = F P Fᵀ + Q with F = [[1, dt], [0, 1]] and the walk entering acceleration.
     const double p_vv = p_vv_ + 2.0 * dt_s * p_va_ + dt_s * dt_s * p_aa_ + q * dt_s * dt_s / 3.0;
     const double p_va = p_va_ + dt_s * p_aa_ + q * dt_s / 2.0;
     const double p_aa = p_aa_ + q;
@@ -92,7 +79,6 @@ public:
     p_va_ = p_va;
     p_aa_ = p_aa;
 
-    // Update on speed only.
     const double r = cfg_.speed_measurement_noise * cfg_.speed_measurement_noise;
     const double s = p_vv_ + r;
     if (!(s > 0.0))

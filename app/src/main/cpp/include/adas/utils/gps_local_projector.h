@@ -10,7 +10,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 class GpsLocalProjector {
 public:
   void reset()
@@ -39,18 +38,17 @@ public:
     const double dlat = (lat_deg - lat0_deg_) * (M_PI / 180.0);
     const double dlon = (lon_deg - lon0_deg_) * (M_PI / 180.0);
     const double lat0 = lat0_deg_ * (M_PI / 180.0);
-    s.y = dlat * kR;                   // north
-    s.x = dlon * std::cos(lat0) * kR;  // east
+    s.y = dlat * kR;
+    s.x = dlon * std::cos(lat0) * kR;
     s.valid = true;
 
-    // Course usable when moving; ignore bearing==0 at standstill (common GPS quirk).
     s.course_valid = std::isfinite(speed_mps) && std::isfinite(bearing_deg) && speed_mps > 2.0 &&
                      !(speed_mps < 0.5 && std::abs(bearing_deg) < 1e-3);
     if (s.course_valid) {
       s.yaw_enu = yawEnuFromBearingDeg(bearing_deg);
       const double br = bearing_deg * (M_PI / 180.0);
-      s.vx = speed_mps * std::sin(br);  // east
-      s.vy = speed_mps * std::cos(br);  // north
+      s.vx = speed_mps * std::sin(br);
+      s.vy = speed_mps * std::cos(br);
     }
     return s;
   }

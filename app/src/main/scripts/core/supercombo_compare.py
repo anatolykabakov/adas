@@ -127,8 +127,17 @@ def project_xyz(
     return project_iso_xyz(xs, ys, zs, geom, w, h, x_min=x_min, y_sign=y_sign)
 
 
+# Nearest distance drawn for a lane, edge or plan [m]. The lateral projection is fx·y/x, so it runs
+# away as x → 0: a line 1.5 m off centre sits at ±422 px at x=1.69 m on a 640-wide frame. Those points
+# carry no information about where the lane is on the road, and drawing them only produced long streaks.
+LANE_X_MIN_M = 4.0
+
+
 def draw_pts(img: np.ndarray, pts: List[Tuple[int, int]], color, thickness: int) -> None:
+    """Draw a polyline, breaking it wherever the projector reported a gap (``None``)."""
     for a, b in zip(pts[:-1], pts[1:]):
+        if a is None or b is None:
+            continue
         cv2.line(img, a, b, color, thickness, lineType=cv2.LINE_AA)
 
 
@@ -183,7 +192,17 @@ def draw_bag_lanes(
         y = np.asarray(list(lane.y), dtype=np.float64)
         if y.size != xs.size:
             continue
-        pts = project_overlay_xyz(xs, y, np.zeros_like(y), geom, w, h, y_sign=y_sign)
+        pts = project_overlay_xyz(
+            xs,
+            y,
+            np.zeros_like(y),
+            geom,
+            w,
+            h,
+            x_min=LANE_X_MIN_M,
+            y_sign=y_sign,
+            keep_gaps=True,
+        )
         draw_pts(img, pts, (0, 255, 255), 2)
 
     if draw_edges:
@@ -191,7 +210,17 @@ def draw_bag_lanes(
             y = np.asarray(list(edge.y), dtype=np.float64)
             if y.size != xs.size:
                 continue
-            pts = project_overlay_xyz(xs, y, np.zeros_like(y), geom, w, h, y_sign=y_sign)
+            pts = project_overlay_xyz(
+                xs,
+                y,
+                np.zeros_like(y),
+                geom,
+                w,
+                h,
+                x_min=LANE_X_MIN_M,
+                y_sign=y_sign,
+                keep_gaps=True,
+            )
             draw_pts(img, pts, (0, 0, 255), 2)
 
     if (
@@ -209,8 +238,9 @@ def draw_bag_lanes(
                 geom,
                 w,
                 h,
-                x_min=0.5,
+                x_min=LANE_X_MIN_M,
                 y_sign=y_sign,
+                keep_gaps=True,
                 path_lift=isinstance(geom, PhoneRtGeometry),
             )
             draw_pts(img, pts, (0, 255, 0), 3)

@@ -6,16 +6,17 @@
 #include <cmath>
 
 #include "adas/utils/logger.h"
-#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/math_utils.h"
 
 namespace adas {
 namespace services {
-
 void TrafficSign::configure()
 {
-  subscribe<adas::proto::ZMQMessage>(topics::kTrafficDetections,
-                                     [this](const adas::proto::ZMQMessage& m) { onDets(m); });
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::TrafficDetections>(topics::kTrafficDetections,
+                                            [this](const adas::proto::TrafficDetections& m) { onDets(m); });
   scheduleTimer(
       100, [this] { tick(); }, "tick");
   LOGI("TrafficSign: %s + chassis → %s (speed limit / TFL / overspeed)", topics::kTrafficDetections,
@@ -42,23 +43,19 @@ void TrafficSign::onChassis(const ChassisSample& msg)
   have_chassis_ = true;
 }
 
-void TrafficSign::onDets(const adas::proto::ZMQMessage& msg)
+void TrafficSign::onDets(const adas::proto::TrafficDetections& payload)
 {
-  if (!msg.has_traffic_detections())
-    return;
-  const auto& td = msg.traffic_detections();
-  const int64_t now = td.timestamp() > 0 ? td.timestamp() : utils::getCurrentTimestamp();
-  state_.n_dets = td.dets_size();
+  const int64_t now = payload.timestamp() > 0 ? payload.timestamp() : nowMs();
+  state_.n_dets = payload.dets_size();
   state_.status = state_.n_dets > 0 ? "ok" : "no_dets";
 
-  // Prefer highest-conf speed-limit sign and traffic light this frame.
   int best_limit = 0;
   float best_limit_conf = 0.f;
   std::string best_limit_label;
   adas::proto::TrafficLightColor best_tfl = adas::proto::TFL_UNKNOWN;
   float best_tfl_conf = 0.f;
 
-  for (const auto& d : td.dets()) {
+  for (const auto& d : payload.dets()) {
     if (d.speed_limit_kmh() > 0 && d.conf() >= config_.min_sign_conf && d.conf() >= best_limit_conf) {
       best_limit = d.speed_limit_kmh();
       best_limit_conf = d.conf();
@@ -88,7 +85,7 @@ void TrafficSign::tick()
 {
   if (!have_chassis_)
     return;
-  publishTraffic(utils::getCurrentTimestamp());
+  publishTraffic(nowMs());
 }
 
 void TrafficSign::publishTraffic(int64_t now_ms)

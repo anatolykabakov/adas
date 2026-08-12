@@ -8,7 +8,6 @@
 #include "adas/utils/logger.h"
 
 namespace {
-
 void setBool(const Json::Value& o, const char* key, bool& field)
 {
   if (o.isObject() && o.isMember(key) && o[key].isBool())
@@ -54,7 +53,6 @@ AdasApp::Config AdasApp::Config::forSimulated(double wheelbase_m, double pitch_d
   cfg.feature_flags.enable_lane_keep = true;
   cfg.feature_flags.enable_localization = true;
   cfg.feature_flags.enable_camera_calib = true;
-  cfg.feature_flags.enable_imu_calib = true;
   cfg.feature_flags.enable_vision_supercombo = false;
 
   cfg.lane_keep.wheelbase_m = wheelbase_m;
@@ -65,10 +63,21 @@ AdasApp::Config AdasApp::Config::forSimulated(double wheelbase_m, double pitch_d
   cfg.camera_calib.yaw_deg = yaw_deg;
   cfg.camera_calib.height_m = camera_height_m;
 
-  cfg.imu_calib.mount_roll_deg = 0.0;
-  cfg.imu_calib.mount_pitch_deg = pitch_deg;
-  cfg.imu_calib.mount_yaw_deg = yaw_deg;
-  cfg.imu_calib.has_mount_prior = true;
+  cfg.localization.imu_mount_roll_deg = 0.0;
+  cfg.localization.imu_mount_pitch_deg = pitch_deg;
+  cfg.localization.imu_mount_yaw_deg = yaw_deg;
+  cfg.localization.imu_has_mount_prior = true;
+
+  // Производные поля оценщика — теми же строками, что и в `loadFromFile`. Без них симулированное
+  // приложение собирает оценщик со знаком угла руля +1 (дефолт `ParamsLearner::Config`), тогда как
+  // машина едет с −1: модель сводит перевёрнутый знак только уводом жёсткости в зажим и
+  // передаточного в сторону, то есть оценщик в любом реплее гарантированно расходится.
+  auto& pl = cfg.localization.params;
+  pl.vehicle.wheelbase_m = wheelbase_m;
+  pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
+  pl.stiffness_init = cfg.lane_keep.tire_stiffness_factor;
+  pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
+  pl.steer_sign = cfg.lane_keep.steer_sign;
   return cfg;
 }
 
@@ -97,35 +106,42 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setBool(nodes, "traffic_sign", f.enable_traffic_sign);
   setBool(nodes, "map_data", f.enable_map_data);
 
-  const bool had_imu_key = nodes.isObject() && nodes.isMember("imu_calib");
-  setBool(nodes, "imu_calib", f.enable_imu_calib);
-  if (!had_imu_key)
-    f.enable_imu_calib = f.enable_localization;
-
   const Json::Value& veh = root["vehicle"];
   setString(veh, "name", cfg.vehicle_name);
   setDouble(veh, "wheelbase_m", cfg.lane_keep.wheelbase_m);
   setDouble(veh, "wheelbase_m", cfg.localization.wheelbase_m);
   setDouble(veh, "steer_ratio", cfg.lane_keep.steer_ratio);
-  setDouble(veh, "steer_ratio", cfg.topic_convert.steer_ratio);
-  setDouble(veh, "path_lane_blend_scale", cfg.topic_convert.path_lane_blend_scale);
-  setDouble(veh, "path_camera_offset_m", cfg.topic_convert.path_camera_offset_m);
-  setDouble(veh, "lane_std_good_m", cfg.topic_convert.lane_std_good_m);
-  setDouble(veh, "lane_std_bad_m", cfg.topic_convert.lane_std_bad_m);
-  setDouble(veh, "lane_std_range_m", cfg.topic_convert.lane_std_range_m);
-  setDouble(veh, "lane_width_min_m", cfg.topic_convert.lane_width_min_m);
-  setDouble(veh, "lane_width_max_m", cfg.topic_convert.lane_width_max_m);
-  setDouble(veh, "center_force_gain", cfg.topic_convert.center_force_gain);
-  setDouble(veh, "center_force_max_m", cfg.topic_convert.center_force_max_m);
-  setDouble(veh, "center_force_turn_scale", cfg.topic_convert.center_force_turn_scale);
+  adas::LanePathConfig lane_path{};
+  double steer_ratio = 15.7;
+  setDouble(veh, "steer_ratio", steer_ratio);
+  setDouble(veh, "path_lane_blend_scale", lane_path.lane_blend_scale);
+  setDouble(veh, "path_camera_offset_m", lane_path.camera_offset_m);
+  setDouble(veh, "lane_std_good_m", lane_path.lane_std_good_m);
+  setDouble(veh, "lane_std_bad_m", lane_path.lane_std_bad_m);
+  setDouble(veh, "lane_std_range_m", lane_path.lane_std_range_m);
+  setDouble(veh, "lane_width_min_m", lane_path.lane_width_min_m);
+  setDouble(veh, "lane_width_max_m", lane_path.lane_width_max_m);
+  setDouble(veh, "center_force_gain", lane_path.center_force_gain);
+  setDouble(veh, "center_force_max_m", lane_path.center_force_max_m);
+  setDouble(veh, "center_force_turn_scale", lane_path.center_force_turn_scale);
   setDouble(veh, "max_steer_deg", cfg.lane_keep.max_steer_deg);
   setDouble(veh, "max_torque_cnm", cfg.lane_keep.max_torque_cnm);
   setBool(veh, "roll_compensation", cfg.lane_keep.roll_compensation);
   setBool(veh, "dp_parity_pack", cfg.lane_keep.dp_parity_pack);
   setString(veh, "fp_solver", cfg.lane_keep.fp_solver);
-  setBool(veh, "lane_mode_hysteresis", cfg.topic_convert.lane_mode_hysteresis);
-  setDouble(veh, "lane_mode_off_prob", cfg.topic_convert.lane_mode_off_prob);
-  setDouble(veh, "lane_mode_on_prob", cfg.topic_convert.lane_mode_on_prob);
+  setBool(veh, "lane_mode_hysteresis", lane_path.lane_mode_hysteresis);
+  setDouble(veh, "lane_mode_off_prob", lane_path.lane_mode_off_prob);
+  setDouble(veh, "lane_mode_on_prob", lane_path.lane_mode_on_prob);
+
+  cfg.lane_keep.lane_path = lane_path;
+  cfg.lane_keep.steer_ratio = steer_ratio;
+  cfg.long_plan.lane_path = lane_path;
+  cfg.long_plan.steer_ratio = steer_ratio;
+  cfg.safety_warn.lane_path = lane_path;
+  cfg.safety_warn.steer_ratio = steer_ratio;
+  cfg.camera_calib.steer_ratio = steer_ratio;
+  cfg.traffic_sign.steer_ratio = steer_ratio;
+  cfg.localization.steer_ratio = steer_ratio;
   setDouble(veh, "pp_k_dd", cfg.lane_keep.pp_k_dd);
   setDouble(veh, "pp_ld_min", cfg.lane_keep.pp_ld_min);
   setDouble(veh, "pp_ld_max", cfg.lane_keep.pp_ld_max);
@@ -228,17 +244,19 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
 
   const Json::Value& cam = root["calibration"]["camera"];
   const Json::Value& rpy = cam["rpy_deg"];
-  setDouble(rpy, "roll", cfg.imu_calib.mount_roll_deg);
+  setDouble(rpy, "roll", cfg.localization.imu_mount_roll_deg);
   setDouble(rpy, "pitch", cfg.camera_calib.pitch_deg);
-  setDouble(rpy, "pitch", cfg.imu_calib.mount_pitch_deg);
+  setDouble(rpy, "pitch", cfg.localization.imu_mount_pitch_deg);
   setDouble(rpy, "yaw", cfg.camera_calib.yaw_deg);
-  setDouble(rpy, "yaw", cfg.imu_calib.mount_yaw_deg);
-  cfg.imu_calib.has_mount_prior = rpy.isObject();
+  setDouble(rpy, "yaw", cfg.localization.imu_mount_yaw_deg);
+  cfg.localization.imu_has_mount_prior = rpy.isObject();
 
   const Json::Value& pos = cam["position_m"];
   setDouble(pos, "z_up", cfg.camera_calib.height_m);
   setDouble(pos, "y_left", cfg.lane_keep.cam_y_left_m);
-  setDouble(pos, "y_left", cfg.topic_convert.cam_y_left_m);
+  setDouble(pos, "y_left", cfg.lane_keep.lane_path.cam_y_left_m);
+  cfg.long_plan.lane_path.cam_y_left_m = cfg.lane_keep.lane_path.cam_y_left_m;
+  cfg.safety_warn.lane_path.cam_y_left_m = cfg.lane_keep.lane_path.cam_y_left_m;
 
   const Json::Value& K = cam["intrinsics_prior"];
   setDouble(K, "fx", cfg.camera_calib.fx);
@@ -246,8 +264,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(K, "cx", cfg.camera_calib.cx);
   setDouble(K, "cy", cfg.camera_calib.cy);
 
-  // Localization measurement sources. Each is a separate key so a run can be made to answer "what would
-  // the pose do without this sensor" — the experiment that finally quantified the yaw-rate defect.
   const Json::Value& loc = root["localization"];
   auto& src = cfg.localization.sources;
   setBool(loc, "use_gps_position", src.gps_position);
@@ -259,17 +275,14 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setBool(loc, "invert_cam_yaw_rate", cfg.localization.invert_cam_yaw_rate);
   setBool(loc, "use_bicycle_model", src.bicycle_model);
   setDouble(loc, "gps_noise_pos", cfg.localization.gps_noise_pos);
+  setDouble(loc, "gps_max_accuracy_m", cfg.localization.gps_max_accuracy_m);
+  setBool(loc, "gps_scale_noise_by_accuracy", cfg.localization.gps_scale_noise_by_accuracy);
   auto& rr = cfg.localization.road_roll;
   setDouble(loc, "road_roll_body_deg_per_g", rr.body_roll_deg_per_g);
   setDouble(loc, "road_roll_tau_s", rr.tau_s);
   setDouble(loc, "road_roll_min_speed_ms", rr.min_speed_ms);
   setDouble(loc, "gps_update_interval", cfg.localization.gps_update_interval);
 
-  // The learner must start from, and be bounded around, exactly the model the controller uses. Reading the
-  // vehicle block here rather than giving the learner its own copy of `wheelbase_m` and `steer_ratio` is
-  // deliberate: two sources for the same constant is how a "learned" parameter ends up meaning something
-  // slightly different from the parameter it replaces, which is worse than a hand-tuned number because it
-  // looks principled.
   auto& pl = cfg.localization.params;
   pl.vehicle.wheelbase_m = cfg.localization.wheelbase_m;
   pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
@@ -277,6 +290,9 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
   pl.steer_sign = cfg.lane_keep.steer_sign;
   setBool(loc, "learn_vehicle_params", cfg.localization.learn_vehicle_params);
+  setDouble(loc, "params_angle_offset_init_deg", pl.angle_offset_init_deg);
+  setDouble(loc, "imu_speed_threshold_kmh", cfg.localization.imu_speed_threshold_kmh);
+  setBool(loc, "imu_invert_yaw_rate", cfg.localization.imu_invert_yaw_rate);
   setDouble(loc, "params_stiffness_p0_std", pl.stiffness_p0_std);
   setDouble(loc, "params_stiffness_process_std", pl.stiffness_process_std);
   setDouble(loc, "params_steer_ratio_process_std", pl.steer_ratio_process_std);
@@ -289,8 +305,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setString(zmq, "endpoint_in", cfg.zmq_bridge.endpoint_in);
   setString(zmq, "endpoint_out", cfg.zmq_bridge.endpoint_out);
 
-  // OSM curvature ahead. The thresholds are dragonpilot's and are exposed because the only way to know
-  // whether 0.002 1/m and 2.6 m/s² are right for this map is to vary them over a recorded run.
   const Json::Value& map = root["map"];
   setString(map, "path", cfg.map_data.map_path);
   setDouble(map, "update_hz", cfg.map_data.update_hz);
@@ -309,12 +323,12 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(map, "max_lat_acc", rt.max_lat_acc);
   setDouble(map, "min_section_m", rt.min_section_m);
 
-  LOGI("AdasApp::Config %s: lane_keep=%d ctrl=%s loc=%d cam=%d imu=%d wb=%.3f "
+  LOGI("AdasApp::Config %s: lane_keep=%d ctrl=%s loc=%d cam=%d wb=%.3f "
        "max_steer=%.1f° max_tq=%.0f pid=%.2f/%.2f/%.5f P/Y=%.1f/%.1f h=%.2f",
        path.c_str(), f.enable_lane_keep ? 1 : 0, cfg.lane_keep.controller.c_str(), f.enable_localization ? 1 : 0,
-       f.enable_camera_calib ? 1 : 0, f.enable_imu_calib ? 1 : 0, cfg.lane_keep.wheelbase_m,
-       cfg.lane_keep.max_steer_deg, cfg.lane_keep.max_torque_cnm, cfg.lane_keep.pid_kp, cfg.lane_keep.pid_ki,
-       cfg.lane_keep.pid_kf, cfg.camera_calib.pitch_deg, cfg.camera_calib.yaw_deg, cfg.camera_calib.height_m);
+       f.enable_camera_calib ? 1 : 0, cfg.lane_keep.wheelbase_m, cfg.lane_keep.max_steer_deg,
+       cfg.lane_keep.max_torque_cnm, cfg.lane_keep.pid_kp, cfg.lane_keep.pid_ki, cfg.lane_keep.pid_kf,
+       cfg.camera_calib.pitch_deg, cfg.camera_calib.yaw_deg, cfg.camera_calib.height_m);
 
   if (ok)
     *ok = true;

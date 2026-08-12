@@ -7,7 +7,6 @@
 namespace adas {
 namespace flowpilot {
 namespace {
-
 constexpr double kMinSpeed = 1.0;
 constexpr double kPsiMax = 90.0 * M_PI / 180.0;
 constexpr double kRateMax = 50.0 * M_PI / 180.0;

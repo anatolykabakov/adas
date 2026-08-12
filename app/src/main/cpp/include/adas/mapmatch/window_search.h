@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 /**
  * Route search over heading increments on fixed-length path windows.
  *
@@ -17,16 +16,16 @@ namespace mapmatch {
  * of both — the drift is under 3 deg and an arc accumulates the same degrees as the kink.
  */
 struct WindowSearchConfig {
-  double window_m = 250.0;  ///< window length along the path
-  double tol_deg = 4.0;     ///< disagreement within tolerance is not penalised
-  double clip_deg = 45.0;   ///< penalty ceiling for one window
-  int beam = 4000;          ///< states kept per layer
-  int per_edge = 3;         ///< states per edge
-  double cell_m = 300.0;    ///< cell size for spatial diversity
-  int per_cell = 6;         ///< states per cell, or the beam collapses into one area
-  double defer_deg = 90.0;  ///< below this much information, no cost-based pruning
-  int defer_beam = 60000;   ///< but the layer is still bounded, or growth is explosive
-  int max_expand = 64;      ///< safety stop on growth inside a window
+  double window_m = 250.0;
+  double tol_deg = 4.0;
+  double clip_deg = 45.0;
+  int beam = 4000;
+  int per_edge = 3;
+  double cell_m = 300.0;
+  int per_cell = 6;
+  double defer_deg = 90.0;
+  int defer_beam = 60000;
+  int max_expand = 64;
   bool verbose = false;
 };
 

@@ -4,7 +4,6 @@
 #include <cmath>
 
 namespace adas {
-
 /** Road bank (roll) from the lateral accelerometer, the yaw rate and the speed.
  *
  *  Why this exists: `paramsd` cannot learn tyre stiffness honestly without it. A banked road and an
@@ -46,34 +45,18 @@ namespace adas {
 class RoadRollEstimator {
 public:
   struct Config {
-    /** Suspension roll gradient, degrees per g, subtracted from the raw estimate. Measured 2.8–3.2 on
-     *  this car; 0 disables the correction and leaves the confound in, which is the honest thing to do
-     *  on a vehicle where it has not been measured. */
     double body_roll_deg_per_g = 3.0;
 
-    /** Time constant of the output filter, seconds. Ten seconds is where the per-sample 2.1° scatter
-     *  stops improving; shorter buys noise, longer starts smearing one corner into the next. */
     double tau_s = 10.0;
 
-    /** Below this speed the relation is dominated by its own noise: `a_y = −v·ψ̇` vanishes and the
-     *  accelerometer sees mostly the phone shaking. */
     double min_speed_ms = 8.0;
 
-    /** Reject transients. The relation above is steady-state; during a steering input the suspension is
-     *  still moving and the body-roll correction does not hold. Units: m/s³. */
     double max_lateral_jerk = 0.8;
 
-    /** A sample further than this from the current estimate is a bump or a clipped accelerometer, not a
-     *  road. Degrees. */
     double max_innovation_deg = 8.0;
 
-    /** Standard deviation reported before enough samples have arrived, degrees. Deliberately the same
-     *  10° that `paramsd` uses for "no usable roll", so a consumer gating on it behaves identically
-     *  whether we publish nothing or publish an unconverged estimate. */
     double unconverged_std_deg = 10.0;
 
-    /** Per-sample scatter, degrees — the measured 2.1–2.3. Used to shrink the reported uncertainty as
-     *  samples accumulate. */
     double sample_std_deg = 2.2;
   };
 
@@ -105,7 +88,6 @@ public:
 
     const double a_y = -speed_ms * yaw_rate_can;
 
-    // Steady state only. Without this the suspension's own transient is read as road.
     if (have_prev_ay_) {
       const double jerk = std::abs(a_y - prev_ay_) / dt_s;
       if (jerk > cfg_.max_lateral_jerk) {
@@ -119,7 +101,6 @@ public:
     constexpr double kG = 9.81;
     const double sin_phi = std::clamp((a_y - f_y) / kG, -1.0, 1.0);
     double sample_deg = std::asin(sin_phi) * 180.0 / M_PI;
-    // Take out the part that scales with lateral acceleration: that is the body on its springs.
     sample_deg -= cfg_.body_roll_deg_per_g * (a_y / kG);
 
     if (n_ > 0 && std::abs(sample_deg - roll_deg_) > cfg_.max_innovation_deg)

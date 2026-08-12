@@ -7,15 +7,18 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 namespace topics {
 inline constexpr const char* kVehicleChassis = "vehicle/chassis";
 inline constexpr const char* kVisionLanes = "vision/lanes";
 inline constexpr const char* kVisionPath = "vision/path";
+/** Готовая опорная линия на вход, минуя разбор разметки.
+ *
+ *  `kVisionPath` теперь публикует LaneKeep, поэтому подать ему линию по тому же топику нельзя —
+ *  вышла бы петля. Стендам это нужно: реплей чужого лога и симулятор дают уже посчитанную линию,
+ *  а не разметку, и выразить её через `LaneLines` невозможно — там нет ни `lane_anchored`, ни
+ *  раздельных `polyline` и `plan_poly`. Пусто на машине: там линию строит сам LaneKeep. */
+inline constexpr const char* kVisionPathIn = "vision/path_in";
 inline constexpr const char* kGpsLocation = "sensors/gps/location";
-/** Raw geodetic fix as the phone reports it. `kGpsLocation` carries the same fix, but by the time anything
- *  in C++ sees it `TopicConvert` has already projected it into a local frame whose origin is private
- *  to that projector — so this is the only topic that still has latitude and longitude on it. */
 inline constexpr const char* kGpsData = "sensors/gps/data";
 inline constexpr const char* kImu = "sensors/imu";
 inline constexpr const char* kImuRaw = "sensors/imu_raw";
@@ -59,8 +62,8 @@ struct LanePathMsg {
   std::vector<Vec2> polyline;
 
   std::vector<Vec2> plan_poly;
-  std::vector<double> plan_yaw;       // rad
-  std::vector<double> plan_yaw_rate;  // rad/s
+  std::vector<double> plan_yaw;
+  std::vector<double> plan_yaw_rate;
 
   bool lane_anchored = false;
   bool lanelines_active = true;
@@ -102,9 +105,6 @@ struct ImuSample {
   int64_t timestamp_us = 0;
   double yaw_rate = 0.0;
   bool valid = false;
-  /** Lateral specific force in the vehicle frame (x forward, y right, z down), m/s². Needed by
-   *  `RoadRollEstimator`; `lat_accel_valid` is false until a mount heading exists, because gravity alone
-   *  does not measure heading and the y axis would point nowhere in particular. */
   double lat_accel = 0.0;
   bool lat_accel_valid = false;
 };
@@ -120,14 +120,9 @@ struct LocalizationPose {
   double odom_y = 0.0;
   double ekf_x = 0.0;
   double ekf_y = 0.0;
-  /** Road bank and its uncertainty — see `utils/road_roll_estimator.h`. Gate on the std, not on presence:
-   *  10° is the "no usable roll" value `paramsd` itself falls back to. */
   double road_roll_deg = 0.0;
   double road_roll_std_deg = 10.0;
   bool road_roll_valid = false;
-  /** Vehicle parameters as learned online — see `utils/params_learner.h`. Published even while the
-   *  controller still uses the configured constants, because the only way to earn the switch is to record
-   *  the learned value next to the hand-tuned one over a real drive. */
   double learned_stiffness_factor = 0.0;
   double learned_steer_ratio = 0.0;
   double learned_angle_offset_deg = 0.0;
@@ -150,6 +145,66 @@ struct CameraOdometrySample {
   Vec3 trans_std = Vec3::Ones();
   Vec3 rot_std = Vec3::Ones();
   bool valid = false;
+};
+
+/** Output of the lateral loop. It lives here rather than in the service header because it is a
+ *  domain structure, and the conversion functions must not include a service for it — that would
+ *  make the headers circular. */
+struct LaneKeepOutput {
+  int64_t timestamp_us = 0;
+  int64_t capture_ts_us = 0;
+  int64_t vision_ts_us = 0;
+  int64_t chassis_ts_us = 0;
+  int64_t publish_ts_us = 0;
+  double steer_rad = 0.0;
+  double steer_norm = 0.0;
+  double max_steer_rad = 0.0;
+  double desired_swa_deg = 0.0;
+  double actual_swa_deg = 0.0;
+  double angle_error_deg = 0.0;
+  double lookahead_m = 0.0;
+  double target_x = 0.0;
+  double target_y = 0.0;
+  bool has_target = false;
+  double curvature = 0.0;
+  double cte_m = 0.0;
+  double epsi_rad = 0.0;
+  std::string status = "ok";
+  std::string controller = "pp";
+
+  struct Debug {
+    double speed_mps = 0.0;
+    int n_points = 0;
+    double pp_steer_raw_rad = 0.0;
+    double mpc_kappa_path = 0.0;
+    double mpc_kappa_yaw = 0.0;
+    double mpc_kappa_used = 0.0;
+    double mpc_dkappa_ds = 0.0;
+    double mpc_delta_vp_rad = 0.0;
+    double mpc_delta_clamped_rad = 0.0;
+    double mpc_max_steer_rad = 0.0;
+    double max_steer_rad = 0.0;
+    bool slew_clipped = false;
+    int torque_cnm = 0;
+    bool steer_output_enabled = false;
+
+    bool assist_allowed = false;
+    bool assist_known = false;
+
+    bool lane_anchored = false;
+    bool lanelines_active = true;
+    double road_roll_deg = 0.0;
+    std::string kappa_solver;
+    double pid_p = 0.0;
+    double pid_i = 0.0;
+    double pid_f = 0.0;
+    double lane_width_m = 0.0;
+    double lane_offset_m = 0.0;
+    double center_force_m = 0.0;
+    double p_lane_blend_scale = 0.0;
+    double p_camera_offset_m = 0.0;
+    double p_center_force_gain = 0.0;
+  } dbg;
 };
 
 struct CameraCalibrationState {

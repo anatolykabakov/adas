@@ -1,5 +1,7 @@
 #pragma once
 
+#include "adas/utils/lane_path.h"
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -8,81 +10,18 @@
 
 #include "adas/middleware/manager.hpp"
 #include "adas/utils/adas_topics.h"
+#include "adas/lateral/slew_guard.hpp"
+#include "adas/services/lane_keep_gates.h"
+#include "adas/utils/interval_filter.h"
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/math_utils.h"
-#include "adas/utils/path_lateral_state.h"
-#include "adas/lateral/pp.h"
-#include "adas/utils/vehicle_model.h"
-#include "adas/lateral/visionpilot_mpc.hpp"
-#include "adas/lateral/flowpilot_mpc.hpp"
-#include "adas/lateral/lateral_solver.h"
+#include "adas/lateral/pp_planner.hpp"
+#include "adas/lateral/vp_planner.hpp"
+#include "adas/lateral/fp_planner.hpp"
 #include "adas/lateral/planner.hpp"
-#ifdef ADAS_WITH_ACADOS
-#include "adas/lateral/acados_lat_mpc.hpp"
-#endif
 
 namespace adas {
-
-struct LaneKeepOutput {
-  int64_t timestamp_us = 0;
-  int64_t capture_ts_us = 0;
-  int64_t vision_ts_us = 0;
-  int64_t chassis_ts_us = 0;
-  int64_t publish_ts_us = 0;
-  double steer_rad = 0.0;
-  double steer_norm = 0.0;
-  double desired_swa_deg = 0.0;
-  double actual_swa_deg = 0.0;
-  double angle_error_deg = 0.0;
-  double lookahead_m = 0.0;
-  double target_x = 0.0;
-  double target_y = 0.0;
-  bool has_target = false;
-  double curvature = 0.0;
-  double cte_m = 0.0;
-  double epsi_rad = 0.0;
-  std::string status = "ok";
-  std::string controller = "pp";
-
-  struct Debug {
-    double speed_mps = 0.0;
-    int n_points = 0;
-    double pp_steer_raw_rad = 0.0;
-    double mpc_kappa_path = 0.0;
-    double mpc_kappa_yaw = 0.0;
-    double mpc_kappa_used = 0.0;
-    double mpc_dkappa_ds = 0.0;
-    double mpc_delta_vp_rad = 0.0;
-    double mpc_delta_clamped_rad = 0.0;
-    double mpc_max_steer_rad = 0.0;
-    double max_steer_rad = 0.0;
-    bool slew_clipped = false;
-    int torque_cnm = 0;
-    bool steer_output_enabled = false;
-
-    /** Whether the rack was actually being given torque, as reported by the panda safety layer. */
-    bool assist_allowed = false;
-    /** False when no panda has reported yet, or when its last report has aged out. */
-    bool assist_known = false;
-
-    bool lane_anchored = false;
-    bool lanelines_active = true;
-    double road_roll_deg = 0.0;
-    std::string kappa_solver;
-    double pid_p = 0.0;
-    double pid_i = 0.0;
-    double pid_f = 0.0;
-    double lane_width_m = 0.0;
-    double lane_offset_m = 0.0;
-    double center_force_m = 0.0;
-    double p_lane_blend_scale = 0.0;
-    double p_camera_offset_m = 0.0;
-    double p_center_force_gain = 0.0;
-  } dbg;
-};
-
 namespace services {
-
 class LaneKeep : public adas::middleware::Service {
 public:
   struct Config {
@@ -161,6 +100,8 @@ public:
 
     bool lat_require_assist = true;
     double assist_max_age_s = 0.5;
+
+    LanePathConfig lane_path{};
   };
 
   LaneKeep() : LaneKeep(Config{}) {}
@@ -178,15 +119,15 @@ public:
     return step(speed_mps, m);
   }
 
-  PurePursuit& purePursuit() { return pp_; }
   const LaneKeepOutput& last() const { return last_; }
+
+  lateral::PpPlanner::Config ppPlannerConfig() const;
+  lateral::VpPlanner::Config vpPlannerConfig() const;
+  lateral::FpPlanner::Config fpPlannerConfig() const;
   const Config& config() const { return config_; }
-  bool useMpc() const { return config_.controller == "mpc"; }
   bool useFlowpilot() const { return config_.controller == "fp"; }
   const char* solverName() const;
   const char* kappaSolverName() const;
-
-  bool useMpcFamily() const { return useMpc() || useFlowpilot(); }
 
   void registerParameters();
 
@@ -195,7 +136,7 @@ public:
   void setPpLdCurvGain(double gain)
   {
     config_.pp_ld_curv_gain = std::max(gain, 0.0);
-    pp_.ld_curv_gain = config_.pp_ld_curv_gain;
+    solver_.reset();
   }
   void setMaxSteerDeg(double max_steer_deg);
 
@@ -207,6 +148,7 @@ public:
   {
     config_.mpc_kappa_yaw_blend = std::clamp(alpha, 0.0, 1.0);
     config_.mpc_kappa_yaw_min_speed = std::max(min_speed, 0.0);
+    solver_.reset();
   }
 
   void setMpcEmaAlphas(double kappa_alpha, double epsi_alpha, double cte_alpha)
@@ -214,11 +156,13 @@ public:
     config_.mpc_kappa_ema_alpha = std::clamp(kappa_alpha, 0.0, 1.0);
     config_.mpc_epsi_ema_alpha = std::clamp(epsi_alpha, 0.0, 1.0);
     config_.mpc_cte_ema_alpha = std::clamp(cte_alpha, 0.0, 1.0);
-    kappa_ema_init_ = false;
-    epsi_ema_init_ = false;
-    cte_ema_init_ = false;
+    solver_.reset();
   }
-  void setSteerSlewLimitDeg(double deg) { config_.steer_slew_limit_deg = deg; }
+  void setSteerSlewLimitDeg(double deg)
+  {
+    config_.steer_slew_limit_deg = deg;
+    solver_.reset();
+  }
 
   void setVehicleModel(bool on, double tire_stiffness_factor)
   {
@@ -227,7 +171,11 @@ public:
       config_.tire_stiffness_factor = tire_stiffness_factor;
   }
 
-  void setFpSteeringRateWeight(double w) { config_.fp_steering_rate_weight = std::max(0.0, w); }
+  void setFpSteeringRateWeight(double w)
+  {
+    config_.fp_steering_rate_weight = std::max(0.0, w);
+    solver_.reset();
+  }
 
   /** Hand the controller the online estimate. `valid` is the learner's own gate; when it is false the
    *  configured constants are used, so losing validity mid-drive walks the parameters back rather than
@@ -259,37 +207,44 @@ public:
   }
   bool usingLearnedParams() const { return config_.use_learned_params && learned_valid_; }
 
-  void setFpSteerDelayS(double s) { config_.fp_steer_delay_s = std::max(0.05, s); }
-  void setCamYLeftM(double m) { config_.cam_y_left_m = m; }
+  void setFpSteerDelayS(double s)
+  {
+    config_.fp_steer_delay_s = std::max(0.05, s);
+    solver_.reset();
+  }
+  /** Смещение камеры влево. Число живёт в двух местах: здесь его использует сдвиг опоры в ego-кадр,
+   *  а `lane_path.cam_y_left_m` — расчёт положения в полосе. Обновлять надо обе копии, иначе
+   *  параметр, поданный на ходу, разведёт их между собой. */
+  void setCamYLeftM(double m)
+  {
+    config_.cam_y_left_m = m;
+    config_.lane_path.cam_y_left_m = m;
+  }
   void setPidGains(double kp, double ki, double kf) { lat_.setGains(kp, ki, kf); }
   void setSteerSign(double sign) { steer_sign_ = (sign < 0.0) ? -1.0 : 1.0; }
 
 private:
+  LaneFusionState lane_fusion_{};
   void onChassis(const ChassisSample& msg);
   void onLanes(const LanePathMsg& msg);
   void updateTorqueFromAngle();
 
-  void updateFrameDt(const LanePathMsg& msg);
+  /** Steering setpoint from the road-wheel angle. The learned offset is added rather than
+   *  subtracted: the learner solved `delta = (SWA - offset) / ratio`, and this is that relation run
+   *  the other way. */
+  void setDesiredFromSteer(double steer_rad);
 
-  void updateChassisDt(const ChassisSample& msg);
+  /// Reasons to withdraw the command, applied on every chassis tick.
+  void applyGates(LaneKeepOutput& out, int64_t now_us, bool& assist_ok);
 
-  /** Whether torque is reaching the rack right now, and whether we know.
-   *  The two answers when we do not know are deliberately different. Having never heard from a panda
-   *  means there is no panda in the loop — a bag replay, the Python bindings, a bench run — and gating
-   *  there would silence the command in every offline harness we measure with. Having heard from one
-   *  and then losing it means we are on the car and the device stopped talking, in which case it is
-   *  not passing torque either. So: never seen, gate open; seen and aged out, gate closed. */
-  bool assistPresent(int64_t now_us, bool& known) const;
-
-  /** The `fp` curvature → steering-wheel angle chain, run again at the current speed. Reproduces exactly
-   *  what `stepFlowpilot` does after the solve — vehicle model, the speed-dependent angle ceiling, the slew
-   *  guard — because a recompute that skipped any of them would command something the once-per-frame path
-   *  never would. Returns false when there is nothing to recompute from. */
+  /** Steering setpoint recomputed at the current speed between vision frames.
+   *
+   *  The whole chain — vehicle model, speed-dependent angle ceiling, rate limit — is computed by the
+   *  fp planner itself: a recompute skipping any link would command something the per-frame path
+   *  never produces. What is left here is the road-wheel to steering-wheel conversion and the debug
+   *  fields. False when there is nothing to recompute from. */
   bool recomputeSetpoint(LaneKeepOutput& out);
 
-  double emaAlpha(double alpha_at_nominal) const;
-
-  double slipFactorOrZero() const;
   lateral::VehicleParams vehicleParams() const
   {
     lateral::VehicleParams v;
@@ -302,34 +257,11 @@ private:
     v.road_roll_valid = road_roll_valid_;
     return v;
   }
-  double curvatureWithRoll(double kappa, double speed_mps) const;
-  double activeMaxSteerRad() const;
-  double mpcMaxSteerRad(double speed_mps) const;
-
-  class PpSolver;
-  class VisionPilotSolver;
-  class FlowPilotSolver;
-  class GradKappaSolver;
-  class AcadosKappaSolver;
-
   void makeSolver();
 
   Config config_;
   std::unique_ptr<lateral::IPlanner> solver_;
-  PurePursuit pp_;
   LatControlPid lat_;
-  visionpilot::LateralPlanner mpc_;
-  flowpilot::LateralMpc fp_mpc_;
-#ifdef ADAS_WITH_ACADOS
-  flowpilot::AcadosLatMpc acados_mpc_;
-#endif
-  visionpilot::KappaRateFilter kappa_rate_;
-  double kappa_ema_ = 0.0;
-  bool kappa_ema_init_ = false;
-  double epsi_ema_ = 0.0;
-  bool epsi_ema_init_ = false;
-  double cte_ema_ = 0.0;
-  bool cte_ema_init_ = false;
   double max_steer_rad_ = 8.0 * M_PI / 180.0;
   double max_torque_cnm_ = 300.0;
   double steer_ratio_ = 15.7;
@@ -342,33 +274,19 @@ private:
   double steer_sign_ = -1.0;
   bool steer_output_enabled_ = false;
 
+  lateral::SlewGuard slew_;
+  StaleGate stale_gate_;
+  BlinkerGate blinker_gate_;
+  AssistGate assist_gate_;
+  IntervalFilter frame_dt_;
+  HysteresisGate speed_gate_;
+
   ChassisSample chassis_;
   bool have_chassis_ = false;
   double desired_swa_deg_ = 0.0;
   double desired_swa_no_offset_deg_ = 0.0;
   bool have_desired_ = false;
   LaneKeepOutput last_;
-  double last_mpc_steer_rad_ = 0.0;
-  bool have_mpc_prev_ = false;
-  double last_pub_steer_rad_ = 0.0;
-  bool have_pub_prev_ = false;
-  bool ref_stale_ = false;
-  /** When a turn signal last went off; suppression persists for `lka_blinker_resume_delay_s`. */
-  int64_t blinker_off_us_ = 0;
-  bool blinker_off_armed_ = false;
-  bool blinker_suppressed_ = false;
-  /** Last `panda/health`: whether the safety layer allowed control, and when it said so. */
-  bool assist_allowed_ = false;
-  int64_t assist_ts_us_ = 0;
-  bool have_assist_ = false;
-  bool assist_absent_logged_ = false;
-  int pub_gap_frames_ = 0;
-  int64_t last_frame_ts_us_ = 0;
-  double frame_dt_s_ = 0.09;
-  int64_t last_chassis_ts_us_ = 0;
-  int64_t last_pid_us_ = 0;
-  bool speed_gate_open_ = false;
-  double chassis_dt_s_ = 0.05;
 };
 
 }  // namespace services

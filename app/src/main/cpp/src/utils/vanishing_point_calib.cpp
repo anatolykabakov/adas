@@ -6,7 +6,6 @@
 #include <Eigen/Dense>
 
 namespace adas {
-
 std::optional<Vec2> getIntersection(const ImageLine& a, const ImageLine& b)
 {
   if (std::abs(a.m - b.m) < 1e-9)

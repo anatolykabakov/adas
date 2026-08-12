@@ -8,7 +8,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct SearchConfig {
   double turn_tol_deg = 25.0;
   double dist_tol_rel = 0.15;

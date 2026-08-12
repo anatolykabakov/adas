@@ -8,19 +8,18 @@
 #include "adas/utils/vehicle_model.h"
 
 namespace adas {
-
 class ParamsLearner {
 public:
   enum State {
     kStiffness = 0,
     kSteerRatio = 1,
-    kAngleOffset = 2,      //!< рад
-    kAngleOffsetFast = 3,  //!< рад
-    kU = 4,                //!< продольная скорость, м/с
-    kV = 5,                //!< боковая скорость, м/с
-    kYawRate = 6,          //!< рад/с, z вниз
-    kSteerAngle = 7,       //!< угол руля, рад
-    kRoadRoll = 8,         //!< рад
+    kAngleOffset = 2,
+    kAngleOffsetFast = 3,
+    kU = 4,
+    kV = 5,
+    kYawRate = 6,
+    kSteerAngle = 7,
+    kRoadRoll = 8,
     kNumStates = 9
   };
 
@@ -35,8 +34,8 @@ public:
 
     double stiffness_min = 0.2;
     double stiffness_max = 5.0;
-    double steer_ratio_min = 0.0;  //!< 0 — взять 0.5·steer_ratio_init
-    double steer_ratio_max = 0.0;  //!< 0 — взять 2.0·steer_ratio_init
+    double steer_ratio_min = 0.0;
+    double steer_ratio_max = 0.0;
     double angle_offset_max_deg = 10.0;
 
     double steer_sign = 1.0;
@@ -52,7 +51,7 @@ public:
     double roll_process_std_deg = 1.0;
 
     double p_initial_scale = 1.0;
-    double stiffness_p0_std = 0.0;  //!< 0 — брать из Q
+    double stiffness_p0_std = 0.0;
     double steer_ratio_p0_std = 0.0;
 
     double yaw_rate_std = 0.02;
@@ -66,7 +65,7 @@ public:
     double min_speed_ms = 1.0;
     double max_steer_deg = 45.0;
     double max_yaw_rate = 1.0;
-    double max_lateral_jerk = 0.0;  //!< 0 — не отбрасывать переходные процессы: модель динамическая
+    double max_lateral_jerk = 0.0;
     double max_roll_std_deg = 1.5;
 
     double excited_swa_deg = 2.0;
@@ -275,7 +274,7 @@ private:
     const Vec f = integrate(x_, dt);
 
     static const Vec kStep = (Vec() << 1e-4, 1e-3, 1e-5, 1e-5, 1e-3, 1e-4, 1e-5, 1e-5, 1e-5).finished();
-    Mat F = Mat::Identity();  // столбцы заполняются ниже численно
+    Mat F = Mat::Identity();
     for (int i = 0; i < kNumStates; ++i) {
       Vec hi = x_, lo = x_;
       hi[i] += kStep[i];

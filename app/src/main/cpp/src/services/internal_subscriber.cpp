@@ -5,34 +5,22 @@
 
 namespace adas {
 namespace services {
-
 void InternalSubscriber::configure()
 {
-  subscribe<adas::proto::ZMQMessage>(topics::kLaneKeep, [this](const adas::proto::ZMQMessage& m) {
-    if (!m.has_lane_keep())
-      return;
-    out_.emplace_back(laneKeepFromProto(m.lane_keep(), m.timestamp() * 1000));
+  subscribe<adas::proto::LaneKeepState>(topics::kLaneKeep, [this](const adas::proto::LaneKeepState& m) {
+    out_.emplace_back(laneKeepFromProto(m, m.timestamp() * 1000));
   });
-  subscribe<adas::proto::ZMQMessage>(topics::kLocalizationPose, [this](const adas::proto::ZMQMessage& m) {
-    if (!m.has_localization_pose())
-      return;
-    out_.emplace_back(localizationFromProto(m.localization_pose(), m.timestamp() * 1000));
+  subscribe<adas::proto::LocalizationPose>(topics::kLocalizationPose, [this](const adas::proto::LocalizationPose& m) {
+    out_.emplace_back(localizationFromProto(m, m.timestamp() * 1000));
   });
-  subscribe<adas::proto::ZMQMessage>(topics::kCameraCalib, [this](const adas::proto::ZMQMessage& m) {
-    if (!m.has_camera_calib())
-      return;
-    out_.emplace_back(cameraCalibFromProto(m.camera_calib(), m.timestamp() * 1000));
-  });
-  subscribe<adas::proto::ZMQMessage>(topics::kSteerCommand, [this](const adas::proto::ZMQMessage& m) {
-    if (!m.has_steer_command())
-      return;
-    out_.emplace_back(m.steer_command());
-  });
-  subscribe<adas::proto::ZMQMessage>(topics::kSafetyWarn, [this](const adas::proto::ZMQMessage& m) {
-    if (!m.has_safety_warn())
-      return;
-    out_.emplace_back(m.safety_warn());
-  });
+  subscribe<adas::proto::CameraCalibrationState>(topics::kCameraCalib,
+                                                 [this](const adas::proto::CameraCalibrationState& m) {
+                                                   out_.emplace_back(cameraCalibFromProto(m, m.timestamp() * 1000));
+                                                 });
+  subscribe<adas::proto::SteerCommand>(topics::kSteerCommand,
+                                       [this](const adas::proto::SteerCommand& m) { out_.emplace_back(m); });
+  subscribe<adas::proto::SafetyWarnState>(topics::kSafetyWarn,
+                                          [this](const adas::proto::SafetyWarnState& m) { out_.emplace_back(m); });
 }
 
 void InternalSubscriber::reset() { out_.clear(); }

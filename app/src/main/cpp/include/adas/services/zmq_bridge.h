@@ -1,15 +1,16 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
 #include <zmq.hpp>
 
 #include "adas/middleware/manager.hpp"
+#include "adas/utils/proto_convert.h"
 #include "messages.pb.h"
 
 namespace adas {
-
 inline constexpr const char* kZmqEndpointIn = "tcp://127.0.0.1:5555";
 
 inline constexpr const char* kZmqEndpointOut = "tcp://127.0.0.1:5556";
@@ -29,10 +30,10 @@ inline const std::vector<std::string> kZmqOutboundTopics = {
     "safety/warn",
     "traffic/state",
     "map/local",
+    "vision/path",
 };
 
 namespace services {
-
 class ZmqBridge : public adas::middleware::Service {
 public:
   struct Config {
@@ -47,6 +48,18 @@ public:
   void reset() override;
   std::string_view getName() const override { return "zmq_bridge"; }
   const Config& config() const { return config_; }
+
+protected:
+  template <typename Payload, typename Setter>
+  void forwardOutbound(const std::string& topic_name, Setter setter)
+  {
+    subscribe<Payload>(topic_name, [this, topic_name, setter](const Payload& payload) {
+      adas::proto::ZMQMessage zmq;
+      zmq.set_topic(topic_name);
+      setter(zmq, payload);
+      onInternalMessage(topic_name, zmq);
+    });
+  }
 
 private:
   void initSockets();

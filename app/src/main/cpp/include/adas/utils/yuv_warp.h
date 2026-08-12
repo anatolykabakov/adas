@@ -3,7 +3,6 @@
 #include <cstdint>
 
 namespace adas {
-
 constexpr int kModelW = 512;
 constexpr int kModelH = 256;
 

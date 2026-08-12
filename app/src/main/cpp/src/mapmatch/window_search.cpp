@@ -8,7 +8,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 constexpr double kRad2Deg = 57.29577951308232;
 
 double wrapDeg(double a)
@@ -40,8 +39,6 @@ struct DirGeometry {
       const double h0 = std::atan2(ys[1] - ys[0], xs[1] - xs[0]) * kRad2Deg;
       const double h1 = std::atan2(ys.back() - ys[ys.size() - 2], xs.back() - xs[xs.size() - 2]) * kRad2Deg;
 
-      // Bend inside the edge: without it a ring road reads as straight, because the curvature lives in
-      // the polyline and there is no turn at the joins.
       double bend = 0.0;
       double prev = std::atan2(ys[1] - ys[0], xs[1] - xs[0]) * kRad2Deg;
       for (std::size_t i = 2; i < xs.size(); ++i) {
@@ -68,10 +65,10 @@ struct DirGeometry {
 
 struct State {
   double cost = 0.0;
-  int node = -1;       ///< index into the path tree
-  double dist = 0.0;   ///< distance covered along the route
-  double head = 0.0;   ///< route heading
-  double head0 = 0.0;  ///< heading at the start of the current window
+  int node = -1;
+  double dist = 0.0;
+  double head = 0.0;
+  double head0 = 0.0;
 };
 
 std::uint32_t headNode(const RoadMap& map, std::uint32_t de)
@@ -107,8 +104,6 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
   for (std::uint32_t de = 0; de < n_dir; ++de) {
     if (geo.length_m[de] <= 0.0)
       continue;
-    // One-way edges in their own direction only, as in the beam expansion below: a route seeded against
-    // a one-way wastes beam width and can surface a top-ranked route that is not drivable.
     if ((de & 1u) && map.edge(de >> 1).oneway)
       continue;
     State s;
@@ -118,7 +113,7 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
     layer.push_back(s);
   }
 
-  double information = 0.0;  // degrees of signal accumulated so far
+  double information = 0.0;
   std::vector<State> next;
   std::vector<State> grown;
 
@@ -129,7 +124,6 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
 
     next.clear();
     for (const State& st : layer) {
-      // grow the state until it closes the window
       grown.clear();
       grown.push_back(st);
       for (int step = 0; step < cfg.max_expand && !grown.empty(); ++step) {
@@ -152,7 +146,6 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
             if (eid == (de >> 1))
               continue;
             const RoadEdge& e = map.edge(eid);
-            // pick the direction that enters the edge from the node we are on
             const std::uint32_t node = headNode(map, de);
             std::uint32_t de2;
             if (e.node_a == node) {
@@ -181,8 +174,6 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
     if (next.empty())
       break;
 
-    // Cost-based pruning is deferred: over the first windows the increments are near zero and the costs
-    // nearly equal, so pruning would discard the right start at random. Per-edge duplicates are always
     // dropped, otherwise the layer grows explosively.
     std::sort(next.begin(), next.end(), [](const State& a, const State& b) { return a.cost < b.cost; });
     const int limit = information >= cfg.defer_deg ? cfg.beam : cfg.defer_beam;
@@ -197,8 +188,6 @@ std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<d
       int& used = per_edge[de];
       if (used >= cfg.per_edge)
         continue;
-      // Spatial diversity. Keying on the edge is not enough: adjacent edges of one street are the same
-      // place, and the beam settles into one area, returning twenty variants of one wrong answer.
       const std::uint32_t node = headNode(map, de);
       const std::int64_t cx = static_cast<std::int64_t>(std::floor(map.nodeX(node) / cfg.cell_m));
       const std::int64_t cy = static_cast<std::int64_t>(std::floor(map.nodeY(node) / cfg.cell_m));

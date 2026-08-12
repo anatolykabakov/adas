@@ -10,7 +10,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 constexpr char kMagic[8] = {'A', 'D', 'A', 'S', 'M', 'A', 'P', '1'};
 
 template <typename T>

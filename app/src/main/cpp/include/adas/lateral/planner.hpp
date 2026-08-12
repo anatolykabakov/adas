@@ -4,14 +4,13 @@
 
 namespace adas {
 namespace lateral {
-
 class IPlanner {
 public:
   virtual ~IPlanner() = default;
 
   virtual const char* name() const = 0;
 
-  /** Какой численный метод считает кривизну. Пусто, если у планера выбора нет. */
+  /** Which numerical method computes the curvature. Empty when the planner has no choice. */
   virtual const char* solverName() const { return ""; }
 
   virtual bool available() const { return true; }

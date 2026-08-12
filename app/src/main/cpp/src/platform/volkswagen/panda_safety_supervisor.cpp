@@ -7,7 +7,6 @@
 #include "adas/platform/volkswagen/values.h"
 
 namespace volkswagen {
-
 void PandaSafetySupervisor::scheduleSafetyRetry(int64_t now_ms)
 {
   safety_fail_streak_ = std::min(safety_fail_streak_ + 1, 16);
@@ -60,9 +59,6 @@ std::optional<health_t> PandaSafetySupervisor::tick(Panda& panda, health_t healt
       const uint8_t chv = std::get<2>(*vers);
       LOGI("Panda packet versions health=%u can=%u can_health=%u (host expects health=%u can_health=%u)", hv, cv, chv,
            HEALTH_PACKET_VERSION, CAN_HEALTH_PACKET_VERSION);
-      // v11 is not a mismatch: `Panda::get_state` reads the v11 layout when the firmware speaks it, and
-      // that is the version dragonpilot's panda declares. Reporting it as "fields will be wrong" sent
-      // whoever debugged the assist gate looking in the wrong place.
       if (hv != HEALTH_PACKET_VERSION && hv != HEALTH_PACKET_VERSION_V11) {
         LOGE("Panda health packet version %u is neither %u nor %u — fields will be wrong", hv, HEALTH_PACKET_VERSION,
              HEALTH_PACKET_VERSION_V11);

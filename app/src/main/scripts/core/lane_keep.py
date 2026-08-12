@@ -257,16 +257,21 @@ class LaneKeepController:
             float(get("fp_steering_rate_weight", 400.0))
         )
 
-        # Module-level VisionPilot knobs (the `mpc` seed/cost).
-        pyadas.set_mpc_warm_start_gains(
-            float(get("mpc_epsi_gain", 0.5)), float(get("mpc_ff_scale", 2.0))
-        )
-        pyadas.set_mpc_cost_weights(
-            float(get("mpc_cte_weight_base", 20.0)),
-            float(get("mpc_cte_quartic_scale", 5.0)),
-        )
-        pyadas.set_mpc_cte_gain_base(float(get("mpc_cte_gain_base", 0.6)))
-        pyadas.set_mpc_cte_gain_floor(float(get("mpc_cte_gain_floor", 0.0)))
+        # Веса и затравка решателя `mpc`. Раньше это были модульные `pyadas.set_mpc_*` над
+        # глобалами; глобалы стали полями экземпляра, и знобы ходят через реестр параметров —
+        # то есть тем же путём, что steer_ratio и настройки разбора разметки.
+        for name, default in (
+            ("mpc_epsi_gain", 0.5),
+            ("mpc_ff_scale", 2.0),
+            ("mpc_cte_weight_base", 20.0),
+            ("mpc_cte_quartic_scale", 5.0),
+            ("mpc_cte_gain_base", 0.6),
+            ("mpc_cte_gain_floor", 0.0),
+        ):
+            if not self._app.set_param(name, float(get(name, default))):
+                raise RuntimeError(
+                    f"неизвестный параметр {name!r}: конфигурация не применена"
+                )
 
     def set_cam_y_left_m(self, m: float) -> None:
         self.cam_y_left_m = float(m)

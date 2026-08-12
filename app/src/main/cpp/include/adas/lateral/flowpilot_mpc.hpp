@@ -9,7 +9,6 @@
 
 namespace adas {
 namespace flowpilot {
-
 struct LatMpcConfig {
   double path_weight = 1.0;
   double heading_weight = 0.11;

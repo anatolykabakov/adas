@@ -9,7 +9,6 @@
 #include "adas/platform/volkswagen/values.h"
 
 namespace volkswagen {
-
 struct Actuators {
   float steer = 0.f;
 
@@ -35,11 +34,8 @@ struct CarStateView {
   LdwStockValues ldwStock;
   GraStockValues graStock;
   bool cruiseEngaged = false;
-  /** Cruise main switch on — `TSK_Status != 0/1`. This, not `cruiseEngaged`, is what always-on lateral
-   *  keys on: the stock VW cruise disengages below ~30 km/h and on brake, while the main switch stays on. */
   bool cruiseAvailable = false;
   bool gearReverse = false;
-  /// Getriebe_11 has been seen at least once; before that the gear is unknown.
   bool gearKnown = false;
   bool gasPressed = false;
   bool brakePressed = false;
@@ -58,8 +54,6 @@ inline bool lateralActuationAllowed(bool controls_allowed, bool always_on, const
     return true;
   if (!always_on)
     return false;
-  // gearKnown is required: before the first Getriebe_11 frame the gear reads as 0, and "not reverse"
-  // would be formally true and substantially false — the car may be in reverse. Unknown means no.
   return cs.cruiseAvailable && cs.gearKnown && !cs.gearReverse;
 }
 

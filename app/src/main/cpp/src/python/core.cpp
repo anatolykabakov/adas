@@ -21,19 +21,6 @@ PYBIND11_MODULE(core, m)
 {
   m.doc() = "";
 
-  m.def("set_mpc_cost_weights", &visionpilot::set_cost_weights, py::arg("cte_weight_base"),
-        py::arg("cte_quartic_scale"));
-
-  m.def("set_mpc_warm_start_gains", &visionpilot::set_warm_start_gains, py::arg("epsi_gain"), py::arg("ff_scale"));
-
-  m.def("set_mpc_cte_gain_base", &visionpilot::set_cte_gain_base, py::arg("base"));
-  m.def("set_mpc_cte_gain_floor", &visionpilot::set_cte_gain_floor, py::arg("floor"));
-
-  // The MQB torque limiter, exposed because a replay has no panda in the loop and the command that reaches
-  // the rack is the limited one. Comparing our unlimited torque against upstream's `actuatorsOutput` is not
-  // a comparison — the rate limit alone turns a requested 300 into a median 187 applied. Exposed rather
-  // than reimplemented in the harness: a second copy of the asymmetric up/down logic would be a second
-  // thing to keep correct.
   m.def("apply_driver_steer_torque_limits", &volkswagen::applyDriverSteerTorqueLimits, py::arg("apply_torque"),
         py::arg("driver_torque"), py::arg("apply_steer_last"));
   m.attr("STEER_MAX") = volkswagen::CarControllerParams::STEER_MAX;
@@ -204,9 +191,6 @@ PYBIND11_MODULE(core, m)
           },
           py::arg("x"), py::arg("y"), py::arg("search_m") = 200.0);
 
-  // Route ahead and its curvature — the same code the on-device `map_data` service runs, exposed so a
-  // recorded run can be replayed through it offline (`app/src/main/scripts/bag_map_data.py`). Runs that were
-  // driven before the service existed have GPS in the bag, so they can be analysed too.
   py::class_<adas::mapmatch::RouteConfig>(mm, "RouteConfig")
       .def(py::init<>())
       .def_readwrite("horizon_m", &adas::mapmatch::RouteConfig::horizon_m)
@@ -384,7 +368,19 @@ PYBIND11_MODULE(core, m)
       .def_readonly("odom_x", &adas::LocalizationPose::odom_x)
       .def_readonly("odom_y", &adas::LocalizationPose::odom_y)
       .def_readonly("ekf_x", &adas::LocalizationPose::ekf_x)
-      .def_readonly("ekf_y", &adas::LocalizationPose::ekf_y);
+      .def_readonly("ekf_y", &adas::LocalizationPose::ekf_y)
+      // Крен и выученные параметры. Без них по реплею нельзя увидеть, какими числами ехал
+      // контроллер, — а с `use_learned_params` он едет именно ими, а не константами конфига.
+      .def_readonly("road_roll_deg", &adas::LocalizationPose::road_roll_deg)
+      .def_readonly("road_roll_std_deg", &adas::LocalizationPose::road_roll_std_deg)
+      .def_readonly("road_roll_valid", &adas::LocalizationPose::road_roll_valid)
+      .def_readonly("learned_stiffness_factor", &adas::LocalizationPose::learned_stiffness_factor)
+      .def_readonly("learned_steer_ratio", &adas::LocalizationPose::learned_steer_ratio)
+      .def_readonly("learned_angle_offset_deg", &adas::LocalizationPose::learned_angle_offset_deg)
+      .def_readonly("learned_stiffness_std", &adas::LocalizationPose::learned_stiffness_std)
+      .def_readonly("learned_steer_ratio_std", &adas::LocalizationPose::learned_steer_ratio_std)
+      .def_readonly("learned_params_valid", &adas::LocalizationPose::learned_params_valid)
+      .def_readonly("learned_sample_count", &adas::LocalizationPose::learned_sample_count);
 
   py::class_<adas::LaneKeepOutput>(m, "LaneKeepOutput")
       .def_readonly("timestamp_us", &adas::LaneKeepOutput::timestamp_us)
@@ -407,8 +403,6 @@ PYBIND11_MODULE(core, m)
       .def_readonly("status", &adas::LaneKeepOutput::status)
       .def_readonly("controller", &adas::LaneKeepOutput::controller);
 
-  // The actuation command: what CarController would have been handed. `torque_cnm` is signed cNm before the
-  // MQB rate/driver limiter, `enabled` is the app's own lateral gate.
   py::class_<adas::proto::SteerCommand>(m, "SteerCommand")
       .def_property_readonly("torque_cnm", &adas::proto::SteerCommand::torque_cnm)
       .def_property_readonly("enabled", &adas::proto::SteerCommand::enabled)
@@ -502,9 +496,6 @@ PYBIND11_MODULE(core, m)
       .def("update_params", &AdasApp::updateParams, py::arg("params"))
       .def(
           "publish_chassis",
-          // `steering_angle_deg` and `steering_pressed` are not decoration: the angle PID closes its loop on
-          // the measured steering-wheel angle and hands over to the driver on `steering_pressed`. A replay
-          // that leaves them at zero exercises the planner and silently bypasses the controller.
           [](AdasApp& self, int64_t timestamp_us, double speed_mps, double steer_rad, double yaw_rate,
              double steering_angle_deg, bool steering_pressed) {
             adas::ChassisSample c;
@@ -595,6 +586,18 @@ PYBIND11_MODULE(core, m)
             self.publishImu(imu);
           },
           py::arg("timestamp_us"), py::arg("yaw_rate"), py::arg("valid") = true)
+      .def(
+          // Сырой IMU: доходит до `ImuCalibrator`, а значит даёт крен дороги. `publish_imu` несёт
+          // готовую скорость рыска, из которой калибратор ориентацию защёлкнуть не может.
+          "publish_imu_data",
+          [](AdasApp& self, py::bytes serialized) {
+            adas::proto::IMUData imu;
+            const std::string data = serialized;
+            if (!imu.ParseFromString(data))
+              throw std::invalid_argument("publish_imu_data: not an IMUData message");
+            self.publishImuData(imu);
+          },
+          py::arg("imu_bytes"))
       .def("pop_messages", [](AdasApp& self) {
         py::list out;
         for (auto& msg : self.popMessages()) {

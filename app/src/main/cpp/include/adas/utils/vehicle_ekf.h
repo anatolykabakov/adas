@@ -5,7 +5,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 class VehicleEKF {
 public:
   using Vec5 = Eigen::Matrix<double, 5, 1>;
@@ -70,7 +69,7 @@ public:
   bool speedIsAState() const { return speed_is_state_; }
 
   GpsPosResult updateGps(double gps_x, double gps_y, double max_innovation = 50.0, double reseed_innovation = 100.0,
-                         bool allow_reseed = true);
+                         bool allow_reseed = true, double R_pos = -1.0);
 
   bool updateGpsYaw(double yaw_enu, double R_yaw = 0.05, bool force = false);
 
@@ -97,10 +96,7 @@ public:
   int gps_vel_update_count = 0;
   int imu_update_count = 0;
   int cam_odo_update_count = 0;
-  /** Bicycle-model yaw rate folded in as a weak measurement — counted apart from the gyro so the
-   *  diagnostics keep saying which sensor the heading actually came from. */
   int model_update_count = 0;
-  /** Wheel-speed measurements folded in when speed is a state. */
   int wheel_speed_update_count = 0;
 
   double wheelbase = 2.636;
@@ -115,12 +111,7 @@ private:
   Mat5 Q_ = Mat5::Zero();
   Mat2 R_gps_ = Mat2::Zero();
   double R_imu_ = 0.0004;
-  /** Noise of the bicycle-model yaw rate when it is used as a measurement — see
-   *  `setYawRateIsAState`. Default 0.15 rad/s: at 20 m/s and 10° of wheel the model reads
-   *  0.44 rad/s while the truth is nearer 0.24, so the disagreement is of that order. */
   double R_model_ = 0.15 * 0.15;
-  /** Wheel-speed measurement noise when speed is a state. 0.1 m/s: the signal is good to about that
-   *  once its scale is removed (residual 0.07-0.10 m/s against GNSS Doppler on two runs). */
   double R_wheel_ = 0.1 * 0.1;
   bool yaw_rate_is_state_ = true;
   bool speed_is_state_ = true;

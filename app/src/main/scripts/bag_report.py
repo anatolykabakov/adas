@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Сводный разбор заезда за один проход: темп зрения, шаг уставки, упор по моменту, уверенность
-разметки, поза против колёс, голосовые пометки водителя.
+"""Сводный разбор заезда за один проход: темп зрения, шаг уставки, положение в полосе по дугам,
+упор по моменту, задержка цепочки, уверенность разметки, поза против колёс, средний слой,
+голосовые пометки водителя.
 
 Выводы обычно берутся из сопоставления этих величин, а не из каждой по отдельности — поэтому они
 печатаются рядом. Считается по кэшу из `vis/bag_cache.py`: первый прогон около 95 секунд, дальше
@@ -228,10 +229,113 @@ def sec_notes(d, bag: Path, model: str):
         )
 
 
+def sec_offset(d):
+    """Положение в полосе по прямым и дугам — то, ради чего существует bag_arc_offset.
+
+    Считается только там, где полоса реально опознана: при выключенном подмешивании смещение
+    описывает план модели, а не полосу, и сравнивать его с нулём бессмысленно.
+    """
+    m = _clean(d) & d["ctrl_lane_anchored"] & d["ctrl_lanelines_active"]
+    off, R, w = d["ctrl_lane_offset"], d["ctrl_R"], d["ctrl_lane_width"]
+    print("\n== положение в полосе (только где полоса опознана) ==")
+    share = 100.0 * np.mean(
+        _clean(d) & d["ctrl_lane_anchored"] & d["ctrl_lanelines_active"]
+    )
+    print(f"  годных тиков: {int(m.sum())} ({share:.1f} % от управляемых)")
+    if m.sum() < 100:
+        print("  мало данных: полоса почти не опознавалась, смещение не о полосе")
+        return
+    print(
+        f"  {'участок':<18} {'n':>7} {'смещ мед':>9} {'смещ p90':>9} {'|смещ| мед':>11} {'ширина мед':>11}"
+    )
+    for label, lo, hi in ARCS:
+        sub = m & (R >= lo) & (R < hi)
+        if sub.sum() < 30:
+            continue
+        o = off[sub]
+        print(
+            f"  {label:<18} {int(sub.sum()):>7} {np.median(o):>+8.3f}м {_pct(o, 90):>+8.3f}м "
+            f"{np.median(np.abs(o)):>10.3f}м {np.median(w[sub]):>10.2f}м"
+        )
+    left = off[m] > 0
+    print(
+        f"  знак: правее центра {100*np.mean(~left):.0f} %, левее {100*np.mean(left):.0f} % — "
+        f"устойчивый перекос означает смещение камеры или угловой ноль, а не управление"
+    )
+
+
+def sec_latency(d):
+    """Цепочка кадр камеры -> инференс -> публикация команды. Разности, а не абсолютные метки."""
+    cap, vis, pub = d["ctrl_capture_t"], d["ctrl_vision_t"], d["ctrl_publish_t"]
+    ok = (cap > 0) & (pub > 0)
+    if ok.sum() < 100:
+        return
+    print("\n== задержка ==")
+    full = (pub - cap)[ok].astype(float)
+    print(
+        f"  кадр -> команда:   медиана {np.median(full):5.1f} мс  p95 {_pct(full, 95):5.1f}  max {full.max():5.0f}"
+    )
+    okv = ok & (vis > 0)
+    if okv.sum() > 100:
+        post = (pub - vis)[okv].astype(float)
+        infer = (vis - cap)[okv].astype(float)
+        print(
+            f"  кадр -> инференс:  медиана {np.median(infer):5.1f} мс  p95 {_pct(infer, 95):5.1f}"
+        )
+        print(
+            f"  инференс -> команда: медиана {np.median(post):5.1f} мс  p95 {_pct(post, 95):5.1f}"
+        )
+    fdt = d["ctrl_frame_dt"]
+    fdt = fdt[fdt > 0]
+    if fdt.size:
+        print(f"  шаг зрения, как его видел контроллер: медиана {np.median(fdt):.1f} мс")
+
+
+def sec_mw(d, bag: Path):
+    """Средний слой: потери в очередях и отставание сервисов. Считается прямо по топику."""
+    from vis.bag_io import load_topic_messages
+
+    try:
+        st = [m for _, m, _ in load_topic_messages(bag, "middleware/stats")]
+    except Exception:
+        return
+    if not st:
+        return
+    print("\n== middleware ==")
+    last = st[-1]
+    drop = np.array([int(getattr(m, "dropped_total", 0)) for m in st])
+    lag = np.array([bool(getattr(m, "any_lagging", False)) for m in st])
+    print(
+        f"  снимков {len(st)}, сервисов {int(getattr(last, 'services', 0))}, "
+        f"потеряно всего {drop.max()}, отставание хоть у кого-то: {100*lag.mean():.1f} % снимков"
+    )
+    rows = {}
+    for m in st:
+        for s in getattr(m, "services_timing", []):
+            r = rows.setdefault(
+                s.name, {"drop": 0, "lag": 0, "n": 0, "max_cb": 0.0, "max_dt": 0.0}
+            )
+            r["drop"] = max(r["drop"], int(s.dropped))
+            r["lag"] += int(bool(s.lagging))
+            r["n"] += 1
+            r["max_cb"] = max(r["max_cb"], float(s.max_cb_ms))
+            r["max_dt"] = max(r["max_dt"], float(s.max_dt_ms))
+    if not rows:
+        return
+    print(f"  {'сервис':<18} {'потерь':>7} {'отстав':>7} {'cb max':>8} {'dt max':>8}")
+    for name, r in sorted(rows.items(), key=lambda kv: -kv[1]["drop"]):
+        print(
+            f"  {name:<18} {r['drop']:>7} {100*r['lag']/max(r['n'],1):>6.0f}% "
+            f"{r['max_cb']:>7.1f}м {r['max_dt']:>7.1f}м"
+        )
+
+
 SECTIONS = {
     "rate": sec_rate,
     "step": sec_step,
+    "offset": sec_offset,
     "torque": sec_torque,
+    "latency": sec_latency,
     "lanes": sec_lanes,
     "pose": sec_pose,
 }
@@ -243,7 +347,7 @@ def main() -> None:
     )
     ap.add_argument("bags", nargs="+", type=Path)
     ap.add_argument(
-        "--only", default=None, help="через запятую: " + ",".join(SECTIONS) + ",notes"
+        "--only", default=None, help="через запятую: " + ",".join(SECTIONS) + ",mw,notes"
     )
     ap.add_argument("--refresh", action="store_true", help="пересобрать кэш")
     ap.add_argument("--notes-model", default="medium")
@@ -252,7 +356,7 @@ def main() -> None:
     want = (
         [s.strip() for s in args.only.split(",")]
         if args.only
-        else list(SECTIONS) + ["notes"]
+        else list(SECTIONS) + ["mw", "notes"]
     )
 
     for bag in args.bags:
@@ -262,7 +366,9 @@ def main() -> None:
             f"\n########  {bag.name}  ({dur:.1f} мин, тиков управления {d['ctrl_t'].size})"
         )
         for key in want:
-            if key in SECTIONS:
+            if key == "mw":
+                sec_mw(d, bag)
+            elif key in SECTIONS:
                 SECTIONS[key](d)
             elif key == "notes":
                 sec_notes(d, bag, args.notes_model)

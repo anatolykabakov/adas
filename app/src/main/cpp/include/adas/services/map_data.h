@@ -11,59 +11,21 @@
 #include "adas/utils/adas_topics.h"
 
 namespace adas {
-
-/** Road curvature ahead from the OSM map, published on `map/local` and recorded in the bag.
- *
- *  This is dragonpilot's `selfdrive/mapd` with the parts that do not apply here removed. dragonpilot queries
- *  Overpass over the network for a 3 km circle and rebuilds its way collection when the car nears the edge of
- *  it; we already ship the whole of Moscow as a 4.9 MB `ADASMAP1` file that loads in one read
- *  (`docs/MAPMATCH.md`), so there is no query, no thread, and no cache — just a lookup. What is kept is the
- *  chain that turns a road graph into speeds: snap, walk forward, curvature, turn sections,
- *  `v = sqrt(a_lat / kappa)`.
- *
- *  Nothing consumes it yet, by design. The output goes into the bag so a run can be examined offline
- *  (`app/src/main/scripts/bag_map_data.py`) and compared against what the vision-based curvature preview
- *  said at the same moment. Wiring map speeds into `long_plan` is a decision that needs that comparison
- *  first: the map is a single centreline drawn by hand, and on the runs recorded so far it matches the
- *  driven road to within a few metres in some places and 100 m in others.
- *
- *  Position comes from two sources on purpose. The map needs geodetic coordinates, and only the raw GPS
- *  message carries them; but GPS on these runs arrives at 0.1-1 Hz and jumps, while `localization/pose` is
- *  a 100 Hz fused estimate in a local frame with an origin this service does not know. So each fix anchors
- *  the map frame, and pose deltas carry the position between fixes. The drift that accumulates in between is
- *  measured, not assumed: `pose_gps_gap_m` is the error at the moment the next fix arrives. */
 namespace services {
-
 class MapData : public adas::middleware::Service {
 public:
   struct Config {
-    /** Map file. On Android this is overwritten by `nativeStart` with the absolute path of the unpacked
-     *  asset; the name here is what Java looks up in the APK (`map.path` in `config.json` — one key, read by
-     *  both sides, so they cannot drift). If relative and not overridden, the service falls back to a few
-     *  known locations. Empty disables it without removing it from the graph. */
     std::string map_path = "Moscow.osm.admap";
 
-    /** Rate the route is rebuilt and published at. dragonpilot runs its mapd at 1 Hz; 2 Hz here costs a
-     *  route build (0.02 ms) plus 5.2 kB of bag per tick, and makes the logged track smooth enough to plot.
-     *  Measured cost at the defaults is about 45 MB/hour — the same class as `vision/model_long`, and an
-     *  order of magnitude under `localization/pose`. */
     double update_hz = 2.0;
 
-    /** The surrounding graph is 15 kB — three times the route — and does not change between ticks, so it
-     *  rides along only this often. Set the period to 0 to attach it to every message. */
     double local_map_period_s = 5.0;
     double local_map_radius_m = 400.0;
 
-    /** Below this speed the heading is not trustworthy enough to pick a direction of travel, so the last
-     *  good one is reused — the same reason dragonpilot stops updating its route near a full stop. */
     double min_speed_mps = 1.5;
 
-    /** A fix further than this from where the pose said we were is treated as the pose having drifted, not
-     *  as a bad fix: the anchor is reset. Only affects logging of `pose_gps_gap_m` and the reset itself. */
     double max_pose_gap_m = 150.0;
 
-    /** Age past which a GPS fix no longer anchors anything and the service stops publishing. At 0.1 Hz
-     *  fixes, the default tolerates a two-fix gap. */
     double max_fix_age_s = 30.0;
 
     mapmatch::RouteConfig route{};
@@ -83,8 +45,8 @@ public:
   const mapmatch::RouteAhead& lastRoute() const { return route_; }
 
 private:
-  void onGpsData(const adas::proto::ZMQMessage& msg);
-  void onPose(const adas::proto::ZMQMessage& msg);
+  void onGpsData(const adas::proto::GPSData& payload);
+  void onPose(const adas::proto::LocalizationPose& payload);
   void onTick();
 
   bool loadMap();
@@ -96,7 +58,6 @@ private:
   bool map_loaded_ = false;
   std::string map_resolved_path_;
 
-  // Anchor: map-frame position of the last fix, and the pose reading at that instant.
   bool have_anchor_ = false;
   double anchor_map_x_ = 0.0, anchor_map_y_ = 0.0;
   double anchor_pose_x_ = 0.0, anchor_pose_y_ = 0.0;

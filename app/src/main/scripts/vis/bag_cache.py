@@ -20,9 +20,11 @@ import numpy as np
 from . import bag_io
 
 # Поднимать при ЛЮБОМ изменении набора или смысла столбцов.
+# v6: добавлены метки задержки (capture/vision/publish), смещение в полосе, ширина полосы, крен и
+# флаги разметки — из них считаются разделы «задержка» и «смещение по дугам» в bag_report.
 # v5: заготовки protobuf пересобраны, в них появилось поле p_max_torque_cnm — в кэшах v4
 # столбец ctrl_max_torque заполнен нулями из getattr-заглушки.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 CACHE_NAME = f".bagcache_v{SCHEMA_VERSION}.npz"
 
@@ -78,6 +80,35 @@ def _build(bag: Path) -> Dict[str, np.ndarray]:
     out["ctrl_status"] = (
         np.array([d[1].status for d in dbg], dtype="S24") if dbg else np.zeros(0, "S24")
     )
+    # Метки цепочки: кадр камеры -> конец инференса -> публикация команды. Разности между ними и
+    # есть задержка, поэтому они нужны в кэше, а не считаются вторым проходом по багу.
+    out["ctrl_capture_t"] = _col(
+        dbg, lambda d: int(getattr(d, "capture_ts_ms", 0)), dtype=np.int64
+    )
+    out["ctrl_vision_t"] = _col(
+        dbg, lambda d: int(getattr(d, "vision_ts_ms", 0)), dtype=np.int64
+    )
+    out["ctrl_publish_t"] = _col(
+        dbg, lambda d: int(getattr(d, "publish_ts_ms", 0)), dtype=np.int64
+    )
+    out["ctrl_frame_dt"] = _col(dbg, lambda d: float(getattr(d, "frame_dt_ms", 0.0)))
+
+    # Положение в полосе и её ширина: то, ради чего существует bag_arc_offset. Плюс состояние
+    # разметки, без которого смещение нельзя читать — при выключенном подмешивании оно про план
+    # модели, а не про полосу.
+    out["ctrl_lane_offset"] = _col(dbg, lambda d: float(getattr(d, "lane_offset_m", 0.0)))
+    out["ctrl_lane_width"] = _col(dbg, lambda d: float(getattr(d, "lane_width_m", 0.0)))
+    out["ctrl_center_force"] = _col(
+        dbg, lambda d: float(getattr(d, "center_force_m", 0.0))
+    )
+    out["ctrl_road_roll"] = _col(dbg, lambda d: float(getattr(d, "road_roll_deg", 0.0)))
+    out["ctrl_lanelines_active"] = _col(
+        dbg, lambda d: bool(getattr(d, "lanelines_active", False)), dtype=bool
+    )
+    out["ctrl_lane_anchored"] = _col(
+        dbg, lambda d: bool(getattr(d, "lane_anchored", False)), dtype=bool
+    )
+
     out["ctrl_err"] = out["ctrl_des_swa"] - out["ctrl_act_swa"]
     out["ctrl_R"] = _radius(out["ctrl_kappa"])
     out["ctrl_lat_acc"] = out["ctrl_v"] ** 2 * np.abs(out["ctrl_kappa"])

@@ -8,7 +8,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct FitConfig {
   double sample_m = 10.0;
   double sigma_road_m = 4.0;

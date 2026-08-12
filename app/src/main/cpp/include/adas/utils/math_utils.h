@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include <cmath>
 
 #include <Eigen/Core>
@@ -9,7 +11,6 @@
 #endif
 
 namespace adas {
-
 inline double normalizeAngle(double angle)
 {
   while (angle > M_PI)

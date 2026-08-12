@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace lateral {
-
 struct VehicleParams {
   double wheelbase_m = 2.636;
   double steer_ratio = 15.7;
@@ -61,6 +60,7 @@ struct Output {
 
   double steer_rad = 0.0;
   double steer_norm = 0.0;
+  double max_steer_rad = 0.0;
   double curvature = 0.0;
   double curvature_rate = 0.0;
   double cte_m = 0.0;

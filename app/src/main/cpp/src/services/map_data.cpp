@@ -1,4 +1,5 @@
 #include "adas/services/map_data.h"
+#include "adas/utils/proto_convert.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,7 +13,6 @@
 namespace adas {
 namespace services {
 namespace {
-
 constexpr double kDeg = M_PI / 180.0;
 
 bool fileExists(const std::string& path)
@@ -21,12 +21,6 @@ bool fileExists(const std::string& path)
   return in.good();
 }
 
-/** Where a relative `map_path` may live.
- *
- *  On the phone it normally never gets here: the map ships as an APK asset, Java unpacks it when the
- *  `map_data` node is on and `nativeStart` passes the absolute path. The candidates below are the fallbacks
- *  that keep the service usable without that — the host build running from the repo, and a map pushed by
- *  hand (`adb push maps/Moscow.osm.admap /sdcard/adas_maps/`) when testing a map the APK does not carry. */
 std::vector<std::string> mapPathCandidates(const std::string& path)
 {
   if (!path.empty() && path.front() == '/')
@@ -66,9 +60,9 @@ void MapData::configure()
 {
   map_loaded_ = loadMap();
 
-  subscribe<adas::proto::ZMQMessage>(topics::kGpsData, [this](const adas::proto::ZMQMessage& m) { onGpsData(m); });
-  subscribe<adas::proto::ZMQMessage>(topics::kLocalizationPose,
-                                     [this](const adas::proto::ZMQMessage& m) { onPose(m); });
+  subscribe<adas::proto::GPSData>(topics::kGpsData, [this](const adas::proto::GPSData& m) { onGpsData(m); });
+  subscribe<adas::proto::LocalizationPose>(topics::kLocalizationPose,
+                                           [this](const adas::proto::LocalizationPose& m) { onPose(m); });
 
   const auto period_ms = static_cast<uint64_t>(std::max(1.0, 1000.0 / std::max(0.1, config_.update_hz)));
   scheduleTimer(
@@ -95,19 +89,17 @@ void MapData::reset()
   route_ = mapmatch::RouteAhead{};
 }
 
-void MapData::onGpsData(const adas::proto::ZMQMessage& msg)
+void MapData::onGpsData(const adas::proto::GPSData& payload)
 {
-  if (!msg.has_gps_data() || !map_loaded_)
+  if (!map_loaded_)
     return;
-  const auto& g = msg.gps_data();
-  const double lat = g.latitude();
-  const double lon = g.longitude();
+  const double lat = payload.latitude();
+  const double lon = payload.longitude();
   if (!std::isfinite(lat) || !std::isfinite(lon) || (std::abs(lat) < 1e-9 && std::abs(lon) < 1e-9))
     return;
 
   const auto [mx, my] = map_.frame().toLocal(lat, lon);
 
-  // Measure how far the pose had drifted since the previous fix before moving the anchor onto this one.
   if (have_anchor_ && have_pose_) {
     const double pred_x = anchor_map_x_ + (pose_x_ - anchor_pose_x_);
     const double pred_y = anchor_map_y_ + (pose_y_ - anchor_pose_y_);
@@ -121,29 +113,22 @@ void MapData::onGpsData(const adas::proto::ZMQMessage& msg)
   anchor_pose_x_ = pose_x_;
   anchor_pose_y_ = pose_y_;
   have_anchor_ = true;
-  // If the localizer has not spoken yet there is no pose to anchor against, and the zeros stored above are
-  // not a reading — they are the absence of one. `onPose` re-anchors on the first real pose; without that,
-  // a fix arriving before the localizer starts would offset every later position by the pose at that moment.
   anchor_has_pose_ = have_pose_;
   last_lat_ = lat;
   last_lon_ = lon;
-  last_fix_us_ = g.timestamp() * 1000;
+  last_fix_us_ = payload.timestamp() * 1000;
 
-  gps_speed_mps_ = g.speed();
-  gps_bearing_deg_ = g.bearing();
-  // Bearing is only meaningful while moving, and a stationary phone reports exactly 0 rather than nothing.
+  gps_speed_mps_ = payload.speed();
+  gps_bearing_deg_ = payload.bearing();
   gps_course_valid_ = std::isfinite(gps_bearing_deg_) && gps_speed_mps_ > 2.0;
 }
 
-void MapData::onPose(const adas::proto::ZMQMessage& msg)
+void MapData::onPose(const adas::proto::LocalizationPose& payload)
 {
-  if (!msg.has_localization_pose())
-    return;
-  const auto& p = msg.localization_pose();
-  pose_x_ = p.x();
-  pose_y_ = p.y();
-  pose_yaw_ = p.yaw();
-  pose_v_ = p.v();
+  pose_x_ = payload.x();
+  pose_y_ = payload.y();
+  pose_yaw_ = payload.yaw();
+  pose_v_ = payload.v();
 
   if (have_anchor_ && !anchor_has_pose_) {
     anchor_pose_x_ = pose_x_;
@@ -165,7 +150,6 @@ bool MapData::currentPosition(double& x, double& y, double& yaw) const
     return true;
   }
 
-  // No localizer: the fix is all there is, and heading has to come from GPS course.
   x = anchor_map_x_;
   y = anchor_map_y_;
   if (!gps_course_valid_)
@@ -200,30 +184,23 @@ void MapData::onTick()
     return;
 
   const auto t_us = static_cast<int64_t>(now());
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(t_us / 1000);
-  zmq.set_topic(topics::kMapLocal);
-  auto* m = zmq.mutable_map_local();
-  m->set_timestamp(t_us / 1000);
-  m->set_map_loaded(true);
-  m->set_pose_gps_gap_m(static_cast<float>(last_gap_m_));
+
+  MapLocalInputs in;
+  in.timestamp_us = t_us;
+  in.pose_gps_gap_m = last_gap_m_;
 
   double x = 0.0, y = 0.0, yaw = 0.0;
   const bool have_pos = currentPosition(x, y, yaw);
   const double speed = have_pose_ ? pose_v_ : gps_speed_mps_;
 
-  // A fix that stopped arriving means the position is dead reckoning off an anchor of unknown age. Publish
-  // the unmatched message anyway — a gap in the log is indistinguishable from the service being dead.
   const bool fix_fresh = last_fix_us_ != 0 && (t_us - last_fix_us_) < static_cast<int64_t>(config_.max_fix_age_s * 1e6);
 
   if (!have_pos || !fix_fresh) {
-    publish(topics::kMapLocal, zmq);
+    publish(topics::kMapLocal, createMapLocal(in));
     ++ticks_;
     return;
   }
 
-  // Heading is the one input a stopped car cannot supply: yaw rate integrates noise and GPS course is
-  // meaningless. Hold the last good one rather than letting the route flip to the opposite carriageway.
   if (speed >= config_.min_speed_mps) {
     last_good_yaw_ = yaw;
     have_yaw_ = true;
@@ -235,69 +212,29 @@ void MapData::onTick()
   route_ = mapmatch::buildRouteAhead(map_, x, y, yaw, config_.route);
   const auto build_us = now() - t0;
 
-  m->set_lat(last_lat_);
-  m->set_lon(last_lon_);
-  m->set_map_x(x);
-  m->set_map_y(y);
-  m->set_yaw(yaw);
-  m->set_speed_mps(static_cast<float>(speed));
-  m->set_matched(route_.matched);
-  m->set_build_ms(static_cast<float>(build_us / 1000.0));
+  in.positioned = true;
+  in.lat = last_lat_;
+  in.lon = last_lon_;
+  in.map_x = x;
+  in.map_y = y;
+  in.yaw = yaw;
+  in.speed_mps = speed;
+  in.build_ms = build_us / 1000.0;
+  in.route_step_m = config_.route.step_m;
+  in.route = &route_;
+
+  adas::proto::MapLocalState msg = createMapLocal(in);
 
   if (route_.matched) {
     ++matched_ticks_;
-    m->set_match_dist_m(static_cast<float>(route_.match_dist_m));
-    m->set_heading_delta_deg(static_cast<float>(route_.heading_delta_rad / kDeg));
-    m->set_road_name(route_.road_name);
-    m->set_route_step_m(static_cast<float>(config_.route.step_m));
-    m->set_route_length_m(static_cast<float>(route_.length_m));
-    m->set_route_node_spacing_m(static_cast<float>(route_.node_spacing_m));
-
-    m->mutable_route_x()->Reserve(static_cast<int>(route_.x_m_pts.size()));
-    m->mutable_route_y()->Reserve(static_cast<int>(route_.y_m_pts.size()));
-    m->mutable_route_kappa()->Reserve(static_cast<int>(route_.kappa.size()));
-    for (std::size_t i = 0; i < route_.x_m_pts.size(); ++i) {
-      m->add_route_x(static_cast<float>(route_.x_m_pts[i]));
-      m->add_route_y(static_cast<float>(route_.y_m_pts[i]));
-      m->add_route_kappa(static_cast<float>(i < route_.kappa.size() ? route_.kappa[i] : 0.0));
-    }
-
-    for (const auto& t : route_.turns) {
-      auto* s = m->add_turns();
-      s->set_start_m(static_cast<float>(t.start_m));
-      s->set_end_m(static_cast<float>(t.end_m));
-      s->set_kappa(static_cast<float>(t.kappa));
-      s->set_speed_mps(static_cast<float>(t.speed_mps));
-      s->set_sign(t.sign);
-    }
-
-    // The `liveMapData` summary: the section we are inside, and the first one starting ahead of us.
-    for (const auto& t : route_.turns) {
-      if (t.start_m <= 0.5 && t.end_m > 0.0) {
-        m->set_turn_speed_valid(true);
-        m->set_turn_speed_mps(static_cast<float>(t.speed_mps));
-        m->set_turn_speed_end_m(static_cast<float>(t.end_m));
-        m->set_turn_speed_sign(t.sign);
-        break;
-      }
-    }
-    for (const auto& t : route_.turns) {
-      if (t.start_m > 0.5) {
-        m->set_next_turn_valid(true);
-        m->set_next_turn_speed_mps(static_cast<float>(t.speed_mps));
-        m->set_next_turn_distance_m(static_cast<float>(t.start_m));
-        break;
-      }
-    }
-
     const auto period_us = static_cast<int64_t>(config_.local_map_period_s * 1e6);
     if (period_us <= 0 || last_local_map_us_ == 0 || (t_us - last_local_map_us_) >= period_us) {
-      fillLocalMap(*m, x, y);
+      fillLocalMap(msg, x, y);
       last_local_map_us_ = t_us;
     }
   }
 
-  publish(topics::kMapLocal, zmq);
+  publish(topics::kMapLocal, msg);
 
   if (++ticks_ % 600 == 0) {
     LOGI("MapData: %llu ticks, matched %.0f%%, last match %.1f m on '%s', build %.2f ms",

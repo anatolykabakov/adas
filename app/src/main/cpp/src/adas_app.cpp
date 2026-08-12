@@ -86,11 +86,6 @@ void AdasApp::setupRealtimeServices()
   if (f.enable_zmq_bridge)
     zmq_bridge_service_ = middleware_->registerService<adas::services::ZmqBridge>(cfg_.zmq_bridge);
 
-  topic_convert_service_ = middleware_->registerService<adas::services::TopicConvert>(cfg_.topic_convert);
-
-  if (f.enable_localization && f.enable_imu_calib)
-    imu_calib_service_ = middleware_->registerService<adas::services::ImuCalib>(cfg_.imu_calib);
-
   if (f.enable_lane_keep) {
     auto lk = cfg_.lane_keep;
     lk.steer_output_enabled = true;
@@ -129,14 +124,11 @@ void AdasApp::setupSimulatedServices()
   auto lk = cfg_.lane_keep;
   lk.steer_output_enabled = true;
 
+  inbound_path_cfg_ = cfg_.lane_keep.lane_path;
   middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
   lane_keep_service_ = middleware_->registerService<adas::services::LaneKeep>(lk);
   localization_service_ = middleware_->registerService<adas::services::Localization>(cfg_.localization);
   camera_calib_service_ = middleware_->registerService<adas::services::CameraCalib>(cfg_.camera_calib);
-  imu_calib_service_ = middleware_->registerService<adas::services::ImuCalib>(cfg_.imu_calib);
-
-  if (sim_topic_convert_)
-    topic_convert_service_ = middleware_->registerService<adas::services::TopicConvert>(cfg_.topic_convert);
 
   if (cfg_.feature_flags.enable_safety_warn)
     safety_warn_service_ = middleware_->registerService<adas::services::SafetyWarn>(cfg_.safety_warn);
@@ -147,24 +139,31 @@ void AdasApp::setupSimulatedServices()
 void AdasApp::publishChassis(const adas::ChassisSample& chassis)
 {
   if (middleware_)
-    middleware_->publish(adas::topics::kVehicleChassis, chassis);
+    middleware_->publish(adas::topics::kVehicleState, adas::carStateFromChassis(chassis));
 }
 
+/** Готовая опорная линия от стенда — на вход поперечного контура как есть.
+ *
+ *  Раньше это уезжало в `LaneLines` через поля плана модели, и по дороге терялись `plan_poly`,
+ *  `lane_anchored`, ширина полосы и центрирующая сила, а `polyline` резалась по `x >= 1`. Сравнивать
+ *  контроллер с чужим логом после такой подачи нельзя: сравнивались бы разные опорные линии. */
 void AdasApp::publishLanes(const adas::LanePathMsg& lanes)
 {
   if (middleware_)
-    middleware_->publish(adas::topics::kVisionPath, lanes);
+    middleware_->publish(adas::topics::kVisionPathIn, adas::createLanePath(lanes));
+}
+
+void AdasApp::publishLanePath(const adas::proto::LanePath& path)
+{
+  if (middleware_)
+    middleware_->publish(adas::topics::kVisionPathIn, path);
 }
 
 void AdasApp::publishLaneLines(const adas::proto::LaneLines& lanes)
 {
   if (!middleware_)
     return;
-  adas::proto::ZMQMessage zmq;
-  zmq.set_timestamp(lanes.timestamp());
-  zmq.set_topic(adas::topics::kVisionLanes);
-  *zmq.mutable_lane_lines() = lanes;
-  middleware_->publish(adas::topics::kVisionLanes, zmq);
+  middleware_->publish(adas::topics::kVisionLanes, lanes);
 }
 
 void AdasApp::publishGps(const adas::GpsSample& gps)
@@ -177,6 +176,12 @@ void AdasApp::publishImu(const adas::ImuSample& imu)
 {
   if (middleware_)
     middleware_->publish(adas::topics::kImuYaw, imu);
+}
+
+void AdasApp::publishImuData(const adas::proto::IMUData& imu)
+{
+  if (middleware_)
+    middleware_->publish(adas::topics::kImu, imu);
 }
 
 void AdasApp::publishLaneUv(const adas::LaneUvMsg& uv)
@@ -221,7 +226,14 @@ bool AdasApp::setParam(const std::string& name, const std::string& value)
 
 bool AdasApp::setParam(const std::string& name, double value) { return setParam(name, std::to_string(value)); }
 
-bool AdasApp::setParam(const std::string& name, bool value) { return setParam(name, value ? "true" : "false"); }
+/** `std::string`, а не строковый литерал: `const char*` привязался бы к перегрузке для `bool`
+ *  (преобразование указателя в bool — стандартное, а в `std::string` — пользовательское), то есть
+ *  функция звала бы саму себя с `true` до конца времён. Единственный вызов через неё —
+ *  `setLaneKeepRecomputeSetpoint`, и он вешал процесс на 100 % CPU. */
+bool AdasApp::setParam(const std::string& name, bool value)
+{
+  return setParam(name, std::string(value ? "true" : "false"));
+}
 
 std::string AdasApp::getParam(const std::string& name) const
 {

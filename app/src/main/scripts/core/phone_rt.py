@@ -88,6 +88,8 @@ class PhoneRtGeometry:
         for ui, vi in zip(u, v):
             if -margin <= ui < w + margin and -margin <= vi < h + margin:
                 pts.append((int(round(ui)), int(round(vi))))
+            elif keep_gaps:
+                pts.append(None)
         return pts
 
     def project_ego_xy(
@@ -119,8 +121,12 @@ def project_overlay_xyz(
     y_sign: float = 1.0,
     path_lift: bool = False,
     margin: float = 80.0,
+    keep_gaps: bool = False,
 ) -> List[Tuple[int, int]]:
-    """Dispatch: PhoneRt (device Y-right) or AAD CameraGeometry (ISO via y_sign)."""
+    """Dispatch: PhoneRt (device Y-right) or AAD CameraGeometry (ISO via y_sign).
+
+    ``keep_gaps`` marks out-of-frame points as ``None`` so a drawer can break the polyline there.
+    """
     if isinstance(geom, PhoneRtGeometry):
         # Callers may still pass DRAW_Y_SIGN with device Y; undo to device.
         ys_dev = np.asarray(ys, dtype=np.float64)
@@ -150,10 +156,20 @@ def project_overlay_xyz(
             x_min=x_min,
             path_lift=path_lift,
             margin=margin,
+            keep_gaps=keep_gaps,
         )
 
     from .lane_projection import project_iso_xyz
 
     return project_iso_xyz(
-        xs, ys, zs, geom, w, h, x_min=x_min, y_sign=y_sign, margin=margin
+        xs,
+        ys,
+        zs,
+        geom,
+        w,
+        h,
+        x_min=x_min,
+        y_sign=y_sign,
+        margin=margin,
+        keep_gaps=keep_gaps,
     )

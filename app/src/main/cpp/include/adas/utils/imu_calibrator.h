@@ -10,7 +10,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 class ImuCalibrator {
 public:
   explicit ImuCalibrator(double speed_threshold_mps = 0.5 / 3.6, int min_samples = 50, int max_buffer = 400,

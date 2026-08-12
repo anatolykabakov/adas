@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace platform {
-
 /** What the lateral controller asks for. Torque in centinewton-metres when the platform actuates
  *  torque directly; `steer` is the same request normalised to [-1, 1]. */
 struct Actuators {
@@ -51,11 +50,8 @@ struct CarStateView {
   float steeringTorque = 0.f;
   bool steeringPressed = false;
   bool cruiseEngaged = false;
-  /** Cruise main switch on. This, not `cruiseEngaged`, is what always-on lateral keys on: stock cruise
-   *  drops out below ~30 km/h and on the brake while the main switch stays on. */
   bool cruiseAvailable = false;
   bool gearReverse = false;
-  /** The gear frame has been seen at least once; before that the gear is unknown, not "not reverse". */
   bool gearKnown = false;
   bool gasPressed = false;
   bool brakePressed = false;
@@ -65,8 +61,8 @@ struct CarStateView {
  *  cut the command — a cut is a fault, not a limit. */
 struct SteerLimits {
   int maxTorqueCNm = 0;
-  int stepFrames = 0;      ///< command cadence: one command every N panda ticks
-  int deltaUpPerStep = 0;  ///< how fast the magnitude may grow
+  int stepFrames = 0;
+  int deltaUpPerStep = 0;
   int deltaDownPerStep = 0;
   int driverAllowanceCNm = 0;
 };

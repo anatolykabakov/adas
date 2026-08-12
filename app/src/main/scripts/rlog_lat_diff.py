@@ -1,87 +1,85 @@
 #!/usr/bin/env python3
-"""Push a recorded openpilot/dragonpilot route through *our* lateral stack and diff the commands.
+"""Прогон записи openpilot/dragonpilot через *наш* поперечный стек и разница команд.
 
-This is the sharpest test available to a port: same car, same road, same reference path, same measured
-steering angle — and the only thing that differs is whose code turns that into a steering command. Synthetic
-tests say the code does what it was written to do; this says whether it does what upstream does.
+Самая жёсткая проверка, доступная порту: та же машина, та же дорога, та же опорная линия, тот же
+измеренный угол руля — отличается только код, который превращает это в команду. Синтетика говорит,
+что код делает написанное; это говорит, делает ли он то же, что апстрим.
 
-The replay goes through the middleware, not through internal classes. `AdasApp` is the whole app: publish on
-the topics the phone publishes on, call `step()`, read what comes out. That is deliberate — the middleware
-exists to hide the implementation, so a comparison that reached inside it would be measuring a wiring diagram
-we invented for the test rather than the one that drives the car.
+Реплей идёт через middleware, а не через внутренние классы: `AdasApp` — это всё приложение,
+публикуем в те же топики, что телефон, зовём `step()`, читаем что вышло. Намеренно: middleware
+существует, чтобы скрывать реализацию, и сравнение, залезающее внутрь, мерило бы придуманную для
+теста схему, а не ту, по которой едет машина.
 
-## Two reference modes, and what each isolates
+## Два режима эталона
 
-`--reference plan` (default) feeds `lateralPlan.dPathPoints`: their finished reference, *after* their lane
-blending, camera offset and centering term. Their `y_pts` are sampled at `v_ego · t_idxs`, so the x
-coordinates are reconstructed the same way. Perception and lane fusion are excluded on purpose, and our own
-blending, camera offset and centering are switched off for the same reason — otherwise the comparison would
-measure two different setpoints. What remains under test is path → curvature → angle → torque.
+`--reference plan` (по умолчанию) подаёт `lateralPlan.dPathPoints`: их готовую опору, УЖЕ после их
+смешивания разметки, смещения камеры и центрирующего члена. Их `y_pts` сняты на `v_ego · t_idxs`,
+поэтому x восстанавливаются так же. Перцепция и фьюжн исключены нарочно, и наши смешивание,
+смещение и центрирование выключены по той же причине — иначе сравнивались бы две разные уставки.
+Под тестом остаётся: путь → кривизна → угол → момент.
 
-`--reference model` feeds `modelV2` instead: their four lane lines, road edges, and the plan, published as a
-`LaneLines` message so that **our** `laneLinesToPath` runs on their model output. That extends the comparison
-one stage upstream, to include our lane blending, width gate, σ gate and camera offset. Two things about it
-are worth knowing before reading its numbers:
+`--reference model` подаёт `modelV2`: их линии разметки, края дороги и план как `LaneLines`, так что
+**наш** `laneLinesToPath` работает на их выходе модели. Это расширяет сравнение на стадию вверх —
+наши смешивание, гейт по ширине, гейт по σ и смещение камеры. Две оговорки к его числам:
 
-* their `laneLineStds` is **one scalar per line**; ours is a per-point `y_std` whose median over 5–20 m is
-  what the σ gate reads. The scalar is broadcast to every point, so model mode exercises our gate on *their*
-  definition of σ. That is informative — it is half of what task #23 has to settle — but it is not the same
-  quantity our own model produces;
-* their lateral sign matches ours (measured, not assumed: on a confident frame the near lines sit at −1.64
-  and +1.82 m, i.e. y is right-positive exactly as `lanes.proto` documents), so the polylines are copied
-  across without a flip.
+* их `laneLineStds` — **один скаляр на линию**, наш — поточечный `y_std`, чью медиану на 5–20 м
+  читает гейт по σ. Скаляр размножается на все точки, то есть режим гоняет наш гейт на ИХ
+  определении σ. Это половина задачи #23, но это не та величина, которую даёт наша модель;
+* их знак поперечной оси совпадает с нашим (измерено: на уверенном кадре ближние линии стоят на
+  −1.64 и +1.82 м, то есть y положителен вправо, как и написано в `lanes.proto`), поэтому полилинии
+  переносятся без переворота.
 
-## What is compared, and why not the steering angle first
+## Что сравнивается и почему не угол руля в первую очередь
 
-Four quantities, in the order the signal travels. Keeping them apart is the point: a planning disagreement, a
-vehicle-model disagreement and a controller disagreement have different fixes.
+Четыре величины, в порядке движения сигнала. Держать их раздельно — весь смысл: расхождение в
+планировании, в модели машины и в контроллере лечатся по-разному.
 
-1. **curvature** — their `controlsState.desiredCurvature` against our `LaneKeepOutput.curvature`. This is the
-   planner's own output on both sides, before either stack's steer ratio or understeer term touches it;
-2. **setpoint angle** — their `actuators.steeringAngleDeg` against ours. Curvature → angle goes through each
-   side's vehicle model, so this is where a `steer_ratio` or `tire_stiffness_factor` disagreement shows up
-   rather than a planning one;
-3. **torque before the limiter** — their `actuators.steer · STEER_MAX` against our `SteerCommand.torque_cnm`;
-4. **torque after the limiter** — their `actuatorsOutput.steerOutputCan` (already in cNm, so no round trip
-   through the normalisation) against our command run through `applyDriverSteerTorqueLimits` on a 20 ms grid,
-   which is what `CarController` does at `STEER_STEP = 2`. Comparing (3) alone flatters both sides: the
-   200 cNm/s rate limit turns a requested 300 into a median 187 applied, and the limiter is also where the
-   command resets to zero whenever the assist drops.
+1. **кривизна** — их `controlsState.desiredCurvature` против нашей `LaneKeepOutput.curvature`:
+   собственный выход планировщика с обеих сторон, до того как передаточное или снос тронут его;
+2. **уставной угол** — их `actuators.steeringAngleDeg` против нашего. Кривизна → угол идёт через
+   модель машины каждой стороны, поэтому здесь проявляется расхождение по `steer_ratio` или
+   `tire_stiffness_factor`, а не по планированию;
+3. **момент до ограничителя** — их `actuators.steer · STEER_MAX` против `SteerCommand.torque_cnm`;
+4. **момент после ограничителя** — их `actuatorsOutput.steerOutputCan` (уже в cNm) против нашей
+   команды через `applyDriverSteerTorqueLimits` на сетке 20 мс, как делает `CarController` при
+   `STEER_STEP = 2`. Сравнение только (3) льстит обеим сторонам: темповый предел 200 cNm/с
+   превращает запрошенные 300 в медианные 187 приложенных, и ограничитель — то место, где команда
+   обнуляется при каждой потере ассиста.
 
-**Their setpoint angle is not usable everywhere, and that is why (1) exists.** Measured on this route:
-`actuators.steeringAngleDeg` reaches **649.7°** and has a p90 of **130.8°** even restricted to `latActive`
-frames, because at low speed the plan is a few metres long, the curvature it implies is large, and their
-vehicle model turns that into an angle no rack has. `desiredCurvature` over the same frames stays physical —
-p90 0.049 1/m, i.e. a 20 m radius. So the angle comparison is gated on `|their angle| ≤ max_steer_deg ·
-steer_ratio`, the largest setpoint our own planner can produce; past it our side is clamped by construction
-and the comparison would measure our clamp. The number of frames this removes is reported, not hidden.
+**Их уставной угол годен не везде, и поэтому существует (1).** Измерено на этом заезде:
+`actuators.steeringAngleDeg` доходит до **649.7°** и держит p90 **130.8°** даже на кадрах с
+`latActive`, потому что на малой скорости план длиной несколько метров даёт большую кривизну, а их
+модель машины превращает её в угол, которого нет ни у одной рейки. `desiredCurvature` на тех же
+кадрах остаётся физическим — p90 0.049 1/м, то есть радиус 20 м. Поэтому сравнение угла закрыто
+гейтом `|их угол| ≤ max_steer_deg · steer_ratio`: это наибольшая уставка, которую вообще может выдать
+наш планировщик, за ней мы зажаты по построению и сравнение мерило бы наш зажим. Сколько кадров это
+убирает — печатается, а не скрывается.
 
-The limiter comes from the binding, not from a Python copy of it, so there is one implementation of the
-asymmetric up/down logic. The EPS keepalive dither (±1 cNm every 1.9 s) is **not** modelled; it is a
-liveness trick, not control.
+Ограничитель берётся из биндинга, а не из копии на python: асимметричная логика вверх/вниз
+существует в одном экземпляре. Дрожание для живости EPS (±1 cNm каждые 1.9 с) **не** моделируется —
+это трюк живости, а не управление.
 
-## The one unfairness that cannot be fixed, only accounted for
+## Единственная несправедливость, которую нельзя убрать, только учесть
 
-**The replay is open loop, and that biases the torque comparison and nothing else.** The measured steering
-angle comes from their log, so it is the angle *their* torque produced. Our command never moves the wheel, so
-whatever error remains, our integrator keeps accumulating it — while theirs was logged while actively closing
-the same error. Measured over 102 000 frames of this route set: our setpoint angle agrees with theirs to a
-median of **0.08°** with a correlation of **0.965**, yet our torque before the limiter sits at a median of
-**229 cNm against their 69** and hits the ±300 ceiling in 35 % of frames against their 10 %. Two stages
-agreeing that closely cannot produce a 3× torque disagreement — the integrator can, and does.
+**Реплей разомкнут, и это смещает сравнение момента, но не остальное.** Измеренный угол руля взят из
+их лога, то есть это угол, который создал ИХ момент. Наша команда руль не двигает, поэтому остаток
+ошибки наш интегратор копит, а их — копил, активно закрывая ту же ошибку. Измерено на 102 000 кадрах:
+наша уставка угла совпадает с их до медианных **0.08°** при корреляции **0.965**, а момент до
+ограничителя стоит на медиане **229 cNm против их 69** и упирается в ±300 на 35 % кадров против их
+10 %. Две стадии, совпадающие так близко, не могут дать трёхкратное расхождение момента —
+интегратор может, и даёт.
 
-So `--no-integrator` runs our PID with `ki = 0`, which makes the torque comparison a comparison of
-instantaneous response to the same error, and is the only version of it worth reading. The default keeps the
-integrator so the bias stays visible rather than quietly corrected, and both numbers are printed with the
-difference between them named.
+Поэтому `--no-integrator` гоняет наш PID с `ki = 0`: это сравнение мгновенного отклика на ту же
+ошибку и единственная версия сравнения момента, которую стоит читать. По умолчанию интеграл включён,
+чтобы смещение было видно, а не тихо исправлено.
 
-What this means for interpretation: **curvature and setpoint angle are trustworthy in this harness, torque
-is trustworthy only with `--no-integrator`**, and steady-state offset is not answerable here at all — that
-needs a closed loop, which is what the simulator is for and what `docs/BACKLOG.md` §3 says it cannot rank
-controllers with either.
+Итого для чтения: **кривизна и уставной угол достоверны, момент достоверен только с
+`--no-integrator`**, а установившееся смещение здесь не отвечается вообще — для него нужен замкнутый
+контур, чем и является симулятор, о котором `docs/BACKLOG.md` §3 говорит, что ранжировать
+контроллеры он тоже не умеет.
 
-Sign conventions are reported, not assumed: their angle is openpilot's, ours is the CAN convention with
-`vehicle.steer_sign` already applied, so the script measures the relationship instead of hard-coding it.
+Знаковые соглашения измеряются, а не предполагаются: их угол — в соглашении openpilot, наш — в
+соглашении CAN с уже применённым `vehicle.steer_sign`, поэтому скрипт мерит связь, а не зашивает её.
 
   OPENPILOT_ROOT=/path/to/openpilot python3 rlog_lat_diff.py <route dir> [<route dir> ...]
   python3 rlog_lat_diff.py <parent of routes> --reference model
@@ -95,296 +93,373 @@ import bz2
 import json
 import os
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
 import _path  # noqa: F401
 
-# openpilot's model time grid. The first LAT_MPC_N+1 entries are what `dPathPoints` is sampled on, and
-# hard-coding them beats importing openpilot: this must keep working when their tree is not on the path.
-T_IDXS = [
-    0.0,
-    0.00976562,
-    0.0390625,
-    0.08789062,
-    0.15625,
-    0.24414062,
-    0.3515625,
-    0.47851562,
-    0.625,
-    0.79101562,
-    0.9765625,
-    1.18164062,
-    1.40625,
-    1.65039062,
-    1.9140625,
-    2.19726562,
-    2.5,
-    2.82226562,
-    3.1640625,
-    3.52539062,
-    3.90625,
-    4.30664062,
-    4.7265625,
-    5.16601562,
-    5.625,
-    6.10351562,
-    6.6015625,
-    7.11914062,
-    7.65625,
-    8.21289062,
-    8.7890625,
-    9.38476562,
-    10.0,
-]
+# Сетка времени модели openpilot. Первые LAT_MPC_N+1 — то, на чём снят `dPathPoints`; зашита, а не
+# импортируется: стенд должен работать и когда их дерева нет на пути.
+T_IDXS = np.array(
+    [
+        0.0,
+        0.00976562,
+        0.0390625,
+        0.08789062,
+        0.15625,
+        0.24414062,
+        0.3515625,
+        0.47851562,
+        0.625,
+        0.79101562,
+        0.9765625,
+        1.18164062,
+        1.40625,
+        1.65039062,
+        1.9140625,
+        2.19726562,
+        2.5,
+        2.82226562,
+        3.1640625,
+        3.52539062,
+        3.90625,
+        4.30664062,
+        4.7265625,
+        5.16601562,
+        5.625,
+        6.10351562,
+        6.6015625,
+        7.11914062,
+        7.65625,
+        8.21289062,
+        8.7890625,
+        9.38476562,
+        10.0,
+    ]
+)
 LAT_MPC_N = 16
-LIMITER_DT_S = 0.020  # STEER_STEP = 2 on a 10 ms timer
+LIMITER_DT_S = 0.020  # STEER_STEP = 2 на таймере 10 мс
 ALIGN_TOL_MS = 30.0
+SPEED_BINS = ((0, 5), (5, 10), (10, 15), (15, 20), (20, 30))
+TORQUE_BINS = ((0, 50), (50, 150), (150, 250), (250, 299), (299, 1000))
+MIN_ROUTE, MIN_POOL, MIN_BIN = 50, 200, 30
 
 
-def route_dirs(paths: list[Path]) -> list[Path]:
-    """Accept route directories or a parent holding several. A route is a directory of numbered segments."""
-    out = []
-    for p in paths:
-        if not p.is_dir():
-            continue
-        if any(c.is_dir() and c.name.isdigit() for c in p.iterdir()):
-            out.append(p)
-        else:
-            out.extend(
-                sorted(
-                    c
-                    for c in p.iterdir()
-                    if c.is_dir()
-                    and any(g.is_dir() and g.name.isdigit() for g in c.iterdir())
-                )
+def med(x):
+    return float(np.median(np.abs(x)))
+
+
+def p90(x):
+    return float(np.percentile(np.abs(x), 90))
+
+
+def sat(x):
+    """Доля кадров на потолке момента, %."""
+    return 100.0 * float(np.mean(np.abs(x) >= 299))
+
+
+def arr(seq):
+    return np.asarray(list(seq), dtype=np.float64)
+
+
+class Series:
+    """Одна сравниваемая величина: наша против их, со снятым знаковым соглашением.
+
+    Знак снимается корреляцией, а не зашивается: их угол в соглашении openpilot, наш — в соглашении
+    CAN с уже применённым `steer_sign`.
+    """
+
+    def __init__(self, ours, theirs):
+        self.corr = float(np.corrcoef(ours, theirs)[0, 1]) if len(ours) > 2 else 0.0
+        self.ours = ours * (-1.0 if self.corr < 0 else 1.0)
+        self.theirs = theirs
+        self.diff = self.ours - theirs
+
+    def __len__(self):
+        return len(self.ours)
+
+    @property
+    def slope(self):
+        return float(np.polyfit(self.theirs, self.ours, 1)[0])
+
+    def bin(self, values, lo, hi):
+        """Подвыборка по внешней величине — скорости или их же моменту."""
+        return (np.abs(values) >= lo) & (np.abs(values) < hi)
+
+
+@dataclass
+class Frames:
+    """Что вышло из одного маршрута. Столбцы названы там, где читаются."""
+
+    ours: np.ndarray  # t, swa, torque, on, v, driver_tq, curv
+    theirs: np.ndarray  # t, swa, steer_norm, applied, on
+    curv: np.ndarray  # t, curvature
+    ratio: float
+    refs: int
+
+    def __bool__(self):
+        return len(self.ours) > 0 and len(self.theirs) > 0
+
+
+class RouteLog:
+    """Чтение одного маршрута в события, терпя битый или обрезанный хвост.
+
+    Оба отказа нормальны для записей и оба раньше валили весь прогон: оборванная запись оставляет
+    `rlog.bz2`, распаковывающийся частично, и поток capnp, кончающийся посреди сообщения. Тихо
+    укороченный маршрут — это как раз то, из-за чего свип заявляет покрытие, которого у него нет,
+    поэтому потери попадают в `damaged`, а не в тишину.
+    """
+
+    def __init__(self, route: Path, segments: int | None, want_model: bool):
+        self.route = route
+        self.want_model = want_model
+        self.car: dict | None = None
+        self.damaged: list[str] = []
+        self.segs = sorted(
+            (p for p in route.iterdir() if p.is_dir()), key=lambda p: int(p.name)
+        )[: segments or None]
+        self.events = sorted(self._read_all(), key=lambda e: e[0])
+
+    @staticmethod
+    def _cereal():
+        # cereal живёт в чужом дереве (openpilot/dragonpilot), путь к нему у каждого свой.
+        root = os.environ.get("OPENPILOT_ROOT")
+        if not root:
+            raise SystemExit(
+                "нужен OPENPILOT_ROOT — путь к дереву openpilot/dragonpilot, откуда cereal:\n"
+                "  OPENPILOT_ROOT=/path/to/openpilot python3 rlog_lat_diff.py <route dir>"
             )
-    return out
+        sys.path.insert(0, root) if root not in sys.path else None
+        from cereal import log
 
+        return log
 
-def read_segment(f: Path, capnp_log):
-    """Events from one segment, tolerating a damaged or truncated tail.
+    @staticmethod
+    def _unpack(path: Path):
+        """Распаковка по кускам: `bz2.decompress` целиком поднимает OSError на битом файле."""
+        raw, d, out, lost = path.read_bytes(), bz2.BZ2Decompressor(), b"", False
+        for k in range(0, len(raw), 1 << 18):
+            try:
+                out += d.decompress(raw[k : k + (1 << 18)])
+            except (OSError, EOFError):
+                lost = True
+                break
+            if d.eof:
+                break
+        return out, lost
 
-    Both failure modes are normal in recordings and both used to take down the whole run. A recording that
-    ended mid-write leaves the last `rlog.bz2` unpacking partially and its capnp stream stopping mid-message;
-    one segment of this route set is corrupt outright and raised `OSError: Invalid data stream` from
-    `bz2.decompress`, which killed a four-route sweep at the second route. So: decompress in chunks and keep
-    whatever came out, then read events until the stream stops making sense. Returns (events, note) where
-    note is non-empty when something was lost, because a silently shortened route is how a sweep comes to
-    claim coverage it does not have.
-    """
-    raw = f.read_bytes()
-    d = bz2.BZ2Decompressor()
-    data, lost = b"", False
-    step = 1 << 18
-    for k in range(0, len(raw), step):
+    def _segment(self, path: Path, capnp_log):
+        data, lost = self._unpack(path)
+        if not data:
+            return [], "не распаковался"
+        evts, note = [], ""
         try:
-            data += d.decompress(raw[k : k + step])
-        except (OSError, EOFError):
-            lost = True
-            break
-        if d.eof:
-            break
-    if not data:
-        return [], "не распаковался"
-    evts, note = [], ""
-    try:
-        for evt in capnp_log.Event.read_multiple_bytes(data):
-            evts.append(evt)
-    except Exception:
-        note = "capnp обрезан"
-    if lost:
-        note = (
-            note + ", " if note else ""
-        ) + f"bz2 битый, взято {len(data) / 1e6:.1f} МБ"
-    return evts, note
+            # По одному, а не `list(...)`: на обрезанном потоке исключение придёт посреди чтения, и
+            # прочитанное до него — годные кадры, которые нельзя терять вместе с хвостом.
+            for evt in capnp_log.Event.read_multiple_bytes(data):
+                evts.append(evt)
+        except Exception:
+            note = "capnp обрезан"
+        if lost:
+            note = (
+                note + ", " if note else ""
+            ) + f"bz2 битый, взято {len(data)/1e6:.1f} МБ"
+        return evts, note
+
+    def _read_all(self):
+        capnp_log = self._cereal()
+        for seg in self.segs:
+            path = seg / "rlog.bz2"
+            if not path.exists():
+                continue
+            evts, note = self._segment(path, capnp_log)
+            if note:
+                self.damaged.append(f"{seg.name}: {note}")
+            for evt in evts:
+                got = self._event(evt)
+                if got:
+                    yield got
+
+    def _event(self, evt):
+        w, t = evt.which(), evt.logMonoTime * 1e-6
+        if w == "carParams":
+            cp = evt.carParams
+            self.car = self.car or {
+                "fingerprint": str(cp.carFingerprint),
+                "wheelbase": float(cp.wheelbase),
+                "steer_ratio": float(cp.steerRatio),
+            }
+        elif w == "carState":
+            cs = evt.carState
+            # `steeringTorque` — момент водителя, и он не украшение: он расширяет зажим ограничителя
+            # на STEER_DRIVER_ALLOWANCE, поэтому ноль здесь сделал бы наш ограниченный поток строже
+            # того, который выдала машина.
+            return (
+                t,
+                "car",
+                (
+                    float(cs.vEgo),
+                    float(cs.steeringAngleDeg),
+                    bool(cs.steeringPressed),
+                    float(getattr(cs, "yawRate", 0.0)),
+                    float(cs.steeringTorque),
+                ),
+            )
+        elif w == "lateralPlan" and not self.want_model:
+            lp = evt.lateralPlan
+            return t, "plan", (arr(lp.dPathPoints), arr(lp.psis), arr(lp.curvatures))
+        elif w == "modelV2" and self.want_model:
+            mv = evt.modelV2
+            return (
+                t,
+                "model",
+                {
+                    "x": arr(mv.laneLines[1].x),
+                    "lanes": [arr(ln.y) for ln in mv.laneLines],
+                    "probs": arr(mv.laneLineProbs),
+                    "stds": arr(mv.laneLineStds),
+                    "edges": [arr(e.y) for e in mv.roadEdges],
+                    "plan_x": arr(mv.position.x),
+                    "plan_y": arr(mv.position.y),
+                    "plan_z": arr(mv.position.z),
+                    "plan_yaw": arr(mv.orientation.z),
+                    "plan_yaw_rate": arr(mv.orientationRate.z),
+                },
+            )
+        elif w == "controlsState":
+            # Держится отдельно от `carControl`: это единственная их поперечная величина,
+            # остающаяся физической на малой скорости.
+            return t, "curv", float(evt.controlsState.desiredCurvature)
+        elif w == "carControl":
+            cc = evt.carControl
+            out = cc.actuatorsOutput
+            # `steerOutputCan` — ограниченное значение в cNm; откат нужен для логов без поля.
+            applied = float(getattr(out, "steerOutputCan", out.steer * 300.0))
+            return (
+                t,
+                "cmd",
+                (
+                    float(cc.actuators.steeringAngleDeg),
+                    float(cc.actuators.steer),
+                    applied,
+                    bool(cc.latActive),
+                ),
+            )
+        return None
 
 
-def load_route(route: Path, max_segments: int | None, want_model: bool):
-    """Read the events we need, in time order, as (timestamp_ms, kind, payload) tuples."""
-    # cereal живёт в чужом дереве (openpilot/dragonpilot), путь к нему у каждого свой.
-    root = os.environ.get("OPENPILOT_ROOT")
-    if not root:
-        raise SystemExit(
-            "нужен OPENPILOT_ROOT — путь к дереву openpilot/dragonpilot, откуда берётся cereal:\n"
-            "  OPENPILOT_ROOT=/path/to/openpilot python3 rlog_lat_diff.py <route dir>"
-        )
-    if root not in sys.path:
-        sys.path.insert(0, root)
-    from cereal import log as capnp_log
+class Harness:
+    """Приложение, настроенное как ОТГРУЖАЕТСЯ, и прогон маршрута через него.
 
-    segs = sorted([p for p in route.iterdir() if p.is_dir()], key=lambda p: int(p.name))
-    if max_segments:
-        segs = segs[:max_segments]
-
-    events = []
-    car_params = None
-    damaged = []
-    for seg in segs:
-        f = seg / "rlog.bz2"
-        if not f.exists():
-            continue
-        seg_events, note = read_segment(f, capnp_log)
-        if note:
-            damaged.append(f"{seg.name}: {note}")
-        for evt in seg_events:
-            w = evt.which()
-            t = evt.logMonoTime * 1e-6
-            if w == "carParams" and car_params is None:
-                cp = evt.carParams
-                car_params = {
-                    "fingerprint": str(cp.carFingerprint),
-                    "wheelbase": float(cp.wheelbase),
-                    "steer_ratio": float(cp.steerRatio),
-                    "mass": float(cp.mass),
-                    "center_to_front": float(cp.centerToFront),
-                    "tuning": cp.lateralTuning.which(),
-                }
-            elif w == "carState":
-                cs = evt.carState
-                # `steeringTorque` is the driver's torque and it is not decoration either: it widens the
-                # limiter's clamp by STEER_DRIVER_ALLOWANCE, so leaving it at zero would make our limited
-                # stream tighter than the one the car actually produced.
-                events.append(
-                    (
-                        t,
-                        "car",
-                        (
-                            float(cs.vEgo),
-                            float(cs.steeringAngleDeg),
-                            bool(cs.steeringPressed),
-                            float(cs.yawRate) if hasattr(cs, "yawRate") else 0.0,
-                            float(cs.steeringTorque),
-                        ),
-                    )
-                )
-            elif w == "lateralPlan" and not want_model:
-                lp = evt.lateralPlan
-                events.append(
-                    (
-                        t,
-                        "plan",
-                        (
-                            np.asarray(list(lp.dPathPoints), dtype=np.float64),
-                            np.asarray(list(lp.psis), dtype=np.float64),
-                            np.asarray(list(lp.curvatures), dtype=np.float64),
-                        ),
-                    )
-                )
-            elif w == "modelV2" and want_model:
-                mv = evt.modelV2
-                events.append(
-                    (
-                        t,
-                        "model",
-                        {
-                            "x": np.asarray(list(mv.laneLines[1].x), dtype=np.float64),
-                            "lanes": [
-                                np.asarray(list(ln.y), dtype=np.float64)
-                                for ln in mv.laneLines
-                            ],
-                            "probs": np.asarray(list(mv.laneLineProbs), dtype=np.float64),
-                            "stds": np.asarray(list(mv.laneLineStds), dtype=np.float64),
-                            "edges": [
-                                np.asarray(list(e.y), dtype=np.float64)
-                                for e in mv.roadEdges
-                            ],
-                            "plan_x": np.asarray(list(mv.position.x), dtype=np.float64),
-                            "plan_y": np.asarray(list(mv.position.y), dtype=np.float64),
-                            "plan_z": np.asarray(list(mv.position.z), dtype=np.float64),
-                            "plan_yaw": np.asarray(
-                                list(mv.orientation.z), dtype=np.float64
-                            ),
-                            "plan_yaw_rate": np.asarray(
-                                list(mv.orientationRate.z), dtype=np.float64
-                            ),
-                        },
-                    )
-                )
-            elif w == "controlsState":
-                # Their planner's own output. Kept separate from `carControl` because it is the one lateral
-                # quantity of theirs that stays physical at low speed — see the module docstring.
-                events.append((t, "curv", float(evt.controlsState.desiredCurvature)))
-            elif w == "carControl":
-                cc = evt.carControl
-                out = cc.actuatorsOutput
-                # `steerOutputCan` is the limited value in cNm. Falling back to `steer · STEER_MAX` only
-                # matters for logs old enough to lack the field.
-                applied = (
-                    float(out.steerOutputCan)
-                    if hasattr(out, "steerOutputCan")
-                    else float(out.steer) * 300.0
-                )
-                events.append(
-                    (
-                        t,
-                        "cmd",
-                        (
-                            float(cc.actuators.steeringAngleDeg),
-                            float(cc.actuators.steer),
-                            applied,
-                            bool(cc.latActive),
-                        ),
-                    )
-                )
-    events.sort(key=lambda e: e[0])
-    return events, car_params, len(segs), damaged
-
-
-def apply_overrides(cfg_veh, sets):
-    """Правки на время прогона, поверх прочитанного `config.json`.
-
-    Сравнивать варианты, переписывая боевой файл, — верный способ уехать на дорогу с настройкой от
-    последнего эксперимента; здесь она живёт только в этом процессе и печатается в шапке.
+    Дефолты конструктора — не та машина, по которой едет телефон: `max_steer_deg` там 8, а в
+    `assets/config.json` 20, контроллер там `pp`, а в файле `fp`. Реплей на дефолтах мерит машину,
+    которой не существует — первый прогон этого скрипта держал наш момент в упоре на 85 % кадров
+    только потому, что 8 градусов колеса нормируются в 1.0 в два с половиной раза раньше.
     """
-    for item in sets or []:
-        key, _, value = item.partition("=")
-        cfg_veh[key.strip()] = float(value)
-    return cfg_veh
 
+    # Знобы оценщика параметров машины, ровно как они названы в `localization` конфига. Без них
+    # оценщик в реплее — не тот, что на машине: при дефолтном `params_stiffness_p0_std = 0` жёсткость
+    # стоит там, где стартовала (P = Q), и «включённый оценщик» ничего не учит.
+    LEARNER_KEYS = (
+        "learn_vehicle_params",
+        "params_angle_offset_init_deg",
+        "params_stiffness_p0_std",
+        "params_stiffness_process_std",
+        "params_steer_ratio_process_std",
+        "params_min_speed_ms",
+        "params_max_lateral_jerk",
+        "params_max_roll_std_deg",
+        "params_use_roll",
+    )
 
-def build_app(core, cfg_veh, cp, args):
-    """Configure the app as it *ships*, not as its constructor defaults.
+    def __init__(self, core, veh: dict, loc: dict, args):
+        self.core = core
+        self.veh = veh
+        self.loc = loc
+        self.args = args
+        self.model_mode = args.reference == "model"
 
-    Those defaults are not the car the phone drives: `max_steer_deg` is 8 in the constructor and 20 in
-    `assets/config.json`, and the controller is `pp` there and `fp` in the file. A replay on constructor
-    defaults measures a car that does not exist — the first run of this script had our torque at its ceiling
-    in 85 % of frames purely because 8 degrees of road wheel normalises to 1.0 two and a half times sooner.
-    """
-    wheelbase = cp["wheelbase"] if cp else 2.62
-    model_mode = args.reference == "model"
-    app = core.AdasApp(wheelbase, -1.8, 0.5, 1.10, topic_convert=model_mode)
-    app.set_lane_keep_controller(
-        args.controller or cfg_veh.get("lane_keep_controller", "fp")
-    )
-    app.set_lane_keep_max_steer_deg(float(cfg_veh.get("max_steer_deg", 20.0)))
-    app.set_lane_keep_steer_slew_limit_deg(
-        float(cfg_veh.get("steer_slew_limit_deg", 8.0))
-    )
-    app.set_lane_keep_vehicle_model(
-        bool(cfg_veh.get("lat_use_vehicle_model", True)),
-        args.stiffness
-        if args.stiffness is not None
-        else float(cfg_veh.get("tire_stiffness_factor", 0.64)),
-    )
-    app.set_lane_keep_fp_steer_delay_s(float(cfg_veh.get("fp_steer_delay_s", 0.35)))
-    app.set_lane_keep_recompute_setpoint(bool(args.recompute_setpoint))
-    if args.no_integrator:
-        # See "the one unfairness" in the module docstring: with no feedback path our integrator winds up on
-        # an error it cannot influence, so only ki = 0 compares controllers rather than replay artefacts.
-        app.set_lane_keep_pid_gains(
-            float(cfg_veh.get("pid_kp", 0.6)), 0.0, float(cfg_veh.get("pid_kf", 6e-5))
+    def recompute(self):
+        """Пересчёт уставки между кадрами: флаг ИЛИ конфиг.
+
+        Читать только флаг значило бы мерить не то, что поедет: отгружаемый конфиг везёт
+        `lat_recompute_setpoint: true`, а пересчёт правит уставку на каждом тике шасси, то есть на
+        100 Гц вместо 16.
+        """
+        return bool(
+            self.args.recompute_setpoint or self.veh.get("lat_recompute_setpoint", False)
         )
-    ratio = (
-        args.steer_ratio
-        if args.steer_ratio
-        else (cp["steer_ratio"] if cp else float(cfg_veh["steer_ratio"]))
-    )
-    app.set_param("steer_ratio", ratio)
 
-    if model_mode:
-        # Our own fusion runs here, so it must run with shipped numbers — the same trap as above, one stage up.
+    def shipped_controller(self):
+        """Контроллер вместе с численным методом, как задано в конфиге.
+
+        `fp_solver` — не отдельный параметр реестра, он выбирается через имя контроллера
+        `fp_acados`. Без этого стенд мерил бы `grad` (дефолт `forSimulated`), тогда как отгружаемый
+        конфиг везёт `acados` — то есть сравнивал бы решатель, которым машина не едет.
+        """
+        ctrl = self.veh.get("lane_keep_controller", "fp")
+        if ctrl == "fp" and self.veh.get("fp_solver") == "acados":
+            return "fp_acados"
+        return ctrl
+
+    def _build(self, car):
+        a, veh, args = self.core, self.veh, self.args
+        app = a.AdasApp(
+            car["wheelbase"] if car else 2.62,
+            -1.8,
+            0.5,
+            1.10,
+            topic_convert=self.model_mode,
+        )
+        app.set_lane_keep_controller(args.controller or self.shipped_controller())
+        app.set_lane_keep_max_steer_deg(float(veh.get("max_steer_deg", 20.0)))
+        app.set_lane_keep_steer_slew_limit_deg(
+            float(veh.get("steer_slew_limit_deg", 8.0))
+        )
+        stiff = args.stiffness or float(veh.get("tire_stiffness_factor", 0.64))
+        app.set_lane_keep_vehicle_model(
+            bool(veh.get("lat_use_vehicle_model", True)), stiff
+        )
+        app.set_lane_keep_fp_steer_delay_s(float(veh.get("fp_steer_delay_s", 0.35)))
+        app.set_lane_keep_recompute_setpoint(self.recompute())
+        if args.no_integrator:
+            # См. «единственную несправедливость» в шапке: без обратной связи наш интегратор
+            # наматывает ошибку, на которую не влияет.
+            app.set_lane_keep_pid_gains(
+                float(veh.get("pid_kp", 0.6)), 0.0, float(veh.get("pid_kf", 6e-5))
+            )
+        ratio = args.steer_ratio or (
+            car["steer_ratio"] if car else float(veh["steer_ratio"])
+        )
+        app.set_param("steer_ratio", ratio)
+        self._apply_fusion(app)
+        self._apply_learner(app)
+        return app, ratio
+
+    def _apply_learner(self, app):
+        """Оценщик параметров машины и разрешение контроллеру его читать — как в конфиге.
+
+        `forSimulated` держит оценщик выключенным, поэтому по дефолтам стенд мерил бы контроллер на
+        константах, тогда как отгружаемый конфиг везёт `use_learned_params: true`.
+        """
+
+        def put(name, value):
+            text = str(value).lower() if isinstance(value, bool) else repr(float(value))
+            app.set_param_str(name, text)
+
+        put("use_learned_params", bool(self.veh.get("use_learned_params", False)))
+        for key in self.LEARNER_KEYS:
+            if key in self.loc:
+                put(key, self.loc[key])
+
+    def _apply_fusion(self, app):
+        if not self.model_mode:
+            # Их путь уже готовая опора; наш не должен добавлять поверх второе смещение камеры.
+            app.set_lane_keep_cam_y_left_m(0.0)
+            return
+        # Здесь работает наш фьюжн, значит он обязан работать с отгружаемыми числами.
         for k in (
             "path_lane_blend_scale",
             "path_camera_offset_m",
@@ -393,460 +468,506 @@ def build_app(core, cfg_veh, cp, args):
             "lane_std_bad_m",
             "lane_std_range_m",
         ):
-            if k in cfg_veh:
-                app.set_param(k, float(cfg_veh[k]))
-        app.set_param("cam_y_left_m", float(cfg_veh.get("cam_y_left_m", 0.0)))
-    else:
-        # Their path is already the finished reference; ours must not add a second camera offset on top of
-        # it, or the two setpoints differ before the controller is even reached.
-        app.set_lane_keep_cam_y_left_m(0.0)
-    return app, ratio
+            if k in self.veh:
+                app.set_param(k, float(self.veh[k]))
+        app.set_param("cam_y_left_m", float(self.veh.get("cam_y_left_m", 0.0)))
 
-
-def lane_lines_message(pb, m, ts_ms, frame_id):
-    """Their `modelV2` as our `LaneLines`. Per-point `y_std` is their scalar broadcast — see the docstring."""
-    ll = pb.LaneLines()
-    ll.timestamp = ts_ms
-    ll.capture_ts_ms = ts_ms
-    ll.frame_id = frame_id
-    ll.x.extend(m["x"].tolist())
-    for y, prob, std in zip(m["lanes"], m["probs"], m["stds"]):
-        p = ll.lanes.add()
-        p.y.extend(y.tolist())
-        p.prob = float(prob)
-        p.y_std.extend([float(std)] * len(y))
-    for y in m["edges"]:
-        e = ll.edges.add()
-        e.y.extend(y.tolist())
-    ll.plan_x.extend(m["plan_x"].tolist())
-    ll.plan_y.extend(m["plan_y"].tolist())
-    ll.plan_z.extend(m["plan_z"].tolist())
-    ll.plan_yaw.extend(m["plan_yaw"].tolist())
-    ll.plan_yaw_rate.extend(m["plan_yaw_rate"].tolist())
-    ll.plan_hyp = 0
-    return ll.SerializeToString()
-
-
-def replay(core, events, cp, args, cfg_veh):
-    """Run one route through the stack. Returns (ours, theirs, ratio) as float arrays."""
-    app, ratio = build_app(core, cfg_veh, cp, args)
-    app.start()
-    if args.reference == "model":
+    def _lane_lines(self, m, ts_ms, frame_id):
+        """Их `modelV2` как наш `LaneLines`. Поточечный `y_std` — размноженный их скаляр."""
         import lanes_pb2
 
-    t0 = events[0][0]
-    v_ego, driver_tq = 0.0, 0.0
-    last_swa = last_curv = float("nan")
-    ours, theirs, their_curv = [], [], []
-    n_ref = 0
-    for t, kind, payload in events:
-        ts_us = int((t - t0) * 1000)
-        if kind == "car":
-            v_ego, ang, pressed, yaw, driver_tq = payload
-            app.publish_chassis(ts_us, v_ego, 0.0, yaw, ang, pressed)
-        elif kind == "plan":
-            dpath, psis, curvs = payload
-            n = min(len(dpath), LAT_MPC_N + 1, len(T_IDXS))
-            if n < 6:
-                continue
-            xs = np.asarray(T_IDXS[:n]) * max(v_ego, 0.1)
-            poly = [(float(x), float(y)) for x, y in zip(xs, dpath[:n])]
-            plan_yaw = [float(p) for p in psis[:n]] if len(psis) >= n else []
-            plan_yaw_rate = (
-                [float(c) * max(v_ego, 0.1) for c in curvs[:n]] if len(curvs) >= n else []
-            )
-            app.publish_lanes(ts_us, poly, n_ref, poly, plan_yaw, plan_yaw_rate, True)
-            n_ref += 1
-        elif kind == "model":
-            app.publish_lane_lines(
-                lane_lines_message(lanes_pb2, payload, ts_us // 1000, n_ref)
-            )
-            n_ref += 1
-        elif kind == "cmd":
-            theirs.append((t - t0, *payload))
-        elif kind == "curv":
-            their_curv.append((t - t0, payload))
-        app.step(ts_us)
-        for msg in app.pop_messages():
-            if isinstance(msg, core.LaneKeepOutput):
-                # `desired_swa_deg` is only filled on the chassis path, so the setpoint is reconstructed from
-                # `steer_rad`, which the vision path does fill: SWA = road-wheel angle x steer ratio. That is
-                # arithmetic on a published field, not a peek inside the service.
-                if msg.has_target:
-                    last_curv = msg.curvature
-                    last_swa = msg.steer_rad * 180.0 / np.pi * ratio
-                else:
-                    last_curv = last_swa = float("nan")
-            elif isinstance(msg, core.SteerCommand):
-                ours.append(
-                    (
-                        ts_us / 1000.0,
-                        last_swa,
-                        float(msg.torque_cnm),
-                        1.0 if msg.enabled else 0.0,
-                        v_ego,
-                        driver_tq,
-                        last_curv,
+        ll = lanes_pb2.LaneLines()
+        ll.timestamp = ll.capture_ts_ms = ts_ms
+        ll.frame_id = frame_id
+        ll.x.extend(m["x"].tolist())
+        for y, prob, std in zip(m["lanes"], m["probs"], m["stds"]):
+            p = ll.lanes.add()
+            p.y.extend(y.tolist())
+            p.prob = float(prob)
+            p.y_std.extend([float(std)] * len(y))
+        for y in m["edges"]:
+            ll.edges.add().y.extend(y.tolist())
+        for name in ("plan_x", "plan_y", "plan_z", "plan_yaw", "plan_yaw_rate"):
+            getattr(ll, name).extend(m[name].tolist())
+        ll.plan_hyp = 0
+        return ll.SerializeToString()
+
+    def run(self, log: RouteLog) -> Frames:
+        app, ratio = self._build(log.car)
+        t0 = log.events[0][0]
+        v_ego = driver_tq = 0.0
+        swa = curv = float("nan")
+        ours, theirs, their_curv, refs = [], [], [], 0
+
+        for t, kind, payload in log.events:
+            ts_us = int((t - t0) * 1000)
+            if kind == "car":
+                v_ego, ang, pressed, yaw, driver_tq = payload
+                app.publish_chassis(ts_us, v_ego, 0.0, yaw, ang, pressed)
+            elif kind == "plan":
+                refs += self._publish_plan(app, ts_us, payload, v_ego, refs)
+            elif kind == "model":
+                app.publish_lane_lines(self._lane_lines(payload, ts_us // 1000, refs))
+                refs += 1
+            elif kind == "cmd":
+                theirs.append((t - t0, *payload))
+            elif kind == "curv":
+                their_curv.append((t - t0, payload))
+
+            app.step(ts_us)
+            for msg in app.pop_messages():
+                if isinstance(msg, self.core.LaneKeepOutput):
+                    # `desired_swa_deg` заполняется только на пути шасси, поэтому уставка
+                    # восстанавливается из `steer_rad`, который заполняет путь зрения:
+                    # SWA = угол колеса x передаточное. Арифметика над опубликованным полем,
+                    # а не подглядывание внутрь сервиса.
+                    deg = msg.steer_rad * 180.0 / np.pi
+                    swa = deg * ratio if msg.has_target else np.nan
+                    curv = msg.curvature if msg.has_target else np.nan
+                elif isinstance(msg, self.core.SteerCommand):
+                    ours.append(
+                        (
+                            ts_us / 1000.0,
+                            swa,
+                            float(msg.torque_cnm),
+                            float(msg.enabled),
+                            v_ego,
+                            driver_tq,
+                            curv,
+                        )
                     )
-                )
-    app.stop()
-    return (
-        np.asarray(ours, dtype=np.float64) if ours else np.zeros((0, 7)),
-        np.asarray(theirs, dtype=np.float64) if theirs else np.zeros((0, 5)),
-        np.asarray(their_curv, dtype=np.float64) if their_curv else np.zeros((0, 2)),
-        ratio,
-        n_ref,
-    )
-
-
-def limited_stream(core, O):
-    """Our command stream as the rack would have received it: zero-order held onto a 20 ms grid and run
-    through the MQB limiter, exactly as `CarController` does when `frame_ % STEER_STEP == 0`.
-
-    The zero-order hold is not a smoothing choice — it is what the actuator timer does. It picks up whatever
-    the last published command was, and republishing the same value is how ~32 % of `controls/steer` frames
-    behave on the road.
-    """
-    if len(O) == 0:
-        return np.zeros((0, 4))
-    grid = np.arange(O[0, 0], O[-1, 0], LIMITER_DT_S * 1000.0)
-    idx = np.clip(np.searchsorted(O[:, 0], grid, side="right") - 1, 0, len(O) - 1)
-    out = np.empty((len(grid), 4))
-    last = 0
-    for k, i in enumerate(idx):
-        want = int(round(O[i, 2])) if O[i, 3] > 0.5 else 0
-        # Not lat_active means apply_steer = 0 *and* the ramp restarts from zero on re-engagement, because
-        # `apply_steer_last_` is assigned unconditionally. That reset is a real part of the behaviour.
-        last = (
-            core.apply_driver_steer_torque_limits(want, O[i, 5], last)
-            if O[i, 3] > 0.5
-            else 0
+        app.stop()
+        return Frames(
+            self._table(ours, 7),
+            self._table(theirs, 5),
+            self._table(their_curv, 2),
+            ratio,
+            refs,
         )
-        out[k] = (grid[k], last, O[i, 3], O[i, 4])
+
+    @staticmethod
+    def _publish_plan(app, ts_us, payload, v_ego, refs):
+        dpath, psis, curvs = payload
+        n = min(len(dpath), LAT_MPC_N + 1, len(T_IDXS))
+        if n < 6:
+            return 0
+        v = max(v_ego, 0.1)
+        poly = [(float(x), float(y)) for x, y in zip(T_IDXS[:n] * v, dpath[:n])]
+        yaws = [float(p) for p in psis[:n]] if len(psis) >= n else []
+        rates = [float(c) * v for c in curvs[:n]] if len(curvs) >= n else []
+        app.publish_lanes(ts_us, poly, refs, poly, yaws, rates, True)
+        return 1
+
+    @staticmethod
+    def _table(rows, width):
+        return np.asarray(rows, dtype=np.float64) if rows else np.zeros((0, width))
+
+
+class Match:
+    """Сопоставление одного маршрута по времени: маски годных кадров и счётчики отброшенного."""
+
+    def __init__(self, core, f: Frames, min_speed: float, angle_ceiling: float):
+        self.f = f
+        self.i, dt_ok = self.align(f.ours, f.theirs)
+        both_on = (f.ours[:, 3] > 0.5) & (f.theirs[self.i, 4] > 0.5)
+        self.fast = f.ours[:, 4] > min_speed
+        self.pre = dt_ok & both_on & self.fast
+
+        # После ограничителя — на собственной сетке актюатора 20 мс.
+        self.limited = self.limit(core, f.ours)
+        self.li, ldt_ok = self.align(self.limited, f.theirs)
+        self.post = (
+            ldt_ok
+            & (self.limited[:, 2] > 0.5)
+            & (f.theirs[self.li, 4] > 0.5)
+            & (self.limited[:, 3] > min_speed)
+        )
+
+        # Кривизна: их планировщик против нашего, на их собственном потоке событий, а не нашем.
+        self.ci, cdt_ok = self.align(f.ours, f.curv)
+        self.curv = self.pre & cdt_ok & np.isfinite(f.ours[:, 6])
+
+        # Угол: только там, где их уставка вообще достижима нашим планировщиком.
+        finite = self.pre & np.isfinite(f.ours[:, 1])
+        wild = np.abs(f.theirs[self.i, 1]) > angle_ceiling
+        self.ang = finite & ~wild
+        self.drops = {
+            "slow": int((dt_ok & both_on & ~self.fast).sum()),
+            "off": int((dt_ok & ~both_on).sum()),
+            "align": int((~dt_ok).sum()),
+            "angle_wild": int((finite & wild).sum()),
+        }
+
+    @staticmethod
+    def align(a, t, tol_ms=ALIGN_TOL_MS):
+        """Индекс ближайшей строки `их` для каждой строки `a` и маска годности."""
+        if len(a) == 0 or len(t) == 0:
+            return np.zeros(len(a), dtype=int), np.zeros(len(a), dtype=bool)
+        i = np.clip(np.searchsorted(t[:, 0], a[:, 0]), 0, len(t) - 1)
+        j = np.clip(i - 1, 0, len(t) - 1)
+        i = np.where(np.abs(t[j, 0] - a[:, 0]) < np.abs(t[i, 0] - a[:, 0]), j, i)
+        return i, np.abs(t[i, 0] - a[:, 0]) <= tol_ms
+
+    @staticmethod
+    def limit(core, o):
+        """Наш поток таким, каким его получила бы рейка: удержан на сетке 20 мс и прогнан через
+        ограничитель MQB, как делает `CarController` при `frame_ % STEER_STEP == 0`.
+
+        Удержание — не выбор сглаживания, а то, что делает таймер актюатора: он подхватывает
+        последнюю опубликованную команду. Не lat_active означает apply_steer = 0 *и* перезапуск
+        разгона с нуля, потому что `apply_steer_last_` присваивается безусловно.
+        """
+        if len(o) == 0:
+            return np.zeros((0, 4))
+        grid = np.arange(o[0, 0], o[-1, 0], LIMITER_DT_S * 1000.0)
+        idx = np.clip(np.searchsorted(o[:, 0], grid, side="right") - 1, 0, len(o) - 1)
+        out, last = np.empty((len(grid), 4)), 0
+        for k, i in enumerate(idx):
+            on = o[i, 3] > 0.5
+            last = (
+                core.apply_driver_steer_torque_limits(int(round(o[i, 2])), o[i, 5], last)
+                if on
+                else 0
+            )
+            out[k] = (grid[k], last, o[i, 3], o[i, 4])
+        return out
+
+    def stats(self, name, segs, car):
+        return {
+            "name": name,
+            "segs": segs,
+            "refs": self.f.refs,
+            "ours": len(self.f.ours),
+            "matched": int(self.pre.sum()),
+            "matched_post": int(self.post.sum()),
+            "matched_curv": int(self.curv.sum()),
+            "matched_ang": int(self.ang.sum()),
+            "fast_share": 100.0 * float(np.mean(self.fast)),
+            "car": car["fingerprint"] if car else "?",
+            "ratio": self.f.ratio,
+            **self.drops,
+        }
+
+    def pairs(self, steer_max):
+        """Сопоставленные пары (наше, их) по каждой сравниваемой величине."""
+        f, i = self.f, self.i
+        return {
+            "pre": (self.pre, f.ours[:, 2], f.theirs[i, 2] * steer_max),
+            "ang": (self.ang, f.ours[:, 1], f.theirs[i, 1]),
+            "curv": (self.curv, f.ours[:, 6], f.curv[self.ci, 1]),
+            "post": (self.post, self.limited[:, 1], f.theirs[self.li, 3]),
+        }
+
+
+@dataclass
+class Pool:
+    """Копилка сопоставленных пар по всем маршрутам; отдаёт `Series` на каждую величину."""
+
+    parts: dict = field(default_factory=dict)
+    speeds: list = field(default_factory=list)
+
+    def add(self, match: Match, steer_max: float):
+        for key, (mask, ours, theirs) in match.pairs(steer_max).items():
+            if mask.sum() < MIN_ROUTE:
+                continue
+            self.parts.setdefault(key, []).append((ours[mask], theirs[mask]))
+        if match.ang.sum() >= MIN_ROUTE:
+            self.speeds.append(match.f.ours[match.ang, 4])
+
+    def series(self, key) -> Series | None:
+        rows = self.parts.get(key)
+        if not rows:
+            return None
+        ours = np.concatenate([o for o, _ in rows])
+        theirs = np.concatenate([t for _, t in rows])
+        return Series(ours, theirs) if len(ours) >= MIN_POOL else None
+
+    def speed(self):
+        return np.concatenate(self.speeds) if self.speeds else np.zeros(0)
+
+
+class Report:
+    """Печать. Каждый метод — один блок вывода."""
+
+    def __init__(self, args, veh, angle_ceiling):
+        self.args = args
+        self.veh = veh
+        self.ceiling = angle_ceiling
+
+    def header(self, n_routes, loc):
+        if self.args.set:
+            print("переопределено на этот прогон: " + ", ".join(self.args.set))
+        integ = (
+            "ВЫКЛ (честный момент)"
+            if self.args.no_integrator
+            else "вкл (момент смещён открытым контуром)"
+        )
+        stiff = self.args.stiffness or self.veh.get("tire_stiffness_factor")
+        print(
+            f"маршрутов: {n_routes}, эталон: {self.args.reference}, "
+            f"контроллер {self.args.controller or self.veh.get('lane_keep_controller')}, "
+            f"жёсткость {stiff}, интеграл {integ}, пересчёт уставки между кадрами "
+            f"{'ВКЛ' if (self.args.recompute_setpoint or self.veh.get('lat_recompute_setpoint')) else 'выкл'}"
+        )
+        learn = loc.get("learn_vehicle_params", False)
+        used = self.veh.get("use_learned_params", False)
+        print(
+            f"оценщик параметров: {'вкл' if learn else 'выкл'}, контроллер читает его: "
+            f"{'ДА' if used else 'нет'}, крен в оценщике: "
+            f"{'вкл' if loc.get('params_use_roll') else 'выкл'}"
+        )
+
+    def routes(self, rows):
+        print("\nпо маршрутам:")
+        print(
+            "  маршрут                                сегм  наших   v>гейта   сопост.  кривизна"
+            "  угол  после огр.    отброшено: медл / выкл / дикий угол"
+        )
+        for r in rows:
+            print(
+                f"  {r['name']:38s} {r['segs']:4d} {r['ours']:6d} {r['fast_share']:8.0f}% "
+                f"{r['matched']:9d} {r['matched_curv']:9d} {r['matched_ang']:5d} "
+                f"{r['matched_post']:11d}    {r['slow']:6d} / {r['off']:5d} / "
+                f"{r['angle_wild']:5d}"
+            )
+        cars = ", ".join(sorted({r["car"] for r in rows}))
+        print(
+            f"  машина: {cars}, передаточное {rows[0]['ratio']:.2f}, "
+            f"потолок уставного угла для сравнения {self.ceiling:.0f}°"
+        )
+
+    def curvature(self, s: Series):
+        print(
+            f"\nкривизна, 1/м — выход планировщика до любой модели машины, n={len(s)} "
+            f"(знак: корр {s.corr:+.3f})"
+        )
+        print(f"  |их|  медиана {med(s.theirs):.5f}  p90 {p90(s.theirs):.5f}")
+        print(f"  |наш| медиана {med(s.ours):.5f}  p90 {p90(s.ours):.5f}")
+        print(
+            f"  наш = {s.slope:.3f} x их, корр {abs(s.corr):.3f}, "
+            f"расхождение ск.кв {np.std(s.diff):.5f}"
+        )
+
+    def torque(self, title, s: Series):
+        print(f"\n{title} (знак: корр {s.corr:+.3f}), n={len(s)}")
+        for who, x in (("|их| ", s.theirs), ("|наш|", s.ours)):
+            print(
+                f"  {who} медиана {med(x):6.0f}   p90 {p90(x):6.0f}   "
+                f"в упоре 300: {sat(x):5.1f}%"
+            )
+        print(
+            f"  расхождение: медиана {np.median(s.diff):+.0f}, ск.кв {np.std(s.diff):.0f}, "
+            f"p90 |·| {p90(s.diff):.0f} cNm, наклон наш/их {s.slope:.3f}"
+        )
+
+    def limiter_effect(self, pre: Series, post: Series):
+        print(
+            f"\n  ограничитель меняет вывод: ск.кв расхождения {np.std(pre.diff):.0f} → "
+            f"{np.std(post.diff):.0f} cNm, p90 |·| {p90(pre.diff):.0f} → {p90(post.diff):.0f}"
+        )
+        print(
+            "  (сравнение только до ограничителя льстит обеим сторонам — темповый предел "
+            "срезает и запрос, и расхождение)"
+        )
+
+    def torque_bins(self, s: Series):
+        print("\nпо величине их момента (до ограничителя):")
+        print("  |их| cNm       n    |наш| медиана   расхождение ск.кв   упор их / наш")
+        for lo, hi in TORQUE_BINS:
+            b = s.bin(s.theirs, lo, hi)
+            if b.sum() < MIN_BIN:
+                continue
+            print(
+                f"  {lo:3d}-{hi:4d} {b.sum():8d}      {med(s.ours[b]):6.0f}         "
+                f"{np.std(s.diff[b]):7.0f}          {sat(s.theirs[b]):4.0f}% / "
+                f"{sat(s.ours[b]):4.0f}%"
+            )
+
+    def angle(self, s: Series, speeds):
+        print(
+            f"\nуставной угол руля на одном и том же пути, n={len(s)} "
+            f"(знак: корр {s.corr:+.3f}):"
+        )
+        print(f"  |их|  медиана {med(s.theirs):6.2f}°  p90 {p90(s.theirs):6.2f}°")
+        print(f"  |наш| медиана {med(s.ours):6.2f}°  p90 {p90(s.ours):6.2f}°")
+        print(f"  наш = {s.slope:.3f} x их, корр {abs(s.corr):.3f}")
+        print(
+            f"  расхождение: медиана {np.median(s.diff):+.2f}°, ск.кв {np.std(s.diff):.2f}°, "
+            f"p90 |·| {p90(s.diff):.2f}°"
+        )
+        print(
+            f"  доля кадров с расхождением больше 1.67° (порога, за которым наш PID сразу "
+            f"в упоре): {100 * np.mean(np.abs(s.diff) > 1.667):.0f}%"
+        )
+        print(
+            "\n  по скорости:      n   |их| мед   |наш| мед   наклон наш/их   расхожд. ск.кв"
+        )
+        for lo, hi in SPEED_BINS:
+            b = (speeds >= lo) & (speeds < hi)
+            if b.sum() < MIN_ROUTE:
+                continue
+            note = "  ← сетка x = t·v вырождена, эталон короче машины" if hi <= 5 else ""
+            sub = Series(s.ours[b], s.theirs[b])
+            print(
+                f"    {lo:2d}-{hi:2d} м/с {b.sum():7d}   {med(s.theirs[b]):6.2f}°   "
+                f"{med(s.ours[b]):6.2f}°        {sub.slope:5.2f}         "
+                f"{np.std(s.diff[b]):6.2f}°{note}"
+            )
+
+    def integrator_warning(self):
+        print(
+            "\nвнимание: интеграл включён, а контур разомкнут — момент ниже завышен нашим "
+            "виндапом."
+        )
+        print(
+            "           честное сравнение момента: --no-integrator (угол и кривизна выше "
+            "от этого не зависят)"
+        )
+
+
+def route_dirs(paths: list[Path]) -> list[Path]:
+    """Каталоги маршрутов или один родительский. Маршрут — каталог с нумерованными сегментами."""
+
+    def is_route(p):
+        return any(c.is_dir() and c.name.isdigit() for c in p.iterdir())
+
+    out = []
+    for p in (q for q in paths if q.is_dir()):
+        out.extend(
+            [p]
+            if is_route(p)
+            else sorted(c for c in p.iterdir() if c.is_dir() and is_route(c))
+        )
     return out
 
 
-def align(A, T, tol_ms=ALIGN_TOL_MS):
-    """Index of the nearest `theirs` row for each row of A, plus a validity mask."""
-    if len(A) == 0 or len(T) == 0:
-        return np.zeros(len(A), dtype=int), np.zeros(len(A), dtype=bool)
-    i = np.clip(np.searchsorted(T[:, 0], A[:, 0]), 0, len(T) - 1)
-    j = np.clip(i - 1, 0, len(T) - 1)
-    i = np.where(np.abs(T[j, 0] - A[:, 0]) < np.abs(T[i, 0] - A[:, 0]), j, i)
-    return i, np.abs(T[i, 0] - A[:, 0]) <= tol_ms
-
-
-def signed(ours, theirs):
-    """Their sign convention is not ours, so measure the relationship rather than assume it."""
-    c = float(np.corrcoef(ours, theirs)[0, 1]) if len(ours) > 2 else 0.0
-    return ours * (-1.0 if c < 0 else 1.0), c
-
-
-def report_torque(title, ours, theirs):
-    o, c = signed(ours, theirs)
-    d = o - theirs
-    print(f"\n{title} (знак: корр {c:+.3f}), n={len(o)}")
-    print(
-        f"  |их|  медиана {np.median(np.abs(theirs)):6.0f}   p90 {np.percentile(np.abs(theirs), 90):6.0f}"
-        f"   в упоре 300: {100 * np.mean(np.abs(theirs) >= 299):5.1f}%"
-    )
-    print(
-        f"  |наш| медиана {np.median(np.abs(o)):6.0f}   p90 {np.percentile(np.abs(o), 90):6.0f}"
-        f"   в упоре 300: {100 * np.mean(np.abs(o) >= 299):5.1f}%"
-    )
-    print(
-        f"  расхождение: медиана {np.median(d):+.0f}, ск.кв {np.std(d):.0f}, "
-        f"p90 |·| {np.percentile(np.abs(d), 90):.0f} cNm, наклон наш/их {np.polyfit(theirs, o, 1)[0]:.3f}"
-    )
-    return d
-
-
-def report_angle(oa_raw, ta, vv):
-    oa, ca = signed(oa_raw, ta)
-    da = oa - ta
-    print(
-        f"\nуставной угол руля на одном и том же пути, n={len(oa)} (знак: корр {ca:+.3f}):"
-    )
-    print(
-        f"  |их|  медиана {np.median(np.abs(ta)):6.2f}°  p90 {np.percentile(np.abs(ta), 90):6.2f}°"
-    )
-    print(
-        f"  |наш| медиана {np.median(np.abs(oa)):6.2f}°  p90 {np.percentile(np.abs(oa), 90):6.2f}°"
-    )
-    print(f"  наш = {np.polyfit(ta, oa, 1)[0]:.3f} x их, корр {abs(ca):.3f}")
-    print(
-        f"  расхождение: медиана {np.median(da):+.2f}°, ск.кв {np.std(da):.2f}°, "
-        f"p90 |·| {np.percentile(np.abs(da), 90):.2f}°"
-    )
-    print(
-        f"  доля кадров с расхождением больше 1.67° (порога, за которым наш PID сразу в упоре): "
-        f"{100 * np.mean(np.abs(da) > 1.667):.0f}%"
-    )
-    print(
-        "\n  по скорости:      n   |их| мед   |наш| мед   наклон наш/их   расхожд. ск.кв"
-    )
-    for lo, hi in ((0, 5), (5, 10), (10, 15), (15, 20), (20, 30)):
-        s_ = (vv >= lo) & (vv < hi)
-        if s_.sum() < 50:
-            continue
-        note = "  ← сетка x = t·v вырождена, эталон короче машины" if hi <= 5 else ""
-        print(
-            f"    {lo:2d}-{hi:2d} м/с {s_.sum():7d}   {np.median(np.abs(ta[s_])):6.2f}°   "
-            f"{np.median(np.abs(oa[s_])):6.2f}°        {np.polyfit(ta[s_], oa[s_], 1)[0]:5.2f}         "
-            f"{np.std(da[s_]):6.2f}°{note}"
-        )
-
-
-def main() -> int:
+def parse_args():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    ap.add_argument(
-        "routes", type=Path, nargs="+", help="route dirs, or one parent holding them"
-    )
-    ap.add_argument(
-        "--segments",
-        type=int,
-        default=6,
-        help="how many minute-segments per route (0 = all)",
-    )
-    ap.add_argument(
+    add = ap.add_argument
+    add("routes", type=Path, nargs="+", help="каталоги маршрутов или один родительский")
+    add("--segments", type=int, default=6, help="сегментов на маршрут (0 = все)")
+    add(
         "--reference",
         choices=("plan", "model"),
         default="plan",
-        help="plan: their finished dPathPoints. model: their modelV2 through our lane fusion",
+        help="plan: их готовый dPathPoints. model: их modelV2 через наш фьюжн",
     )
-    ap.add_argument(
-        "--controller", default=None, help="override lane_keep controller (fp | pp)"
-    )
-    ap.add_argument(
-        "--steer-ratio",
+    add("--controller", default=None, help="переопределить контроллер (fp | pp)")
+    add("--steer-ratio", type=float, default=None, help="переопределить, напр. их 16.12")
+    add(
+        "--stiffness",
         type=float,
         default=None,
-        help="override, e.g. their learned 16.12",
+        help="переопределить tire_stiffness_factor",
     )
-    ap.add_argument(
-        "--stiffness", type=float, default=None, help="tire_stiffness_factor override"
-    )
-    ap.add_argument(
+    add(
         "--min-speed",
         type=float,
         default=5.0,
-        help="speed gate; what it removes is reported, not silently dropped",
+        help="гейт по скорости; отброшенное печатается",
     )
-    ap.add_argument(
+    add(
         "--recompute-setpoint",
         action="store_true",
-        help="recompute the setpoint between frames as upstream does at 100 Hz (lat_recompute_setpoint)",
+        help="пересчитывать уставку между кадрами, как апстрим на 100 Гц",
     )
-    ap.add_argument(
+    add(
         "--set",
         action="append",
         default=[],
         metavar="KEY=VALUE",
         help="переопределить vehicle.* только на этот прогон, не трогая config.json",
     )
-    ap.add_argument(
+    add(
         "--no-integrator",
         action="store_true",
-        help="run our PID with ki=0 — the only fair way to compare torque in an open-loop replay",
+        help="наш PID с ki=0 — единственный честный способ сравнить момент в разомкнутом реплее",
     )
-    args = ap.parse_args()
+    return ap.parse_args()
 
+
+def shipped_config(overrides):
+    """Блоки `vehicle` и `localization` отгружаемого конфига плюс правки на время прогона.
+
+    Правки живут только в этом процессе и печатаются в шапке: сравнивать варианты, переписывая
+    боевой файл, — верный способ уехать на дорогу с настройкой от последнего эксперимента.
+    """
+    path = Path(__file__).resolve().parents[1] / "assets" / "config.json"
+    cfg = json.loads(path.read_text())
+    veh = cfg["vehicle"]
+    for item in overrides:
+        key, _, value = item.partition("=")
+        veh[key.strip()] = float(value)
+    return veh, cfg.get("localization", {})
+
+
+def main() -> int:
+    args = parse_args()
     from pyadas import core
 
     routes = route_dirs(args.routes)
     if not routes:
         print("не нашёл ни одного маршрута (каталог с нумерованными сегментами)")
         return 1
-    cfg = json.loads(
-        (Path(__file__).resolve().parents[1] / "assets" / "config.json").read_text()
-    )
-    veh = apply_overrides(cfg["vehicle"], args.set)
-    if args.set:
-        print("переопределено на этот прогон: " + ", ".join(args.set))
-    print(
-        f"маршрутов: {len(routes)}, эталон: {args.reference}, "
-        f"контроллер {args.controller or veh.get('lane_keep_controller')}, "
-        f"жёсткость {args.stiffness if args.stiffness is not None else veh.get('tire_stiffness_factor')}, "
-        f"интеграл {'ВЫКЛ (честный момент)' if args.no_integrator else 'вкл (момент смещён открытым контуром)'}, "
-        f"пересчёт уставки между кадрами {'ВКЛ' if args.recompute_setpoint else 'выкл'}"
-    )
 
-    pool = {
-        k: []
-        for k in (
-            "pre_o",
-            "pre_t",
-            "post_o",
-            "post_t",
-            "ang_o",
-            "ang_t",
-            "ang_v",
-            "curv_o",
-            "curv_t",
-        )
-    }
-    per_route = []
-    angle_ceiling = float(veh.get("max_steer_deg", 20.0)) * (
+    veh, loc = shipped_config(args.set)
+    ceiling = float(veh.get("max_steer_deg", 20.0)) * (
         args.steer_ratio or float(veh["steer_ratio"])
     )
+    report = Report(args, veh, ceiling)
+    report.header(len(routes), loc)
+
+    harness = Harness(core, veh, loc, args)
+    pool, rows = Pool(), []
     for route in routes:
-        events, cp, n_seg, damaged = load_route(
-            route, args.segments or None, args.reference == "model"
-        )
-        for d in damaged:
+        log = RouteLog(route, args.segments, harness.model_mode)
+        for d in log.damaged:
             print(f"  {route.name} / {d}")
-        if not events:
+        if not log.events:
             print(f"  {route.name}: событий нет, пропускаю")
             continue
-        O, T, C, ratio, n_ref = replay(core, events, cp, args, veh)
-        if len(O) == 0 or len(T) == 0:
-            print(f"  {route.name}: наш стек не выдал команд (эталонов подано {n_ref})")
+        frames = harness.run(log)
+        if not frames:
+            print(
+                f"  {route.name}: наш стек не выдал команд (эталонов подано {frames.refs})"
+            )
             continue
+        match = Match(core, frames, args.min_speed, ceiling)
+        rows.append(match.stats(route.name, len(log.segs), log.car))
+        pool.add(match, core.STEER_MAX)
 
-        # Before the limiter, at our own command rate.
-        i, dt_ok = align(O, T)
-        both_on = (O[:, 3] > 0.5) & (T[i, 4] > 0.5)
-        fast = O[:, 4] > args.min_speed
-        m = dt_ok & both_on & fast
-        drops = {
-            "slow": int((dt_ok & both_on & ~fast).sum()),
-            "off": int((dt_ok & ~both_on).sum()),
-            "align": int((~dt_ok).sum()),
-        }
-
-        # After the limiter, on the actuator's own 20 ms grid.
-        L = limited_stream(core, O)
-        li, ldt_ok = align(L, T)
-        lm = ldt_ok & (L[:, 2] > 0.5) & (T[li, 4] > 0.5) & (L[:, 3] > args.min_speed)
-
-        # Curvature: their planner against ours, on their own event stream rather than ours.
-        ci, cdt_ok = align(O, C)
-        cm = m & cdt_ok & np.isfinite(O[:, 6])
-
-        # Angle: only where their setpoint is one our planner could have produced at all.
-        am = m & np.isfinite(O[:, 1]) & (np.abs(T[i, 1]) <= angle_ceiling)
-        drops["angle_wild"] = int(
-            (m & np.isfinite(O[:, 1]) & (np.abs(T[i, 1]) > angle_ceiling)).sum()
-        )
-
-        per_route.append(
-            {
-                "name": route.name,
-                "segs": n_seg,
-                "refs": n_ref,
-                "ours": len(O),
-                "matched": int(m.sum()),
-                "matched_post": int(lm.sum()),
-                "matched_curv": int(cm.sum()),
-                "matched_ang": int(am.sum()),
-                "fast_share": 100.0 * float(np.mean(fast)),
-                "car": cp["fingerprint"] if cp else "?",
-                "ratio": ratio,
-                **drops,
-            }
-        )
-        if m.sum() >= 50:
-            pool["pre_o"].append(O[m, 2])
-            pool["pre_t"].append(T[i[m], 2] * core.STEER_MAX)
-        if am.sum() >= 50:
-            pool["ang_o"].append(O[am, 1])
-            pool["ang_t"].append(T[i[am], 1])
-            pool["ang_v"].append(O[am, 4])
-        if cm.sum() >= 50:
-            pool["curv_o"].append(O[cm, 6])
-            pool["curv_t"].append(C[ci[cm], 1])
-        if lm.sum() >= 50:
-            pool["post_o"].append(L[lm, 1])
-            pool["post_t"].append(T[li[lm], 3])
-
-    if not per_route:
+    if not rows:
         print("ни один маршрут не дал данных")
         return 1
+    report.routes(rows)
 
-    print("\nпо маршрутам:")
-    print(
-        "  маршрут                                сегм  наших   v>гейта   сопост.  кривизна  угол  "
-        "после огр.    отброшено: медл / выкл / дикий угол"
-    )
-    for r in per_route:
-        print(
-            f"  {r['name']:38s} {r['segs']:4d} {r['ours']:6d} {r['fast_share']:8.0f}% {r['matched']:9d} "
-            f"{r['matched_curv']:9d} {r['matched_ang']:5d} {r['matched_post']:11d}    "
-            f"{r['slow']:6d} / {r['off']:5d} / {r['angle_wild']:5d}"
-        )
-    cars = {r["car"] for r in per_route}
-    print(
-        f"  машина: {', '.join(sorted(cars))}, передаточное {per_route[0]['ratio']:.2f}, "
-        f"потолок уставного угла для сравнения {angle_ceiling:.0f}°"
-    )
-
-    P = {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in pool.items()}
-    if len(P["pre_o"]) < 200:
+    pre = pool.series("pre")
+    if pre is None:
         print("\nмало сопоставленных кадров для выводов")
         return 0
 
-    if len(P["curv_o"]) >= 200:
-        co, cc = signed(P["curv_o"], P["curv_t"])
-        dc = co - P["curv_t"]
-        print(
-            f"\nкривизна, 1/м — выход планировщика до любой модели машины, n={len(co)} "
-            f"(знак: корр {cc:+.3f})"
-        )
-        print(
-            f"  |их|  медиана {np.median(np.abs(P['curv_t'])):.5f}  p90 {np.percentile(np.abs(P['curv_t']), 90):.5f}"
-        )
-        print(
-            f"  |наш| медиана {np.median(np.abs(co)):.5f}  p90 {np.percentile(np.abs(co), 90):.5f}"
-        )
-        print(
-            f"  наш = {np.polyfit(P['curv_t'], co, 1)[0]:.3f} x их, корр {abs(cc):.3f}, "
-            f"расхождение ск.кв {np.std(dc):.5f}"
-        )
+    curv = pool.series("curv")
+    if curv:
+        report.curvature(curv)
 
     if not args.no_integrator:
-        print(
-            "\nвнимание: интеграл включён, а контур разомкнут — момент ниже завышен нашим виндапом."
-        )
-        print(
-            "           честное сравнение момента: --no-integrator (угол и кривизна выше от этого не зависят)"
-        )
-    d_pre = report_torque("момент ДО ограничителя, cNm", P["pre_o"], P["pre_t"])
-    if len(P["post_o"]) >= 200:
-        d_post = report_torque(
-            "момент ПОСЛЕ ограничителя, cNm — то, что доходит до рейки",
-            P["post_o"],
-            P["post_t"],
-        )
-        print(
-            f"\n  ограничитель меняет вывод: ск.кв расхождения {np.std(d_pre):.0f} → {np.std(d_post):.0f} cNm, "
-            f"p90 |·| {np.percentile(np.abs(d_pre), 90):.0f} → {np.percentile(np.abs(d_post), 90):.0f}"
-        )
-        print(
-            "  (сравнение только до ограничителя льстит обеим сторонам — темповый предел срезает "
-            "и запрос, и расхождение)"
-        )
+        report.integrator_warning()
+    report.torque("момент ДО ограничителя, cNm", pre)
+    post = pool.series("post")
+    if post:
+        report.torque("момент ПОСЛЕ ограничителя, cNm — то, что доходит до рейки", post)
+        report.limiter_effect(pre, post)
     else:
         print("\nпосле ограничителя сопоставить не удалось — мало кадров")
+    report.torque_bins(pre)
 
-    print("\nпо величине их момента (до ограничителя):")
-    print("  |их| cNm       n    |наш| медиана   расхождение ск.кв   упор их / наш")
-    o_pre, _ = signed(P["pre_o"], P["pre_t"])
-    for lo, hi in ((0, 50), (50, 150), (150, 250), (250, 299), (299, 1000)):
-        s_ = (np.abs(P["pre_t"]) >= lo) & (np.abs(P["pre_t"]) < hi)
-        if s_.sum() < 30:
-            continue
-        print(
-            f"  {lo:3d}-{hi:4d} {s_.sum():8d}      {np.median(np.abs(o_pre[s_])):6.0f}         "
-            f"{np.std(d_pre[s_]):7.0f}          {100 * np.mean(np.abs(P['pre_t'][s_]) >= 299):4.0f}% / "
-            f"{100 * np.mean(np.abs(o_pre[s_]) >= 299):4.0f}%"
-        )
-
-    # The planner half decides whether the torque comparison above means anything — a controller fed a
-    # different setpoint will disagree no matter how faithfully it was ported.
-    if len(P["ang_o"]) > 200:
-        report_angle(P["ang_o"], P["ang_t"], P["ang_v"])
+    # Половина про планировщик решает, значит ли что-нибудь сравнение момента выше: контроллер,
+    # которому дали другую уставку, разойдётся как угодно верно его ни портировали.
+    ang = pool.series("ang")
+    if ang:
+        report.angle(ang, pool.speed())
     return 0
 
 

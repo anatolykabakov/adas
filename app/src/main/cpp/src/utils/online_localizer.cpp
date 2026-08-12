@@ -4,11 +4,11 @@
 #include <cmath>
 
 namespace adas {
-
 OnlineLocalizer::OnlineLocalizer(double wheelbase, double gps_noise_pos, double gps_update_interval,
                                  bool imu_every_step)
   : ekf_(wheelbase, gps_noise_pos, 0.05)
   , wheelbase_(wheelbase)
+  , gps_noise_pos_(gps_noise_pos)
   , gps_update_interval_(gps_update_interval)
   , imu_every_step_(imu_every_step)
 {
@@ -125,8 +125,6 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
     if (!yaw_seeded_ && gps->course_valid && use_gps_course)
       snapYaw(gps->yaw_enu);
 
-    // With position off the filter is dead reckoning: no update, and no reseed either, so the pose is
-    // whatever the yaw-rate chain and the wheel speed make of it. That is the point of the switch.
     if (pending_agree_ > 0 && std::hypot(gps->x - pending_x_, gps->y - pending_y_) > reseed_agree_radius_m)
       pending_agree_ = 0;
     pending_x_ = gps->x;
@@ -135,13 +133,22 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
     const bool may_reseed = pending_agree_ >= reseed_agree_count;
 
     const double acc = gps->accuracy_m > 0.0 ? gps->accuracy_m : 0.0;
-    const double max_innov = acc > 0.0 ? std::clamp(4.0 * acc, 10.0, 60.0) : 25.0;
-    const auto pos = use_gps_position ? ekf_.updateGps(gps->x, gps->y, max_innov, 50.0, may_reseed) :
-                                        VehicleEKF::GpsPosResult::Accepted;
+
+    const bool acc_usable = acc <= 0.0 || acc <= max_gps_accuracy_m;
+    const double max_innov = acc > 0.0 ? std::clamp(2.0 * acc, 10.0, 30.0) : 25.0;
+    const double reseed_innov = std::max(3.0 * max_innov, reseed_agree_radius_m * 4.0);
+    const double pos_R = scale_gps_noise_by_accuracy && acc > 0.0 ? acc * acc : gps_noise_pos_ * gps_noise_pos_;
+
+    const bool use_pos = use_gps_position && acc_usable;
+    if (!acc_usable)
+      ++gps_rejected_accuracy_;
+    const auto pos = use_pos ?
+                         ekf_.updateGps(gps->x, gps->y, max_innov, reseed_innov, may_reseed, pos_R) :
+                         (use_gps_position ? VehicleEKF::GpsPosResult::Rejected : VehicleEKF::GpsPosResult::Accepted);
     if (pos != VehicleEKF::GpsPosResult::Rejected) {
       last_gps_t_ = t_;
 
-      if (gps->course_valid) {
+      if (gps->course_valid && acc_usable) {
         if (use_gps_course) {
           const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
           if (pos == VehicleEKF::GpsPosResult::Reseeded || (yaw_err > 0.5 && may_reseed)) {

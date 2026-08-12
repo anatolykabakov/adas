@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "adas/middleware/manager.hpp"
+#include "adas/utils/proto_convert.h"
 #include "adas/services/camera_calib.h"
-#include "adas/services/imu_calib.h"
 #include "adas/services/internal_subscriber.h"
 #include "adas/services/lane_keep.h"
 #include "adas/services/localization.h"
@@ -19,7 +19,6 @@
 #include "adas/services/traffic_sign.h"
 #include "adas/services/middleware_stats.h"
 #include "adas/services/panda.h"
-#include "adas/services/topic_convert.h"
 #include "adas/services/zmq_bridge.h"
 
 class AdasApp {
@@ -32,14 +31,10 @@ public:
     bool enable_lane_keep = true;
     bool enable_localization = true;
     bool enable_camera_calib = true;
-    bool enable_imu_calib = true;
     bool enable_vision_supercombo = true;
     bool enable_long_plan = true;
     bool enable_safety_warn = true;
     bool enable_traffic_sign = true;
-    /** On in the shipped `config.json`, off in this default. Not an oversight: this default is what runs when
-     *  the config fails to load, and starting a service on a failed load is how you end up debugging a node
-     *  nobody asked for. Nothing downstream consumes its output — see `services/map_data.h`. */
     bool enable_map_data = false;
   };
 
@@ -48,11 +43,9 @@ public:
     std::string vehicle_name = "vw_golf_7_mqb";
     adas::services::Panda::Config panda{};
     adas::services::ZmqBridge::Config zmq_bridge{};
-    adas::services::TopicConvert::Config topic_convert{};
     adas::services::LaneKeep::Config lane_keep{};
     adas::services::Localization::Config localization{};
     adas::services::CameraCalib::Config camera_calib{};
-    adas::services::ImuCalib::Config imu_calib{};
     adas::services::LongPlan::Config long_plan{};
     adas::services::SafetyWarn::Config safety_warn{};
     adas::services::TrafficSign::Config traffic_sign{};
@@ -88,9 +81,14 @@ public:
   void publishChassis(const adas::ChassisSample& chassis);
   void publishLanes(const adas::LanePathMsg& lanes);
 
+  void publishLanePath(const adas::proto::LanePath& path);
   void publishLaneLines(const adas::proto::LaneLines& lanes);
   void publishGps(const adas::GpsSample& gps);
   void publishImu(const adas::ImuSample& imu);
+  /** Сырой IMU, как его присылает телефон. Единственный вход, доводящий данные до `ImuCalibrator`:
+   *  `publishImu` несёт уже посчитанную скорость рыска, из которой калибратор не может защёлкнуть
+   *  ориентацию, а без защёлки нет `lat_accel` и, значит, нет валидного крена дороги. */
+  void publishImuData(const adas::proto::IMUData& imu);
   void publishLaneUv(const adas::LaneUvMsg& uv);
 
   void step(uint64_t timestamp_us);
@@ -132,7 +130,6 @@ public:
   adas::services::Localization* localization() { return localization_service_.get(); }
   adas::services::MapData* mapData() { return map_data_service_.get(); }
   adas::services::CameraCalib* cameraCalib() { return camera_calib_service_.get(); }
-  adas::services::ImuCalib* imuCalib() { return imu_calib_service_.get(); }
   adas::services::InternalSubscriber& subscriber() { return *internal_subscriber_; }
 
 private:
@@ -147,7 +144,8 @@ private:
 
   std::shared_ptr<adas::services::Panda> panda_service_;
   std::shared_ptr<adas::services::ZmqBridge> zmq_bridge_service_;
-  std::shared_ptr<adas::services::TopicConvert> topic_convert_service_;
+  adas::LanePathConfig inbound_path_cfg_{};
+  adas::LaneFusionState inbound_fusion_{};
   bool sim_topic_convert_ = false;
 
   std::shared_ptr<adas::services::LaneKeep> lane_keep_service_;
@@ -157,6 +155,5 @@ private:
   std::shared_ptr<adas::services::Localization> localization_service_;
   std::shared_ptr<adas::services::MapData> map_data_service_;
   std::shared_ptr<adas::services::CameraCalib> camera_calib_service_;
-  std::shared_ptr<adas::services::ImuCalib> imu_calib_service_;
   std::shared_ptr<adas::services::InternalSubscriber> internal_subscriber_;
 };

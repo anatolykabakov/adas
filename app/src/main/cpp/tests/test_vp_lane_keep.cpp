@@ -6,12 +6,13 @@
 
 #include <gtest/gtest.h>
 
+#include "adas/lateral/flowpilot_mpc.hpp"
 #include "adas/adas_app.h"
 #include "messages.pb.h"
 #include "adas/middleware/manager.hpp"
 #include "adas/services/lane_keep.h"
 #include "adas/utils/path_lateral_state.h"
-#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/proto_convert.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 #include "adas/lateral/visionpilot_mpc.hpp"
 
@@ -23,13 +24,25 @@ using visionpilot::build_kappa_schedule;
 using visionpilot::LateralPlanner;
 
 namespace {
-
 std::vector<Vec2> straightLaneRightOffset(double offset_m)
 {
   std::vector<Vec2> poly;
   for (int i = 2; i <= 40; ++i)
     poly.emplace_back(static_cast<double>(i), offset_m);
   return poly;
+}
+
+// Кормить kVisionPath значило бы проверять сервис против сообщения, которого он не слушает.
+adas::proto::LaneLines lanesFromPolyline(const std::vector<Vec2>& poly, int64_t ts_us)
+{
+  adas::proto::LaneLines ll;
+  ll.set_timestamp(ts_us / 1000);
+  ll.set_capture_ts_ms(ts_us / 1000);
+  for (const auto& pt : poly) {
+    ll.add_plan_x(pt.x());
+    ll.add_plan_y(pt.y());
+  }
+  return ll;
 }
 
 LaneKeep::Config mpcConfig()
@@ -56,14 +69,15 @@ TEST(PathLateralState, StraightOffsetRightGivesNegativeCteInVpFrame)
 
 TEST(VisionPilotMpc, FeedforwardMatchesAckermannOnCurve)
 {
-  LateralPlanner mpc;
+  const visionpilot::Params params;
+  LateralPlanner mpc(params);
   const double Lf = 2.67;
   const double kappa = 0.02;
   const double v = 10.0;
   Eigen::Vector3d state;
   state << 0.0, 0.0, kappa;
-  const auto ks = build_kappa_schedule(Lf, 0.0, kappa, 0.0);
-  Eigen::VectorXd vs(static_cast<int>(visionpilot::N));
+  const auto ks = build_kappa_schedule(Lf, 0.0, kappa, 0.0, params.N);
+  Eigen::VectorXd vs(static_cast<int>(params.N));
   vs.setConstant(v);
   const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
   ASSERT_GE(deltas.size(), 2u);
@@ -74,12 +88,13 @@ TEST(VisionPilotMpc, FeedforwardMatchesAckermannOnCurve)
 
 TEST(VisionPilotMpc, CorrectsPositiveCte)
 {
-  LateralPlanner mpc;
+  const visionpilot::Params params;
+  LateralPlanner mpc(params);
   const double Lf = 2.67;
   Eigen::Vector3d state;
   state << 0.8, 0.0, 0.0;
-  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0);
-  Eigen::VectorXd vs(static_cast<int>(visionpilot::N));
+  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0, params.N);
+  Eigen::VectorXd vs(static_cast<int>(params.N));
   vs.setConstant(8.0);
   const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
   ASSERT_GE(deltas.size(), 2u);
@@ -90,12 +105,13 @@ TEST(VisionPilotMpc, CorrectsPositiveCte)
 
 TEST(VisionPilotMpc, LowSpeedModerateCteDoesNotSaturate)
 {
-  LateralPlanner mpc;
+  const visionpilot::Params params;
+  LateralPlanner mpc(params);
   const double Lf = 2.67;
   Eigen::Vector3d state;
   state << 0.6, 0.0, 0.0;
-  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0);
-  Eigen::VectorXd vs(static_cast<int>(visionpilot::N));
+  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0, params.N);
+  Eigen::VectorXd vs(static_cast<int>(params.N));
   vs.setConstant(1.5);
   const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
   ASSERT_GE(deltas.size(), 2u);
@@ -320,18 +336,15 @@ TEST(LaneKeepServiceMpc, LowSpeedGateHoldsZeroAndHasHysteresis)
 }
 
 namespace {
-
 class SteerSink : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "steer_sink"; }
 
   void configure() override
   {
-    subscribe<adas::proto::ZMQMessage>(adas::topics::kSteerCommand, [this](const adas::proto::ZMQMessage& m) {
-      if (!m.has_steer_command())
-        return;
-      last_enabled = m.steer_command().enabled();
-      last_torque = m.steer_command().torque_cnm();
+    subscribe<adas::proto::SteerCommand>(adas::topics::kSteerCommand, [this](const adas::proto::SteerCommand& m) {
+      last_enabled = m.enabled();
+      last_torque = m.torque_cnm();
       ++count;
     });
   }
@@ -356,26 +369,16 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
   auto lk = mw.registerService<LaneKeep>(c);
   mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
-  // Time comes from the middleware, not from the wall clock. The service used to read
-  // `utils::getCurrentTimestamp()` directly and this test used to match it — which meant the gate could only
-  // ever be tested against real time, and a bag replay through `AdasApp` saw every path as hours stale and
-  // cleared every command. Driving the clock here is both the honest test and the thing that makes replays
-  // possible; `mw.setTime` is the only source of "now" either side of the fix.
   int64_t now_us = 10'000'000;
   mw.setTime(now_us);
 
   auto feed = [&](int64_t capture_us) {
-    adas::LanePathMsg path;
-    path.polyline = straightLaneRightOffset(0.4);
-    path.capture_ts_us = capture_us;
-    path.timestamp_us = capture_us;
-    mw.publish(adas::topics::kVisionPath, path);
-
+    mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), capture_us));
     adas::ChassisSample ch;
     ch.timestamp_us = capture_us;
     ch.speed_mps = 14.0;
     ch.steering_angle_deg = 0.0;
-    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
     mw.step();
   };
 
@@ -387,7 +390,6 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
   EXPECT_FALSE(sink->last_enabled) << "must not steer on a stale path";
   EXPECT_EQ(0, sink->last_torque);
 
-  // Advance the clock the way a real run would, then feed a fresh frame.
   now_us += 100'000;
   mw.setTime(now_us);
   feed(now_us);
@@ -409,15 +411,11 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
 
   mw.setTime(10'000'000);
   const int64_t old_us = 10'000'000 - 5'000'000;
-  adas::LanePathMsg path;
-  path.polyline = straightLaneRightOffset(0.4);
-  path.capture_ts_us = old_us;
-  path.timestamp_us = old_us;
-  mw.publish(adas::topics::kVisionPath, path);
+  mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), old_us));
   adas::ChassisSample ch;
   ch.timestamp_us = old_us;
   ch.speed_mps = 14.0;
-  mw.publish(adas::topics::kVehicleChassis, ch);
+  mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
   mw.step();
 
   EXPECT_TRUE(sink->last_enabled) << "with gate off, prior behavior";
@@ -447,19 +445,15 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
   uint64_t sim_us = 1'000'000;
   auto feed = [&](bool left, bool right) {
     mw.setTime(sim_us);
-    adas::LanePathMsg path;
-    path.polyline = straightLaneRightOffset(0.4);
     const int64_t ts = static_cast<int64_t>(sim_us);
-    path.capture_ts_us = ts;
-    path.timestamp_us = ts;
-    mw.publish(adas::topics::kVisionPath, path);
+    mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), ts));
 
     adas::ChassisSample ch;
     ch.timestamp_us = ts;
     ch.speed_mps = 14.0;
     ch.left_blinker = left;
     ch.right_blinker = right;
-    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
     mw.step();
   };
 
@@ -477,7 +471,7 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
   // Falling edge: still suppressed until the resume delay elapses.
   feed(false, false);
   EXPECT_FALSE(sink->last_enabled) << "signal just cancelled — the car is still crossing the line";
-  sim_us += 250'000;  // step past the 0.2 s resume delay on the harness clock
+  sim_us += 250'000;
   feed(false, false);
   EXPECT_TRUE(sink->last_enabled) << "delay elapsed — steering again";
 }
@@ -496,30 +490,19 @@ TEST(LaneKeepBlinkerGate, CanBeSwitchedOff)
   mw.registerService<LaneKeep>(c);
   mw.registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
-  adas::LanePathMsg path;
-  path.polyline = straightLaneRightOffset(0.4);
-  const int64_t ts = utils::getCurrentTimestamp() * 1000;
-  path.capture_ts_us = ts;
-  path.timestamp_us = ts;
-  mw.publish(adas::topics::kVisionPath, path);
+  const int64_t ts = static_cast<int64_t>(mw.now());
+  mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), ts));
   adas::ChassisSample ch;
   ch.timestamp_us = ts;
   ch.speed_mps = 14.0;
   ch.left_blinker = true;
-  mw.publish(adas::topics::kVehicleChassis, ch);
+  mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
   mw.step();
 
   EXPECT_TRUE(sink->last_enabled);
 }
 
-// The assist gate. On run 2026_08_06_18_27_12 the panda withheld torque 70.7 % of the time and nothing
-// in the stack said so: `steer_output_enabled` stayed true, the debug topic claimed we were steering,
-// and the integrator wound up against an error it could not influence. Where the angle error exceeded
-// 5°, the assist was actually present in 12.9 % of frames — the error *was* the missing assist.
 namespace {
-
-// One rig for all the assist tests: fixed straight path with a standing offset, a clock we drive, and
-// panda health published only when the test says so.
 struct AssistRig {
   explicit AssistRig(bool require_assist = true, double max_age_s = 0.5)
     : sink(std::make_shared<SteerSink>()), mw(adas::middleware::Manager::Mode::Simulated)
@@ -528,7 +511,7 @@ struct AssistRig {
     c.steer_output_enabled = true;
     c.min_control_speed_mps = 0.0;
     c.min_control_speed_hyst_mps = 0.0;
-    c.lane_max_age_s = 0.0;  // staleness gate off — these tests are about actuation only
+    c.lane_max_age_s = 0.0;
     c.lka_suppress_on_blinker = false;
     c.lat_require_assist = require_assist;
     c.assist_max_age_s = max_age_s;
@@ -537,41 +520,28 @@ struct AssistRig {
     mw.setTime(now_us);
   }
 
-  // `lat_actuation_allowed` is what the gate reads, and it is deliberately not `controls_allowed`: with
-  // always-on lateral the panda passes torque while `controls_allowed` is false. The two are published with
-  // opposite values in one of the tests below to pin that distinction.
-  //
-  // Built through `utils::createHealthMessage`, the same function `Panda` uses, rather than assembled
-  // by hand. A hand-built message tests the gate against a shape the app never publishes: if the real builder
-  // ever stopped setting the topic or the `panda_health` submessage, the subscriber's `has_panda_health()`
-  // guard would drop every report and these tests would still pass.
   void health(bool lat_allowed, bool controls_allowed_field = false)
   {
     health_t raw{};
     raw.controls_allowed_pkt = controls_allowed_field ? 1 : 0;
     raw.safety_mode_pkt = volkswagen::MqbSafetyConstants::kVolkswagen;
-    auto zmq = utils::createHealthMessage(raw);
-    zmq.mutable_panda_health()->set_lat_actuation_allowed(lat_allowed);
-    mw.publish(adas::topics::kPandaHealth, zmq);
+    auto msg = utils::createHealthMessage(raw, static_cast<int64_t>(mw.now() / 1000));
+    msg.set_lat_actuation_allowed(lat_allowed);
+    mw.publish(adas::topics::kPandaHealth, msg);
   }
 
-  // One vision frame plus one chassis sample, 20 ms of simulated time apart from the previous call so
-  // the PID sees a constant rate.
   void tick()
   {
     now_us += 20'000;
     mw.setTime(now_us);
-    adas::LanePathMsg path;
-    path.polyline = straightLaneRightOffset(0.4);
-    path.capture_ts_us = now_us;
-    path.timestamp_us = now_us;
-    mw.publish(adas::topics::kVisionPath, path);
+    // По шине ходит схема, поэтому тест подаёт то же, что подал бы транспорт.
+    mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), now_us));
 
-    adas::ChassisSample ch;
-    ch.timestamp_us = now_us;
-    ch.speed_mps = 14.0;
-    ch.steering_angle_deg = 0.0;
-    mw.publish(adas::topics::kVehicleChassis, ch);
+    adas::proto::CarState cs;
+    cs.set_timestamp(now_us / 1000);
+    cs.set_v_ego(14.0);
+    cs.set_steering_angle_deg(0.0);
+    mw.publish(adas::topics::kVehicleState, cs);
     mw.step();
   }
 
@@ -714,7 +684,6 @@ TEST(LaneKeepAssistGate, CanBeSwitchedOffAndStillReports)
 
 // Recomputing the setpoint between vision frames. The property that makes it safe to call at any rate is
 // that `lagAdjustedCurvature` clamps against the *plan's* own kappa0, not against the previous output — so
-// repeated calls at one speed cannot ratchet the command away. If that ever changes, this test fails and the
 // 100 Hz call site becomes a slow drift generator.
 TEST(SetpointRecompute, RepeatedCallsAtOneSpeedDoNotRatchet)
 {
@@ -758,21 +727,6 @@ TEST(SetpointRecompute, SpeedIsWhatMovesIt)
   EXPECT_FALSE(mpc.curvatureAtSpeed(14.0, 0.05).has_value()) << "reset must forget the trajectory";
 }
 
-// Which flags may share a drive — revised 2026-08-07 after measurement contradicted the first version.
-// The rule was "at most one of {lat_always_on, lat_recompute_setpoint, use_learned_params, nnapi_fp16}".
-// Two things falsified it:
-//   * `lat_always_on` stopped being a variable. It was answered on run 2026_08_07_19_04_05 — alt_exp 17,
-//     tx_blocked flat at zero, assist presence 2.6 -> 79.1 % at 5-8 m/s — and is the baseline now. A rule that
-//     counts the baseline as a change blocks every future drive;
-//   * `nnapi_fp16` cannot be tested alone. Measured on that drive: pipeline work 52 ms against a 67 ms camera
-//     interval with 94 % of cycles dropping nothing, i.e. camera-bound. Fixing the camera to 33 ms leaves 52 ms
-//     of work, so we would still take every second frame — 15 Hz, a null result. Only fp16 brings work to
-//     ~32 ms, under one camera period. The camera fix and fp16 are one change with two halves, like
-//     `lat_always_on` and the ALKA bit before them.
-// What survives is the constraint that actually matters: two changes may share a drive only if each leaves an
-// independent trace in the bag. `interval_ms` and `infer_ms` separate the camera from fp16; a setpoint that
-// moves between vision frames separates the recompute from both. What has no independent trace is a second
-// change to the *command given the same reference*, so that set stays exclusive.
 TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
 {
   bool ok = false;
@@ -782,7 +736,7 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
   const std::vector<std::pair<const char*, bool>> command = {
       {"lat_recompute_setpoint", cfg.lane_keep.lat_recompute_setpoint},
       {"use_learned_params", cfg.lane_keep.use_learned_params},
-      {"lane_mode_hysteresis", cfg.topic_convert.lane_mode_hysteresis},
+      {"lane_mode_hysteresis", cfg.lane_keep.lane_path.lane_mode_hysteresis},
       {"roll_compensation", cfg.lane_keep.roll_compensation},
   };
   std::string on;
@@ -799,11 +753,6 @@ TEST(ShippedConfig, AtMostOneCommandChangeIsEnabledAtATime)
                        << " — both change the command for the same reference, so the bag cannot separate them";
 }
 
-// What the bag reports must be what the PID chased. The first version of the recompute wrote its result into
-// `last_`, which `updateTorqueFromAngle` had already copied and then assigned back — so the command changed
-// while `control/lane_keep_debug` kept showing the once-per-frame setpoint. Silent, and exactly the kind of
-// mismatch that made earlier lateral analysis wrong. Here the speed changes between vision frames, which is
-// the only input the recompute consumes.
 TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
 {
   auto steerAfterSpeedChange = [](bool recompute) {
@@ -827,24 +776,19 @@ TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
       const double x = static_cast<double>(i);
       curve.emplace_back(x, 0.004 * x * x);
     }
-    adas::LanePathMsg path;
-    path.polyline = curve;
-    path.capture_ts_us = t;
-    path.timestamp_us = t;
-    mw.publish(adas::topics::kVisionPath, path);
+    mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(curve, t));
     adas::ChassisSample ch;
     ch.timestamp_us = t;
     ch.speed_mps = 12.0;
-    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
     mw.step();
     const double at_frame = lk->last().steer_rad;
 
-    // No new vision frame — only the speed moves, which is what upstream's 100 Hz recompute reacts to.
     t += 20'000;
     mw.setTime(t);
     ch.timestamp_us = t;
     ch.speed_mps = 24.0;
-    mw.publish(adas::topics::kVehicleChassis, ch);
+    mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
     mw.step();
     return std::make_pair(at_frame, lk->last().steer_rad);
   };
@@ -856,7 +800,6 @@ TEST(SetpointRecompute, TheReportedSetpointFollowsTheRecompute)
   EXPECT_NE(on.first, on.second) << "with it on the reported setpoint must move, not just the internal one";
 }
 
-#ifdef ADAS_WITH_ACADOS
 #include "adas/lateral/acados_lat_mpc.hpp"
 
 TEST(AcadosLatMpc, LoadsAndSolves)
@@ -868,7 +811,6 @@ TEST(AcadosLatMpc, LoadsAndSolves)
 }
 
 namespace {
-
 struct ArcRefs {
   std::vector<double> y, psi, r;
 };
@@ -960,4 +902,3 @@ TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
   EXPECT_NEAR(ra.desired_curvature, ro.desired_curvature, 0.5 * std::abs(kappa)) << "и близкую величину — постановка "
                                                                                     "задачи одна и та же";
 }
-#endif  // ADAS_WITH_ACADOS

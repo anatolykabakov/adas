@@ -1,10 +1,9 @@
 #pragma once
 
-#include "messages.pb.h"
 #include "adas/utils/adas_topics.h"
+#include "messages.pb.h"
 
 namespace adas {
-
 struct LanePathConfig {
   float min_lane_prob = 0.3f;
 
@@ -42,11 +41,5 @@ struct LaneFusionState {
 
 LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConfig& cfg = {},
                             LaneFusionState* state = nullptr);
-
-ChassisSample carStateToChassis(const adas::proto::CarState& cs, double steer_ratio = 15.7);
-
-RawImuSample imuToRaw(const adas::proto::IMUData& imu);
-
-CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& odom);
 
 }  // namespace adas

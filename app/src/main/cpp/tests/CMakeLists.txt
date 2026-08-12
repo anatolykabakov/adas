@@ -8,6 +8,9 @@ add_executable(
   test_zmq_imu.cpp
   test_utils.cpp
   test_lat_control.cpp
+  test_pp_planner.cpp
+  test_vp_planner.cpp
+  test_lane_keep_gates.cpp
   test_panda_mqb.cpp
   test_vp_lane_keep.cpp
   test_safety_warn.cpp

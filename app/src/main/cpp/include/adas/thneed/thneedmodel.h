@@ -15,9 +15,6 @@ public:
 
 private:
   Thneed* thneed = NULL;
-  // flowpilot had `PubMaster pm({"modelV2", "cameraOdometry"})` here, the only reason this header
-  // pulled in cereal. It is unused in `ThneedModel::execute()` — they publish from their own JNI — so it
-  // is removed along with the include; the output goes to Java and our pipeline publishes it.
   bool recorded;
   float* output;
 };

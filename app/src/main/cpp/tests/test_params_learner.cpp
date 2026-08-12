@@ -1,4 +1,5 @@
 #include <cmath>
+#include "adas/utils/proto_convert.h"
 #include <cstdlib>
 
 #include <gtest/gtest.h>
@@ -11,17 +12,7 @@
 
 using adas::services::LaneKeep;
 
-// The portable part of upstream's `paramsd`: learn tyre stiffness, steer ratio and the steering bias from
-// steering angle, speed and yaw rate. It exists because one constant cannot represent the thing it stands
-// for — measured on this car, `kappa_fact/kappa_kin` is 0.97 at 6–9 m/s, 0.80 at 12–15 and 0.54 at 21–26 —
-// and because two independent estimates of it disagreed by a factor of two (our 0.54 against comma's
-// learned 1.319 on the same car).
-//
-// Signs: everything inside the learner is z-down (positive yaw = right turn), and `chassis.yaw_rate` is ISO
-// (left-positive), so the tests feed it the way the decoder delivers it and the learner negates.
-
 namespace {
-
 constexpr double kDt = 0.01;
 
 class CarSim {
@@ -53,7 +44,7 @@ public:
       v_ += h * dv;
       r_ += h * dr;
     }
-    return -r_;  // внутри z вниз, на шине ISO
+    return -r_;
   }
 
 private:
@@ -105,7 +96,7 @@ TEST(ParamsLearner, StiffnessIsOnlyWeaklyObservable)
 
 TEST(ParamsLearner, RecoversASteeringBias)
 {
-  const auto est = learn(1.0, 15.7, /*truth_offset_deg=*/0.8, 0.0, false, movable());
+  const auto est = learn(1.0, 15.7, 0.8, 0.0, false, movable());
   EXPECT_NEAR(est.angleOffsetTotalDeg(), 0.8, 0.4);
 }
 
@@ -117,7 +108,7 @@ TEST(ParamsLearner, RecoversTheSteerRatio)
 
 TEST(ParamsLearner, KnowingTheRollRecoversTheTruthOnABankedRoad)
 {
-  const auto informed = learn(1.0, 15.7, 0.0, 1.5, /*feed_roll=*/true, movable());
+  const auto informed = learn(1.0, 15.7, 0.0, 1.5, true, movable());
   EXPECT_NEAR(informed.stiffnessFactor(), 1.0, 0.3);
 }
 
@@ -129,7 +120,7 @@ TEST(ParamsLearner, ThePseudoObservationsBoundTheUncertainty)
   const double bounded = est.stiffnessStd();
 
   adas::ParamsLearner::Config loose = movable();
-  loose.stiffness_obs_std = 1e6;  // псевдонаблюдение фактически выключено
+  loose.stiffness_obs_std = 1e6;
   adas::ParamsLearner without(loose);
   for (int i = 0; i < 60000; ++i)
     without.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
@@ -201,7 +192,6 @@ TEST(LearnedParams, TheControllerKeepsItsConstantsUntilBothFlagsAgree)
   cfg.use_learned_params = false;
   LaneKeep svc(cfg);
 
-  // An estimate arrives, and it is a valid one. With the consumer flag off nothing may move.
   svc.setLearnedParams(true, 1.20, 16.4, 0.7);
   EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
   EXPECT_DOUBLE_EQ(svc.effectiveSteerRatio(), 15.7);
@@ -217,8 +207,6 @@ TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
   cfg.use_learned_params = true;
   LaneKeep svc(cfg);
 
-  // Before anything is learned the configured values are in force — not zeros, and not the learner's
-  // initial guess arriving as if it were knowledge.
   EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
   EXPECT_FALSE(svc.usingLearnedParams());
 
@@ -228,8 +216,6 @@ TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
   EXPECT_DOUBLE_EQ(svc.effectiveSteerRatio(), 16.4);
   EXPECT_DOUBLE_EQ(svc.effectiveAngleOffsetDeg(), 0.7);
 
-  // Validity is lost — a stop, a reset, the sigma reopening. The configured values come back rather than
-  // the last thing the estimator believed sticking around unexamined.
   svc.setLearnedParams(false, 1.20, 16.4, 0.7);
   EXPECT_FALSE(svc.usingLearnedParams());
   EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
@@ -242,16 +228,16 @@ TEST(LearnedParams, NonsenseIsRefusedEvenWhenItArrivesFlaggedValid)
   LaneKeep::Config cfg;
   cfg.use_learned_params = true;
   LaneKeep svc(cfg);
-  svc.setLearnedParams(true, 0.0, 16.4, 0.0);  // stiffness zero: slipFactor would divide by it
+  svc.setLearnedParams(true, 0.0, 16.4, 0.0);
   EXPECT_FALSE(svc.usingLearnedParams());
-  svc.setLearnedParams(true, 0.8, 0.0, 0.0);  // ratio zero: the command would be identically zero
+  svc.setLearnedParams(true, 0.8, 0.0, 0.0);
   EXPECT_FALSE(svc.usingLearnedParams());
 }
 
 TEST(ParamsLearner, TheWrongSteeringSignRunsItIntoTheBounds)
 {
   adas::ParamsLearner::Config bad = movable();
-  bad.steer_sign = -1.0;  // неверен для данных ниже, они сгенерированы с +1
+  bad.steer_sign = -1.0;
   adas::ParamsLearner::Config truth_cfg = movable();
   truth_cfg.steer_sign = 1.0;
 
@@ -290,11 +276,6 @@ TEST(ShippedConfig, TheLearnerMayRunButTheControllerMayNotReadIt)
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(path, &ok);
   ASSERT_TRUE(ok) << "cannot parse " << path;
 
-  // The observer ships **on** as of the 2026-08-06 drive: it changes no command, and running it is the only
-  // way the estimate is ever seen on live data rather than in a bag replay. The consumer ships **off** and
-  // this assertion is the one that matters — it is the difference between an instrument and a control input,
-  // and the reason the two were ever separate flags. A header default is not a decision until the shipped
-  // config agrees with it, which is why this suite exists at all.
   if (cfg.lane_keep.dp_parity_pack) {
     EXPECT_TRUE(cfg.lane_keep.use_learned_params) << "пакет объявлен, а наблюдатель не подключён — тогда флаг пакета "
                                                      "лишний";
@@ -304,15 +285,11 @@ TEST(ShippedConfig, TheLearnerMayRunButTheControllerMayNotReadIt)
                                                       "decision needs a bag behind it";
   }
 
-  // Roll stays out of the learner: measured on the same run at 0.0114 rad/s of injected error per degree
-  // against a 0.0065 rad/s residual. See `use_roll` in the header.
   EXPECT_FALSE(cfg.localization.params.use_roll);
 }
 
 TEST(LearnedParams, RunningTheObserverCannotTouchTheCommand)
 {
-  // The claim that lets the observer ship on. With the consumer flag off the controller must not subscribe
-  // to the estimate at all, so no arriving value — valid, invalid or absurd — can reach a command.
   LaneKeep::Config cfg;
   cfg.tire_stiffness_factor = 0.64;
   cfg.steer_ratio = 15.7;
@@ -335,8 +312,6 @@ TEST(ShippedConfig, TheLearnerStartsFromTheParametersTheControllerUses)
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(path, &ok);
   ASSERT_TRUE(ok) << "cannot parse " << path;
 
-  // One source for each constant. If the learner is given its own copy of the wheelbase or the stiffness,
-  // a "learned" parameter comes to mean something slightly different from the parameter it replaces.
   const auto& pl = cfg.localization.params;
   EXPECT_DOUBLE_EQ(pl.vehicle.wheelbase_m, cfg.localization.wheelbase_m);
   EXPECT_DOUBLE_EQ(pl.vehicle.tire_stiffness_factor, cfg.lane_keep.tire_stiffness_factor);
@@ -344,19 +319,12 @@ TEST(ShippedConfig, TheLearnerStartsFromTheParametersTheControllerUses)
   EXPECT_DOUBLE_EQ(pl.steer_ratio_init, cfg.lane_keep.steer_ratio);
 }
 
-// ---------------------------------------------------------------------------------------------------
-// End-to-end through the service, because "the observer is enabled and learns nothing" is a failure that
-// costs a drive rather than a test run. This exercises the real path: a ChassisSample on the real topic,
-// through the real subscription, into the real publish.
-// ---------------------------------------------------------------------------------------------------
-
 namespace {
-
 class ChassisPublisher : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "chassis_pub"; }
   void configure() override {}
-  void send(const adas::ChassisSample& m) { publish(adas::topics::kVehicleChassis, m); }
+  void send(const adas::ChassisSample& m) { publish(adas::topics::kVehicleState, adas::carStateFromChassis(m)); }
 };
 
 }  // namespace
@@ -365,10 +333,10 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
 {
   adas::services::Localization::Config cfg;
   cfg.learn_vehicle_params = true;
-  cfg.params.steer_sign = -1.0;  // this car: positive CAN angle is a left turn
-  cfg.params.use_roll = false;   // as shipped
-  const double truth_tsf = 1.4;  // заметно в стороне от единицы, с которой стартует оценщик
-  cfg.params.stiffness_p0_std = 0.1;  // при P = Q апстрима жёсткость не двигается вовсе
+  cfg.params.steer_sign = -1.0;
+  cfg.params.use_roll = false;
+  const double truth_tsf = 1.4;
+  cfg.params.stiffness_p0_std = 0.1;
 
   auto pub = std::make_shared<ChassisPublisher>();
   auto loc = std::make_shared<adas::services::Localization>(cfg);

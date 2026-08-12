@@ -12,7 +12,6 @@ using adas::mapmatch::RouteConfig;
 using adas::mapmatch::turnSections;
 
 namespace {
-
 /** Arc of radius R sampled every `step` metres of arc length, starting at the origin heading east.
  *  `sign` = +1 turns left. */
 void arc(double radius, double length, double step, int sign, std::vector<double>& xs, std::vector<double>& ys,
@@ -20,7 +19,6 @@ void arc(double radius, double length, double step, int sign, std::vector<double
 {
   for (double s = 0.0; s <= length + 1e-9; s += step) {
     const double th = theta0 + sign * s / radius;
-    // Position along a circle whose centre is `sign * radius` to the left of the start.
     const double cx = x0 - sign * radius * std::sin(theta0);
     const double cy = y0 + sign * radius * std::cos(theta0);
     xs.push_back(cx + sign * radius * std::sin(th));
@@ -37,13 +35,12 @@ void straight(double length, double step, std::vector<double>& xs, std::vector<d
     xs.push_back(x0 + s);
     ys.push_back(y0);
   }
-  xs.push_back(x0 + length);  // land exactly on the end, whatever the step
+  xs.push_back(x0 + length);
   ys.push_back(y0);
 }
 
 }  // namespace
 
-// A circle is the one case where the answer is known exactly: curvature must be 1/R everywhere, and the
 // sign must say which way the road bends.
 TEST(RoadRoute, CurvatureOfCircleIsOneOverRadius)
 {
@@ -56,7 +53,6 @@ TEST(RoadRoute, CurvatureOfCircleIsOneOverRadius)
     arc(radius, 400.0, 5.0, +1, xs, ys);
     const auto k = curvatureAlong(xs, ys, qs, 25.0);
     ASSERT_GE(k.size(), 20u);
-    // Skip the ends, where the window is truncated and the estimate is one-sided.
     for (std::size_t i = 5; i + 5 < k.size(); ++i)
       EXPECT_NEAR(k[i], 1.0 / radius, 0.02 / radius) << "radius " << radius << " at i=" << i;
   }
@@ -68,8 +64,6 @@ TEST(RoadRoute, CurvatureOfCircleIsOneOverRadius)
   EXPECT_NEAR(std::abs(k[k.size() / 2]), 1.0 / 300.0, 0.02 / 300.0);
 }
 
-// The property the whole estimator exists for: OSM draws the same corner with wildly different node counts,
-// and on this map a third of all segments are longer than the 25 m window. Reading the heading at segment
 // midpoints makes the answer independent of that.
 TEST(RoadRoute, CurvatureIsIndependentOfNodeSpacing)
 {
@@ -87,8 +81,6 @@ TEST(RoadRoute, CurvatureIsIndependentOfNodeSpacing)
   }
 }
 
-// Why the curvature is not taken from the resampled points: resampling flattens the heading profile into a
-// staircase and the node-spacing independence above is lost. This measures that, so the structure of
 // `buildRouteAhead` (map geometry in, resampled grid only as query points) cannot be "simplified" away.
 TEST(RoadRoute, ResampledGeometryLosesNodeSpacingIndependence)
 {
@@ -116,7 +108,7 @@ TEST(RoadRoute, ResampleGivesFixedStepAndKeepsLength)
   std::vector<double> xs, ys;
   xs.push_back(0.0);
   ys.push_back(0.0);
-  straight(1000.0, 137.0, xs, ys);  // deliberately not a multiple of the step
+  straight(1000.0, 137.0, xs, ys);
 
   std::vector<double> s, x, y;
   resamplePolyline(xs, ys, 5.0, s, x, y);
@@ -128,7 +120,6 @@ TEST(RoadRoute, ResampleGivesFixedStepAndKeepsLength)
   }
 }
 
-// Straight, left bend, straight, right bend. The sections must find both bends, get their speeds from
 // v = sqrt(a_lat / kappa), and not merge an S-bend into one section.
 TEST(RoadRoute, TurnSectionsSplitBySignAndCarrySpeed)
 {
@@ -173,8 +164,6 @@ TEST(RoadRoute, StraightRoadHasNoTurnSections)
   EXPECT_TRUE(turnSections(s, k, RouteConfig{}).empty());
 }
 
-// A 1 km sweeping curve with one tight corner in it must not end up as a single section at the tight
-// corner's speed — that is dragonpilot's `split_speed_section_by_curv_degree`, and without it a motorway
 // bend inherits the speed of the one kink in it.
 TEST(RoadRoute, SharpPeakIsSplitOutOfALongGentleCurve)
 {
@@ -197,7 +186,6 @@ TEST(RoadRoute, SharpPeakIsSplitOutOfALongGentleCurve)
   EXPECT_GT(tight->kappa, 1.0 / 130.0);
   EXPECT_LT(tight->end_m - tight->start_m, 400.0) << "the sharp section must be local, not the whole curve";
 
-  // And some other section must be the gentle part, i.e. clearly slower curvature.
   const auto gentle = std::min_element(sections.begin(), sections.end(),
                                        [](const auto& a, const auto& b) { return a.kappa < b.kappa; });
   EXPECT_LT(gentle->kappa, 0.6 * tight->kappa);

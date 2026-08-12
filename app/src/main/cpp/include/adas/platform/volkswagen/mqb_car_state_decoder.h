@@ -11,7 +11,6 @@
 #include "adas/platform/volkswagen/values.h"
 
 namespace volkswagen {
-
 bool isAllowedMqbRxAddress(uint32_t address);
 
 inline bool cruiseEngagedFromTsk(int tsk_status) { return tsk_status == 3 || tsk_status == 4 || tsk_status == 5; }
@@ -32,7 +31,7 @@ public:
   void setSpeedFilterConfig(const adas::SpeedFilter::Config& cfg) { speed_filter_.setConfig(cfg); }
   const adas::SpeedFilter& speedFilter() const { return speed_filter_; }
 
-  void updateFromFrame(const can_frame& frame);
+  void updateFromFrame(const can_frame& frame, int64_t now_ms);
 
   bool dirty() const { return dirty_; }
   bool consumeDirty()
@@ -56,8 +55,6 @@ private:
   DBSParser* dbc_ = nullptr;
   adas::proto::CarState state_;
   bool dirty_ = false;
-  /** Filtered speed and acceleration from the raw wheel-speed average — see `SpeedFilter` for what
-   *  the unfiltered finite difference looked like. */
   adas::SpeedFilter speed_filter_{};
   int64_t prev_v_ts_ms_ = 0;
   bool brake_esp_ = false;

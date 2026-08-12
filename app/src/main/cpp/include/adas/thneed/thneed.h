@@ -14,12 +14,7 @@
 
 #include "adas/thneed/msm_kgsl.h"
 
-//#define QCOM2
-//#define USE_PRECOMPILED
-
 using namespace std;
-
-// cl_int thneed_clSetKernelArg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void *arg_value);
 
 namespace json11 {
 class Json;
@@ -113,7 +108,6 @@ public:
   cl_device_id device_id;
   int context_id;
 
-  // protected?
   bool record = false;
   int debug;
   int timestamp;
@@ -130,7 +124,6 @@ public:
   cl_int clexec();
   vector<shared_ptr<CLQueuedKernel> > kq;
 
-  // pending CL kernels
   vector<shared_ptr<CLQueuedKernel> > ckq;
 
   // loading

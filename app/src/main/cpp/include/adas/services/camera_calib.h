@@ -2,13 +2,12 @@
 
 #include "adas/middleware/manager.hpp"
 #include "adas/utils/adas_topics.h"
+#include "adas/utils/proto_convert.h"
 #include "adas/utils/pose_calibrator.h"
 #include "adas/utils/vanishing_point_calib.h"
 
 namespace adas {
-
 namespace services {
-
 class CameraCalib : public adas::middleware::Service {
 public:
   struct Config {
@@ -20,6 +19,7 @@ public:
     double cx = 640.0;
     double cy = 360.0;
     int history_len = 50;
+    double steer_ratio = 15.7;
   };
 
   CameraCalib() : CameraCalib(Config{}) {}
@@ -46,6 +46,7 @@ public:
 
 private:
   void onLaneUv(const LaneUvMsg& msg);
+  void onCameraOdometryProto(const adas::proto::CameraOdometry& odom);
   void onCameraOdometry(const CameraOdometrySample& msg);
   void onChassis(const ChassisSample& msg);
   void syncLastFromPose(int64_t timestamp_us);

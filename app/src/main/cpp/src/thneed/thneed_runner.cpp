@@ -1,13 +1,3 @@
-// thneed runner: replays a recorded queue of OpenCL kernels on the phone GPU.
-//
-// Everything above the "our JNI" marker is flowpilot code (MIT), taken almost verbatim from
-// `android/src/main/cpp/jniconvert.cpp`. Their own JNI is dropped: it publishes into cereal, which we
-// do not have, and is tied to their package names.
-//
-// thneed is not a runtime but a serialized `vector<CLQueuedKernel>` that `load()` reads and `clexec()`
-// replays. The kernels are stored as compiled GPU binaries loaded through `clCreateProgramWithBinary`,
-// so the file is tied to the GPU and driver that produced it — our own network cannot be substituted
-// without compiling it on the device. See docs/VISION_RATE.md §5.
 
 #include <jni.h>
 #include <fstream>
@@ -64,9 +54,6 @@ typedef cl_int (*clEnqueueReadBuffer_t)(cl_command_queue, cl_mem, cl_bool, size_
                                         const cl_event*, cl_event*);
 typedef cl_int (*clReleaseMemObject_t)(cl_mem);
 
-// Load the OpenCL library
-// The short name does not resolve: on OnePlus 7T (Android 12, Adreno 640) `dlopen("libOpenCL.so")`
-// returns NULL even though the library is listed in /vendor/etc/public.libraries.txt. Try candidates
 // and log which one worked.
 static void* load_opencl()
 {
@@ -77,7 +64,7 @@ static void* load_opencl()
       "libOpenCL.so.1",
   };
   for (const char* name : candidates) {
-    dlerror();  // clear the previous error, otherwise dlerror() reports an unrelated one
+    dlerror();
     void* h = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
     if (h != NULL) {
       __android_log_print(ANDROID_LOG_INFO, "thneed", "OpenCL loaded from %s", name);
@@ -91,7 +78,6 @@ static void* load_opencl()
 
 void* opencl_library = load_opencl();
 
-// Get function pointers
 auto p_clCreateProgramWithSource = reinterpret_cast<clCreateProgramWithSource_t>(dlsym(opencl_library, "clCreateProgram"
                                                                                                        "WithSource"));
 auto p_clBuildProgram = reinterpret_cast<clBuildProgram_t>(dlsym(opencl_library, "clBuildProgram"));
@@ -120,21 +106,12 @@ typedef cl_int (*clEnqueueNDRangeKernel_t)(cl_command_queue, cl_kernel, cl_uint,
 typedef cl_int (*clGetKernelInfo_t)(cl_kernel, cl_kernel_info, size_t, void*, size_t*);
 typedef cl_int (*clSetKernelArg_t)(cl_kernel, cl_uint, size_t, const void*);
 
-// Get more function pointers
 auto p_clCreateKernel = reinterpret_cast<clCreateKernel_t>(dlsym(opencl_library, "clCreateKernel"));
 auto p_clGetKernelArgInfo = reinterpret_cast<clGetKernelArgInfo_t>(dlsym(opencl_library, "clGetKernelArgInfo"));
 auto p_clEnqueueNDRangeKernel = reinterpret_cast<clEnqueueNDRangeKernel_t>(dlsym(opencl_library, "clEnqueueNDRangeKerne"
                                                                                                  "l"));
 auto p_clGetKernelInfo = reinterpret_cast<clGetKernelInfo_t>(dlsym(opencl_library, "clGetKernelInfo"));
 auto p_clSetKernelArg = reinterpret_cast<clSetKernelArg_t>(dlsym(opencl_library, "clSetKernelArg"));
-
-// Now you can use these function pointers as if they were the original functions
-// For example:
-// cl_kernel kernel = (*p_clCreateKernel)(program, "my_kernel", &err);
-
-// Now you can use these function pointers as if they were the original functions
-// For example:
-// cl_context context = (*p_clCreateContext)(NULL, 1, &device_id, NULL, NULL, &err);
 
 #undef assert
 #define assert(x)                                                                                                      \
@@ -196,7 +173,6 @@ cl_device_id cl_get_device_id(cl_device_type device_type)
   CL_CHECK((*p_clGetPlatformIDs)(num_platforms, &platform_ids[0], NULL));
 
   for (size_t i = 0; i < num_platforms; ++i) {
-    // Get first device
     if (cl_device_id device_id = NULL;
         (*p_clGetDeviceIDs)(platform_ids[i], device_type, 1, &device_id, NULL) == 0 && device_id) {
       return device_id;
@@ -272,7 +248,6 @@ void Thneed::load(uint8_t* buf)
     cl_mem clbuf = NULL;
 
     if (mobj["buffer_id"].string_value().size() > 0) {
-      // image buffer must already be allocated
       clbuf = real_mem[*(cl_mem*)(mobj["buffer_id"].string_value().data())];
       assert(mobj["needs_load"].bool_value() == false);
     } else {
@@ -282,7 +257,6 @@ void Thneed::load(uint8_t* buf)
           __android_log_print(ANDROID_LOG_INFO, "JNILOG", "loading %p %d @ 0x%X\n", clbuf, sz, ptr);
         ptr += sz;
       } else {
-        // TODO: is there a faster way to init zeroed out buffers?
         void* host_zeros = calloc(sz, 1);
         clbuf = (*p_clCreateBuffer)(context, CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE, sz, host_zeros, NULL);
         free(host_zeros);
@@ -335,7 +309,6 @@ void Thneed::load(uint8_t* buf)
 
     cl_int cl_err;
     void* ret = (*p_clEnqueueMapBuffer)(command_queue, aa, CL_TRUE, CL_MAP_WRITE, 0, sz, 0, NULL, NULL, &cl_err);
-    // if (cl_err != CL_SUCCESS) __android_log_print(ANDROID_LOG_INFO, "JNILOG","clError: %s map %p %d\n",
     // cl_get_error_string(cl_err), aa, sz);
     assert(cl_err == CL_SUCCESS);
     inputs.push_back(ret);
@@ -345,7 +318,6 @@ void Thneed::load(uint8_t* buf)
     auto mobj = obj.object_items();
     int sz = mobj["size"].int_value();
     __android_log_print(ANDROID_LOG_INFO, "JNILOG", "Thneed::save: adding output with size %d\n", sz);
-    // TODO: support multiple outputs
     output = real_mem[*(cl_mem*)(mobj["buffer_id"].string_value().data())];
     if (output == NULL)
       __android_log_print(ANDROID_LOG_INFO, "JNILOG", "Thneed::save: output was null!");
@@ -391,8 +363,6 @@ void Thneed::load(uint8_t* buf)
   (*p_clFinish)(command_queue);
 }
 
-// *********** Thneed ***********
-
 #ifndef QCOM2
 
 Thneed::Thneed(bool do_clinit, cl_context _context)
@@ -400,7 +370,7 @@ Thneed::Thneed(bool do_clinit, cl_context _context)
   context = _context;
   if (do_clinit)
     clinit();
-  debug = 0;  //(thneed_debug_env != NULL) ? atoi(thneed_debug_env) : 0;
+  debug = 0;
 }
 
 void Thneed::execute(float** finputs, float* foutput, bool slow)
@@ -428,17 +398,13 @@ void Thneed::execute(float** finputs, float* foutput, bool slow)
 
 int __ioctl(int filedes, unsigned long request, void* argp)
 {
-  request &= 0xFFFFFFFF;  // needed on QCOM2
+  request &= 0xFFFFFFFF;
   Thneed* thneed = g_thneed;
 
-  // save the fd
-  // if (request == IOCTL_KGSL_GPUOBJ_ALLOC) g_fd = filedes;
-
-  // note that this runs always, even without a thneed object
   if (request == IOCTL_KGSL_DRAWCTXT_CREATE) {
     struct kgsl_drawctxt_create* create = (struct kgsl_drawctxt_create*)argp;
     create->flags &= ~KGSL_CONTEXT_PRIORITY_MASK;
-    create->flags |= 6 << KGSL_CONTEXT_PRIORITY_SHIFT;  // priority from 1-15, 1 is max priority
+    create->flags |= 6 << KGSL_CONTEXT_PRIORITY_SHIFT;
     __android_log_print(ANDROID_LOG_INFO, "JNILOG", "IOCTL_KGSL_DRAWCTXT_CREATE: creating context with flags 0x%x\n",
                         create->flags);
   }
@@ -496,9 +462,7 @@ int __ioctl(int filedes, unsigned long request, void* argp)
         }
       }
     } else if (request == IOCTL_KGSL_DRAWCTXT_CREATE || request == IOCTL_KGSL_DRAWCTXT_DESTROY) {
-      // this happens
     } else if (request == IOCTL_KGSL_GPUOBJ_ALLOC || request == IOCTL_KGSL_GPUOBJ_FREE) {
-      // this happens
     } else {
       if (thneed->debug >= 1) {
         __android_log_print(ANDROID_LOG_INFO, "JNILOG", "other ioctl %lx\n", request);
@@ -507,7 +471,6 @@ int __ioctl(int filedes, unsigned long request, void* argp)
   }
 
   int ret = ioctl(filedes, request, argp);
-  // NOTE: This error message goes into stdout and messes up pyenv
   if (ret != 0)
     __android_log_print(ANDROID_LOG_INFO, "JNILOG", "ioctl returned %d with errno %d\n", ret, errno);
   return ret;
@@ -529,10 +492,7 @@ GPUMalloc::GPUMalloc(int size, int fd)
   remaining = size;
 }
 
-GPUMalloc::~GPUMalloc()
-{
-  // TODO: free the GPU malloced area
-}
+GPUMalloc::~GPUMalloc() {}
 
 void* GPUMalloc::alloc(int size)
 {
@@ -627,18 +587,15 @@ void Thneed::wait()
 
 Thneed::Thneed(bool do_clinit, cl_context _context)
 {
-  // TODO: QCOM2 actually requires a different context
-  // context = _context;
   if (do_clinit)
     clinit();
-  getGPUMemoryAllocationFD();  // this should set g_fd
+  getGPUMemoryAllocationFD();
   assert(g_fd != -1);
   fd = g_fd;
   ram = make_unique<GPUMalloc>(0x80000, fd);
   timestamp = -1;
   g_thneed = this;
-  // char *thneed_debug_env = getenv("THNEED_DEBUG");
-  debug = 1;  // (thneed_debug_env != NULL) ? atoi(thneed_debug_env) : 0;
+  debug = 1;
 }
 
 void Thneed::execute(float** finputs, float* foutput, bool slow)
@@ -650,7 +607,6 @@ void Thneed::execute(float** finputs, float* foutput, bool slow)
   // ****** copy inputs
   copy_inputs(finputs, true);
 
-  // ****** run commands
   int i = 0;
   for (auto& it : cmds) {
     ++i;
@@ -672,18 +628,13 @@ void Thneed::execute(float** finputs, float* foutput, bool slow)
 
 #endif
 
-void Thneed::stop()
-{
-  //__android_log_print(ANDROID_LOG_INFO, "JNILOG","Thneed::stop: recorded %lu commands\n", cmds.size());
-  record = false;
-}
+void Thneed::stop() { record = false; }
 
 void Thneed::clinit()
 {
   device_id = cl_get_device_id(CL_DEVICE_TYPE_DEFAULT);
   if (context == NULL)
     context = CL_CHECK_ERR((*p_clCreateContext)(NULL, 1, &device_id, NULL, NULL, &err));
-  // cl_command_queue_properties props[3] = {CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0};
   cl_command_queue_properties props[3] = {CL_QUEUE_PROPERTIES, 0, 0};
   command_queue = CL_CHECK_ERR((*p_clCreateCommandQueueWithProperties)(context, device_id, props, &err));
   __android_log_print(ANDROID_LOG_INFO, "JNILOG", "Thneed::clinit done\n");
@@ -710,7 +661,6 @@ void Thneed::copy_inputs(float** finputs, bool internal)
                           finputs[idx], inputs[idx], input_clmem[idx]);
 
     if (internal) {
-      // if it's internal, using memcpy is fine since the buffer sync is cached in the ioctl layer
       if (finputs[idx] != NULL)
         memcpy(inputs[idx], finputs[idx], input_sizes[idx]);
     } else {
@@ -753,7 +703,6 @@ CLQueuedKernel::CLQueuedKernel(Thneed* lthneed, cl_kernel _kernel, cl_uint _work
   name = string(_name);
   (*p_clGetKernelInfo)(kernel, CL_KERNEL_NUM_ARGS, sizeof(num_args), &num_args, NULL);
 
-  // get args
   for (int i = 0; i < num_args; i++) {
     char arg_name[0x100] = {0};
     (*p_clGetKernelArgInfo)(kernel, i, CL_KERNEL_ARG_NAME, sizeof(arg_name), arg_name, NULL);
@@ -765,7 +714,6 @@ CLQueuedKernel::CLQueuedKernel(Thneed* lthneed, cl_kernel _kernel, cl_uint _work
     args_size.push_back(g_args_size[make_pair(kernel, i)]);
   }
 
-  // get program
   (*p_clGetKernelInfo)(kernel, CL_KERNEL_PROGRAM, sizeof(program), &program, NULL);
 }
 
@@ -804,10 +752,6 @@ cl_int CLQueuedKernel::exec()
       assert(ret == CL_SUCCESS);
     }
   }
-
-  // if (thneed->debug >= 1) {
-  //     debug_print(thneed->debug >= 2);
-  // }
 
   return (*p_clEnqueueNDRangeKernel)(thneed->command_queue, kernel, work_dim, NULL, global_work_size, local_work_size,
                                      0, NULL, NULL);
@@ -884,7 +828,7 @@ void CLQueuedKernel::debug_print(bool verbose)
   }
 }
 
-#endif  // USE_PRECOMPILED
+#endif
 
 ThneedModel::ThneedModel(uint8_t* model, float* _output, size_t _output_size, int runtime, bool luse_tf8,
                          cl_context context)
@@ -937,22 +881,7 @@ void ThneedModel::execute()
     thneed->execute(input_buffers, output);
   }
 }
-// ======================== our JNI ========================
-//
-// Differences from theirs: no cereal (the output goes to Java and our pipeline publishes it), and our
-// package names. Recurrent state (features_buffer, prev_desired_curvs) lives here as it does in theirs.
-//
-// Flat input buffer layout, same as flowpilot:
-//   [0                     .. IMG_LEN)          input_imgs      (12x128x256 float)
-//   [IMG_LEN               .. 2*IMG_LEN)        big_input_imgs  (same frame, wide warp matrix)
-//   [2*IMG_LEN             .. +DESIRE_LEN)      desire          (100x8)
-//   [2*IMG_LEN+DESIRE_LEN  .. +2)               lateral_control_params: vEgo, actuator delay
-//
-// Raw model output: OUTPUT_SIZE parsed values plus FEATURE_LEN features fed back into the next frame.
 
-// Model sizes, declared explicitly because the header they come from (`selfdrive/modeld/models/driving.h`)
-// is absent from flowpilot's Android tree. Source: driving.h:17-19, and OUTPUT_SIZE =
-// sizeof(ModelOutput)/sizeof(float) = 5992 for the f3 model; NET_OUTPUT_SIZE = OUTPUT_SIZE + FEATURE_LEN.
 static const int FEATURE_LEN = 512;
 static const int HISTORY_BUFFER_LEN = 99;
 static const int OUTPUT_SIZE = 5992;
@@ -972,9 +901,6 @@ static const int kImgLen = 1572864 / 4;
 static const int kDesireLen = 3200 / 4;
 
 extern "C" {
-
-// Checked before the first OpenCL call, not left to try/catch in Java: with unresolved pointers
-// `cl_get_device_id` dies on SIGSEGV, and a native signal cannot be caught by a Java handler — the whole
 // process goes down, so the promised fallback to ONNX would not happen.
 static bool openclReady()
 {
@@ -1013,9 +939,6 @@ JNIEXPORT jboolean JNICALL Java_adas_app_vision_SupercomboThneedRunner_nativeIni
     return JNI_FALSE;
   }
   if (thneed != NULL) {
-    // Model already loaded, but the recurrent state must be cleared: the runner is re-created on a
-    // live model switch and Java starts from an empty frame pair, so 99 frames of features and
-    // curvatures from the previous session would be inconsistent with it.
     for (int i = 0; i < features_len; i++)
       features_buf[i] = 0;
     for (int i = 0; i < PREV_DESIRED_CURVS_LEN; i++)
@@ -1076,10 +999,6 @@ JNIEXPORT jfloat JNICALL Java_adas_app_vision_SupercomboThneedRunner_nativeExecu
   std::memcpy(&features_buf[FEATURE_LEN * (HISTORY_BUFFER_LEN - 1)], &outputs[OUTPUT_SIZE],
               sizeof(float) * FEATURE_LEN);
 
-  // Desired-curvature history: the 0.9.x model gets its own previous command back as an input.
-  //
-  // Deliberate divergence from flowpilot, which shifts this by BYTES —
-  // `PREV_DESIRED_CURVS_LEN - 1` instead of `sizeof(float) * (...)` — moving a quarter of the history
   // and leaving a half-written float at the boundary. Shift by elements.
   std::memmove(&prev_curvs_buf[0], &prev_curvs_buf[1], sizeof(float) * (PREV_DESIRED_CURVS_LEN - 1));
   prev_curvs_buf[PREV_DESIRED_CURVS_LEN - 1] = outputs[5990];
@@ -1087,5 +1006,4 @@ JNIEXPORT jfloat JNICALL Java_adas_app_vision_SupercomboThneedRunner_nativeExecu
   env->SetFloatArrayRegion(output, 0, output_len, outputs);
   return ms;
 }
-
-}  // extern "C"
+}

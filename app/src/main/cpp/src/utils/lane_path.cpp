@@ -1,14 +1,14 @@
-#include "adas/utils/topic_convert.h"
+#include "adas/utils/lane_path.h"
 
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-#include "adas/utils/adas_topics.h"
+#include "adas/utils/logger.h"
+#include "adas/utils/math_utils.h"
 
 namespace adas {
 namespace {
-
 constexpr double kWidthFilterAlpha = 0.01;
 
 constexpr double kCenterFitXMaxM = 30.0;
@@ -56,8 +56,6 @@ double medianLaneStd(const adas::proto::LanePolyline& lane, const adas::proto::L
 {
   std::vector<double> stds;
   const int n = std::min(lane.y_std_size(), ll.x_size());
-  // Clamped from below rather than replaced by the default: a narrow configured window (say 4 m) used
-  // to become the widest one, 5-40 m, the opposite of what was asked for.
   const double x_max = std::max(range_m, 10.0);
   for (int i = 0; i < n; ++i) {
     const double x = ll.x(i);
@@ -303,49 +301,6 @@ LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConf
   }
   applyCameraOffset(out, shift);
   return out;
-}
-
-ChassisSample carStateToChassis(const adas::proto::CarState& cs, double steer_ratio)
-{
-  ChassisSample s;
-  s.timestamp_us = cs.timestamp() * 1000;
-  s.speed_mps = cs.v_ego();
-  s.yaw_rate = cs.yaw_rate();
-  s.steering_angle_deg = cs.steering_angle_deg();
-  s.steering_pressed = cs.steering_pressed();
-  s.left_blinker = cs.left_blinker();
-  s.right_blinker = cs.right_blinker();
-  const double ratio = std::max(steer_ratio, 1e-3);
-  s.steer_rad = (cs.steering_angle_deg() * M_PI / 180.0) / ratio;
-  return s;
-}
-
-RawImuSample imuToRaw(const adas::proto::IMUData& imu)
-{
-  RawImuSample s;
-  s.timestamp_us = imu.timestamp() * 1000;
-  s.ax = imu.accel_x();
-  s.ay = imu.accel_y();
-  s.az = imu.accel_z();
-  s.gx = imu.gyro_x();
-  s.gy = imu.gyro_y();
-  s.gz = imu.gyro_z();
-  s.valid = true;
-  return s;
-}
-
-CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& odom)
-{
-  CameraOdometrySample s;
-  s.timestamp_us = odom.timestamp() * 1000;
-  for (int i = 0; i < 3; ++i) {
-    s.trans(i) = (i < odom.trans_size()) ? odom.trans(i) : 0.0;
-    s.rot(i) = (i < odom.rot_size()) ? odom.rot(i) : 0.0;
-    s.trans_std(i) = (i < odom.trans_std_size()) ? odom.trans_std(i) : 1.0;
-    s.rot_std(i) = (i < odom.rot_std_size()) ? odom.rot_std(i) : 1.0;
-  }
-  s.valid = odom.trans_size() >= 3 && odom.rot_size() >= 3;
-  return s;
 }
 
 }  // namespace adas

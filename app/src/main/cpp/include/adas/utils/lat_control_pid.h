@@ -5,7 +5,6 @@
 #include <limits>
 
 namespace adas {
-
 class PidController {
 public:
   PidController(double k_p = 0.6, double k_i = 0.2, double k_f = 0.00015, double rate_hz = 50.0, double pos_limit = 1.0,
@@ -82,12 +81,6 @@ private:
   double control_ = 0;
 };
 
-/// Feedforward floor speed [m/s]: below it the torque demand is set by turning the wheel against
-/// tyre scrub, not by holding the car in the corner, and that part does not scale with v².
-///
-/// Fitted over three drives (2026_08_04, 08-07, 08-08) on steady-state frames with the proportional
-/// term subtracted: the required coefficient on SWA follows `a + b·v²` with a = 0.019/0.014/0.005 and
-/// b = 0.000119/0.000146/0.000173. `sqrt(a/b)` is this floor — 9.8 m/s, about 35 km/h.
 inline constexpr double kFeedforwardFloorMps = 9.8;
 
 class LatControlPid {

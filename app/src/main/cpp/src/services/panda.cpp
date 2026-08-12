@@ -7,12 +7,11 @@
 
 #include "adas/utils/adas_topics.h"
 #include "adas/utils/logger.h"
-#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/proto_convert.h"
 #include "adas/platform/volkswagen/values.h"
 
 namespace adas {
 namespace services {
-
 namespace {
 constexpr int64_t kHcaCmdTimeoutMs = 250;
 }
@@ -38,10 +37,10 @@ void Panda::configure()
 
     initializePanda();
 
-    subscribe<adas::proto::ZMQMessage>(adas::topics::kSteerCommand,
-                                       [this](const adas::proto::ZMQMessage& m) { steerCommandCallback(m); });
-    subscribe<adas::proto::ZMQMessage>(adas::topics::kLongPlan,
-                                       [this](const adas::proto::ZMQMessage& m) { longPlanCallback(m); });
+    subscribe<adas::proto::SteerCommand>(topics::kSteerCommand,
+                                         [this](const adas::proto::SteerCommand& m) { steerCommandCallback(m); });
+    subscribe<adas::proto::LongPlanState>(topics::kLongPlan,
+                                          [this](const adas::proto::LongPlanState& m) { longPlanCallback(m); });
 
     scheduleTimer(
         10, [this] { pandaRxCallback(); }, "rx");
@@ -65,26 +64,20 @@ void Panda::initializePanda()
   LOGI("Panda instance created successfully");
 }
 
-void Panda::steerCommandCallback(const adas::proto::ZMQMessage& msg)
+void Panda::steerCommandCallback(const adas::proto::SteerCommand& cmd)
 {
-  if (!msg.has_steer_command())
-    return;
-  const auto& cmd = msg.steer_command();
   using P = volkswagen::CarControllerParams;
   const int torque = std::clamp(cmd.torque_cnm(), -P::STEER_MAX, P::STEER_MAX);
   hca_cmd_steer_ = torque;
   hca_cmd_enabled_ = cmd.enabled() && (torque != 0);
-  hca_cmd_ts_ms_ = utils::getCurrentTimestamp();
+  hca_cmd_ts_ms_ = nowMs();
 }
 
-void Panda::longPlanCallback(const adas::proto::ZMQMessage& msg)
+void Panda::longPlanCallback(const adas::proto::LongPlanState& lp)
 {
-  if (!msg.has_long_plan())
-    return;
-  const auto& lp = msg.long_plan();
   long_v_target_ = lp.v_target();
   have_long_plan_ = true;
-  long_plan_ts_ms_ = utils::getCurrentTimestamp();
+  long_plan_ts_ms_ = nowMs();
 }
 
 volkswagen::CruiseButtonCmd Panda::computeCruiseButtons(const volkswagen::CarStateView& cs)
@@ -94,16 +87,11 @@ volkswagen::CruiseButtonCmd Panda::computeCruiseButtons(const volkswagen::CarSta
     return cmd;
 
   constexpr int64_t kLongPlanTimeoutMs = 500;
-  const int64_t now = utils::getCurrentTimestamp();
+  const int64_t now = nowMs();
   const bool plan_fresh = have_long_plan_ && (now - long_plan_ts_ms_) <= kLongPlanTimeoutMs;
 
   if (cs.cruiseEngaged && !cruise_was_engaged_) {
     cruise_v_set_ = std::max(0.0, static_cast<double>(cs.vEgo));
-    // The driver's chosen speed is the ceiling for the whole engagement. Without a radar we have no
-    // business driving faster than they asked; the assistant's only authority is to give speed back
-    // and then restore it. This also removes half the button traffic: on run 2026_08_06_00_36_42 the
-    // actuator produced roughly as many up-tips as down-tips, hunting around a target that a
-    // one-sided authority would never have chased.
     cruise_v_set_ceiling_ = cruise_v_set_;
     cruise_hold_tip_up_ = cruise_hold_tip_down_ = false;
     cruise_cooldown_until_ms_ = 0;
@@ -160,12 +148,6 @@ bool Panda::assistAllowed(const volkswagen::CarStateView& cs) const
 }
 
 namespace {
-// Kept next to the call so the reasoning does not drift away from it.
-// Upstream's gate is `controlsd.py:677`. Their fourth condition, calibration validity, is intentionally
-// absent from `lateralActuationAllowed`: the camera moves every mount and the estimator converges in 30–60 s,
-// which costs a measured 0.02 m of offset on straights (see BACKLOG §1), so a calibration gate would withhold
-// the assist for a minute to avoid two centimetres. With always-on lateral the car now steers during that
-// warm-up, which is the one place this decision is worth revisiting on the road rather than in a comment.
 }  // namespace
 
 void Panda::carControllerCallback()
@@ -176,7 +158,7 @@ void Panda::carControllerCallback()
   if (safety_.lastSafetyMode() != C::kVolkswagen || !safety_.lastIgnition())
     return;
 
-  const int64_t now = utils::getCurrentTimestamp();
+  const int64_t now = nowMs();
   const bool cmd_fresh = hca_cmd_ts_ms_ > 0 && (now - hca_cmd_ts_ms_) <= kHcaCmdTimeoutMs;
 
   const auto cs = decoder_.toCarStateView();
@@ -208,11 +190,11 @@ Panda::~Panda()
 
 void Panda::reset() {}
 
-void Panda::publishCarState()
+void Panda::publishCarState(int64_t now_ms)
 {
   if (!decoder_.consumeDirty())
     return;
-  decoder_.state().set_timestamp(utils::getCurrentTimestamp());
+  decoder_.state().set_timestamp(now_ms);
   publish(adas::topics::kVehicleState, utils::createCarStateMessage(decoder_.state()));
 }
 
@@ -226,17 +208,18 @@ void Panda::pandaRxCallback()
     if (!panda_->can_receive(raw) || raw.empty())
       return;
 
+    const int64_t now_ms = nowMs();
     std::vector<can_frame> filtered;
     for (const auto& frame : raw) {
       if (!volkswagen::isAllowedMqbRxAddress(frame.address))
         continue;
       filtered.push_back(frame);
-      decoder_.updateFromFrame(frame);
+      decoder_.updateFromFrame(frame, now_ms);
     }
 
     if (!filtered.empty())
-      publish(adas::topics::kCanRx, utils::createCANMessage(filtered));
-    publishCarState();
+      publish(adas::topics::kCanRx, utils::createCANMessage(filtered, now_ms));
+    publishCarState(now_ms);
   } catch (const std::exception& e) {
     LOGE("Exception in pandaRxCallback(): %s", e.what());
   }
@@ -264,11 +247,11 @@ void Panda::pandaStateCallback()
     log.lat_cmd_active = hca_cmd_enabled_ && assistAllowed(cs_now);
     log.ldw_valid = decoder_.ldwStock().valid;
 
-    auto out = safety_.tick(*panda_, *health, utils::getCurrentTimestamp(), log);
+    const int64_t now_ms = nowMs();
+    auto out = safety_.tick(*panda_, *health, now_ms, log);
     if (out) {
-      auto msg = utils::createHealthMessage(*out);
-      // Computed after the tick so it reflects the controls_allowed this cycle actually saw.
-      msg.mutable_panda_health()->set_lat_actuation_allowed(assistAllowed(cs_now));
+      auto msg = utils::createHealthMessage(*out, now_ms);
+      msg.set_lat_actuation_allowed(assistAllowed(cs_now));
       publish(adas::topics::kPandaHealth, msg);
     }
   } catch (const std::exception& e) {

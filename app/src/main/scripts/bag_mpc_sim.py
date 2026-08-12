@@ -211,12 +211,12 @@ def _new_app(
         app.set_lane_keep_mpc_kappa_yaw_blend(kappa_yaw_blend)
         if hasattr(app, "set_lane_keep_mpc_ema_alphas"):
             app.set_lane_keep_mpc_ema_alphas(kappa_ema, epsi_ema, cte_ema)
-        # AFTER ctor — ctor calls set_warm_start_gains(config defaults) and would clobber.
-        pyadas.set_mpc_warm_start_gains(epsi_gain, ff_scale)
-        if hasattr(pyadas, "set_mpc_cte_gain_base"):
-            pyadas.set_mpc_cte_gain_base(cte_gain_base)
-        if hasattr(pyadas, "set_mpc_cte_gain_floor"):
-            pyadas.set_mpc_cte_gain_floor(cte_gain_floor)
+        # Веса решателя — через реестр параметров: модульных `pyadas.set_mpc_*` больше нет,
+        # глобалы стали полями экземпляра.
+        app.set_param("mpc_epsi_gain", epsi_gain)
+        app.set_param("mpc_ff_scale", ff_scale)
+        app.set_param("mpc_cte_gain_base", cte_gain_base)
+        app.set_param("mpc_cte_gain_floor", cte_gain_floor)
     elif controller == "fp" and hasattr(app, "set_lane_keep_mpc_ema_alphas"):
         app.set_lane_keep_mpc_ema_alphas(kappa_ema, epsi_ema, cte_ema)
     return app

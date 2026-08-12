@@ -4,7 +4,6 @@
 #include <cmath>
 
 namespace adas {
-
 struct VehicleModelParams {
   double wheelbase_m = 2.636;
   double center_to_front_frac = 0.45;

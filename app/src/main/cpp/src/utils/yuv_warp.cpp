@@ -5,7 +5,6 @@
 
 namespace adas {
 namespace {
-
 void mul3(const float a[9], const float b[9], float r[9])
 {
   for (int i = 0; i < 3; ++i) {

@@ -15,7 +15,6 @@
 #include "adas/utils/logger.h"
 
 namespace {
-
 struct Ping {
   int id = 0;
   std::string payload;
@@ -217,8 +216,7 @@ TEST(MiddlewareTest, BoundedSubscriptionDropsOldest)
     void configure() override
     {
       subscribe<Ping>(
-          "test/ping", [this](const Ping& m) { ids_.push_back(m.id); },
-          /*queue_capacity=*/2);
+          "test/ping", [this](const Ping& m) { ids_.push_back(m.id); }, 2);
     }
     std::vector<int> ids_;
   };
@@ -278,10 +276,9 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
   sub.set(zmq::sockopt::rcvtimeo, 100);
   sub.connect(ep_out);
 
-  adas::proto::ZMQMessage out;
-  out.set_topic("safety/warn");
-  out.mutable_safety_warn()->set_fcw(true);
-  out.mutable_safety_warn()->set_ttc_s(1.75f);
+  adas::proto::SafetyWarnState out;
+  out.set_fcw(true);
+  out.set_ttc_s(1.75f);
 
   adas::proto::ZMQMessage got;
   bool received = false;
@@ -308,6 +305,30 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
 }
 
 namespace {
+/// Считает доставленное по каждому топику, требуя ровно тот тип, который ждут настоящие сервисы.
+class InboundSink : public adas::middleware::Service {
+public:
+  std::string_view getName() const override { return "inbound_sink"; }
+
+  void configure() override
+  {
+    subscribe<adas::proto::CarState>(adas::topics::kVehicleState, [this](const adas::proto::CarState& m) {
+      v_ego = m.v_ego();
+      ++car;
+    });
+    subscribe<adas::proto::IMUData>(adas::topics::kImu, [this](const adas::proto::IMUData&) { ++imu; });
+    subscribe<adas::proto::LaneLines>(adas::topics::kVisionLanes, [this](const adas::proto::LaneLines&) { ++lanes; });
+    subscribe<adas::proto::ModelLongPlan>(adas::topics::kVisionModelLong,
+                                          [this](const adas::proto::ModelLongPlan&) { ++model_long; });
+    subscribe<adas::proto::TrafficDetections>(adas::topics::kTrafficDetections,
+                                              [this](const adas::proto::TrafficDetections&) { ++traffic; });
+    subscribe<adas::proto::CameraCalibrationState>(adas::topics::kCameraCalib,
+                                                   [this](const adas::proto::CameraCalibrationState&) { ++calib; });
+  }
+
+  int car = 0, imu = 0, lanes = 0, model_long = 0, traffic = 0, calib = 0;
+  double v_ego = 0.0;
+};
 
 class KnobService : public adas::middleware::Service {
 public:
@@ -410,4 +431,84 @@ TEST(MiddlewareParams, DuplicateRegistrationIsRefused)
   adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated, {svc});
   EXPECT_TRUE(svc->first);
   EXPECT_FALSE(svc->second) << "duplicate name must be rejected or one field silently wins";
+}
+
+// Входящая ветка моста: конверт с ZMQ разбирается на доменные сообщения, и сервис получает тот тип,
+// на который подписан. Проверяется тем же способом, что и исходящая, — через настоящий сокет.
+//
+// Ошибка здесь не роняет приложение, а тихо лишает сервис входа: при несовпадении типа посредник
+// пишет строчку в лог и выбрасывает сообщение. В машине это означает сервис без данных, и заметить
+// это можно только по отсутствию его публикаций.
+TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
+{
+  const std::string ep_in = "tcp://127.0.0.1:5593";
+  const std::string ep_out = "tcp://127.0.0.1:5594";
+
+  auto mw = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
+  mw->registerService<adas::services::ZmqBridge>(adas::services::ZmqBridge::Config{ep_in, ep_out});
+  auto sink = std::make_shared<InboundSink>();
+  mw->registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
+
+  zmq::context_t ctx{1};
+  // Входящий сокет биндит мост, поэтому издатель к нему подключается: второй bind на тот же адрес
+  // — это «Address already in use», а не проверка.
+  zmq::socket_t pub{ctx, ZMQ_PUB};
+  pub.connect(ep_in);
+
+  const auto send = [&](const adas::proto::ZMQMessage& m) {
+    std::string bytes;
+    m.SerializeToString(&bytes);
+    pub.send(zmq::buffer(bytes), zmq::send_flags::dontwait);
+  };
+
+  adas::proto::ZMQMessage car;
+  car.set_topic(adas::topics::kVehicleState);
+  car.mutable_car_state()->set_v_ego(13.5f);
+
+  adas::proto::ZMQMessage imu;
+  imu.set_topic(adas::topics::kImu);
+  imu.mutable_imu_data()->set_gyro_z(0.1f);
+
+  adas::proto::ZMQMessage lanes;
+  lanes.set_topic(adas::topics::kVisionLanes);
+  lanes.mutable_lane_lines()->set_frame_id(7);
+
+  adas::proto::ZMQMessage model_long;
+  model_long.set_topic(adas::topics::kVisionModelLong);
+  model_long.mutable_model_long_plan()->set_frame_id(7);
+
+  adas::proto::ZMQMessage traffic;
+  traffic.set_topic(adas::topics::kTrafficDetections);
+  traffic.mutable_traffic_detections()->set_frame_id(7);
+
+  adas::proto::ZMQMessage calib;
+  calib.set_topic(adas::topics::kCameraCalib);
+  calib.mutable_camera_calib()->set_pitch_deg(1.0f);
+
+  // Доставка асинхронна, и один step() разбирает не всё присланное: ждём каждое сообщение, а не
+  // первое попавшееся, иначе тест закончится на самом быстром и промолчит об остальных.
+  const auto all_arrived = [&] {
+    return sink->car > 0 && sink->imu > 0 && sink->lanes > 0 && sink->model_long > 0 && sink->traffic > 0 &&
+           sink->calib > 0;
+  };
+  for (int attempt = 0; attempt < 100 && !all_arrived(); ++attempt) {
+    mw->setTime(attempt * 10'000);
+    send(car);
+    send(imu);
+    send(lanes);
+    send(model_long);
+    send(traffic);
+    send(calib);
+    mw->step();
+    if (!all_arrived())
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  ASSERT_GT(sink->car, 0) << "конверт не разобрался — сервисы остались без входа";
+  EXPECT_FLOAT_EQ(13.5f, sink->v_ego) << "разобралось не то поле";
+  EXPECT_GT(sink->imu, 0) << "sensors/imu не доставлен";
+  EXPECT_GT(sink->lanes, 0) << "vision/lanes не доставлен";
+  EXPECT_GT(sink->model_long, 0) << "vision/model_long не доставлен";
+  EXPECT_GT(sink->traffic, 0) << "детекции не доставлены";
+  EXPECT_GT(sink->calib, 0) << "калибровка камеры не доставлена";
 }

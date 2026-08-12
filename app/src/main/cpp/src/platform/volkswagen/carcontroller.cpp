@@ -4,7 +4,6 @@
 #include <cmath>
 
 namespace volkswagen {
-
 int applyDriverSteerTorqueLimits(int apply_torque, float driver_torque, int apply_steer_last)
 {
   using P = CarControllerParams;

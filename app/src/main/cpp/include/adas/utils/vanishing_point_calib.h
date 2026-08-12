@@ -9,7 +9,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 struct ImageLine {
   double m = 0.0;
   double c = 0.0;

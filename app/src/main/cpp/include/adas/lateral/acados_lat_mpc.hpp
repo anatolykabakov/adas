@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace flowpilot {
-
 class AcadosLatMpc {
 public:
   struct Result {

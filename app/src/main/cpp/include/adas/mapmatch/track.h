@@ -6,7 +6,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct ImuSamples {
   std::vector<double> t_s;
   std::vector<double> gyro_x, gyro_y, gyro_z;

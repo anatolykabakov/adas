@@ -6,7 +6,6 @@
 #include "adas/platform/volkswagen/values.h"
 
 namespace volkswagen {
-
 struct HudControl {
   bool leftLaneVisible = false;
   bool rightLaneVisible = false;

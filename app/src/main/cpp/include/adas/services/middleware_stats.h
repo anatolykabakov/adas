@@ -6,10 +6,7 @@
 #include "messages.pb.h"
 
 namespace adas {
-
-/// Publishes MiddlewareSnapshot as ZMQMessage on middleware/stats (~1 Hz) for bag logging.
 namespace services {
-
 class MiddlewareStats : public middleware::Service {
 public:
   void configure() override;
