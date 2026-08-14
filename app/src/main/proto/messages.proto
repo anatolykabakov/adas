@@ -21,6 +21,7 @@ import "traffic_vision.proto";
 import "phone_stats.proto";
 import "map_data.proto";
 import "lane_path.proto";
+import "lat_plan.proto";
 
 // Main message wrapper for ZMQ
 message ZMQMessage {
@@ -54,5 +55,6 @@ message ZMQMessage {
         PhoneStats phone_stats = 30;
         MapLocalState map_local = 31;
         LanePath lane_path = 32;
+        LatPlan lat_plan = 33;
     }
 }

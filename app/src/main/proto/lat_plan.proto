@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package adas.proto;
+
+// Выход поперечного планера — то, по чему едет контроллер.
+//
+// Интерфейс — КРИВИЗНА, а не угол руля. Угол зависит от скорости через снос, поэтому выводить его
+// должен тот, кто видит свежую скорость, то есть контроллер на своём такте. Так же у апстрима:
+// `lateralPlan.desiredCurvature` -> `controlsd` -> `VM.get_steer_from_curvature(κ, vEgo, roll)`.
+// Пока интерфейсом был угол, приходилось держать `lat_recompute_setpoint` — накладку, пересчитывающую
+// уже посчитанное. С кривизной и тиком контроллера 100 Гц она исчезла как понятие: удалена 2026-08-13.
+message LatPlan {
+  int64 timestamp = 1;
+  // Кадр камеры, от которого построен план: по нему контроллер решает, не устарела ли опора.
+  int64 capture_ts_ms = 2;
+  int64 infer_ts_ms = 3;
+  int32 frame_id = 4;
+
+  // Требуемая кривизна, 1/м, и её производная по пути, 1/м².
+  double desired_curvature = 5;
+  double desired_curvature_rate = 6;
+
+  // Планер выдал команду. Отдельно от `status`, потому что читать строку в горячем пути незачем.
+  bool valid = 7;
+  string status = 8;         // ok | no_polyline | bad_fit | low_speed
+  string controller = 9;     // pp | mpc | fp
+  string kappa_solver = 10;  // grad | acados | пусто для pp и mpc
+
+  // Чем планер располагал, когда считал. Контроллеру не нужно, нужно чтению записи: без этого
+  // нельзя отличить «планер дал не то» от «контроллер сделал не то».
+  double cte_m = 11;
+  double epsi_rad = 12;
+  double speed_mps = 13;
+  double frame_dt_s = 14;
+}

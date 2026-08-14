@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include "adas/utils/online_localizer.h"
 #include "adas/utils/vehicle_ekf.h"
 
 namespace {
@@ -188,4 +189,116 @@ TEST(VehicleEkfSpeed, CountersSeparateWheelFromGps)
     ekf.predict(15.0, 0.0, kDt);
   EXPECT_EQ(ekf.wheel_speed_update_count, 100);
   EXPECT_EQ(ekf.gps_vel_update_count, 0);
+}
+
+namespace {
+/** Прямая с постоянным смещением рыска и с GPS, чей курс верен, а позиция уже далеко.
+ *
+ *  Так выглядел заезд 2026_08_13_23_01_56: курс защёлкнулся неверно на ходу, позиция уехала за ворота
+ *  инновации, и оттуда возврата не было — коррекция курса жила внутри ветки принятой позиции.
+ *  `bias_rad_s` — смещение датчика рыска, `far_m` — насколько позиция GPS расходится с состоянием. */
+double headingErrorAfter(double seconds, double bias_rad_s, double far_m, double snap_hold_s)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.yaw_snap_hold_s = snap_hold_s;
+  loc.reset(0.0, 0.0, 0.0, 25.0, 0.0);
+
+  const double dt = 0.01;
+  double t = 0.0;
+  for (int i = 0; i < static_cast<int>(seconds / dt); ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    if (i % 100 == 0) {  // 1 Гц, как у телефона
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;         // машина едет прямо на восток, и GPS это знает
+      g.x = 25.0 * t + far_m;  // позиция заведомо за воротами инновации
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;  // точность проходит порог 25 м
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, bias_rad_s, gps);
+  }
+  return std::abs(adas::normalizeAngle(loc.yaw()));
+}
+}  // namespace
+
+// Курс правится по GPS, даже когда позиция отвергнута: иначе ошибка курса сама уводит позицию за
+// ворота, ворота закрываются, и лекарство перестаёт поступать вместе с болезнью.
+TEST(OnlineLocalizerYaw, GpsCourseCorrectsEvenWhenPositionIsRejected)
+{
+  const double bias = 0.0034;  // 0.19 °/с — столько намерено по заезду
+  const double err = headingErrorAfter(120.0, bias, /*far_m=*/500.0, /*snap_hold_s=*/3.0);
+  EXPECT_LT(err, 0.15) << "курс ушёл на " << err * 180.0 / M_PI << "° при исправном GPS-курсе";
+}
+
+// Защёлка обязана срабатывать на ходу: условие «несколько совпадающих фиксов в радиусе 8 м» на
+// скорости не выполняется никогда, и без времени большая ошибка оставалась бы навсегда.
+TEST(OnlineLocalizerYaw, LargeHeadingErrorSnapsWhileMoving)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.yaw_snap_hold_s = 3.0;
+  loc.reset(0.0, 0.0, 1.2, 25.0, 0.0);  // 69° мимо: так и начался тот заезд
+
+  const double dt = 0.01;
+  double t = 0.0;
+  for (int i = 0; i < 1000; ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    if (i % 100 == 0) {
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;
+      g.x = 25.0 * t + 500.0;
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, 0.0, gps);
+  }
+  EXPECT_LT(std::abs(adas::normalizeAngle(loc.yaw())), 0.1) << "защёлка на ходу не сработала";
+}
+
+// Уехавшая позиция обязана возвращаться на ходу. Раньше пересев требовал трёх совпадающих фиксов в
+// радиусе 8 м — то есть стоянки, и в заезде 2026_08_13_23_01_56 позиция ждала её 350 с, накопив 2.8 км.
+TEST(OnlineLocalizerPos, FarPositionReseedsWhileMoving)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.pos_reseed_hold_s = 3.0;
+  loc.reset(0.0, 0.0, 0.0, 25.0, 0.0);
+
+  const double dt = 0.01;
+  double t = 0.0;
+  double err = 0.0;
+  for (int i = 0; i < 2000; ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    double gx = 0.0;
+    if (i % 100 == 0) {
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;
+      gx = 25.0 * t + 500.0;  // состояние отстало на 500 м — это за воротами инновации
+      g.x = gx;
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, 0.0, gps);
+    if (i % 100 == 0)
+      err = std::abs(loc.x() - gx);
+  }
+  EXPECT_LT(err, 30.0) << "позиция осталась в " << err << " м от GPS, пересев на ходу не сработал";
 }

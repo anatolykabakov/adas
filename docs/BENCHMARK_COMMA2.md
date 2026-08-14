@@ -67,7 +67,7 @@ follows the model plan (−0.12), and tracking error (+0.09) happens to cancel i
 |---|---|---|
 | 0 | ~~Resolve understeer contradiction before editing tsf~~ — **closed 2026-08-04**: CAN yaw is sound (see below), so our measurement stands and tsf must move **down**, not to 1.319 | **done** |
 | 1 | ~~Config: `tsf` **0.50 → 0.40**~~ | **dropped 2026-08-07** — it moves *away* from comma (their learner settled at 1.247–1.319 on this car) on the strength of a fit whose curve is flat, and §5a resolved the disagreement as identifiability rather than tuning. See `BACKLOG.md` §0 |
-| 1a | Setpoint recomputed between frames (`lat_recompute_setpoint`), the one confirmed inner-loop divergence | **built 2026-08-07**, shipped off |
+| 1a | Setpoint recomputed between frames, the one confirmed inner-loop divergence | **closed 2026-08-13**: the control law moved into `Control` and runs at a fixed 100 Hz, so the setpoint follows speed by construction; the `lat_recompute_setpoint` flag and its planner-side mechanism are gone |
 | 2 | Inner loop 100 Hz | **done** 2026-08-04 |
 | 3 | Road grade estimate | open |
 | 4 | Port `paramsd` — see [`PARAMSD.md`](PARAMSD.md) | open |

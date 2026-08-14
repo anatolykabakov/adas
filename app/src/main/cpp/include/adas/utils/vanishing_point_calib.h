@@ -20,6 +20,13 @@ Vec2 getPitchYawFromVp(double u_i, double v_i, double fx, double fy, double cx, 
 
 std::optional<ImageLine> fitLineVOfU(const std::vector<Vec2>& uv, double mean_residuals_thresh = 25.0);
 
+/**
+ * \brief Camera pitch and yaw from where the lane lines converge in the image.
+ *
+ * \details The vanishing point of two parallel road edges sits on the optical axis of an aligned camera,
+ * so its offset from the principal point is the mounting error. Needs visible markings, which is why it
+ * is fused with the pose-based estimate rather than trusted alone.
+ */
 class VanishingPointCalibrator {
 public:
   explicit VanishingPointCalibrator(int history_len = 50, double pitch0_deg = 0.0, double yaw0_deg = 0.0);

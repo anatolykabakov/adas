@@ -42,81 +42,23 @@ void ZmqBridge::initSockets()
   pub_out_->bind(endpoint_out_);
   LOGI("✓ ZMQ PUB bound %s (outbound)", endpoint_out_.c_str());
 
-  forwardOutbound<adas::proto::CANData>(topics::kCanRx,
-                                        [](adas::proto::ZMQMessage& zmq, const adas::proto::CANData& payload) {
-                                          zmq.set_timestamp(payload.timestamp());
-                                          *zmq.mutable_can_data() = payload;
-                                        });
-  forwardOutbound<adas::proto::PandaHealth>(topics::kPandaHealth,
-                                            [](adas::proto::ZMQMessage& zmq, const adas::proto::PandaHealth& payload) {
-                                              zmq.set_timestamp(payload.timestamp());
-                                              *zmq.mutable_panda_health() = payload;
-                                            });
-  forwardOutbound<adas::proto::CarState>(topics::kVehicleState,
-                                         [](adas::proto::ZMQMessage& zmq, const adas::proto::CarState& payload) {
-                                           zmq.set_timestamp(payload.timestamp());
-                                           *zmq.mutable_car_state() = payload;
-                                         });
-  forwardOutbound<adas::proto::LaneKeepState>(
-      topics::kLaneKeep, [](adas::proto::ZMQMessage& zmq, const adas::proto::LaneKeepState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_lane_keep() = payload;
-      });
-  forwardOutbound<adas::proto::LaneKeepDebug>(
-      topics::kLaneKeepDebug, [](adas::proto::ZMQMessage& zmq, const adas::proto::LaneKeepDebug& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_lane_keep_debug() = payload;
-      });
-  forwardOutbound<adas::proto::LocalizationPose>(
-      topics::kLocalizationPose, [](adas::proto::ZMQMessage& zmq, const adas::proto::LocalizationPose& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_localization_pose() = payload;
-      });
-  forwardOutbound<adas::proto::CameraCalibrationState>(
-      topics::kCameraCalib, [](adas::proto::ZMQMessage& zmq, const adas::proto::CameraCalibrationState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_camera_calib() = payload;
-      });
-  forwardOutbound<adas::proto::CameraCalibDebug>(
-      topics::kCameraCalibDebug, [](adas::proto::ZMQMessage& zmq, const adas::proto::CameraCalibDebug& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_camera_calib_debug() = payload;
-      });
-  forwardOutbound<adas::proto::SteerCommand>(
-      topics::kSteerCommand, [](adas::proto::ZMQMessage& zmq, const adas::proto::SteerCommand& payload) {
-        zmq.set_timestamp(payload.publish_ts_ms());
-        *zmq.mutable_steer_command() = payload;
-      });
-  forwardOutbound<adas::proto::MiddlewareStats>(
-      topics::kMiddlewareStats, [](adas::proto::ZMQMessage& zmq, const adas::proto::MiddlewareStats& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_middleware_stats() = payload;
-      });
-  forwardOutbound<adas::proto::LongPlanState>(
-      topics::kLongPlan, [](adas::proto::ZMQMessage& zmq, const adas::proto::LongPlanState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_long_plan() = payload;
-      });
-  forwardOutbound<adas::proto::SafetyWarnState>(
-      topics::kSafetyWarn, [](adas::proto::ZMQMessage& zmq, const adas::proto::SafetyWarnState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_safety_warn() = payload;
-      });
-  forwardOutbound<adas::proto::TrafficVisionState>(
-      topics::kTrafficVision, [](adas::proto::ZMQMessage& zmq, const adas::proto::TrafficVisionState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_traffic_vision() = payload;
-      });
-  forwardOutbound<adas::proto::LanePath>(topics::kVisionPath,
-                                         [](adas::proto::ZMQMessage& zmq, const adas::proto::LanePath& payload) {
-                                           zmq.set_timestamp(payload.timestamp());
-                                           *zmq.mutable_lane_path() = payload;
-                                         });
-  forwardOutbound<adas::proto::MapLocalState>(
-      topics::kMapLocal, [](adas::proto::ZMQMessage& zmq, const adas::proto::MapLocalState& payload) {
-        zmq.set_timestamp(payload.timestamp());
-        *zmq.mutable_map_local() = payload;
-      });
+  using Zmq = adas::proto::ZMQMessage;
+  forwardOutbound<adas::proto::CANData>(topics::kCanRx, &Zmq::mutable_can_data);
+  forwardOutbound<adas::proto::PandaHealth>(topics::kPandaHealth, &Zmq::mutable_panda_health);
+  forwardOutbound<adas::proto::CarState>(topics::kVehicleState, &Zmq::mutable_car_state);
+  forwardOutbound<adas::proto::LatPlan>(topics::kLatPlan, &Zmq::mutable_lat_plan);
+  forwardOutbound<adas::proto::LaneKeepState>(topics::kLaneKeep, &Zmq::mutable_lane_keep);
+  forwardOutbound<adas::proto::LaneKeepDebug>(topics::kLaneKeepDebug, &Zmq::mutable_lane_keep_debug);
+  forwardOutbound<adas::proto::LocalizationPose>(topics::kLocalizationPose, &Zmq::mutable_localization_pose);
+  forwardOutbound<adas::proto::CameraCalibrationState>(topics::kCameraCalib, &Zmq::mutable_camera_calib);
+  forwardOutbound<adas::proto::CameraCalibDebug>(topics::kCameraCalibDebug, &Zmq::mutable_camera_calib_debug);
+  forwardOutbound<adas::proto::SteerCommand>(topics::kSteerCommand, &Zmq::mutable_steer_command);
+  forwardOutbound<adas::proto::MiddlewareStats>(topics::kMiddlewareStats, &Zmq::mutable_middleware_stats);
+  forwardOutbound<adas::proto::LongPlanState>(topics::kLongPlan, &Zmq::mutable_long_plan);
+  forwardOutbound<adas::proto::SafetyWarnState>(topics::kSafetyWarn, &Zmq::mutable_safety_warn);
+  forwardOutbound<adas::proto::TrafficVisionState>(topics::kTrafficVision, &Zmq::mutable_traffic_vision);
+  forwardOutbound<adas::proto::LanePath>(topics::kVisionPath, &Zmq::mutable_lane_path);
+  forwardOutbound<adas::proto::MapLocalState>(topics::kMapLocal, &Zmq::mutable_map_local);
 }
 
 void ZmqBridge::zmqPollTimerCallback()
@@ -131,31 +73,38 @@ void ZmqBridge::zmqPollTimerCallback()
 
 void ZmqBridge::processInbound()
 {
+  std::string topic;
+  adas::proto::ZMQMessage message;
+  if (recvEnvelope(topic, message))
+    publishPayload(topic, message);
+}
+
+bool ZmqBridge::recvEnvelope(std::string& topic, adas::proto::ZMQMessage& message)
+{
   zmq::message_t frame0;
   auto r0 = sub_in_->recv(frame0, zmq::recv_flags::dontwait);
   if (!r0)
-    return;
+    return false;
 
-  std::string topic;
   std::string payload;
-
+  // Two shapes on the wire: [topic][payload] from publishers that set an envelope prefix, and a bare
+  // payload from those that do not. The topic then comes from the message itself.
   if (frame0.more()) {
     topic.assign(static_cast<const char*>(frame0.data()), frame0.size());
     zmq::message_t frame1;
     auto r1 = sub_in_->recv(frame1, zmq::recv_flags::dontwait);
     if (!r1) {
       LOGE("Inbound multipart missing payload for topic '%s'", topic.c_str());
-      return;
+      return false;
     }
     payload.assign(static_cast<const char*>(frame1.data()), frame1.size());
   } else {
     payload.assign(static_cast<const char*>(frame0.data()), frame0.size());
   }
 
-  adas::proto::ZMQMessage message;
   if (!message.ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
     LOGE("Failed to deserialize inbound ZMQ payload (%zu bytes)", payload.size());
-    return;
+    return false;
   }
 
   if (topic.empty()) {
@@ -166,11 +115,15 @@ void ZmqBridge::processInbound()
 
   if (topic.empty()) {
     LOGE("Inbound ZMQ message has empty topic");
-    return;
+    return false;
   }
 
   LOGD("ZMQ inbound '%s' (%zu bytes)", topic.c_str(), payload.size());
+  return true;
+}
 
+void ZmqBridge::publishPayload(const std::string& topic, const adas::proto::ZMQMessage& message)
+{
   using Msg = adas::proto::ZMQMessage;
   switch (message.payload_case()) {
     case Msg::kCameraImage:
@@ -250,6 +203,9 @@ void ZmqBridge::processInbound()
       break;
     case Msg::kLanePath:
       publish(topic, message.lane_path());
+      break;
+    case Msg::kLatPlan:
+      publish(topic, message.lat_plan());
       break;
     default:
       LOGW("ZMQ inbound '%s' without payload — dropped", topic.c_str());

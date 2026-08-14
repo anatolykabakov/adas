@@ -369,8 +369,9 @@ PYBIND11_MODULE(core, m)
       .def_readonly("odom_y", &adas::LocalizationPose::odom_y)
       .def_readonly("ekf_x", &adas::LocalizationPose::ekf_x)
       .def_readonly("ekf_y", &adas::LocalizationPose::ekf_y)
-      // Крен и выученные параметры. Без них по реплею нельзя увидеть, какими числами ехал
-      // контроллер, — а с `use_learned_params` он едет именно ими, а не константами конфига.
+      // Road bank and the learned parameters. Without them a replay cannot show which numbers the
+      // controller drove with — and under `use_learned_params` it drives with these, not with the config
+      // constants.
       .def_readonly("road_roll_deg", &adas::LocalizationPose::road_roll_deg)
       .def_readonly("road_roll_std_deg", &adas::LocalizationPose::road_roll_std_deg)
       .def_readonly("road_roll_valid", &adas::LocalizationPose::road_roll_valid)
@@ -481,13 +482,11 @@ PYBIND11_MODULE(core, m)
       .def("set_lane_keep_mpc_ema_alphas", &AdasApp::setLaneKeepMpcEmaAlphas, py::arg("kappa_alpha"),
            py::arg("epsi_alpha"), py::arg("cte_alpha"))
       .def("set_lane_keep_steer_slew_limit_deg", &AdasApp::setLaneKeepSteerSlewLimitDeg, py::arg("deg"))
-      .def("set_lane_keep_vehicle_model", &AdasApp::setLaneKeepVehicleModel, py::arg("on"),
-           py::arg("tire_stiffness_factor") = 0.64)
+      .def("set_lane_keep_tire_stiffness", &AdasApp::setLaneKeepTireStiffness, py::arg("tire_stiffness_factor"))
       .def("set_lane_keep_fp_steer_delay_s", &AdasApp::setLaneKeepFpSteerDelayS, py::arg("seconds"))
       .def("set_lane_keep_fp_steering_rate_weight", &AdasApp::setLaneKeepFpSteeringRateWeight, py::arg("weight"))
       .def("set_lane_keep_cam_y_left_m", &AdasApp::setLaneKeepCamYLeftM, py::arg("m"))
       .def("set_lane_keep_pid_gains", &AdasApp::setLaneKeepPidGains, py::arg("kp"), py::arg("ki"), py::arg("kf"))
-      .def("set_lane_keep_recompute_setpoint", &AdasApp::setLaneKeepRecomputeSetpoint, py::arg("on"))
       .def("set_param", static_cast<bool (AdasApp::*)(const std::string&, double)>(&AdasApp::setParam), py::arg("name"),
            py::arg("value"))
       .def("set_param_str", static_cast<bool (AdasApp::*)(const std::string&, const std::string&)>(&AdasApp::setParam),
@@ -559,7 +558,7 @@ PYBIND11_MODULE(core, m)
       .def(
           "publish_gps",
           [](AdasApp& self, int64_t timestamp_us, double x, double y, double speed_mps, double bearing_deg,
-             double yaw_enu, double vx, double vy, bool course_valid, bool valid) {
+             double yaw_enu, double vx, double vy, bool course_valid, bool valid, double accuracy_m, int satellites) {
             adas::GpsSample g;
             g.timestamp_us = timestamp_us;
             g.x = x;
@@ -570,12 +569,17 @@ PYBIND11_MODULE(core, m)
             g.vx = vx;
             g.vy = vy;
             g.course_valid = course_valid;
+            // The reported accuracy decides whether the filter takes the position and with what noise.
+            // Without it a replay measured a different pipeline than the car runs: the receiver on drive
+            // 2026_08_13_23_01_56 reported 10 m.
+            g.accuracy_m = accuracy_m;
+            g.satellites = satellites;
             g.valid = valid;
             self.publishGps(g);
           },
           py::arg("timestamp_us"), py::arg("x"), py::arg("y"), py::arg("speed_mps") = 0.0, py::arg("bearing_deg") = 0.0,
           py::arg("yaw_enu") = 0.0, py::arg("vx") = 0.0, py::arg("vy") = 0.0, py::arg("course_valid") = false,
-          py::arg("valid") = true)
+          py::arg("valid") = true, py::arg("accuracy_m") = 0.0, py::arg("satellites") = 0)
       .def(
           "publish_imu",
           [](AdasApp& self, int64_t timestamp_us, double yaw_rate, bool valid) {
@@ -587,8 +591,21 @@ PYBIND11_MODULE(core, m)
           },
           py::arg("timestamp_us"), py::arg("yaw_rate"), py::arg("valid") = true)
       .def(
-          // Сырой IMU: доходит до `ImuCalibrator`, а значит даёт крен дороги. `publish_imu` несёт
-          // готовую скорость рыска, из которой калибратор ориентацию защёлкнуть не может.
+          // The receiver's fix as it comes: the localization service projects latitude and longitude
+          // itself. `publish_gps` puts already-projected metres on the same topic and nothing subscribes
+          // to those — an offline run was dead reckoning, never receiving GNSS at all.
+          "publish_gps_location",
+          [](AdasApp& self, py::bytes serialized) {
+            adas::proto::GPSLocation gps;
+            const std::string data = serialized;
+            if (!gps.ParseFromString(data))
+              throw std::invalid_argument("publish_gps_location: not a GPSLocation message");
+            self.publishGpsLocation(gps);
+          },
+          py::arg("gps_bytes"))
+      .def(
+          // Raw IMU: reaches `ImuCalibrator`, and therefore yields the road bank. `publish_imu` carries
+          // an already-calibrated yaw rate, from which the calibrator cannot fix an orientation.
           "publish_imu_data",
           [](AdasApp& self, py::bytes serialized) {
             adas::proto::IMUData imu;

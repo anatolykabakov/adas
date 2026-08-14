@@ -32,6 +32,13 @@ struct SafetyLogContext {
   bool ldw_valid = false;
 };
 
+/**
+ * \brief Keeps the panda in the safety mode this car needs, and keeps it alive.
+ *
+ * \details The panda blocks actuation unless it receives a heartbeat and has been told which safety model
+ * to enforce. Both are periodic obligations, not one-time setup, so they live in their own supervisor
+ * rather than in the driver's send path.
+ */
 class PandaSafetySupervisor {
 public:
   using C = MqbSafetyConstants;

@@ -88,12 +88,45 @@ void SafetyWarn::onChassis(const ChassisSample& msg)
   have_chassis_ = true;
 }
 
-void SafetyWarn::tick()
-{
-  if (!have_chassis_)
-    return;
+namespace {
 
-  const auto& cfg = config_.planner;
+/// The plan's warning list as flags. The planner returns an unordered vector; the message and the HUD
+/// want four named booleans, and each of them is latched separately.
+struct WarningFlags {
+  bool fcw = false;
+  bool aeb = false;
+  bool lldw = false;
+  bool rldw = false;
+};
+
+WarningFlags flattenWarnings(const std::vector<safety::Warning>& warnings)
+{
+  WarningFlags f;
+  for (const auto w : warnings) {
+    switch (w) {
+      case safety::Warning::FCW:
+        f.fcw = true;
+        break;
+      case safety::Warning::AEB:
+        f.aeb = true;
+        break;
+      case safety::Warning::LLDW:
+        f.lldw = true;
+        break;
+      case safety::Warning::RLDW:
+        f.rldw = true;
+        break;
+      default:
+        break;
+    }
+  }
+  return f;
+}
+
+}  // namespace
+
+safety::PlannerInput SafetyWarn::buildPlannerInput() const
+{
   safety::PlannerInput in;
   in.ego_speed_ms = std::max(0.0, chassis_.speed_mps);
   in.driver_steering = chassis_.steering_pressed;
@@ -109,7 +142,20 @@ void SafetyWarn::tick()
     in.lateral.lane_anchored = lane_anchored_;
     in.lateral.valid = true;
   }
+  return in;
+}
 
+void SafetyWarn::tick()
+{
+  if (!have_chassis_)
+    return;
+
+  const auto& cfg = config_.planner;
+  safety::PlannerInput in = buildPlannerInput();
+
+  // The lead is read here and not in buildPlannerInput because its raw numbers go into the message as
+  // well as into the planner: when a warning looks wrong in a bag, the first question is what distance
+  // and closing speed it was raised on, and a gate that dropped the lead would erase exactly that.
   double lead_d = 0.0;
   double lead_v = 0.0;
   double lead_prob = 0.0;
@@ -129,33 +175,13 @@ void SafetyWarn::tick()
   }
 
   const safety::SafetyPlan plan = safety::computeSafetyPlan(cfg, in);
+  const WarningFlags raw = flattenWarnings(plan.warnings);
 
-  bool raw_fcw = false, raw_aeb = false, raw_lldw = false, raw_rldw = false;
-  for (const auto w : plan.warnings) {
-    switch (w) {
-      case safety::Warning::FCW:
-        raw_fcw = true;
-        break;
-      case safety::Warning::AEB:
-        raw_aeb = true;
-        break;
-      case safety::Warning::LLDW:
-        raw_lldw = true;
-        break;
-      case safety::Warning::RLDW:
-        raw_rldw = true;
-        break;
-      default:
-        break;
-    }
-  }
+  const bool fcw = fcw_latch_.update(raw.fcw);
+  const bool aeb = aeb_latch_.update(raw.aeb);
+  const bool lldw = lldw_latch_.update(raw.lldw);
+  const bool rldw = rldw_latch_.update(raw.rldw);
 
-  const bool fcw = fcw_latch_.update(raw_fcw);
-  const bool aeb = aeb_latch_.update(raw_aeb);
-  const bool lldw = lldw_latch_.update(raw_lldw);
-  const bool rldw = rldw_latch_.update(raw_rldw);
-
-  const int64_t ms = nowMs();
   publish(topics::kSafetyWarn,
           createSafetyWarn(
               in, plan, {lead_d, lead_v, lead_prob, has_lead, fcw, aeb, lldw, rldw, have_lateral_ ? "ok" : "no_path"},

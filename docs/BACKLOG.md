@@ -232,7 +232,7 @@ fault from `EPS_HCA_Status` (already checked as `eps_ok`), reverse from the gear
 from the work above still applies — the point is to stop requiring `controls_allowed`, not to stop knowing
 about it.
 
-**The setpoint recompute, built 2026-08-07 and shipped off (`lat_recompute_setpoint`).** `LateralMpc` keeps
+**The setpoint recompute — built 2026-08-07, shipped off, deleted 2026-08-13 when the control law moved into `Control` at a fixed 100 Hz, which is the same thing done properly. Kept here for the measurements.** `LateralMpc` keeps
 the last solved trajectory and answers `curvatureAtSpeed(v, dt)`; `LaneKeepService::recomputeSetpoint` reruns
 the whole `stepFlowpilot` tail from it — vehicle model, speed-dependent angle ceiling, slew guard — so a
 recomputed tick cannot command something the once-per-frame path never would. Nothing is re-solved: only the
@@ -277,7 +277,7 @@ argument rested on — it just now rests on evidence instead of on an expectatio
 recompute would be attributable because it moves `desired_swa_deg` between vision frames. It is not:
 `control/lane_keep_debug` is published **once per frame**, from the vision path, while the recompute lives in
 `updateTorqueFromAngle` at chassis rate and publishes only torque. So the between-frame setpoint is never
-recorded and `lat_recompute_setpoint` remains unverified on the road despite having been enabled for a whole
+recorded and the setpoint recompute stayed unverified on the road despite having been enabled for a whole
 drive. The fix is to carry the setpoint on `controls/steer`, which is published at the tick rate.
 
 **Their σ gate measured on their own log, 2026-08-07 — and it is not the shape the comparison assumed.**
@@ -327,7 +327,7 @@ with logging enabled closes most of the list: topics `safety/warn`, `vision/mode
 | ~~FCW/AEB | no recordings with lead vehicle data yet~~ | **measured 2026-08-04 night**: 5 forward (4 FCW + 1 AEB) and 7 lane warnings, all false positives. Forward ones were all stop-and-go (median 4.7 m/s, max 8.5) → speed gate 3 → 8 m/s. Lane ones were 82 % with our own steering engaged at \|cte\| 0.54 m → LDW now suppressed while we steer. Both fixed with tests; `SAFETY_WARN.md` |
 | **vision rate quantised by camera period** | pipeline work is 59 ms (prep 9 + infer 45.5) against a 44 ms camera period, so it can never take every frame and lands on exactly half the camera rate: 11.3 Hz, 2.02 camera frames per processed frame. The pipeline itself has no idle wait (one-slot latest frame, picks up immediately). `TARGET_FPS` raised 20 → 30 so the quantum shrinks to 33 ms; ceiling at any camera rate is ~15 Hz, and upstream's 20 Hz needs prep+infer under one camera period |
 | **LKA hands the wheel back on a turn signal** | new gate `lka_suppress_on_blinker` (on by default, resume delay 1 s): while a blinker is on we stop steering — there is no lane-change planner, so holding the current lane fights the driver. Signal verified present on the night run (left 7 episodes, right 11). Deliberately not keyed on `steering_pressed`: 520 episodes in 23.5 min with a 30 ms median would drop the assist every few seconds. Two tests; **not verified on road** |
-| **setpoint recompute (`lat_recompute_setpoint`)** | ships `false`; `fp` only. Changes the command *between* vision frames, so the actuator sees a ramp where it used to see a 78 ms step. Measurable offline first with `rlog_lat_diff.py --recompute-setpoint`, which is the intended order: the harness reports our setpoint against theirs at their own 100 Hz cadence, so the 10–15 m/s band (4.2° rms) is where the number should move |
+| ~~setpoint recompute~~ | **gone 2026-08-13.** The control law runs in `Control` at a fixed 100 Hz, so the command follows current speed between vision frames by construction. The flag, its planner-side mechanism and the `--recompute-setpoint` harness switch are deleted |
 | **always-on lateral (`lat_always_on`)** | ships `false`; enable deliberately for one drive (`--set vehicle.lat_always_on=true`). This is the largest behaviour change in the whole backlog: the car will steer where the stock cruise is not engaged, i.e. below ~30 km/h, on brake, and during the camera-calibration warm-up. Watch, in order: `panda/health.tx_blocked` stays at zero (if it climbs, bit 16 is not ALKA on this unit and the assist must go back off immediately), `lat_actuation_allowed` tracks `cruiseAvailable` rather than `controls_allowed`, and the share of frames with real torque at 5–12 m/s rises from the measured 2.6–18.3 % |
 | **assist gate (`lat_require_assist`)** | the largest behaviour change on this list: on a drive like 08-06 it withdraws the command in ~70 % of frames, which is correct — the panda was discarding them anyway — but it must be seen on the road. Watch `assist_allowed` against `panda/health.controls_allowed` (they should agree), that `no_assist` appears and clears rather than sticking, and that the first command after the assist returns is no longer a step. This is also the row that makes the drive worth doing before #24: it establishes what the honest baseline is |
 | `STEERING LIMIT` indication | appears when torque is actually at the ceiling |

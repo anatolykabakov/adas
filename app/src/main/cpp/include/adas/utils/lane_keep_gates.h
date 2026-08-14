@@ -3,7 +3,6 @@
 #include <cstdint>
 
 namespace adas {
-namespace services {
 /// The reference line is stale: the command came from a picture no longer worth trusting.
 class StaleGate {
 public:
@@ -19,7 +18,7 @@ private:
 };
 
 /**
- * @brief Turn signal on: the wheel goes back to the driver.
+ * \brief Turn signal on: the wheel goes back to the driver.
  *
  * There is no lane-change planner, so holding the lane while the driver crosses the marking means
  * fighting them. Control does not come back the moment the signal goes off: the car is still
@@ -45,7 +44,7 @@ private:
 };
 
 /**
- * @brief Whether torque is reaching the rack, according to the panda.
+ * \brief Whether torque is reaching the rack, according to the panda.
  *
  * The two answers when we do not know are deliberately different. Never having heard from a panda
  * means there is none in the loop — a replay, the bindings, a bench — and closing the gate would
@@ -74,5 +73,4 @@ private:
   bool absent_ = false;
 };
 
-}  // namespace services
 }  // namespace adas

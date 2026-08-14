@@ -261,18 +261,17 @@ LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConf
     applyCameraOffset(out, shift);
     return out;
   }
-  bool lanelines_active = true;
-  if (cfg.lane_mode_hysteresis) {
-    const double raw_l = ll.lanes_size() > 1 ? ll.lanes(1).prob() : 0.0;
-    const double raw_r = ll.lanes_size() > 2 ? ll.lanes(2).prob() : 0.0;
-    lanelines_active = state ? state->lanelines_active : true;
-    if (raw_l < cfg.lane_mode_off_prob && raw_r < cfg.lane_mode_off_prob)
-      lanelines_active = false;
-    else if (raw_l > cfg.lane_mode_on_prob || raw_r > cfg.lane_mode_on_prob)
-      lanelines_active = true;
-    if (state)
-      state->lanelines_active = lanelines_active;
-  }
+  // Hysteresis on the "follow the lane lines / follow the model plan" switch: without it the flag would
+  // chatter at the confidence boundary, and the reference path would chatter with it.
+  const double raw_l = ll.lanes_size() > 1 ? ll.lanes(1).prob() : 0.0;
+  const double raw_r = ll.lanes_size() > 2 ? ll.lanes(2).prob() : 0.0;
+  bool lanelines_active = state ? state->lanelines_active : true;
+  if (raw_l < cfg.lane_mode_off_prob && raw_r < cfg.lane_mode_off_prob)
+    lanelines_active = false;
+  else if (raw_l > cfg.lane_mode_on_prob || raw_r > cfg.lane_mode_on_prob)
+    lanelines_active = true;
+  if (state)
+    state->lanelines_active = lanelines_active;
   out.lanelines_active = lanelines_active;
 
   const double d_prob = (anchored && lanelines_active) ? (l_prob + r_prob - l_prob * r_prob) * blend_scale : 0.0;

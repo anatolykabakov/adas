@@ -29,8 +29,7 @@ void FpPlanner::reset()
 double FpPlanner::steerRaw(double kappa, double speed_mps, const VehicleParams& vehicle) const
 {
   const double Lf = cfg_.Lf > 1e-3 ? cfg_.Lf : cfg_.wheelbase_m;
-  return -steerFromCurvature(curvatureWithRoll(kappa, speed_mps, vehicle, cfg_.roll_compensation), speed_mps, Lf,
-                             slipFactorOrZero(vehicle));
+  return -steerFromCurvature(curvatureWithRoll(kappa, speed_mps, vehicle), speed_mps, Lf, slipFactorOrZero(vehicle));
 }
 
 Output FpPlanner::update(const Input& in)

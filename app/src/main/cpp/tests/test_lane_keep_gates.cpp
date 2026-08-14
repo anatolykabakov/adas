@@ -1,15 +1,15 @@
 #include <gtest/gtest.h>
 
 #include "adas/lateral/slew_guard.hpp"
-#include "adas/services/lane_keep_gates.h"
+#include "adas/utils/lane_keep_gates.h"
 #include "adas/utils/interval_filter.h"
 
+using adas::AssistGate;
+using adas::BlinkerGate;
 using adas::HysteresisGate;
 using adas::IntervalFilter;
+using adas::StaleGate;
 using adas::lateral::SlewGuard;
-using adas::services::AssistGate;
-using adas::services::BlinkerGate;
-using adas::services::StaleGate;
 
 TEST(IntervalFilterTest, GapReturnsToNominalButChassisHoldsIts)
 {

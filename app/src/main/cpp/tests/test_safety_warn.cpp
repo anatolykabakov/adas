@@ -261,7 +261,4 @@ TEST(SafetyWarn, OurOwnSteeringSuppressesLaneDeparture)
   in.lat_active = true;
   EXPECT_FALSE(has(computeSafetyPlan(cfg, in), Warning::LLDW));
   EXPECT_FALSE(has(computeSafetyPlan(cfg, in), Warning::RLDW));
-
-  cfg.ldw_suppress_on_lat_active = false;
-  EXPECT_TRUE(has(computeSafetyPlan(cfg, in), Warning::LLDW));
 }

@@ -1,9 +1,8 @@
-#include "adas/services/lane_keep_gates.h"
+#include "adas/utils/lane_keep_gates.h"
 
 #include <algorithm>
 
 namespace adas {
-namespace services {
 bool StaleGate::update(int64_t now_us, int64_t capture_ts_us, double max_age_s, double& age_s_out)
 {
   just_changed_ = false;
@@ -76,5 +75,4 @@ AssistGate::Result AssistGate::update(int64_t now_us, double max_age_s)
   return r;
 }
 
-}  // namespace services
 }  // namespace adas

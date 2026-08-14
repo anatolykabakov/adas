@@ -7,35 +7,42 @@
 
 namespace adas {
 namespace lateral {
+/// The car as the planners see it: geometry, mass distribution, tyre stiffness, road bank.
 struct VehicleParams {
-  double wheelbase_m = 2.636;
-  double steer_ratio = 15.7;
-  double tire_stiffness_factor = 1.0;
-  double mass_kg = 1533.0;
-  double center_to_front_frac = 0.45;
-  bool use_vehicle_model = true;
-  double steer_sign = -1.0;
-  double road_roll_rad = 0.0;
-  bool road_roll_valid = false;
+  double wheelbase_m = 2.636;          ///< Wheelbase [m].
+  double steer_ratio = 15.7;           ///< Steering-wheel to road-wheel ratio.
+  double tire_stiffness_factor = 1.0;  ///< Scale on the reference tyre stiffness.
+  double mass_kg = 1533.0;             ///< Kerb mass plus a driver [kg].
+  double center_to_front_frac = 0.45;  ///< Distance to the front axle as a fraction of the wheelbase.
+  double steer_sign = -1.0;            ///< Which way a positive command turns the wheel: +1 or -1.
+  double road_roll_rad = 0.0;          ///< Road bank [rad], which otherwise reads as understeer.
+  bool road_roll_valid = false;        ///< False when the bank estimate is not usable this tick.
 };
 
+/// One planning tick: speed, the path ahead, the car, and where in the lane we are.
 struct Input {
-  double speed_mps = 0.0;
-  double yaw_rate = 0.0;
-  bool have_chassis = false;
-  double frame_dt_s = 0.05;
+  double speed_mps = 0.0;     ///< Ego speed [m/s].
+  double yaw_rate = 0.0;      ///< Measured yaw rate [rad/s].
+  bool have_chassis = false;  ///< False when no chassis frame has arrived yet.
+  double frame_dt_s = 0.05;   ///< Interval since the previous planning tick [s].
 
   std::vector<Vec2> polyline_ego;
   std::vector<Vec2> plan_poly;
   std::vector<double> plan_yaw;
   std::vector<double> plan_yaw_rate;
-  bool lane_anchored = false;
-  double lane_width_m = 0.0;
+  bool lane_anchored = false;  ///< True when the path follows the lane lines rather than the model plan.
+  double lane_width_m = 0.0;   ///< Measured lane width [m]; 0 when unknown.
   double lane_offset_m = 0.0;
 
   VehicleParams vehicle;
 };
 
+/**
+ * \brief Everything a planner computed on the way to its command.
+ *
+ * \details Recorded on every drive, not only when debugging: a command without the intermediate values
+ * cannot be re-derived afterwards, and "why did it steer there" is the question a bag has to answer.
+ */
 struct Debug {
   double speed_mps = 0.0;
   int n_points = 0;
@@ -53,6 +60,7 @@ struct Debug {
   std::string kappa_solver;
 };
 
+/// A planner's result: the command, the limit in force, and the debug trail behind it.
 struct Output {
   bool ok = false;
   std::string status = "ok";

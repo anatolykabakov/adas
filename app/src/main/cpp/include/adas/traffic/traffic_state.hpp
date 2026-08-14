@@ -6,9 +6,9 @@
 namespace adas {
 namespace traffic {
 struct Config {
-  int64_t speed_limit_hold_ms = 30000;
-  int64_t tfl_hold_ms = 2000;
-  double overspeed_margin_kmh = 5.0;
+  int64_t speed_limit_hold_ms = 30000;  ///< How long a seen limit stays in force without being seen again [ms].
+  int64_t tfl_hold_ms = 2000;           ///< How long a traffic-light state is held after the last detection [ms].
+  double overspeed_margin_kmh = 5.0;    ///< Tolerated excess over the limit before it counts as speeding [km/h].
 };
 
 struct State {

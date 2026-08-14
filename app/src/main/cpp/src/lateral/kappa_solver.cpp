@@ -53,7 +53,7 @@ std::unique_ptr<KappaSolver> makeKappaSolver(const std::string& name, const Kapp
     if (a->available())
       solver = std::move(a);
     else
-      LOGW("LaneKeep: fp_solver=acados недоступен, работает grad");
+      LOGW("Planner: fp_solver=acados unavailable, falling back to grad");
   }
   if (!solver)
     solver = std::make_unique<GradKappaSolver>();

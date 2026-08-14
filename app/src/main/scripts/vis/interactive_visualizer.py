@@ -1437,6 +1437,7 @@ class InteractiveVisualizer:
         else:
             fx = fy = 0.5 * w / np.tan(np.radians(35.0))
             cx, cy = 0.5 * w, 0.5 * h
+        pitch_deg, yaw_deg, height_m = self.calib_at(self.camera_frames[img_index][0])
         geom = make_overlay_geometry(
             fx,
             fy,
@@ -1444,9 +1445,9 @@ class InteractiveVisualizer:
             cy,
             w,
             h,
-            camera_height=self._overlay_height_m,
-            pitch_deg=self._overlay_pitch_deg,
-            yaw_deg=self._overlay_yaw_deg,
+            camera_height=height_m,
+            pitch_deg=pitch_deg,
+            yaw_deg=yaw_deg,
             roll_deg=self._overlay_roll_deg,
             cam_x=self._overlay_cam_x,
             cam_y_left=self._overlay_cam_y,
@@ -1694,6 +1695,27 @@ class InteractiveVisualizer:
                 )
             )
 
+    def calib_at(self, ts_ms: Optional[float]):
+        """Калибровка на этот момент заезда, а не одна на весь бег.
+
+        `calibration/camera` — это то, к чему онлайн-калибратор сошёлся на ходу, и он ходит: на
+        2026_08_13_18_45_14 рыск камеры стоял на −2.32° почти весь заезд и ушёл к −1.44° только в
+        конце. Кадры, нарисованные финальным значением, съезжают на 0.77 м в 50 м впереди — это
+        три четверти ширины полосы, и линии перестают ложиться на дорогу. Разброс рыска за заезд
+        3.1–3.5°, так что промах доходит до полутора метров.
+
+        Возвращает (pitch, yaw, height) последней сошедшейся строки не позже `ts_ms`.
+        """
+        base = (self._overlay_pitch_deg, self._overlay_yaw_deg, self._overlay_height_m)
+        if self.calib_data is None or len(self.calib_data) == 0 or ts_ms is None:
+            return base
+        ok = self.calib_data[self.calib_data[:, 4] > 0.5]
+        if len(ok) == 0:
+            return base
+        past = ok[ok[:, 0] <= float(ts_ms)]
+        row = past[-1] if len(past) else ok[0]
+        return float(row[1]), float(row[2]), float(row[3])
+
     def update_camera_view(self, index: int) -> None:
         if not self.camera_frames:
             return
@@ -1722,9 +1744,7 @@ class InteractiveVisualizer:
             cx, cy = 0.5 * w, 0.5 * h
 
         roll_deg = self._overlay_roll_deg
-        pitch_deg = self._overlay_pitch_deg
-        yaw_deg = self._overlay_yaw_deg
-        height_m = self._overlay_height_m
+        pitch_deg, yaw_deg, height_m = self.calib_at(ts_cam)
         cam_x, cam_y = self._overlay_cam_x, self._overlay_cam_y
 
         if self.lanes_overlay_var.get():

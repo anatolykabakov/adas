@@ -3,11 +3,11 @@
 #include "adas/lateral/convert.hpp"
 #include "adas/lateral/vp_planner.hpp"
 #include "adas/middleware/manager.hpp"
-#include "adas/services/lane_keep.h"
+#include "adas/services/planner.h"
 #include "adas/utils/lane_path.h"
 #include "adas/utils/proto_convert.h"
 
-using adas::services::LaneKeep;
+using adas::services::Planner;
 
 namespace {
 std::vector<adas::Vec2> curveAt(int step)
@@ -38,7 +38,7 @@ adas::proto::LaneLines lanesFrom(const std::vector<adas::Vec2>& poly, int64_t ts
 
 TEST(VpPlannerWiring, ServiceRunsThePlannerItAdvertises)
 {
-  LaneKeep::Config c;
+  Planner::Config c;
   c.controller = "mpc";
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
@@ -50,7 +50,7 @@ TEST(VpPlannerWiring, ServiceRunsThePlannerItAdvertises)
   c.mpc_kappa_yaw_min_speed = 3.0;
 
   adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
-  auto lk = mw.registerService<LaneKeep>(c);
+  auto lk = mw.registerService<Planner>(c);
 
   const double speed = 14.0;
   const double yaw_rate = static_cast<float>(0.02);
@@ -90,10 +90,10 @@ TEST(VpPlannerWiring, ServiceRunsThePlannerItAdvertises)
 
 TEST(LaneKeepTuning, RuntimeChangesReachThePlanner)
 {
-  LaneKeep::Config c;
+  Planner::Config c;
   c.controller = "fp";
   adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
-  auto lk = mw.registerService<LaneKeep>(c);
+  auto lk = mw.registerService<Planner>(c);
 
   lk->setFpSteerDelayS(0.5);
   EXPECT_DOUBLE_EQ(0.5, lk->fpPlannerConfig().steer_delay_s);

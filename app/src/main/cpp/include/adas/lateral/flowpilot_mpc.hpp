@@ -9,31 +9,40 @@
 
 namespace adas {
 namespace flowpilot {
+/// Horizon, weights and limits of the flowpilot lateral MPC.
 struct LatMpcConfig {
-  double path_weight = 1.0;
-  double heading_weight = 0.11;
-  double lat_accel_weight = 0.0;
-  double lat_jerk_weight = 0.05;
-  double steering_rate_weight = 400.0;
-  double max_lateral_jerk = 5.0;
-  double steer_delay_s = 0.35;
-  double speed_offset = 10.0;
-  double rotation_radius = 0.0;
-  int gd_iters = 50;
-  double gd_step = 0.1;
+  double path_weight = 1.0;             ///< Cost on distance from the path.
+  double heading_weight = 0.11;         ///< Cost on heading error.
+  double lat_accel_weight = 0.0;        ///< Cost on lateral acceleration; 0 leaves comfort to the jerk term.
+  double lat_jerk_weight = 0.05;        ///< Cost on lateral jerk — what keeps the command from stepping.
+  double steering_rate_weight = 400.0;  ///< Cost on steering rate; higher is smoother and slower to react.
+  double max_lateral_jerk = 5.0;        ///< Hard bound on lateral jerk [m/s^3].
+  double steer_delay_s = 0.35;          ///< Actuator delay compensated for [s].
+  double speed_offset = 10.0;           ///< Speed floor inside the cost [m/s], so terms stay finite at a standstill.
+  double rotation_radius = 0.0;  ///< Offset of the controlled point from the rear axle [m]; 0 is the axle itself.
+  int gd_iters = 50;             ///< Gradient-descent iterations per solve.
+  double gd_step = 0.1;          ///< Gradient-descent step size.
 
-  bool riccati_solver = true;
-  int riccati_iters = 8;
+  bool riccati_solver = true;  ///< Use the Riccati recursion instead of plain gradient descent.
+  int riccati_iters = 8;       ///< Riccati iterations per solve.
 };
 
+/// One MPC solution: the command plus what the solver did to arrive at it.
 struct LatMpcResult {
-  bool ok = false;
+  bool ok = false;  ///< False when the solver did not converge; the caller must not use the result.
   double desired_curvature = 0.0;
   double desired_curvature_rate = 0.0;
   double steer_rad_vp = 0.0;
   double cost = 0.0;
 };
 
+/**
+ * \brief Flowpilot's lateral MPC over the lane path.
+ *
+ * \details Optimises a steering trajectory against the path rather than a single point on it, which is
+ * what lets it anticipate a curve instead of reacting inside one. The cost, the horizon and the limits
+ * come from `LatMpcConfig`, so a drive's configuration records what it drove with.
+ */
 class LateralMpc {
 public:
   static constexpr int N = 16;

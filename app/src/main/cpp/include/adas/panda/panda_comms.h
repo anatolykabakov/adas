@@ -10,6 +10,7 @@
 #define TIMEOUT 0
 #define SPI_BUF_SIZE 1024
 
+/// Transport to a panda, so the driver does not depend on it being USB.
 class PandaCommsHandle {
 public:
   PandaCommsHandle(std::string serial){};
@@ -29,6 +30,8 @@ public:
   virtual int bulk_read(unsigned char endpoint, unsigned char* data, int length, unsigned int timeout = TIMEOUT) = 0;
 };
 
+/// USB transport. On Android the file descriptor is opened by the Java side and handed over, because only
+/// the application has the device permission.
 class PandaUsbHandle : public PandaCommsHandle {
 public:
   PandaUsbHandle(std::string serial);

@@ -25,10 +25,10 @@ add_library(
   STATIC
   adas_app.cpp
   services/zmq_bridge.cpp
-  services/panda.cpp
-  services/lane_keep.cpp
-  services/lane_keep_gates.cpp
-  services/long_plan.cpp
+  services/platform.cpp
+  services/control.cpp
+  services/planner.cpp
+  utils/lane_keep_gates.cpp
   services/safety_warn.cpp
   services/traffic_sign.cpp
   services/localization.cpp
@@ -37,6 +37,7 @@ add_library(
   services/middleware_stats.cpp
   platform/volkswagen/mqbcan.cpp
   platform/volkswagen/carcontroller.cpp
+  platform/volkswagen/car_iface.cpp
   platform/volkswagen/mqb_car_state_decoder.cpp
   platform/volkswagen/panda_safety_supervisor.cpp
   services/map_data.cpp

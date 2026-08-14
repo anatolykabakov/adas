@@ -7,6 +7,12 @@
 
 namespace adas {
 namespace flowpilot {
+/**
+ * \brief Wrapper over the acados-generated lateral MPC solver.
+ *
+ * \details Owns the generated capsule and its workspace, so the rest of the code neither includes the
+ * generated headers nor manages their lifetime. Present only when the build has acados.
+ */
 class AcadosLatMpc {
 public:
   struct Result {

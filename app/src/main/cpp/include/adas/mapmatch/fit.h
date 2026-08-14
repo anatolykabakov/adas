@@ -9,18 +9,18 @@
 namespace adas {
 namespace mapmatch {
 struct FitConfig {
-  double sample_m = 10.0;
-  double sigma_road_m = 4.0;
-  double sigma_speed_scale = 0.03;
-  double sigma_yaw_scale = 0.05;
-  double sigma_turn_deg = 6.0;
-  double sigma_straight_rel = 0.08;
-  double drift_block_m = 300.0;
-  double sigma_drift_deg_per_100m = 0.6;
-  double max_residual_m = 25.0;
-  int iterations = 30;
-  int anneal_steps = 4;
-  double anneal_start_scale = 12.0;
+  double sample_m = 10.0;                 ///< Spacing of the points being fitted [m].
+  double sigma_road_m = 4.0;              ///< Assumed distance from the true road [m].
+  double sigma_speed_scale = 0.03;        ///< Prior spread on the speed-scale correction.
+  double sigma_yaw_scale = 0.05;          ///< Prior spread on the yaw-scale correction.
+  double sigma_turn_deg = 6.0;            ///< Assumed error of a turn angle [deg].
+  double sigma_straight_rel = 0.08;       ///< Assumed relative error of a straight length.
+  double drift_block_m = 300.0;           ///< Length over which heading drift is modelled as constant [m].
+  double sigma_drift_deg_per_100m = 0.6;  ///< Assumed heading drift [deg per 100 m].
+  double max_residual_m = 25.0;           ///< Points further off than this are treated as outliers [m].
+  int iterations = 30;                    ///< Optimiser iterations.
+  int anneal_steps = 4;                   ///< Annealing stages, from a wide search to a tight one.
+  double anneal_start_scale = 12.0;       ///< How much wider the first stage searches.
 };
 
 struct FitResult {

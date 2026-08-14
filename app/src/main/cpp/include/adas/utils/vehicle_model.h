@@ -5,10 +5,10 @@
 
 namespace adas {
 struct VehicleModelParams {
-  double wheelbase_m = 2.636;
-  double center_to_front_frac = 0.45;
-  double mass_kg = 1533.0;
-  double tire_stiffness_factor = 0.64;
+  double wheelbase_m = 2.636;           ///< Wheelbase [m].
+  double center_to_front_frac = 0.45;   ///< Distance to the front axle as a fraction of the wheelbase.
+  double mass_kg = 1533.0;              ///< Kerb mass plus a driver [kg].
+  double tire_stiffness_factor = 0.64;  ///< Scale on the reference car's stiffness; 1.0 is the reference itself.
 };
 
 inline double slipFactor(const VehicleModelParams& p)

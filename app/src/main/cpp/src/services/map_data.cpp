@@ -158,26 +158,6 @@ bool MapData::currentPosition(double& x, double& y, double& yaw) const
   return true;
 }
 
-void MapData::fillLocalMap(adas::proto::MapLocalState& out, double x, double y)
-{
-  const double r = config_.local_map_radius_m;
-  out.set_has_local_map(true);
-  out.set_local_map_radius_m(static_cast<float>(r));
-
-  std::vector<double> xs, ys;
-  for (const std::uint32_t ei : map_.edgesInBBox(x - r, y - r, x + r, y + r)) {
-    map_.edgePolyline(ei, xs, ys);
-    if (xs.size() < 2)
-      continue;
-    auto* e = out.add_local_edges();
-    e->set_name(map_.edgeName(ei));
-    for (std::size_t k = 0; k < xs.size(); ++k) {
-      e->add_x(static_cast<float>(xs[k]));
-      e->add_y(static_cast<float>(ys[k]));
-    }
-  }
-}
-
 void MapData::onTick()
 {
   if (!map_loaded_)
@@ -201,12 +181,7 @@ void MapData::onTick()
     return;
   }
 
-  if (speed >= config_.min_speed_mps) {
-    last_good_yaw_ = yaw;
-    have_yaw_ = true;
-  } else if (have_yaw_) {
-    yaw = last_good_yaw_;
-  }
+  yaw = yawWithHold(yaw, speed);
 
   const auto t0 = now();
   route_ = mapmatch::buildRouteAhead(map_, x, y, yaw, config_.route);
@@ -229,19 +204,33 @@ void MapData::onTick()
     ++matched_ticks_;
     const auto period_us = static_cast<int64_t>(config_.local_map_period_s * 1e6);
     if (period_us <= 0 || last_local_map_us_ == 0 || (t_us - last_local_map_us_) >= period_us) {
-      fillLocalMap(msg, x, y);
+      fillLocalMap(msg, map_, x, y, config_.local_map_radius_m);
       last_local_map_us_ = t_us;
     }
   }
 
   publish(topics::kMapLocal, msg);
 
-  if (++ticks_ % 600 == 0) {
-    LOGI("MapData: %llu ticks, matched %.0f%%, last match %.1f m on '%s', build %.2f ms",
-         static_cast<unsigned long long>(ticks_),
-         100.0 * static_cast<double>(matched_ticks_) / static_cast<double>(ticks_), route_.match_dist_m,
-         route_.road_name.c_str(), build_us / 1000.0);
+  if (++ticks_ % 600 == 0)
+    logProgress(build_us / 1000.0);
+}
+
+double MapData::yawWithHold(double yaw, double speed_mps)
+{
+  if (speed_mps >= config_.min_speed_mps) {
+    last_good_yaw_ = yaw;
+    have_yaw_ = true;
+    return yaw;
   }
+  return have_yaw_ ? last_good_yaw_ : yaw;
+}
+
+void MapData::logProgress(double build_ms) const
+{
+  LOGI("MapData: %llu ticks, matched %.0f%%, last match %.1f m on '%s', build %.2f ms",
+       static_cast<unsigned long long>(ticks_),
+       100.0 * static_cast<double>(matched_ticks_) / static_cast<double>(ticks_), route_.match_dist_m,
+       route_.road_name.c_str(), build_ms);
 }
 
 }  // namespace services

@@ -60,11 +60,11 @@ struct CarStateView {
 /** The steering envelope the panda enforces. The controller clamps to these so the panda never has to
  *  cut the command — a cut is a fault, not a limit. */
 struct SteerLimits {
-  int maxTorqueCNm = 0;
-  int stepFrames = 0;
-  int deltaUpPerStep = 0;
-  int deltaDownPerStep = 0;
-  int driverAllowanceCNm = 0;
+  int maxTorqueCNm = 0;        ///< Torque at full command [cNm], as the panda will allow it.
+  int stepFrames = 0;          ///< Frames between steering messages; the bus expects a fixed cadence.
+  int deltaUpPerStep = 0;      ///< Maximum increase of torque per step [cNm].
+  int deltaDownPerStep = 0;    ///< Maximum decrease per step [cNm]; larger, since releasing is always safe.
+  int driverAllowanceCNm = 0;  ///< Driver torque tolerated before the panda takes the rack back [cNm].
 };
 
 }  // namespace platform

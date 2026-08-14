@@ -8,16 +8,21 @@
 
 namespace adas {
 namespace lateral {
+/**
+ * \brief Speed-dependent ceiling on the steering angle.
+ *
+ * \details The limit is generous at walking pace and tight at speed, because the same angle is a parking
+ * manoeuvre at 5 km/h and a loss of control at 100. `low_speed_steer_deg` plus `steer_deg_per_mps` define
+ * the ramp; `mpc_max_steer_deg` caps it.
+ */
 struct SteerLimits {
-  double mpc_max_steer_deg = 25.0;
-  double low_speed_steer_deg = 8.0;
-  double steer_deg_per_mps = 0.5;
+  double mpc_max_steer_deg = 25.0;   ///< Absolute ceiling on the angle [deg].
+  double low_speed_steer_deg = 8.0;  ///< Angle allowed at a standstill [deg]; the limit ramps up from here.
+  double steer_deg_per_mps = 0.5;    ///< Slope of that ramp [deg per m/s].
 };
 
 inline double slipFactorOrZero(const VehicleParams& v)
 {
-  if (!v.use_vehicle_model)
-    return 0.0;
   VehicleModelParams p;
   p.wheelbase_m = v.wheelbase_m;
   p.mass_kg = v.mass_kg;
@@ -26,9 +31,9 @@ inline double slipFactorOrZero(const VehicleParams& v)
   return slipFactor(p);
 }
 
-inline double curvatureWithRoll(double kappa, double speed_mps, const VehicleParams& v, bool roll_compensation)
+inline double curvatureWithRoll(double kappa, double speed_mps, const VehicleParams& v)
 {
-  if (!roll_compensation || !v.road_roll_valid)
+  if (!v.road_roll_valid)
     return kappa;
   return kappa - rollCompensationCurvature(v.road_roll_rad, speed_mps, slipFactorOrZero(v));
 }

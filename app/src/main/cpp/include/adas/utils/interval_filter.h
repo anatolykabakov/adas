@@ -5,7 +5,7 @@
 
 namespace adas {
 /**
- * @brief Smoothed interval between messages, taken from their timestamps.
+ * \brief Smoothed interval between messages, taken from their timestamps.
  *
  * The source rate enters the filter, rate-limit and PID formulas. A configured constant will not do
  * — vision slows down under load and chassis arrives unevenly — and the raw difference will not do
@@ -15,11 +15,11 @@ namespace adas {
 class IntervalFilter {
 public:
   struct Config {
-    double nominal_s = 0.05;
-    double min_s = 0.02;
-    double max_s = 0.5;
-    double gap_s = 0.5;
-    double alpha = 0.3;
+    double nominal_s = 0.05;  ///< Value used before anything is measured and after a gap [s].
+    double min_s = 0.02;      ///< Lower clamp on a measured interval [s].
+    double max_s = 0.5;       ///< Upper clamp on a measured interval [s].
+    double gap_s = 0.5;       ///< Longer than this and the stream counts as broken, not slow [s].
+    double alpha = 0.3;       ///< Weight of the new sample, in [0, 1].
   };
 
   IntervalFilter() = default;
@@ -76,7 +76,7 @@ private:
 };
 
 /**
- * @brief Gate with hysteresis: opens above one threshold, closes below another.
+ * \brief Gate with hysteresis: opens above one threshold, closes below another.
  *
  * A single threshold for both directions would chatter exactly where the value sits near it — for
  * instance, speed in traffic around the control threshold.

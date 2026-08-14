@@ -17,27 +17,28 @@ enum class Warning : std::uint8_t {
 
 struct LongitudinalConfig {
   double speed_limit_ms = 27.778;
-  double max_accel_ms2 = 1.5;
-  double comfortable_decel_ms2 = 3.0;
-  double time_headway_s = 1.5;
-  double min_gap_m = 2.0;
-  double free_road_exponent = 4.0;
-  double friction_mu = 0.5;
-  double gravity_ms2 = 9.81;
+  double max_accel_ms2 = 1.5;          ///< Acceleration the model assumes for a free road [m/s^2].
+  double comfortable_decel_ms2 = 3.0;  ///< Deceleration the model treats as comfortable [m/s^2].
+  double time_headway_s = 1.5;         ///< Desired time gap to the lead [s].
+  double min_gap_m = 2.0;              ///< Standstill gap [m].
+  double free_road_exponent = 4.0;     ///< Exponent of the free-road term in the IDM.
+  double friction_mu = 0.5;            ///< Assumed tyre friction, for what a curve allows.
+  double gravity_ms2 = 9.81;           ///< Gravity [m/s^2].
 };
 
 struct SafetyPlannerConfig {
   double speed_limit_ms = 27.778;
-  double free_road_gap_m = 9999.0;
+  double free_road_gap_m = 9999.0;  ///< Gap reported when there is no lead [m].
+  /// Distance from the camera to the bumper [m]; the model reports range to itself.
   double front_bumper_offset_m = 1.5;
 
-  double fcw_ttc_s = 2.5;
-  double aeb_ttc_s = 1.4;
-  double fcw_decel_ms2 = 3.5;
-  double aeb_decel_ms2 = 5.5;
-  double warn_min_speed_ms = 8.0;
-  double min_closing_speed_ms = 0.5;
-  double lead_prob_thresh = 0.5;
+  double fcw_ttc_s = 2.5;             ///< Time to collision at which the forward-collision warning fires [s].
+  double aeb_ttc_s = 1.4;             ///< Time to collision at which emergency braking would be requested [s].
+  double fcw_decel_ms2 = 3.5;         ///< Deceleration assumed available for the warning [m/s^2].
+  double aeb_decel_ms2 = 5.5;         ///< Deceleration assumed available for braking [m/s^2].
+  double warn_min_speed_ms = 8.0;     ///< Below this speed no warning is raised [m/s]: town traffic would cry wolf.
+  double min_closing_speed_ms = 0.5;  ///< Closing speed below which there is no collision to warn about [m/s].
+  double lead_prob_thresh = 0.5;      ///< Model confidence needed before a lead is believed.
   double lead_max_offset_m = 2.0;
   double standstill_gap_m = 2.0;
 
@@ -45,9 +46,6 @@ struct SafetyPlannerConfig {
   double cte_ldw_hard_m = 0.8;
   double ldw_min_speed_ms = 12.5;
   double ldw_min_outward_rate_ms = 0.05;
-  bool ldw_suppress_on_driver_steer = true;
-  bool ldw_suppress_on_lat_active = true;
-  bool ldw_suppress_on_blinker = true;
   bool ldw_require_lane_lines = true;
 
   LongitudinalConfig longitudinal{};
@@ -154,16 +152,15 @@ inline SafetyPlan computeSafetyPlan(const SafetyPlannerConfig& cfg, const Planne
   plan.threat = computeThreat(cfg, input);
 
   const bool ldw_allowed = input.lateral.valid && input.ego_speed_ms >= cfg.ldw_min_speed_ms &&
-                           !(cfg.ldw_suppress_on_driver_steer && input.driver_steering) &&
-                           !(cfg.ldw_suppress_on_lat_active && input.lat_active) &&
+                           !input.driver_steering && !input.lat_active &&
                            (!cfg.ldw_require_lane_lines || input.lateral.lane_anchored);
   if (ldw_allowed) {
     const double cte = input.lateral.cte_m;
     const double rate = input.lateral.cte_rate_ms;
     const bool drifting_left = cte < -cfg.cte_ldw_threshold_m && rate < -cfg.ldw_min_outward_rate_ms;
     const bool drifting_right = cte > cfg.cte_ldw_threshold_m && rate > cfg.ldw_min_outward_rate_ms;
-    const bool left_ok = !(cfg.ldw_suppress_on_blinker && input.left_blinker);
-    const bool right_ok = !(cfg.ldw_suppress_on_blinker && input.right_blinker);
+    const bool left_ok = !input.left_blinker;
+    const bool right_ok = !input.right_blinker;
     if (left_ok && (drifting_left || cte < -cfg.cte_ldw_hard_m))
       plan.warnings.push_back(Warning::LLDW);
     if (right_ok && (drifting_right || cte > cfg.cte_ldw_hard_m))
@@ -182,6 +179,12 @@ inline SafetyPlan computeSafetyPlan(const SafetyPlannerConfig& cfg, const Planne
   return plan;
 }
 
+/**
+ * \brief Holds a warning on for a minimum time once raised.
+ *
+ * \details A warning that follows the tick rate is invisible on a display and unreadable in a bag. The
+ * latch is per warning, since a forward-collision alert and a lane departure have different lifetimes.
+ */
 class WarningLatch {
 public:
   WarningLatch(int set_frames = 3, int hold_frames = 10) : set_frames_(set_frames), hold_frames_(hold_frames) {}

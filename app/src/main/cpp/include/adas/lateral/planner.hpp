@@ -4,6 +4,14 @@
 
 namespace adas {
 namespace lateral {
+/**
+ * \brief Interface every lateral planner implements: lane lines in, steering plan out.
+ *
+ * \details Three planners sit behind it — pure pursuit, visionpilot and flowpilot — and the choice is a
+ * runtime parameter, so the service that drives them never names one. `available()` exists because a
+ * planner can be compiled out or depend on a solver missing from the build; asking rather than assuming
+ * is what lets the configuration fall back instead of crashing.
+ */
 class IPlanner {
 public:
   virtual ~IPlanner() = default;

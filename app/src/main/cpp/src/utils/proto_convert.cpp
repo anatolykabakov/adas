@@ -20,7 +20,8 @@ adas::proto::CANData createCANMessage(const std::vector<can_frame>& frames, int6
   return msg;
 }
 
-adas::proto::PandaHealth createHealthMessage(const health_t& health, int64_t now_ms)
+adas::proto::PandaHealth createHealthMessage(const health_t& health, int64_t now_ms, bool ignition,
+                                             bool lat_actuation_allowed)
 {
   const int64_t current_timestamp = now_ms;
 
@@ -65,6 +66,8 @@ adas::proto::PandaHealth createHealthMessage(const health_t& health, int64_t now
   health_data->set_sbu2_voltage_mv(health.sbu2_voltage_mV);
   health_data->set_som_reset_triggered(health.som_reset_triggered != 0);
 
+  msg.set_ignition(ignition);
+  msg.set_lat_actuation_allowed(lat_actuation_allowed);
   return msg;
 }
 
@@ -219,7 +222,7 @@ adas::proto::LaneKeepState createLaneKeepState(const LaneKeepOutput& out, int64_
 }
 
 adas::proto::LaneKeepDebug createLaneKeepDebug(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
-                                               double frame_dt_s, const services::LaneKeep::Config& config)
+                                               double frame_dt_s, const services::Planner::Config& config)
 {
   const int64_t publish_ms = static_cast<int64_t>(now_us) / 1000;
 
@@ -294,27 +297,6 @@ adas::proto::LaneKeepDebug createLaneKeepDebug(const LaneKeepOutput& out, int64_
   return msg;
 }
 
-adas::proto::SteerCommand createSteerCommand(const LaneKeepOutput& out, int64_t now_us, double max_torque_cnm,
-                                             bool steer_output_enabled, bool have_desired)
-{
-  const int64_t publish_ms = static_cast<int64_t>(now_us) / 1000;
-  const int64_t capture_ms = out.capture_ts_us / 1000;
-  const int64_t vision_ms = out.vision_ts_us / 1000;
-  const int64_t chassis_ms = out.chassis_ts_us / 1000;
-
-  adas::proto::SteerCommand msg;
-  auto* cmd = &msg;
-  const int torque = static_cast<int>(std::lround(out.steer_norm * max_torque_cnm));
-  const bool en = steer_output_enabled && out.has_target && out.status == "ok" && have_desired;
-  cmd->set_torque_cnm(en ? torque : 0);
-  cmd->set_enabled(en);
-  cmd->set_capture_ts_ms(capture_ms);
-  cmd->set_vision_ts_ms(vision_ms);
-  cmd->set_chassis_ts_ms(chassis_ms);
-  cmd->set_publish_ts_ms(publish_ms);
-  return msg;
-}
-
 LaneKeepOutput laneKeepFromProto(const adas::proto::LaneKeepState& p, int64_t timestamp_us)
 {
   LaneKeepOutput o;
@@ -354,9 +336,9 @@ LocalizationPose localizationFromProto(const adas::proto::LocalizationPose& p, i
   o.odom_y = p.odom_y();
   o.ekf_x = p.ekf_x();
   o.ekf_y = p.ekf_y();
-  // Крен и выученные параметры: публикующая сторона их заполняет, а здесь они терялись, поэтому
-  // всё, что читает позу через `InternalSubscriber` — реплеи и pyadas — видело нули там, где
-  // контроллер уже ехал на выученных числах.
+  // Road bank and the learned parameters: the publishing side fills them, and they used to be dropped
+  // here — so everything reading the pose through `InternalSubscriber`, replays and pyadas alike, saw
+  // zeros where the controller was already driving on learned numbers.
   o.road_roll_deg = p.road_roll_deg();
   o.road_roll_std_deg = p.road_roll_std_deg();
   o.road_roll_valid = p.road_roll_valid();
@@ -532,6 +514,100 @@ CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& o
   }
   s.valid = odom.trans_size() >= 3 && odom.rot_size() >= 3;
   return s;
+}
+
+void fillLocalMap(adas::proto::MapLocalState& out, const mapmatch::RoadMap& map, double x, double y, double radius_m)
+{
+  out.set_has_local_map(true);
+  out.set_local_map_radius_m(static_cast<float>(radius_m));
+
+  std::vector<double> xs, ys;
+  for (const std::uint32_t ei : map.edgesInBBox(x - radius_m, y - radius_m, x + radius_m, y + radius_m)) {
+    map.edgePolyline(ei, xs, ys);
+    if (xs.size() < 2)
+      continue;
+    auto* e = out.add_local_edges();
+    e->set_name(map.edgeName(ei));
+    for (std::size_t k = 0; k < xs.size(); ++k) {
+      e->add_x(static_cast<float>(xs[k]));
+      e->add_y(static_cast<float>(ys[k]));
+    }
+  }
+}
+
+void applyLanePath(LaneKeepOutput& out, const LanePathMsg& msg)
+{
+  out.dbg.lane_anchored = msg.lane_anchored;
+  out.dbg.lanelines_active = msg.lanelines_active;
+  out.dbg.lane_width_m = msg.lane_width_m;
+  out.dbg.lane_offset_m = msg.lane_offset_m;
+  out.dbg.center_force_m = msg.center_force_m;
+  out.dbg.p_lane_blend_scale = msg.p_lane_blend_scale;
+  out.dbg.p_camera_offset_m = msg.p_camera_offset_m;
+  out.dbg.p_center_force_gain = msg.p_center_force_gain;
+  out.capture_ts_us = msg.capture_ts_us > 0 ? msg.capture_ts_us : (msg.timestamp_us > 0 ? msg.timestamp_us : 0);
+  out.vision_ts_us = msg.infer_ts_us > 0 ? msg.infer_ts_us : 0;
+}
+
+void applySteerFeedback(LaneKeepOutput& out, const adas::proto::SteerCommand& cmd)
+{
+  out.desired_swa_deg = cmd.desired_swa_deg();
+  out.actual_swa_deg = cmd.actual_swa_deg();
+  out.angle_error_deg = cmd.angle_error_deg();
+  out.steer_norm = cmd.steer_norm();
+  out.dbg.pid_p = cmd.pid_p();
+  out.dbg.pid_i = cmd.pid_i();
+  out.dbg.pid_f = cmd.pid_f();
+  out.dbg.slew_clipped = cmd.slew_clipped();
+  out.dbg.assist_allowed = cmd.assist_allowed();
+  out.dbg.assist_known = cmd.assist_known();
+  out.dbg.steer_output_enabled = cmd.enabled();
+}
+
+adas::proto::SteerCommand createSteerCommand(const SteerCommandInputs& in, const LatControlPid::Result& lat)
+{
+  adas::proto::SteerCommand cmd;
+  cmd.set_torque_cnm(in.torque_cnm);
+  cmd.set_enabled(in.enabled);
+  cmd.set_capture_ts_ms(in.capture_ts_ms);
+  cmd.set_vision_ts_ms(in.vision_ts_ms);
+  cmd.set_chassis_ts_ms(in.chassis_ts_ms);
+  cmd.set_publish_ts_ms(in.publish_ts_ms);
+  cmd.set_desired_swa_deg(lat.angle_des_deg);
+  cmd.set_actual_swa_deg(lat.angle_act_deg);
+  cmd.set_angle_error_deg(lat.angle_error_deg);
+  cmd.set_steer_norm(lat.steer_norm);
+  cmd.set_pid_p(lat.p);
+  cmd.set_pid_i(lat.i);
+  cmd.set_pid_f(lat.f);
+  cmd.set_slew_clipped(in.slew_clipped);
+  cmd.set_assist_allowed(in.assist_allowed);
+  cmd.set_assist_known(in.assist_known);
+  cmd.set_status(in.status);
+  cmd.set_hud_left_lane_visible(in.hud_left_lane_visible);
+  cmd.set_hud_right_lane_visible(in.hud_right_lane_visible);
+  cmd.set_cruise_intent(in.cruise_intent);
+  return cmd;
+}
+
+adas::proto::LatPlan createLatPlan(const LaneKeepOutput& out, double command_curvature, double frame_dt_s,
+                                   const char* kappa_solver)
+{
+  adas::proto::LatPlan msg;
+  msg.set_timestamp(out.timestamp_us / 1000);
+  msg.set_capture_ts_ms(out.capture_ts_us / 1000);
+  msg.set_infer_ts_ms(out.vision_ts_us / 1000);
+  msg.set_desired_curvature(command_curvature);
+  msg.set_desired_curvature_rate(out.dbg.mpc_dkappa_ds);
+  msg.set_valid(out.has_target && out.status == "ok");
+  msg.set_status(out.status);
+  msg.set_controller(out.controller);
+  msg.set_kappa_solver(kappa_solver ? kappa_solver : "");
+  msg.set_cte_m(out.cte_m);
+  msg.set_epsi_rad(out.epsi_rad);
+  msg.set_speed_mps(out.dbg.speed_mps);
+  msg.set_frame_dt_s(frame_dt_s);
+  return msg;
 }
 
 adas::proto::LanePath createLanePath(const LanePathMsg& path)

@@ -28,13 +28,13 @@ namespace adas {
 class SpeedFilter {
 public:
   struct Config {
-    double wheel_speed_factor = 1.0;
+    double wheel_speed_factor = 1.0;  ///< Correction on wheel speed; the measured 1.2 % scale error goes here.
 
-    double accel_process_noise = 1.5;
+    double accel_process_noise = 1.5;  ///< Process noise on acceleration [m/s^3].
 
-    double speed_measurement_noise = 0.05;
+    double speed_measurement_noise = 0.05;  ///< Assumed wheel-speed noise [m/s].
 
-    double reseed_jump_ms = 2.0;
+    double reseed_jump_ms = 2.0;  ///< A jump larger than this reseeds the filter instead of being smoothed [m/s].
   };
 
   SpeedFilter() = default;

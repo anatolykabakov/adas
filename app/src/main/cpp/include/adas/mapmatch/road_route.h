@@ -27,23 +27,23 @@ namespace mapmatch {
  *  drawing error (metres), and it is not a substitute for the vision path — see `utils/curvature_preview.h`
  *  for the one the controller actually uses. */
 struct RouteConfig {
-  double horizon_m = 2000.0;
+  double horizon_m = 2000.0;  ///< How far ahead the route is built [m].
 
-  double match_search_m = 120.0;
-  double max_match_dist_m = 40.0;
-  double max_match_heading_deg = 60.0;
-  double heading_weight_m_per_rad = 40.0;
+  double match_search_m = 120.0;           ///< Radius searched for the current edge [m].
+  double max_match_dist_m = 40.0;          ///< Beyond this distance the match is rejected [m].
+  double max_match_heading_deg = 60.0;     ///< Beyond this heading disagreement the match is rejected [deg].
+  double heading_weight_m_per_rad = 40.0;  ///< Exchange rate between heading and distance when scoring a match [m/rad].
 
-  double step_m = 5.0;
-  double window_m = 25.0;
+  double step_m = 5.0;     ///< Spacing of the route samples [m].
+  double window_m = 25.0;  ///< Window over which curvature is fitted [m].
 
-  double turn_kappa = 0.002;
-  double max_lat_acc = 2.6;
-  double min_section_m = 100.0;
-  double max_curv_deviation = 2.0;
-  double max_curv_split_arc_deg = 90.0;
+  double turn_kappa = 0.002;             ///< Curvature above which a section counts as a turn [1/m].
+  double max_lat_acc = 2.6;              ///< Lateral acceleration used to derive a speed limit for a curve [m/s^2].
+  double min_section_m = 100.0;          ///< Sections shorter than this are merged [m].
+  double max_curv_deviation = 2.0;       ///< How far curvature may vary inside one section before it is split.
+  double max_curv_split_arc_deg = 90.0;  ///< Arc above which a curve is split regardless [deg].
 
-  double straight_max_deg = 60.0;
+  double straight_max_deg = 60.0;  ///< Total turning still reported as a straight [deg].
 };
 
 /** A stretch of road ahead whose curvature exceeds `turn_kappa`, with the speed that holds

@@ -15,4 +15,25 @@ message SteerCommand {
   int64 chassis_ts_ms = 4;
   int64 publish_ts_ms = 5;
   int64 capture_ts_ms = 6;   // camera frame arrival — e2e pipeline start
+
+  // Состояние закона управления. Жило в LaneKeepDebug, пока управление считал планер; после переезда
+  // в Control это единственный источник: кто скомандовал, тот и рассказывает, из чего команда вышла.
+  double desired_swa_deg = 7;
+  double actual_swa_deg = 8;
+  double angle_error_deg = 9;
+  double steer_norm = 10;
+  double pid_p = 11;
+  double pid_i = 12;
+  double pid_f = 13;
+  bool slew_clipped = 14;
+  bool assist_allowed = 15;
+  bool assist_known = 16;
+  // Почему команда снята: ok | stale | blinker | no_assist | статус плана.
+  string status = 17;
+
+  // Намерение, а не кадры: борт сам решит, как это уложить в шину и когда машина готова слушать.
+  bool hud_left_lane_visible = 19;
+  bool hud_right_lane_visible = 20;
+  // 0 — ничего не нажимать, 1 — быстрее, 2 — медленнее.
+  int32 cruise_intent = 21;
 }

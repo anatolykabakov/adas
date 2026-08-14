@@ -10,6 +10,13 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
+/**
+ * \brief Projects latitude and longitude into a local ENU plane anchored at the first fix.
+ *
+ * \details Everything downstream works in metres. The anchor is the run's first fix, which is why a pose
+ * recorded by the device and a pose replayed offline differ by a rigid translation unless the same anchor
+ * is used.
+ */
 class GpsLocalProjector {
 public:
   void reset()

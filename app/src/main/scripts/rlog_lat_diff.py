@@ -363,7 +363,6 @@ class Harness:
     # оценщик в реплее — не тот, что на машине: при дефолтном `params_stiffness_p0_std = 0` жёсткость
     # стоит там, где стартовала (P = Q), и «включённый оценщик» ничего не учит.
     LEARNER_KEYS = (
-        "learn_vehicle_params",
         "params_angle_offset_init_deg",
         "params_stiffness_p0_std",
         "params_stiffness_process_std",
@@ -380,17 +379,6 @@ class Harness:
         self.loc = loc
         self.args = args
         self.model_mode = args.reference == "model"
-
-    def recompute(self):
-        """Пересчёт уставки между кадрами: флаг ИЛИ конфиг.
-
-        Читать только флаг значило бы мерить не то, что поедет: отгружаемый конфиг везёт
-        `lat_recompute_setpoint: true`, а пересчёт правит уставку на каждом тике шасси, то есть на
-        100 Гц вместо 16.
-        """
-        return bool(
-            self.args.recompute_setpoint or self.veh.get("lat_recompute_setpoint", False)
-        )
 
     def shipped_controller(self):
         """Контроллер вместе с численным методом, как задано в конфиге.
@@ -419,11 +407,8 @@ class Harness:
             float(veh.get("steer_slew_limit_deg", 8.0))
         )
         stiff = args.stiffness or float(veh.get("tire_stiffness_factor", 0.64))
-        app.set_lane_keep_vehicle_model(
-            bool(veh.get("lat_use_vehicle_model", True)), stiff
-        )
+        app.set_lane_keep_tire_stiffness(stiff)
         app.set_lane_keep_fp_steer_delay_s(float(veh.get("fp_steer_delay_s", 0.35)))
-        app.set_lane_keep_recompute_setpoint(self.recompute())
         if args.no_integrator:
             # См. «единственную несправедливость» в шапке: без обратной связи наш интегратор
             # наматывает ошибку, на которую не влияет.
@@ -439,17 +424,16 @@ class Harness:
         return app, ratio
 
     def _apply_learner(self, app):
-        """Оценщик параметров машины и разрешение контроллеру его читать — как в конфиге.
+        """Настройки оценщика параметров машины — как на машине.
 
-        `forSimulated` держит оценщик выключенным, поэтому по дефолтам стенд мерил бы контроллер на
-        константах, тогда как отгружаемый конфиг везёт `use_learned_params: true`.
+        Сам оценщик и чтение его результата больше не переключаются: они всегда включены, а решает
+        собственная валидность оценки. Из конфига берутся только числа, которыми он настроен.
         """
 
         def put(name, value):
             text = str(value).lower() if isinstance(value, bool) else repr(float(value))
             app.set_param_str(name, text)
 
-        put("use_learned_params", bool(self.veh.get("use_learned_params", False)))
         for key in self.LEARNER_KEYS:
             if key in self.loc:
                 put(key, self.loc[key])
@@ -706,8 +690,7 @@ class Report:
         print(
             f"маршрутов: {n_routes}, эталон: {self.args.reference}, "
             f"контроллер {self.args.controller or self.veh.get('lane_keep_controller')}, "
-            f"жёсткость {stiff}, интеграл {integ}, пересчёт уставки между кадрами "
-            f"{'ВКЛ' if (self.args.recompute_setpoint or self.veh.get('lat_recompute_setpoint')) else 'выкл'}"
+            f"жёсткость {stiff}, интеграл {integ}"
         )
         learn = loc.get("learn_vehicle_params", False)
         used = self.veh.get("use_learned_params", False)
@@ -867,11 +850,6 @@ def parse_args():
         type=float,
         default=5.0,
         help="гейт по скорости; отброшенное печатается",
-    )
-    add(
-        "--recompute-setpoint",
-        action="store_true",
-        help="пересчитывать уставку между кадрами, как апстрим на 100 Гц",
     )
     add(
         "--set",

@@ -13,18 +13,10 @@ Localization::Localization(Config config)
                              std::max(400, config.imu_min_samples * 4), config.imu_invert_yaw_rate);
   if (config.imu_has_mount_prior)
     imu_calib_.setMountPrior(config.imu_mount_roll_deg, config.imu_mount_pitch_deg, config.imu_mount_yaw_deg);
-  loc_.invert_cam_yaw_rate = config.invert_cam_yaw_rate;
   road_roll_.setConfig(config.road_roll);
   params_.setConfig(config.params);
-  loc_.use_gps_position = config.sources.gps_position;
-  loc_.use_gps_course = config.sources.gps_course;
-  loc_.use_gps_velocity = config.sources.gps_velocity;
   loc_.max_gps_accuracy_m = config.gps_max_accuracy_m;
-  loc_.scale_gps_noise_by_accuracy = config.gps_scale_noise_by_accuracy;
   loc_.ekf().setYawRateIsAState(true);
-  if (!config.sources.bicycle_model) {
-    loc_.ekf().setYawRateIsAState(true, 1e3);
-  }
 }
 
 void Localization::registerParameters()
@@ -36,19 +28,7 @@ void Localization::registerParameters()
         loc_.max_gps_accuracy_m = v;
       },
       [this] { return config_.gps_max_accuracy_m; });
-  registerParameter<bool>(
-      "gps_scale_noise_by_accuracy",
-      [this](const bool& v) {
-        config_.gps_scale_noise_by_accuracy = v;
-        loc_.scale_gps_noise_by_accuracy = v;
-      },
-      [this] { return config_.gps_scale_noise_by_accuracy; });
 
-  registerParameter<bool>("learn_vehicle_params", config_.learn_vehicle_params);
-
-  // Настройки оценщика. Записать в поле недостаточно: `params_` получил копию конфига в
-  // конструкторе, поэтому после каждой правки его надо пересобрать — иначе зноб виден в реестре,
-  // но на оценщик не влияет.
   const auto learner = [this](const char* name, double& field) {
     registerParameter<double>(
         name,
@@ -59,8 +39,6 @@ void Localization::registerParameters()
         [&field] { return field; });
   };
   auto& pl = config_.params;
-  // Начальные точки. Процессный шум жёсткости мал (5e-4 за √с), поэтому оценка почти не уходит от
-  // старта: сравнивать её с чужой, стартовав из другого места, значит сравнивать начальные условия.
   learner("params_stiffness_init", pl.stiffness_init);
   learner("params_steer_ratio_init", pl.steer_ratio_init);
   learner("params_angle_offset_init_deg", pl.angle_offset_init_deg);
@@ -90,11 +68,8 @@ void Localization::configure()
       topics::kCameraOdometry, [this](const adas::proto::CameraOdometry& payload) { onCameraOdometryProto(payload); });
   registerParameters();
   subscribe<adas::proto::IMUData>(topics::kImu, [this](const adas::proto::IMUData& payload) { onRawImu(payload); });
-  const auto& src = config_.sources;
-  LOGI("Localization → %s  sources: gps[pos=%d course=%d vel=%d] imu=%d chassis_yaw=%d cam_odo=%d "
-       "bicycle=%d learn_params=%d",
-       topics::kLocalizationPose, src.gps_position, src.gps_course, src.gps_velocity, src.imu_yaw_rate,
-       src.chassis_yaw_rate, src.camera_odometry, src.bicycle_model, config_.learn_vehicle_params);
+  LOGI("Localization → %s  camera odometry %s", topics::kLocalizationPose,
+       config_.sources.camera_odometry ? "on" : "off");
 }
 
 void Localization::reset()
@@ -203,36 +178,46 @@ void Localization::onChassis(const ChassisSample& msg)
   chassis_ = msg;
   have_chassis_ = true;
 
-  std::optional<double> yr;
-  if (config_.sources.imu_yaw_rate && imu_.valid) {
-    yr = imu_.yaw_rate;
-  } else if (config_.sources.chassis_yaw_rate && std::abs(msg.yaw_rate) > 1e-9) {
-    yr = msg.yaw_rate;
-  }
-
-  std::optional<GpsSample> gps;
-  if (gps_.valid) {
-    const int64_t age = msg.timestamp_us - gps_.timestamp_us;
-    if (gps_.timestamp_us <= 0 || (age >= -500'000 && age <= config_.gps_max_age_us))
-      gps = gps_;
-  }
-
-  std::optional<double> cam_w;
-  if (config_.sources.camera_odometry && have_cam_odo_ && cam_odo_.valid) {
-    const double rstd = cam_odo_.rot_std[2];
-    if (rstd < 0.5)
-      cam_w = cam_odo_.rot[2];
-  }
-
-  loc_.step(dt, msg.speed_mps, msg.steer_rad, yr, gps, std::nullopt, cam_w);
+  loc_.step(dt, msg.speed_mps, msg.steer_rad, yawRateMeasurement(msg), freshGps(msg.timestamp_us), std::nullopt,
+            camYawRate());
 
   // The learner rides the chassis tick because every one of its inputs is on this message. It is fed the
-  // raw CAN yaw rate rather than `loc_.ekf().yawRate()` on purpose: the EKF's yaw rate is partly produced by
-  if (config_.learn_vehicle_params) {
-    params_.update(msg.speed_mps, msg.steering_angle_deg, msg.yaw_rate, road_roll_.rollDeg(), road_roll_.rollStdDeg(),
-                   dt);
-  }
+  // raw CAN yaw rate rather than `loc_.ekf().yawRate()` on purpose: the EKF's yaw rate is partly produced
+  // by the bicycle model, whose stiffness and steering ratio are exactly what the learner estimates, so
+  // closing that loop would have it fit its own output.
+  params_.update(msg.speed_mps, msg.steering_angle_deg, msg.yaw_rate, road_roll_.rollDeg(), road_roll_.rollStdDeg(),
+                 dt);
   publishPose(msg.timestamp_us);
+}
+
+std::optional<double> Localization::yawRateMeasurement(const ChassisSample& msg) const
+{
+  if (imu_.valid)
+    return imu_.yaw_rate;
+  if (std::abs(msg.yaw_rate) > 1e-9)
+    return msg.yaw_rate;
+  return std::nullopt;
+}
+
+std::optional<GpsSample> Localization::freshGps(int64_t chassis_ts_us) const
+{
+  if (!gps_.valid)
+    return std::nullopt;
+  // A fix stamped in the future by up to half a second is still the same instant: the two clocks are the
+  // phone's and the receiver's, and the offset between them is not zero.
+  const int64_t age = chassis_ts_us - gps_.timestamp_us;
+  if (gps_.timestamp_us <= 0 || (age >= -500'000 && age <= config_.gps_max_age_us))
+    return gps_;
+  return std::nullopt;
+}
+
+std::optional<double> Localization::camYawRate() const
+{
+  if (!config_.sources.camera_odometry || !have_cam_odo_ || !cam_odo_.valid)
+    return std::nullopt;
+  if (cam_odo_.rot_std[2] >= 0.5)
+    return std::nullopt;
+  return cam_odo_.rot[2];
 }
 
 void Localization::publishPose(int64_t timestamp_us)
@@ -252,7 +237,7 @@ void Localization::publishPose(int64_t timestamp_us)
   pose.learned_angle_offset_deg = params_.angleOffsetDeg();
   pose.learned_stiffness_std = params_.stiffnessStd();
   pose.learned_steer_ratio_std = params_.steerRatioStd();
-  pose.learned_params_valid = config_.learn_vehicle_params && params_.valid();
+  pose.learned_params_valid = params_.valid();
   pose.learned_sample_count = params_.sampleCount();
   pose.odom_x = loc_.odomX().empty() ? 0.0 : loc_.odomX().back();
   pose.odom_y = loc_.odomY().empty() ? 0.0 : loc_.odomY().back();

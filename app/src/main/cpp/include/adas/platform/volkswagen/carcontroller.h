@@ -57,6 +57,12 @@ inline bool lateralActuationAllowed(bool controls_allowed, bool always_on, const
   return cs.cruiseAvailable && cs.gearKnown && !cs.gearReverse;
 }
 
+/**
+ * \brief Turns an actuation request into MQB CAN frames.
+ *
+ * \details Owns the rate limits, the frame counters and the checksums that the car and the panda both
+ * check: a frame with a stale counter is silently dropped by the EPS, and the caller has no way to notice.
+ */
 class CarController {
 public:
   CarController() = default;

@@ -16,17 +16,17 @@ namespace mapmatch {
  * of both — the drift is under 3 deg and an arc accumulates the same degrees as the kink.
  */
 struct WindowSearchConfig {
-  double window_m = 250.0;
-  double tol_deg = 4.0;
-  double clip_deg = 45.0;
-  int beam = 4000;
-  int per_edge = 3;
-  double cell_m = 300.0;
-  int per_cell = 6;
-  double defer_deg = 90.0;
-  int defer_beam = 60000;
-  int max_expand = 64;
-  bool verbose = false;
+  double window_m = 250.0;  ///< Length of the window matched at a time [m].
+  double tol_deg = 4.0;     ///< Heading tolerance inside the window [deg].
+  double clip_deg = 45.0;   ///< Per-sample heading difference is clipped here, so one outlier cannot dominate [deg].
+  int beam = 4000;          ///< Candidates kept per step.
+  int per_edge = 3;         ///< Candidates kept per edge, so one street cannot fill the beam.
+  double cell_m = 300.0;    ///< Grid cell for spreading candidates over space [m].
+  int per_cell = 6;         ///< Candidates kept per cell.
+  double defer_deg = 90.0;  ///< Above this ambiguity the decision is deferred to a wider beam [deg].
+  int defer_beam = 60000;   ///< Beam used for those deferred cases.
+  int max_expand = 64;      ///< Expansion steps before the search gives up.
+  bool verbose = false;     ///< Log every candidate; debugging only.
 };
 
 struct WindowRoute {
@@ -35,8 +35,8 @@ struct WindowRoute {
 };
 
 /**
- * @param window_deg per-window heading increments of the track, degrees
- * @return routes carried to the end of the profile, best first
+ * \param window_deg per-window heading increments of the track, degrees
+ * \return routes carried to the end of the profile, best first
  */
 std::vector<WindowRoute> searchByWindows(const RoadMap& map, const std::vector<double>& window_deg,
                                          const WindowSearchConfig& cfg);

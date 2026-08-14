@@ -6,11 +6,11 @@
 
 #include "adas/adas_app.h"
 #include "adas/middleware/manager.hpp"
-#include "adas/services/lane_keep.h"
+#include "adas/services/planner.h"
 #include "adas/services/localization.h"
 #include "adas/utils/params_learner.h"
 
-using adas::services::LaneKeep;
+using adas::services::Planner;
 
 namespace {
 constexpr double kDt = 0.01;
@@ -183,29 +183,12 @@ TEST(ParamsLearner, ThePredictionIsTheControllersOwnModel)
   const double expected = v * adas::curvatureFromSteer(delta, v, p.wheelbase_m, adas::slipFactor(p));
   EXPECT_NEAR(est.predictYawRate(v, swa, 0.0), expected, 1e-12);
 }
-
-TEST(LearnedParams, TheControllerKeepsItsConstantsUntilBothFlagsAgree)
-{
-  LaneKeep::Config cfg;
-  cfg.tire_stiffness_factor = 0.64;
-  cfg.steer_ratio = 15.7;
-  cfg.use_learned_params = false;
-  LaneKeep svc(cfg);
-
-  svc.setLearnedParams(true, 1.20, 16.4, 0.7);
-  EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
-  EXPECT_DOUBLE_EQ(svc.effectiveSteerRatio(), 15.7);
-  EXPECT_DOUBLE_EQ(svc.effectiveAngleOffsetDeg(), 0.0);
-  EXPECT_FALSE(svc.usingLearnedParams());
-}
-
 TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
 {
-  LaneKeep::Config cfg;
+  Planner::Config cfg;
   cfg.tire_stiffness_factor = 0.64;
   cfg.steer_ratio = 15.7;
-  cfg.use_learned_params = true;
-  LaneKeep svc(cfg);
+  Planner svc(cfg);
 
   EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
   EXPECT_FALSE(svc.usingLearnedParams());
@@ -225,9 +208,8 @@ TEST(LearnedParams, WithTheFlagOnTheEstimateIsUsedAndLosingValidityWalksItBack)
 
 TEST(LearnedParams, NonsenseIsRefusedEvenWhenItArrivesFlaggedValid)
 {
-  LaneKeep::Config cfg;
-  cfg.use_learned_params = true;
-  LaneKeep svc(cfg);
+  Planner::Config cfg;
+  Planner svc(cfg);
   svc.setLearnedParams(true, 0.0, 16.4, 0.0);
   EXPECT_FALSE(svc.usingLearnedParams());
   svc.setLearnedParams(true, 0.8, 0.0, 0.0);
@@ -276,34 +258,10 @@ TEST(ShippedConfig, TheLearnerMayRunButTheControllerMayNotReadIt)
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(path, &ok);
   ASSERT_TRUE(ok) << "cannot parse " << path;
 
-  if (cfg.lane_keep.dp_parity_pack) {
-    EXPECT_TRUE(cfg.lane_keep.use_learned_params) << "пакет объявлен, а наблюдатель не подключён — тогда флаг пакета "
-                                                     "лишний";
-    EXPECT_TRUE(cfg.localization.learn_vehicle_params) << "контроллер читает оценку, которую никто не считает";
-  } else {
-    EXPECT_FALSE(cfg.lane_keep.use_learned_params) << "the learned parameters have never driven this car; that "
-                                                      "decision needs a bag behind it";
-  }
-
+  // Оценщик и чтение его результата больше не переключаются: осталась одна проверка — крен в
+  // оценщике всё ещё выключен, он не проверен заездом.
   EXPECT_FALSE(cfg.localization.params.use_roll);
 }
-
-TEST(LearnedParams, RunningTheObserverCannotTouchTheCommand)
-{
-  LaneKeep::Config cfg;
-  cfg.tire_stiffness_factor = 0.64;
-  cfg.steer_ratio = 15.7;
-  cfg.use_learned_params = false;
-  LaneKeep svc(cfg);
-
-  for (const double tsf : {0.05, 0.2, 1.0, 4.9}) {
-    svc.setLearnedParams(true, tsf, 12.5, 9.0);
-    EXPECT_DOUBLE_EQ(svc.effectiveStiffnessFactor(), 0.64);
-    EXPECT_DOUBLE_EQ(svc.effectiveSteerRatio(), 15.7);
-    EXPECT_DOUBLE_EQ(svc.effectiveAngleOffsetDeg(), 0.0);
-  }
-}
-
 TEST(ShippedConfig, TheLearnerStartsFromTheParametersTheControllerUses)
 {
   const char* env = std::getenv("ADAS_CONFIG_UNDER_TEST");
@@ -332,7 +290,6 @@ public:
 TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
 {
   adas::services::Localization::Config cfg;
-  cfg.learn_vehicle_params = true;
   cfg.params.steer_sign = -1.0;
   cfg.params.use_roll = false;
   const double truth_tsf = 1.4;
@@ -372,29 +329,4 @@ TEST(LearnedParams, TheServiceActuallyLearnsFromChassisMessages)
   EXPECT_GT(pose.learned_stiffness_std, 0.0);
   EXPECT_LT(pose.learned_stiffness_std, 0.5);
   EXPECT_NEAR(pose.learned_steer_ratio, 15.7, 1.0) << "the ratio must stay near its mechanical value";
-}
-
-TEST(LearnedParams, WithTheObserverOffNothingIsPublished)
-{
-  adas::services::Localization::Config cfg;
-  cfg.learn_vehicle_params = false;
-
-  auto pub = std::make_shared<ChassisPublisher>();
-  auto loc = std::make_shared<adas::services::Localization>(cfg);
-  auto mgr = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated,
-                                                         std::vector<adas::middleware::ServicePtr>{pub, loc});
-  mgr->setTime(0);
-
-  for (int i = 0; i < 500; ++i) {
-    adas::ChassisSample m;
-    m.timestamp_us = 1'000'000 + i * 10'000;
-    m.speed_mps = 15.0;
-    m.steering_angle_deg = 12.0;
-    m.yaw_rate = 0.1;
-    pub->send(m);
-    mgr->step();
-  }
-
-  EXPECT_EQ(loc->lastPose().learned_sample_count, 0);
-  EXPECT_FALSE(loc->lastPose().learned_params_valid);
 }

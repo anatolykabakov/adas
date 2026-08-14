@@ -2,8 +2,6 @@
 
 #include "adas/utils/lane_path.h"
 
-#include "adas/utils/proto_convert.h"
-
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -25,30 +23,29 @@ namespace longplan {
  *  Split out of `LongPlan` so the rules can be tested without a middleware instance, the
  *  same way `safety_planner.hpp` is split out of `SafetyWarn`. */
 struct Config {
-  double lead_prob_thresh = 0.5;
-  double t_follow = 1.5;
-  double min_gap_m = 4.0;
-  double a_max = 1.2;
-  double a_min = -2.5;
-  double kp_gap = 0.35;
-  double kp_v = 0.4;
+  double lead_prob_thresh = 0.5;  ///< Model confidence needed before a lead is believed.
+  double t_follow = 1.5;          ///< Desired time gap to the lead [s].
+  double min_gap_m = 4.0;         ///< Standstill gap [m].
+  double a_max = 1.2;             ///< Acceleration the plan may request [m/s^2].
+  double a_min = -2.5;            ///< Deceleration the plan may request [m/s^2].
+  double kp_gap = 0.35;           ///< Gain on gap error.
+  double kp_v = 0.4;              ///< Gain on speed error.
 
-  bool curv_enabled = true;
-  double curv_a_lat_max = 1.8;
-  double curv_preview_s = 4.0;
-  double curv_min_speed_ms = 8.0;
-  double curv_v_floor_ms = 8.0;
+  double curv_a_lat_max = 1.8;     ///< Lateral acceleration allowed in a curve [m/s^2]; caps speed before it.
+  double curv_preview_s = 4.0;     ///< How far ahead the curve is looked for [s].
+  double curv_min_speed_ms = 8.0;  ///< Below this speed curvature does not limit the plan [m/s].
+  double curv_v_floor_ms = 8.0;    ///< Floor the curve limit will not push speed below [m/s].
 
-  double a_coast_ms2 = -0.30;
+  double a_coast_ms2 = -0.30;  ///< Deceleration from lifting off alone [m/s^2] — all this car offers without brakes.
 
-  double lead_max_offset_m = 2.0;
+  double lead_max_offset_m = 2.0;  ///< Lateral offset beyond which a lead is in another lane [m].
 
-  double lead_min_speed_ms = 2.0;
+  double lead_min_speed_ms = 2.0;  ///< Below this the lead is treated as stationary [m/s].
 
-  bool plan_v_enabled = false;
+  bool plan_v_enabled = false;  ///< Follow the model's own speed plan instead of the rule-based one.
 
-  LanePathConfig lane_path{};
-  double steer_ratio = 15.7;
+  LanePathConfig lane_path{};  ///< How lane lines become a path, for the curve preview.
+  double steer_ratio = 15.7;   ///< Steering ratio, to turn the wheel angle into a road-wheel angle.
 };
 
 struct LeadState {
@@ -141,7 +138,7 @@ inline Plan compute(const Config& cfg, const Input& in)
     out.source = "hold";
   }
 
-  if (cfg.curv_enabled && have_path && v_ego >= cfg.curv_min_speed_ms) {
+  if (have_path && v_ego >= cfg.curv_min_speed_ms) {
     const double from_m = std::max(5.0, 0.5 * v_ego);
     const double to_m = std::max(from_m + 15.0, cfg.curv_preview_s * v_ego);
     out.kappa_ahead = maxCurvatureAhead(*in.path, from_m, to_m);

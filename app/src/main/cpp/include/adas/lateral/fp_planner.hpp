@@ -12,7 +12,7 @@
 namespace adas {
 namespace lateral {
 /**
- * @brief Solve for curvature over the model plan horizon, then convert curvature to steering.
+ * \brief Solve for curvature over the model plan horizon, then convert curvature to steering.
  *
  * The numerical method is picked by name at construction, so the choice lives here, not in the
  * service. The planner owns the solver and the memory between frames, which is why it also answers
@@ -23,20 +23,18 @@ namespace lateral {
 class FpPlanner final : public IPlanner {
 public:
   struct Config {
-    double Lf = 2.67;
-    double wheelbase_m = 2.636;
+    double Lf = 2.67;            ///< Lever arm for converting curvature into an angle [m].
+    double wheelbase_m = 2.636;  ///< Wheelbase [m], for the slip model.
 
-    double max_lateral_jerk = 5.0;
-    double steering_rate_weight = 1.0;
-    double steer_delay_s = 0.2;
+    double max_lateral_jerk = 5.0;      ///< Comfort bound on lateral jerk [m/s^3].
+    double steering_rate_weight = 1.0;  ///< Cost on steering rate inside the solver.
+    double steer_delay_s = 0.2;         ///< Actuator delay compensated for [s].
 
-    double steer_slew_limit_deg = 0.0;
+    double steer_slew_limit_deg = 0.0;  ///< Rate limit on the output [deg/s]; 0 disables it.
 
-    bool roll_compensation = false;
+    std::string solver = "grad";  ///< Numerical method: "grad" or "acados".
 
-    std::string solver = "grad";
-
-    SteerLimits limits{};
+    SteerLimits limits{};  ///< Speed-dependent ceiling on the angle.
   };
 
   explicit FpPlanner(Config config);
@@ -50,9 +48,9 @@ public:
 
   /// The angle plus the numbers by which it is read back from a recorded drive.
   struct Recompute {
-    double steer_rad = 0.0;
-    double curvature = 0.0;
-    double max_steer_rad = 0.0;
+    double steer_rad = 0.0;      ///< Commanded road-wheel angle [rad].
+    double curvature = 0.0;      ///< Curvature the command corresponds to [1/m].
+    double max_steer_rad = 0.0;  ///< Limit in force this tick [rad].
   };
 
   /** Setpoint at the current speed between vision frames; empty when there is nothing to redo.

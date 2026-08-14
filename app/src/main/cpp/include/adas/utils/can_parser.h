@@ -27,6 +27,7 @@ struct Message {
   std::map<std::string, Signal> signals;
 };
 
+/// Decodes CAN frames into named signals using a DBC description.
 class DBSParser {
 private:
   std::map<uint32_t, Message> messages;

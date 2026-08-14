@@ -8,6 +8,14 @@
 #include "adas/utils/vehicle_model.h"
 
 namespace adas {
+/**
+ * \brief Learns steering ratio, tyre stiffness and the angle zero while driving.
+ *
+ * \details The port of upstream's `paramsd`: a small filter over steering angle, speed and yaw rate. The
+ * estimate only reaches the controller when `lane_keep.use_learned_params` says so, so enabling the
+ * learner changes no command by itself — the honest sequence is to drive, compare against the configured
+ * constants in the bag, and only then hand it the wheel.
+ */
 class ParamsLearner {
 public:
   enum State {
@@ -24,65 +32,72 @@ public:
   };
 
   struct Config {
-    VehicleModelParams vehicle{};
+    VehicleModelParams vehicle{};  ///< The reference car the estimate is relative to.
 
-    double rotational_inertia = 2468.4;
+    double rotational_inertia = 2468.4;  ///< Yaw inertia [kg*m^2]; scaled from the reference car by mass and wheelbase.
 
-    double stiffness_init = 1.0;
-    double steer_ratio_init = 15.7;
-    double angle_offset_init_deg = 0.0;
+    double stiffness_init = 1.0;         ///< Prior on the stiffness factor.
+    double steer_ratio_init = 15.7;      ///< Prior on the steering ratio.
+    double angle_offset_init_deg = 0.0;  ///< Prior on the steering-wheel zero [deg].
 
-    double stiffness_min = 0.2;
-    double stiffness_max = 5.0;
-    double steer_ratio_min = 0.0;
-    double steer_ratio_max = 0.0;
+    double stiffness_min = 0.2;    ///< Lower clamp on stiffness. Hitting it usually means the steering sign is wrong.
+    double stiffness_max = 5.0;    ///< Upper clamp on the stiffness estimate.
+    double steer_ratio_min = 0.0;  ///< Clamp on the ratio estimate; 0 derives it from the prior.
+    double steer_ratio_max = 0.0;  ///< Upper clamp on the ratio estimate; 0 derives it from the prior.
+    /// Clamp on the learned zero [deg]; beyond this it is a sensor fault, not a misalignment.
     double angle_offset_max_deg = 10.0;
 
+    /// Sign convention of the measured wheel angle. Wrong here and the estimate cannot converge.
     double steer_sign = 1.0;
 
-    double stiffness_process_std = 0.05 / 100.0;
-    double steer_ratio_process_std = 0.01;
+    double stiffness_process_std = 0.05 / 100.0;  ///< How fast stiffness is allowed to drift per step.
+    double steer_ratio_process_std = 0.01;        ///< How fast the ratio is allowed to drift per step.
+    /// Drift allowed for the slow zero [deg/step]: it is mechanical and nearly constant.
     double angle_offset_process_std_deg = 0.02;
+    /// Drift allowed for the fast zero [deg], which absorbs road camber.
     double angle_offset_fast_process_std_deg = 0.25;
-    double u_process_std = 0.1;
-    double v_process_std = 0.01;
-    double yaw_rate_process_std_deg = 0.1;
-    double steer_angle_process_std_deg = 0.1;
-    double roll_process_std_deg = 1.0;
+    double u_process_std = 0.1;                ///< Process noise on longitudinal speed.
+    double v_process_std = 0.01;               ///< Process noise on lateral speed.
+    double yaw_rate_process_std_deg = 0.1;     ///< Process noise on yaw rate [deg/s].
+    double steer_angle_process_std_deg = 0.1;  ///< Process noise on the steering angle [deg/s].
+    double roll_process_std_deg = 1.0;         ///< Drift allowed for the road-bank state [deg/step].
 
-    double p_initial_scale = 1.0;
-    double stiffness_p0_std = 0.0;
-    double steer_ratio_p0_std = 0.0;
+    double p_initial_scale = 1.0;     ///< Scale on the whole initial covariance; larger means less trust in the priors.
+    double stiffness_p0_std = 0.0;    ///< Initial spread on stiffness; 0 derives it from `p_initial_scale`.
+    double steer_ratio_p0_std = 0.0;  ///< Initial spread on the ratio; 0 derives it.
 
-    double yaw_rate_std = 0.02;
-    double steer_angle_std_deg = 0.05;
+    double yaw_rate_std = 0.02;         ///< Assumed yaw-rate measurement noise [rad/s].
+    double steer_angle_std_deg = 0.05;  ///< Assumed steering-angle measurement noise [deg].
+    /// Observation noise on the fast zero [deg]; deliberately loose, it absorbs camber.
     double angle_offset_fast_obs_std_deg = 10.0;
-    double steer_ratio_obs_std = 5.0;
-    double stiffness_obs_std = 0.5;
-    double speed_obs_std = 0.1;
-    double roll_obs_std_deg = 1.0;
+    double steer_ratio_obs_std = 5.0;  ///< Observation noise on the ratio.
+    double stiffness_obs_std = 0.5;    ///< Observation noise on stiffness.
+    double speed_obs_std = 0.1;        ///< Observation noise on speed [m/s].
+    double roll_obs_std_deg = 1.0;     ///< Observation noise on the road bank [deg].
 
-    double min_speed_ms = 1.0;
+    double min_speed_ms = 1.0;  ///< Below this speed nothing is learned [m/s].
+    /// Samples with a larger wheel angle are dropped [deg]: the linear model stops holding.
     double max_steer_deg = 45.0;
-    double max_yaw_rate = 1.0;
-    double max_lateral_jerk = 0.0;
-    double max_roll_std_deg = 1.5;
+    double max_yaw_rate = 1.0;      ///< Samples with a larger yaw rate are dropped [rad/s].
+    double max_lateral_jerk = 0.0;  ///< Samples during faster transients are dropped [m/s^3]; 0 disables the check.
+    double max_roll_std_deg = 1.5;  ///< Samples with a worse bank estimate are dropped [deg].
 
-    double excited_swa_deg = 2.0;
-    int min_excited_samples = 500;
+    double excited_swa_deg = 2.0;   ///< Wheel angle above which the drive counts as exciting the parameters [deg].
+    int min_excited_samples = 500;  ///< Exciting samples needed before the estimate is reported as usable.
 
-    bool use_roll = false;
+    bool use_roll = false;  ///< Include the road bank as a state; needs a bank estimate worth using.
 
-    double stiffness_std_init = 0.0;
-    double steer_ratio_std_init = 0.0;
-    double angle_offset_std_init = 0.0;
-    double stiffness_std_max = 0.0;
-    double steer_ratio_std_max = 0.0;
+    double stiffness_std_init = 0.0;     ///< Reported initial spreads; 0 derives them from the covariance.
+    double steer_ratio_std_init = 0.0;   ///< Initial spread reported for the ratio.
+    double angle_offset_std_init = 0.0;  ///< Initial spread reported for the zero.
+    double stiffness_std_max = 0.0;      ///< Spread above which stiffness is not handed to the controller.
+    double steer_ratio_std_max = 0.0;    ///< Spread above which the ratio is not handed over.
   };
 
   ParamsLearner() : ParamsLearner(Config{}) {}
   explicit ParamsLearner(Config cfg) : cfg_(cfg) { reset(); }
 
+  /// Replace the configuration and restart the estimate, since the priors changed under it.
   void setConfig(const Config& cfg)
   {
     cfg_ = cfg;
@@ -90,6 +105,7 @@ public:
   }
   const Config& config() const { return cfg_; }
 
+  /// Back to the priors: state to the configured initial values, covariance to its initial spread.
   void reset()
   {
     x_.setZero();
@@ -121,6 +137,19 @@ public:
     prev_ay_ = 0.0;
   }
 
+  /**
+   * \brief One learner step.
+   *
+   * \param[in] speed_ms Ego speed [m/s]. Below the configured minimum nothing is learned: at rest the
+   * steering angle says nothing about the ratio.
+   * \param[in] swa_deg Measured steering-wheel angle [deg].
+   * \param[in] yaw_rate_can Yaw rate from CAN [rad/s]. Deliberately not the EKF's — that one is partly
+   * produced by the bicycle model whose parameters are being estimated here.
+   * \param[in] road_roll_deg Road bank [deg], which otherwise looks like understeer.
+   * \param[in] road_roll_std_deg Its standard deviation [deg]; a bank known badly is weighted down.
+   * \param[in] dt Step [s].
+   * \return True when the sample was used.
+   */
   bool update(double speed_ms, double swa_deg, double yaw_rate_can, double road_roll_deg, double road_roll_std_deg,
               double dt_s, bool localizer_tick = true)
   {
@@ -168,12 +197,19 @@ public:
     return true;
   }
 
+  /// Learned scale on the reference tyre stiffness; 1.0 is the reference car.
   double stiffnessFactor() const { return x_[kStiffness]; }
+  /// Learned steering-wheel to road-wheel ratio.
   double steerRatio() const { return x_[kSteerRatio]; }
+  /// Slow part of the steering-wheel zero [deg] — the mechanical misalignment.
   double angleOffsetDeg() const { return x_[kAngleOffset] * 180.0 / M_PI; }
   double angleOffsetTotalDeg() const { return (x_[kAngleOffset] + x_[kAngleOffsetFast]) * 180.0 / M_PI; }
+  /// Road bank as the filter currently believes it [deg].
   double roadRollDeg() const { return x_[kRoadRoll] * 180.0 / M_PI; }
+  /// Yaw rate the learner's own model predicts [rad/s], for comparison against CAN.
   double yawRate() const { return x_[kYawRate]; }
+  /// Standard deviations of the estimates. The gate for handing them to the controller: a number with a
+  /// wide spread is a guess.
   double stiffnessStd() const { return std::sqrt(std::max(p_(kStiffness, kStiffness), 0.0)); }
   double steerRatioStd() const { return std::sqrt(std::max(p_(kSteerRatio, kSteerRatio), 0.0)); }
   double angleOffsetStdDeg() const { return std::sqrt(std::max(p_(kAngleOffset, kAngleOffset), 0.0)) * 180.0 / M_PI; }

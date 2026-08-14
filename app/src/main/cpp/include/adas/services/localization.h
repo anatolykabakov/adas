@@ -16,18 +16,28 @@
 
 namespace adas {
 namespace services {
+/**
+ * \brief Fuses wheel speed, yaw rate and GNSS into one pose.
+ *
+ * \details The estimate is an EKF in a local ENU plane anchored at the first fix. Wheel speed and yaw
+ * rate carry it between fixes; GNSS bounds the drift. Each measurement is a separate switch in
+ * `Config::Sources`, because a fused pose that looks healthy says nothing about which sensor is holding
+ * it up, and turning them off one at a time is the only cheap way to find out.
+ *
+ * The service also runs the road-bank estimator and the vehicle-parameter learner: both need exactly the
+ * inputs that arrive on the chassis tick, and both publish through the pose message.
+ */
 class Localization : public adas::middleware::Service {
 public:
   struct Config {
-    double wheelbase_m = 2.636;
-    double gps_noise_pos = 0.5;
+    double wheelbase_m = 2.636;  ///< Wheelbase [m], the bicycle model's only geometry.
+    double gps_noise_pos = 0.5;  ///< Assumed position noise [m] when the receiver reports no accuracy of its own.
+    /// Minimum interval between position updates [s]; fixes arriving faster are dropped.
     double gps_update_interval = 0.2;
-    bool invert_cam_yaw_rate = false;
+    /// A fix older than this is not used [us]: at 25 m/s, 2.5 s is 62 m of stale position.
     int64_t gps_max_age_us = 2'500'000;
 
-    double gps_max_accuracy_m = 25.0;
-
-    bool gps_scale_noise_by_accuracy = true;
+    double gps_max_accuracy_m = 25.0;  ///< Fixes reporting worse accuracy are not used at all [m]; 0 disables the gate.
 
     /** Which measurements the filter is allowed to use.
      *
@@ -42,29 +52,23 @@ public:
      *
      *  Defaults keep everything on, i.e. the behaviour before these flags existed. */
     struct Sources {
-      bool gps_position = true;
-      bool gps_course = true;
-      bool gps_velocity = true;
-      bool imu_yaw_rate = true;
-      bool chassis_yaw_rate = true;
-      bool camera_odometry = true;
-      bool bicycle_model = true;
+      bool camera_odometry = true;  ///< Use the camera-odometry yaw rate as a measurement.
     } sources{};
 
-    RoadRollEstimator::Config road_roll{};
+    RoadRollEstimator::Config road_roll{};  ///< Road-bank estimator settings.
 
-    bool learn_vehicle_params = false;
-    ParamsLearner::Config params{};
+    ParamsLearner::Config params{};  ///< Vehicle-parameter learner settings.
 
+    /// Below this the IMU calibrator ignores samples [km/h]: gravity cannot resolve heading.
     double imu_speed_threshold_kmh = 0.5;
-    int imu_min_samples = 50;
-    bool imu_invert_yaw_rate = true;
-    double imu_mount_roll_deg = 0.0;
-    double imu_mount_pitch_deg = 0.0;
-    double imu_mount_yaw_deg = 0.0;
-    bool imu_has_mount_prior = false;
+    int imu_min_samples = 50;          ///< Samples needed before the mount estimate counts as usable.
+    bool imu_invert_yaw_rate = true;   ///< The phone gyro's sign is the opposite of the car's on this mount.
+    double imu_mount_roll_deg = 0.0;   ///< Mount prior, roll [deg]; used only with `imu_has_mount_prior`.
+    double imu_mount_pitch_deg = 0.0;  ///< Mount prior, pitch [deg].
+    double imu_mount_yaw_deg = 0.0;    ///< Mount prior, yaw [deg].
+    bool imu_has_mount_prior = false;  ///< Trust the mount prior above instead of estimating from scratch.
 
-    double steer_ratio = 15.7;
+    double steer_ratio = 15.7;  ///< Steering ratio used to turn the wheel angle into a road-wheel angle.
   };
 
   Localization() : Localization(Config{}) {}
@@ -92,6 +96,12 @@ public:
 
 private:
   void onChassis(const ChassisSample& msg);
+  /// Yaw rate to feed the filter: the phone gyro when it is valid, otherwise the ESP sensor from CAN.
+  std::optional<double> yawRateMeasurement(const ChassisSample& msg) const;
+  /// The last fix, if it is close enough in time to this chassis frame to describe the same instant.
+  std::optional<GpsSample> freshGps(int64_t chassis_ts_us) const;
+  /// Camera-odometry yaw rate, if the source is enabled and the model is confident in it.
+  std::optional<double> camYawRate() const;
   void onGpsProto(const adas::proto::GPSLocation& gps);
   void onCameraOdometryProto(const adas::proto::CameraOdometry& odom);
   void onGps(const GpsSample& msg);

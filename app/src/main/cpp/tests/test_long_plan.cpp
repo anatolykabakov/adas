@@ -89,7 +89,6 @@ namespace {
 adas::longplan::Config planConfig()
 {
   adas::longplan::Config c;
-  c.curv_enabled = false;
   return c;
 }
 
@@ -259,7 +258,6 @@ TEST(LongPlan, CurvatureLimiterIsMeasuredAgainstCurrentSpeedNotTheReducedTarget)
 {
   const auto path = straight(200.0);
   adas::longplan::Config cfg = planConfig();
-  cfg.curv_enabled = true;
 
   auto in = freeFlow(20.0, &path);
   in.lead.prob = 0.99;
@@ -275,7 +273,6 @@ TEST(LongPlan, TightArcAheadLowersTheTarget)
 {
   const auto path = arc(120.0, 150.0);
   adas::longplan::Config cfg = planConfig();
-  cfg.curv_enabled = true;
 
   const auto plan = adas::longplan::compute(cfg, freeFlow(20.0, &path));
   EXPECT_NE(plan.source.find("curv"), std::string::npos);
@@ -308,10 +305,10 @@ TEST(ShippedConfig, LongitudinalKnobsReachTheService)
   const Json::Value& lp = root["long_plan"];
   ASSERT_TRUE(lp.isObject());
 
-  EXPECT_DOUBLE_EQ(lp["a_coast_ms2"].asDouble(), cfg.long_plan.a_coast_ms2);
-  EXPECT_DOUBLE_EQ(lp["lead_max_offset_m"].asDouble(), cfg.long_plan.lead_max_offset_m);
-  EXPECT_DOUBLE_EQ(lp["lead_min_speed_ms"].asDouble(), cfg.long_plan.lead_min_speed_ms);
-  EXPECT_EQ(lp["plan_v_enabled"].asBool(), cfg.long_plan.plan_v_enabled);
+  EXPECT_DOUBLE_EQ(lp["a_coast_ms2"].asDouble(), cfg.lane_keep.long_plan.a_coast_ms2);
+  EXPECT_DOUBLE_EQ(lp["lead_max_offset_m"].asDouble(), cfg.lane_keep.long_plan.lead_max_offset_m);
+  EXPECT_DOUBLE_EQ(lp["lead_min_speed_ms"].asDouble(), cfg.lane_keep.long_plan.lead_min_speed_ms);
+  EXPECT_EQ(lp["plan_v_enabled"].asBool(), cfg.lane_keep.long_plan.plan_v_enabled);
 }
 
 TEST(ShippedConfig, DoesNotPromiseBrakingThisCarCannotDeliver)
@@ -320,9 +317,9 @@ TEST(ShippedConfig, DoesNotPromiseBrakingThisCarCannotDeliver)
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
   ASSERT_TRUE(ok);
   // measured envelope is around -0.3 m/s^2.
-  EXPECT_LE(cfg.long_plan.a_coast_ms2, 0.0);
-  EXPECT_GE(cfg.long_plan.a_coast_ms2, -1.0) << "stronger than anything measured on this car";
-  EXPECT_FALSE(cfg.long_plan.plan_v_enabled) << "plan_v0/v_ego measured at 0.678 — not a speed target";
+  EXPECT_LE(cfg.lane_keep.long_plan.a_coast_ms2, 0.0);
+  EXPECT_GE(cfg.lane_keep.long_plan.a_coast_ms2, -1.0) << "stronger than anything measured on this car";
+  EXPECT_FALSE(cfg.lane_keep.long_plan.plan_v_enabled) << "plan_v0/v_ego measured at 0.678 — not a speed target";
 }
 
 TEST(ShippedConfig, WarningGatesMatchTheDecisionsTakenOnRoad)
@@ -332,6 +329,4 @@ TEST(ShippedConfig, WarningGatesMatchTheDecisionsTakenOnRoad)
   ASSERT_TRUE(ok);
   const auto& p = cfg.safety_warn.planner;
   EXPECT_GE(p.warn_min_speed_ms, 8.0) << "stop-and-go false positives, runs 08-04 and 08-06";
-  EXPECT_TRUE(p.ldw_suppress_on_lat_active) << "82 % of LDW frames were our own tracking error";
-  EXPECT_TRUE(p.ldw_suppress_on_blinker);
 }

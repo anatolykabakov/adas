@@ -45,19 +45,20 @@ namespace adas {
 class RoadRollEstimator {
 public:
   struct Config {
+    /// Body roll per unit lateral acceleration [deg/g]; subtracted to leave the road bank.
     double body_roll_deg_per_g = 3.0;
 
-    double tau_s = 10.0;
+    double tau_s = 10.0;  ///< Smoothing time constant [s]: the bank changes slowly, the measurement does not.
 
-    double min_speed_ms = 8.0;
+    double min_speed_ms = 8.0;  ///< Below this speed nothing is estimated [m/s].
 
-    double max_lateral_jerk = 0.8;
+    double max_lateral_jerk = 0.8;  ///< Samples during faster transients are dropped [m/s^3].
 
-    double max_innovation_deg = 8.0;
+    double max_innovation_deg = 8.0;  ///< Samples further than this from the estimate are outliers [deg].
 
-    double unconverged_std_deg = 10.0;
+    double unconverged_std_deg = 10.0;  ///< Reported spread before convergence [deg], so consumers can weight it down.
 
-    double sample_std_deg = 2.2;
+    double sample_std_deg = 2.2;  ///< Assumed noise of a single sample [deg].
   };
 
   RoadRollEstimator() = default;

@@ -6,7 +6,7 @@
 namespace adas {
 namespace lateral {
 /**
- * @brief Rate limit on the command between vision frames.
+ * \brief Rate limit on the command between vision frames.
  *
  * It sits after the planner rather than inside one: the planner decides where to go, and this cuts
  * the jump a driver would feel on the wheel, whichever strategy produced it.
@@ -17,11 +17,11 @@ namespace lateral {
 class SlewGuard {
 public:
   struct Config {
-    double limit_deg = 0.0;
-    double max_lateral_jerk = 5.0;
-    double rate_min_speed = 2.0;
-    double Lf = 2.67;
-    int max_gap_frames = 10;
+    double limit_deg = 0.0;         ///< Hard rate limit on the command [deg/s]; 0 leaves only the jerk bound.
+    double max_lateral_jerk = 5.0;  ///< Jerk bound the limit is derived from at speed [m/s^3].
+    double rate_min_speed = 2.0;    ///< Speed floor used in that derivation [m/s].
+    double Lf = 2.67;               ///< Lever arm converting a curvature step into an angle step [m].
+    int max_gap_frames = 10;        ///< Frames without a command after which the guard forgets its previous value.
   };
 
   SlewGuard() = default;

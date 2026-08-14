@@ -10,14 +10,14 @@ namespace adas {
 namespace lateral {
 /// Shared by every method: this describes the car, not the choice of method.
 struct KappaSolverConfig {
-  double wheelbase_m = 2.636;
-  double max_lateral_jerk = 5.0;
-  double steering_rate_weight = 1.0;
-  double steer_delay_s = 0.2;
+  double wheelbase_m = 2.636;         ///< Wheelbase [m].
+  double max_lateral_jerk = 5.0;      ///< Comfort bound on lateral jerk [m/s^3].
+  double steering_rate_weight = 1.0;  ///< Cost on steering rate.
+  double steer_delay_s = 0.2;         ///< Actuator delay compensated for [s].
 };
 
 /**
- * @brief Numerical method producing the desired curvature from the plan ahead.
+ * \brief Numerical method producing the desired curvature from the plan ahead.
  *
  * The swappable part of the fp planner: the methods solve one problem and differ only in cost and
  * accuracy.

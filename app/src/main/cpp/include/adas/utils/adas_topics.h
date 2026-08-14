@@ -11,18 +11,23 @@ namespace topics {
 inline constexpr const char* kVehicleChassis = "vehicle/chassis";
 inline constexpr const char* kVisionLanes = "vision/lanes";
 inline constexpr const char* kVisionPath = "vision/path";
-/** Готовая опорная линия на вход, минуя разбор разметки.
+/** \brief A ready-made reference path as input, bypassing lane-line parsing.
  *
- *  `kVisionPath` теперь публикует LaneKeep, поэтому подать ему линию по тому же топику нельзя —
- *  вышла бы петля. Стендам это нужно: реплей чужого лога и симулятор дают уже посчитанную линию,
- *  а не разметку, и выразить её через `LaneLines` невозможно — там нет ни `lane_anchored`, ни
- *  раздельных `polyline` и `plan_poly`. Пусто на машине: там линию строит сам LaneKeep. */
+ *  `kVisionPath` is published by the Planner now, so feeding a path in on the same topic would close a
+ *  loop. The harnesses need this: replaying a foreign log and running the simulator both yield a path
+ *  already computed rather than lane lines, and `LaneLines` cannot express it — it has neither
+ *  `lane_anchored` nor separate `polyline` and `plan_poly`. Empty in the car, where the Planner builds
+ *  the path itself. */
 inline constexpr const char* kVisionPathIn = "vision/path_in";
 inline constexpr const char* kGpsLocation = "sensors/gps/location";
 inline constexpr const char* kGpsData = "sensors/gps/data";
 inline constexpr const char* kImu = "sensors/imu";
 inline constexpr const char* kImuRaw = "sensors/imu_raw";
 inline constexpr const char* kImuYaw = "sensors/imu_yaw";
+/** \brief Lateral planner output: the desired curvature.
+ *
+ *  The plan-to-control interface, as upstream's `lateralPlan.desiredCurvature` is. */
+inline constexpr const char* kLatPlan = "control/lat_plan";
 inline constexpr const char* kLaneKeep = "control/lane_keep";
 inline constexpr const char* kLaneKeepDebug = "control/lane_keep_debug";
 inline constexpr const char* kLocalizationPose = "localization/pose";
@@ -38,6 +43,8 @@ inline constexpr const char* kTrafficDetections = "vision/traffic_dets";
 inline constexpr const char* kTrafficVision = "traffic/state";
 inline constexpr const char* kVehicleState = "vehicle/state";
 inline constexpr const char* kCanRx = "can/rx";
+/** \brief Received frames, for the record. `Platform` decodes and publishes them; they go out only to
+ *  be logged, since the chassis arrives as its own message and no service above reads frames itself. */
 inline constexpr const char* kPandaHealth = "panda/health";
 inline constexpr const char* kMiddlewareStats = "middleware/stats";
 inline constexpr const char* kMapLocal = "map/local";

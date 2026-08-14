@@ -110,37 +110,92 @@ struct MiddlewareSnapshot {
   std::vector<ServiceSnapshot> services_timing;
 };
 
+/**
+ * \brief Base class for everything that runs on the internal bus.
+ *
+ * \details A service declares what it subscribes to and what it publishes in `configure()`, and the
+ * manager owns its thread, its timers and its parameter registry. Nothing here knows about sockets: the
+ * same service runs on the phone, in a replay and in a unit test.
+ */
 class Service : public std::enable_shared_from_this<Service> {
 public:
   virtual ~Service() = default;
 
+  /// Name used in logs, in the stats message and to address parameters at this service.
   virtual std::string_view getName() const { return "service"; }
 
 protected:
   template <typename T>
+  /**
+   * \brief Publish a message on a topic.
+   *
+   * \tparam T Message type; subscribers asking for a different type on the same topic never see it.
+   * \param[in] topic Topic name, from `adas/utils/adas_topics.h` rather than a literal.
+   * \param[in] msg The message; it is copied into each subscriber's queue, so the caller keeps ownership.
+   */
   void publish(const std::string& topic, const T& msg);
 
   template <typename T>
+  /**
+   * \brief Subscribe to a topic. Call only from \ref configure.
+   *
+   * \tparam T Message type expected on the topic.
+   * \param[in] topic Topic name.
+   * \param[in] cb Called on this service's own thread, so it needs no locking against its own state.
+   * \param[in] queue_capacity Messages buffered before the oldest is dropped. Dropping is deliberate: a
+   * slow subscriber must not stall the publisher, and the loss shows up in the stats message.
+   */
   void subscribe(const std::string& topic, std::function<void(const T&)> cb,
                  std::size_t queue_capacity = kDefaultSubQueueCapacity);
 
+  /**
+   * \brief Run a callback periodically on this service's thread.
+   *
+   * \param[in] interval_ms Period [ms]. In simulated mode it counts virtual time, so a replay runs as
+   * fast as the CPU allows without changing what the service sees.
+   * \param[in] cb The callback; a tick is skipped rather than queued when the previous one is still running.
+   * \param[in] name Shown in the stats message; useful when a service has several timers.
+   */
   void scheduleTimer(uint64_t interval_ms, std::function<void()> cb, std::string name = {});
 
   template <typename T>
+  /**
+   * \brief Expose a field as a runtime knob, settable while driving.
+   *
+   * \param[in] name Knob name, unique across all services — two owners of one name is a registry clash.
+   * \param[in,out] field The field itself; written on this service's thread between callbacks.
+   * \return False when the name is already taken.
+   */
   bool registerParameter(const std::string& name, T& field);
 
   template <typename T>
+  /**
+   * \brief Expose a knob whose write needs more than an assignment.
+   *
+   * \param[in] name Knob name, unique across all services.
+   * \param[in] setter Applies the value — clamping it, or resetting a solver that caches it.
+   * \param[in] getter Reads the value back, so a host can show what is actually in force.
+   * \return False when the name is already taken.
+   */
   bool registerParameter(const std::string& name, std::function<void(const T&)> setter, std::function<T(void)> getter);
 
+  /// Messages waiting in this service's inbox. A number that keeps growing means the service is too slow.
   size_t getQueueSize() const;
 
   uint64_t now() const;
 
+  /// The manager's clock [ms] — wall time in real-time mode, virtual time in a replay.
   int64_t nowMs() const { return static_cast<int64_t>(now() / 1000); }
 
   Manager* middleware() const { return bus_; }
 
+  /**
+   * \brief Declare subscriptions, timers and parameters. Called once, before the service runs.
+   *
+   * \note Subscribing anywhere else races with the running threads.
+   */
   virtual void configure() = 0;
+  /// Drop accumulated state, keeping the configuration. Called when a replay rewinds or a run restarts.
   virtual void reset() {}
 
   virtual void onException(const std::exception& e, const std::string& context)
@@ -155,6 +210,13 @@ private:
   size_t slot_ = static_cast<size_t>(-1);
 };
 
+/**
+ * \brief Owns the services, the topics between them, and the clock they run on.
+ *
+ * \details Real-time mode gives each service a thread and drives timers off the wall clock. Simulated
+ * mode advances a virtual clock on `step()` instead, which is what makes an offline replay deterministic
+ * and as fast as the CPU allows. Services cannot tell the two apart.
+ */
 class Manager {
 public:
   enum class Mode { RealTime, Simulated };

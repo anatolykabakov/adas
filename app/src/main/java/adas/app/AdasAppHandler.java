@@ -63,6 +63,8 @@ public class AdasAppHandler extends Service {
 
     private UsbDeviceConnection pandaConnection;
     private boolean nativeStarted;
+    /** Дескриптор, с которым поднята нативная часть. -1 значит «без панды». */
+    private int startedFd = -1;
 
     private BroadcastReceiver usbReceiver = new BroadcastReceiver() {
         @Override
@@ -115,14 +117,16 @@ public class AdasAppHandler extends Service {
 
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
-            if (manager == null) {
-                return;
+            if (manager != null) {
+                HashMap<String, UsbDevice> deviceList = manager.getDeviceList();
+                Log.i(TAG, "Number of USB devices found: " + deviceList.size());
+                for (UsbDevice usbDevice : deviceList.values()) {
+                    maybeRequestUSBPermission(usbDevice, this);
+                }
             }
-            HashMap<String, UsbDevice> deviceList = manager.getDeviceList();
-            Log.i(TAG, "Number of USB devices found: " + deviceList.size());
-            for (UsbDevice usbDevice : deviceList.values()) {
-                maybeRequestUSBPermission(usbDevice, this);
-            }
+            // Панды нет — поднимаемся без неё. Планер, локализация, калибровка, зрение и запись от
+            // железа не зависят, а ждать панду значило бы не иметь стенда без машины вообще.
+            startNative(-1);
         }, 1500);
 
         Intent zmqIntent = new Intent(this, ZMQBridgeService.class);
@@ -161,6 +165,7 @@ public class AdasAppHandler extends Service {
             pandaConnection = null;
         }
         nativeStarted = false;
+        startedFd = -1;
 
         Intent zmqIntent = new Intent(this, ZMQBridgeService.class);
         stopService(zmqIntent);
@@ -197,7 +202,7 @@ public class AdasAppHandler extends Service {
     }
 
     private synchronized void openPandaAndStartNative(UsbManager usbManager, UsbDevice usbDevice) {
-        if (nativeStarted) {
+        if (nativeStarted && startedFd != -1) {
             Log.i(TAG, "Native panda already started — skip duplicate open");
             return;
         }
@@ -210,7 +215,31 @@ public class AdasAppHandler extends Service {
         pandaConnection = conn;
         int fd = conn.getFileDescriptor();
         Log.i(TAG, "USB Device FD: " + fd + " (connection retained)");
+        startNative(fd);
+    }
+
+    /** Поднять нативную часть на этом дескрипторе.
+     *
+     *  Панда может прийти позже стенда: тогда живой процесс без неё останавливается и поднимается
+     *  заново уже с дескриптором. Сервисы стороны машины создаются один раз при старте, и подсунуть
+     *  им железо на ходу нельзя — перезапуск честнее, чем половина живого приложения. */
+    private synchronized void startNative(int fd) {
+        if (nativeStarted) {
+            if (fd == -1 || startedFd == fd) {
+                return;
+            }
+            Log.i(TAG, "Panda arrived after start — restarting native with fd=" + fd);
+            if (nativeLoaded) {
+                try {
+                    nativeStop();
+                } catch (Throwable t) {
+                    Log.w(TAG, "nativeStop failed", t);
+                }
+            }
+        }
         nativeStarted = true;
+        startedFd = fd;
+        Log.i(TAG, fd == -1 ? "Starting native without a panda (bench mode)" : "Starting native with panda fd=" + fd);
         new Thread(new AdasAppInstance(fd, dbcPath, configPath, mapPath), "AdasNative").start();
     }
 

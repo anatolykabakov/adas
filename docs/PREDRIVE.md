@@ -191,7 +191,7 @@ controller.
 
 ### What the last drive established, so this one does not re-ask it
 
-`lat_always_on` stays **true** — it is the baseline now, not a variable. On run `2026_08_07_19_04_05`:
+Always-on lateral (ALKA) is unconditional in the code — not a variable. On run `2026_08_07_19_04_05`:
 `alternative_experience = 17`, `tx_blocked` never incremented over 50.2 min, and `controls_allowed` was
 **0.0 %** for the whole drive, so every actuated frame came from bit 16. Assist presence went 2.6 → **79.1 %**
 at 5–8 m/s, 18.3 → **91.9 %** at 8–12, 65 → **99.9 %** at 12–16.
@@ -215,7 +215,6 @@ how often the plan is refreshed.
 |---|---|---|
 | camera AE (code, unconditional) | on | fixed fps range + metering region on the road |
 | `vision.nnapi_fp16` | **false → true** | inference in half precision |
-| `vehicle.lat_recompute_setpoint` | **false → true** | setpoint follows current speed between vision frames |
 
 **The camera fix and fp16 are one change with two halves, and testing either alone gives a null result.**
 Measured on run `2026_08_07_19_04_05`: pipeline work is 7.4 ms prep + 44.7 ms inference = **52 ms**, the camera
@@ -234,13 +233,7 @@ fp16 itself was verified offline before today (`bag_fp16_ab.py`, 200 frames): la
 offset 0.037 m, line probabilities *rose* and the σ tail shrank. Not free — frame-to-frame divergence is
 0.05 m median, 0.20 m p95 — but no degradation.
 
-**`lat_recompute_setpoint` rides along, and it is separable in the bag.** It changes `desired_swa_deg` between
-vision frames, which nothing else does: with it off the setpoint is constant between frames by construction.
-So the fraction of chassis ticks where the setpoint moved without a new frame attributes it exactly, and
-`interval_ms` / `infer_ms` attribute the other two. That is the real constraint the drive discipline should
-enforce — every change leaves an independent trace — and the test now says so
-(`ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime`), instead of the blanket count it had this morning,
-which counted the already-answered `lat_always_on` as a variable and would have blocked every future drive.
+**The lateral control law now runs in `Control` at a fixed 100 Hz** (upstream `Ratekeeper(100)`), so the setpoint follows current speed between vision frames by construction. The old `lat_recompute_setpoint` flag, which emulated this inside the planner, no longer exists.
 
 **What still cannot share a drive:** two changes to the command for the *same* reference. `use_learned_params`
 therefore stays off.
@@ -279,7 +272,7 @@ AE: exposure 8.3 ms, frame duration 33.3 ms (30.0 fps), iso 400     ← every 5 
 | fp16 | `infer_ms` | it does not drop below ~30 ms; then the NNAPI path silently fell back to CPU |
 | setpoint recompute | fraction of chassis ticks where `desired_swa_deg` moved with no new vision frame | that fraction stays ~0 — the flag did not reach the service |
 
-**`lat_require_assist` stays on**, so with `lat_always_on` also on the gate should almost never close. The
+**The assist gate is unconditional**, and with always-on lateral it should almost never close. The
 ten-second reverse-gear check below is still the only thing that exercises it end to end.
 
 ## Artefact verification (done, 2026-08-07 23:35)
@@ -287,11 +280,11 @@ ten-second reverse-gear check below is still the only thing that exercises it en
 | check | result |
 |---|---|
 | C++ tests | **188 passed**, 1 skipped (`ZMQIMUTest`, needs a running app) |
-| drive-discipline test | `ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime` passes — only `lat_recompute_setpoint` is on in that set |
+| drive-discipline test | `ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime` passes — nothing in the command-changing set is on |
 | native lib | rebuilt **23:35**; the binding added for the offline harness was the only source newer than the previous lib, and functionally irrelevant to the app — rebuilt anyway, because "irrelevant, probably" is how a stale lib ships |
 | lib inside the APK | sha256 `b0a678ae6c0383b46a869635…`, byte-identical to disk |
 | camera change inside the APK | 3 marker strings in `classes*.dex` (`AE metering on road`, `AE fps ranges available`, `AE: exposure`) |
-| `config.json` inside the APK | `nnapi_fp16 **true**`, `lat_recompute_setpoint **true**`, `lat_always_on true`, `lat_require_assist true`, `use_learned_params false`, `learn_vehicle_params true`, `cruise_buttons false` |
+| `config.json` inside the APK | `nnapi_fp16 **true**`, `cruise_buttons false`. Always-on lateral, the assist gate, the parameter learner and the controller reading it are no longer switches: they are unconditional in the code as of 2026-08-13, and the config no longer carries them |
 | APK signature | signer SHA-256 `79836abfcbc278ce270d2a68…`, matches `~/.android/debug.keystore` |
 
 That signature row is not paranoia: a container build that created its own debug keystore once forced an

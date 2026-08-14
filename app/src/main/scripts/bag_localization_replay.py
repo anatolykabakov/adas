@@ -71,35 +71,22 @@ def load_inputs(bag: Path):
     return gps, gx, gy, stream
 
 
-def replay(gps, gx, gy, stream, gate_m: float, scale_noise: bool):
+def replay(gps, gx, gy, stream, gate_m: float, scale_noise: bool = True):
     app = pyadas.PyAdasApp()
     app.set_param("gps_max_accuracy_m", float(gate_m))
-    app.set_param_str("gps_scale_noise_by_accuracy", "true" if scale_noise else "false")
+    # Взвешивание шума позиции по точности фикса больше не переключается — оно безусловно.
     app.reset_localization()
 
     t_out, x_out, y_out = [], [], []
     for ts, kind, payload in stream:
         if kind == "gps":
-            g = gps[payload][1]
-            bearing = float(g.bearing)
-            yaw_enu = np.radians(90.0 - bearing)
-            spd = float(g.speed)
-            app.publish_gps(
-                int(ts) * 1000,
-                float(gx[payload]),
-                float(gy[payload]),
-                spd,
-                bearing,
-                yaw_enu,
-                spd * np.cos(yaw_enu),
-                spd * np.sin(yaw_enu),
-                spd > 1.0,
-                True,
-                float(g.horizontal_accuracy),
-                int(g.satellites_used),
-            )
+            # Фикс уходит как есть, в градусах: сервис локализации сам проецирует его в метры своей
+            # `gps_proj_`. Подавать сюда уже спроецированные метры значило кормить фильтр не тем
+            # сообщением — подписчика на такое нет, и ГНСС до фильтра просто не доходил.
+            app.publish_gps_location(gps[payload][1].SerializeToString())
         elif kind == "imu":
-            app.publish_imu(int(ts) * 1000, float(getattr(payload, IMU_YAW_AXIS)))
+            # Сырой IMU: `publish_imu` кладёт готовую скорость рыска в топик, который никто не слушает.
+            app.publish_imu_data(payload.SerializeToString())
         else:
             # steer_rad must be real: the filter gates the gyro on agreement with the bicycle-model yaw
             # rate (|yr - yr_bicycle| < 0.35 rad/s), so a zero steering angle pins that estimate to zero
