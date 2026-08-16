@@ -1,9 +1,9 @@
-#include "adas/lateral/pp_planner.hpp"
+#include "adas/lateral/pp_planner.h"
 
 #include <algorithm>
 #include <cmath>
 
-#include "adas/lateral/limits.hpp"
+#include "adas/lateral/limits.h"
 #include "adas/utils/path_lateral_state.h"
 
 namespace adas {

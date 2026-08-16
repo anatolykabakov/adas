@@ -117,8 +117,8 @@ Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`
 ## Typical student workflow
 
 1. Record or download a session under `adas_logs/...`.
-2. Run `latency.py`, bag visualizer, PlotJuggler — establish Hz / e2e.
-3. Sweep parameters (`bag_config_sweep.py`) at a **fixed** assumed vision latency.
+2. Run `tools/latency.py`, bag visualizer, PlotJuggler — establish Hz / e2e.
+3. Sweep parameters (`bag/bag_config_sweep.py`) at a **fixed** assumed vision latency.
 4. Only then open `LaneKeepService` / `PurePursuit` source with Control chapters in hand.
 
 ```{tip}

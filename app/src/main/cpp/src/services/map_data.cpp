@@ -194,7 +194,7 @@ void MapData::onTick()
   in.map_y = y;
   in.yaw = yaw;
   in.speed_mps = speed;
-  in.build_ms = build_us / 1000.0;
+  in.build_ms = static_cast<double>(build_us) / 1000.0;
   in.route_step_m = config_.route.step_m;
   in.route = &route_;
 
@@ -212,7 +212,7 @@ void MapData::onTick()
   publish(topics::kMapLocal, msg);
 
   if (++ticks_ % 600 == 0)
-    logProgress(build_us / 1000.0);
+    logProgress(static_cast<double>(build_us) / 1000.0);
 }
 
 double MapData::yawWithHold(double yaw, double speed_mps)

@@ -1,7 +1,7 @@
 #include "adas/services/planner.h"
 
-#include "adas/lateral/convert.hpp"
-#include "adas/lateral/limits.hpp"
+#include "adas/lateral/convert.h"
+#include "adas/lateral/limits.h"
 #include "adas/utils/proto_convert.h"
 
 #include <cmath>
@@ -100,6 +100,9 @@ void Planner::registerParameters()
   registerParameter<double>(
       "tire_stiffness_factor", [this](const double& v) { setTireStiffnessFactor(v); },
       [this] { return config_.tire_stiffness_factor; });
+  registerParameter<bool>(
+      "lat_use_vehicle_model", [this](const bool& v) { setVehicleModel(v, config_.tire_stiffness_factor); },
+      [this] { return config_.lat_use_vehicle_model; });
   registerParameter<double>(
       "fp_steer_delay_s", [this](const double& v) { setFpSteerDelayS(v); },
       [this] { return config_.fp_steer_delay_s; });
@@ -244,11 +247,7 @@ void Planner::longTick()
   in.v_ego = std::max(0.0, chassis_.speed_mps);
   in.path = path_.size() >= 3 ? &path_ : nullptr;
 
-  const auto& lead = model_long_.lead0();
-  in.lead.prob = lead.prob();
-  in.lead.d_rel = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
-  in.lead.v_lead = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
-  in.lead.y_rel = lead.y_rel();
+  in.lead = leadFromModel(model_long_);
 
   in.plan_v.valid = model_long_.plan_v_x_size() > 0 || model_long_.plan_v0() != 0.0;
   in.plan_v.v_plan = model_long_.plan_v_x_size() > 0 ? model_long_.plan_v_x(0) : model_long_.plan_v0();

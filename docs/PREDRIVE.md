@@ -82,7 +82,7 @@ not only at low ones; that part of the diagnosis was a surprise and is the large
 
 ### What could not be verified before driving, and why
 
-`bag_feedforward_ab.py` replays the inner loop over the recorded drive, but **open loop**: the recorded
+`bag/bag_feedforward_ab.py` replays the inner loop over the recorded drive, but **open loop**: the recorded
 actual SWA is what the car did under the *old*, insufficient torque. With more torque it would have turned
 further and the error would have been smaller, so the replay **over-estimates** the new command. Its
 ceiling-occupancy numbers (49 → 72 % on 83–167 m) are an upper bound, not a prediction, and the harness
@@ -437,36 +437,36 @@ accepted samples, and a sample is accepted at v ≥ 5 m/s with |SWA| ≤ 45° in
 ## After the drive, in this order
 
 ```bash
-cd app/src/main/scripts
-NEW=../../../../adas_logs/<new_run>
-OLD=../../../../adas_logs/2026_08_06_18_27_12      # the baseline for assist presence
+cd scripts
+NEW=../adas_logs/<new_run>
+OLD=../adas_logs/2026_08_06_18_27_12      # the baseline for assist presence
 
 # 0. Did the pipeline stay healthy at all — frame rate, drops, stage latency.
-python3 bag_middleware_stats.py $NEW
-python3 latency.py $NEW
+python3 bag/bag_middleware_stats.py $NEW
+python3 tools/latency.py $NEW
 
 # 1. The gate question, and it comes first because everything else is conditional on it.
 #    tx_blocked must be flat at 0; alternative_experience must read 17; and the assist must be present in
 #    the 5-12 m/s bands where run 08-06 had 2.6 % and 18.3 %.
-python3 bag_topdown_video.py $NEW --list-assist
-python3 bag_override_episodes.py $NEW      # HCA_01.HCA_Active from the bus, independent of our own flags
+python3 bag/bag_topdown_video.py $NEW --list-assist
+python3 bag/bag_override_episodes.py $NEW      # HCA_01.HCA_Active from the bus, independent of our own flags
 
 # 2. Steering quality restricted to frames that were actually actuated — the comparison that was never
 #    honest before. Same script on both bags; on the old one it will cover far fewer frames, which is
 #    itself the result.
-python3 bag_controller_ab.py $NEW
-python3 bag_controller_ab.py $OLD
+python3 bag/bag_controller_ab.py $NEW
+python3 bag/bag_controller_ab.py $OLD
 
 # 3. Arc offset, at the shipped window. Read it as this drive's baseline rather than as a comparison:
 #    with the assist present in frames that used to be excluded, it is not measuring the same population.
-python3 bag_arc_offset.py $NEW --std-range 20 --blend 0.6 --std-good 0.3 --std-bad 1.5 \
+python3 bag/bag_arc_offset.py $NEW --std-range 20 --blend 0.6 --std-good 0.3 --std-bad 1.5 \
     --center-force 0.0 --weight-by-std --cache /tmp/new20.npz
 
 # 4. Perception σ — unaffected by actuation, so this one *is* comparable across drives.
-python3 bag_lane_sigma_ab.py $NEW $OLD
+python3 bag/bag_lane_sigma_ab.py $NEW $OLD
 
 # 5. The observer: what did it learn live, and does it agree with the offline replay?
-python3 bag_params_learner.py $NEW
+python3 bag/bag_params_learner.py $NEW
 ```
 
 Step 1 carries the weight, and it is the one step where a negative answer ends the analysis: if the panda was
@@ -477,12 +477,12 @@ actuated population, so a drive-to-drive delta mixes "steers better" with "steer
 comparison is within this bag: actuated frames at 5–12 m/s against actuated frames at 16–22 m/s, where the old
 drive already had 87 % presence and therefore a trustworthy number.
 
-`bag_arc_offset.py --std-range` matters here even though the window is not the variable this time: it used to
+`bag/bag_arc_offset.py --std-range` matters here even though the window is not the variable this time: it used to
 take the median σ over the *whole* lane line, which is a different number from the one the controller gates on,
 and an analysis that disagrees with the running code cannot be used to judge that code. Pass 20 to match what
 ships.
 
-Step 5 has two halves worth keeping apart. `bag_params_learner.py` replays the *Python mirror* of the filter;
+Step 5 has two halves worth keeping apart. `bag/bag_params_learner.py` replays the *Python mirror* of the filter;
 the bag also carries what the *C++* filter published live, in
 `localization/pose.learned_stiffness_factor`. They should agree closely — if they do not, one of the two
 transcriptions is wrong and that is a finding in itself.
@@ -502,7 +502,7 @@ Consequences for the criteria below:
 * the **perception** numbers — σ, σ p90, σ veto, blending weight — are unaffected. They are computed from
   `vision/lanes` and do not depend on actuation;
 * the **arc-offset / tracking** numbers are contaminated and must be recomputed restricted to frames where
-  `HCA_01.HCA_Active` is set on the bus. Until `bag_arc_offset.py` gates on that, treat its tracking columns
+  `HCA_01.HCA_Active` is set on the bus. Until `bag/bag_arc_offset.py` gates on that, treat its tracking columns
   as a lower bound on how well the controller actually steers;
 * so a drive that shows "worse arcs" may only be showing "less cruise engaged", which is a property of the
   route and the driver's right foot, not of any knob in this file.
@@ -545,7 +545,7 @@ Two things changed since:
   bag rather than reconstructed from `panda/health` timing;
 * with `lat_always_on` on, most frames should be actuated, so the mixture stops being the dominant term.
 
-`bag_arc_offset.py` still does not gate on actuation. Until it does, use `assist_allowed` from the debug topic
+`bag/bag_arc_offset.py` still does not gate on actuation. Until it does, use `assist_allowed` from the debug topic
 to filter before reading its tracking columns — and the analysis helper `vis.bag_io.lateral_actuation_on`
 exists for exactly this, taking `lat_actuation_allowed` when present and falling back to `controls_allowed`
 for older bags.

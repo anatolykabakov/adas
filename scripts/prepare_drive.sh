@@ -134,7 +134,7 @@ cat <<'PLAN'
   статус `brake_needed` — это просьба к водителю, а не команда.
 
 === что проверять после
-  ./app/src/main/scripts/bag_arc_offset.py <бег> --blend <из лога> --shift 0.05 \
+  ./scripts/bag/bag_arc_offset.py <бег> --blend <из лога> --shift 0.05 \
       --std-good 0.3 --std-bad 1.5 --width-max 4.6 --weight-by-std
   * левая дуга: было +0.23 при tsf 0.50, ошибка слежения +0.21;
   * правые дуги: смотреть не итог, а колонку σ worst и d — при σ > 1.5 подмешивание отключается и

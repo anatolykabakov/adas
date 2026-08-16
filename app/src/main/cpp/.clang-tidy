@@ -1,0 +1,83 @@
+---
+
+# Checks: families first, exclusions after. clang-tidy resolves globs with "last match wins", so a
+# family listed a second time silently re-enables everything excluded above it — which is how
+# misc-const-correctness and misc-non-private-member-variables-in-classes were live despite being
+# excluded. One entry per line, one comma per line: two exclusions were once glued to their neighbour
+# by a missing comma and never applied at all.
+Checks: >-
+    -*,
+    android-*,
+    bugprone-*,
+    clang-*,
+    clang-analyzer-*,
+    cppcoreguidelines-*,
+    google-*,
+    misc-*,
+    modernize-*,
+    performance-*,
+    portability-*,
+    readability-*,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-unchecked-optional-access,
+    -clang-diagnostic-unused-command-line-argument,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-pro-type-reinterpret-cast,
+    -google-readability-avoid-underscore-in-googletest-name,
+    -misc-confusable-identifiers,
+    -misc-const-correctness,
+    -misc-non-private-member-variables-in-classes,
+    -modernize-pass-by-value,
+    -modernize-use-equals-delete,
+    -modernize-use-nodiscard,
+    -modernize-use-trailing-return-type,
+    -readability-else-after-return,
+    -readability-identifier-length,
+    -readability-magic-numbers,
+    -readability-use-anyofallof,
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: ''
+FormatStyle:     google
+
+CheckOptions:
+  # The do/while wrapper is the only way to make a multi-statement macro a single statement, so
+  # the guideline does not apply where the macro body needs it.
+  - key: cppcoreguidelines-avoid-do-while.IgnoreMacros
+    value: 'true'
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: '_'
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: k
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+  - key: readability-identifier-naming.TypeTemplateParameterCase
+    value: CamelCase

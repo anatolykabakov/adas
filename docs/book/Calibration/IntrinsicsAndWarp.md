@@ -32,10 +32,10 @@ Two focal lengths and a principal point, four numbers. A chessboard of known geo
 enough angles, over-determines them, and OpenCV solves for them along with lens distortion.
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # From a directory of stills, or straight from a recorded drive that happened to include the board.
-python3 camera_calib_chessboard.py --images ~/calib_shots --pattern 9x6
-python3 camera_calib_chessboard.py --bag ../../../../adas_logs/<session> --pattern 9x6
+python3 tools/camera_calib_chessboard.py --images ~/calib_shots --pattern 9x6
+python3 tools/camera_calib_chessboard.py --bag ../adas_logs/<session> --pattern 9x6
 ```
 
 `--pattern` counts **inner** corners, so a board with 10×7 squares is `9x6`. The script also enforces view
@@ -104,7 +104,7 @@ print("offset within a minute of driving. Correcting it in the intrinsics as wel
 ```
 
 Verified rather than assumed: fixing $c_x, c_y$ **without** resetting the extrinsics estimate doubled lane
-$\sigma$ from 0.25 to 0.55, measured on 90 frames with `bag_intrinsics_ab.py`. The two corrections were
+$\sigma$ from 0.25 to 0.55, measured on 90 frames with `bag/bag_intrinsics_ab.py`. The two corrections were
 fighting each other. Fixing the principal point only makes sense together with a calibration reset, and even
 then it does not improve $\sigma$ — it just moves the same information from one place to another.
 

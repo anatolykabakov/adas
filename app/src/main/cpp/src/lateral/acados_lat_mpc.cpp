@@ -1,4 +1,4 @@
-#include "adas/lateral/acados_lat_mpc.hpp"
+#include "adas/lateral/acados_lat_mpc.h"
 
 #include <algorithm>
 #include <array>
@@ -16,8 +16,8 @@ namespace {
 constexpr int kN = LAT_N;
 constexpr int kNx = LAT_NX;
 constexpr int kNp = LAT_NP;
-constexpr int kCostDim = 5;
-constexpr int kCostDimE = 3;
+constexpr std::size_t kCostDim = 5;
+constexpr std::size_t kCostDimE = 3;
 constexpr double kSpeedOffset = 10.0;
 constexpr double kMinSpeed = 0.1;
 
@@ -72,14 +72,14 @@ void AcadosLatMpc::setWeights(const Weights& w)
     return;
   std::array<double, kCostDim * kCostDim> W{};
   const std::array<double, kCostDim> diag = {w.path, w.heading, w.lat_accel, w.lat_jerk, w.steering_rate};
-  for (int i = 0; i < kCostDim; ++i)
-    W[i * kCostDim + i] = diag[i];
+  for (std::size_t i = 0; i < kCostDim; ++i)
+    W[(i * kCostDim) + i] = diag[i];
   for (int i = 0; i < kN; ++i)
     ocp_nlp_cost_model_set(impl_->cfg, impl_->dims, impl_->in, i, "W", W.data());
 
   std::array<double, kCostDimE * kCostDimE> We{};
-  for (int i = 0; i < kCostDimE; ++i)
-    We[i * kCostDimE + i] = diag[i];
+  for (std::size_t i = 0; i < kCostDimE; ++i)
+    We[(i * kCostDimE) + i] = diag[i];
   ocp_nlp_cost_model_set(impl_->cfg, impl_->dims, impl_->in, kN, "W", We.data());
 }
 

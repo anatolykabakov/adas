@@ -253,18 +253,8 @@ private:
     return cfg_.steer_ratio_max > 0.0 ? cfg_.steer_ratio_max : 2.0 * cfg_.steer_ratio_init;
   }
 
-  void baseStiffness(double& cF, double& cR) const
-  {
-    constexpr double kCivicMass = 1326.0 + 136.0;
-    constexpr double kCivicWheelbase = 2.70;
-    constexpr double kCivicC2F = kCivicWheelbase * 0.4;
-    constexpr double kCivicC2R = kCivicWheelbase - kCivicC2F;
-    const double wb = cfg_.vehicle.wheelbase_m;
-    const double aF = wb * cfg_.vehicle.center_to_front_frac;
-    const double aR = wb - aF;
-    cF = 192150.0 * cfg_.vehicle.mass_kg / kCivicMass * (aR / wb) / (kCivicC2R / kCivicWheelbase);
-    cR = 202500.0 * cfg_.vehicle.mass_kg / kCivicMass * (aF / wb) / (kCivicC2F / kCivicWheelbase);
-  }
+  /// Cornering stiffness at factor 1.0 — the base the estimated factor multiplies.
+  void baseStiffness(double& cF, double& cR) const { referenceStiffness(cfg_.vehicle, 1.0, cF, cR); }
 
   Vec derivative(const Vec& x) const
   {

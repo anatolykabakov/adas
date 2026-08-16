@@ -24,6 +24,29 @@ public final class RuntimeParams {
     public float camX = 1.50f;
     public float camY = 0f;
 
+    /**
+
+     * Take the focal length from the camera itself and keep {@code intrinsics_prior} as a fallback.
+
+     *
+
+     * <p>Worth turning off where the prior came from a chessboard calibration on this same phone:
+
+     * what was measured beats the factory value from the camera characteristics.
+
+     */
+
+    public boolean intrinsicsFromDevice = true;
+
+    /**
+     * The phone model {@code intrinsics_prior} was taken on, from the {@code device} field inside it.
+     *
+     * <p>Without it, "ours, calibrated" and "foreign, inherited from a previous phone" are
+     * indistinguishable — and the numbers look equally plausible either way.
+     */
+    public String intrinsicsPriorDevice = "";
+
+
     public float fx = 930f;
     public float fy = 930f;
     public float cx = 640f;
@@ -114,8 +137,10 @@ public final class RuntimeParams {
                     p.pitchDeg = (float) rpy.optDouble("pitch", p.pitchDeg);
                     p.yawDeg = (float) rpy.optDouble("yaw", p.yawDeg);
                 }
+                p.intrinsicsFromDevice = cam.optBoolean("intrinsics_from_device", p.intrinsicsFromDevice);
                 JSONObject intr = cam.optJSONObject("intrinsics_prior");
                 if (intr != null) {
+                    p.intrinsicsPriorDevice = intr.optString("device", p.intrinsicsPriorDevice);
                     p.fx = (float) intr.optDouble("fx", p.fx);
                     p.fy = (float) intr.optDouble("fy", p.fy);
                     p.cx = (float) intr.optDouble("cx", p.cx);
@@ -129,6 +154,57 @@ public final class RuntimeParams {
             Log.w(TAG, "parse failed", e);
         }
         return p;
+    }
+
+    /**
+     * Replace the config in filesDir atomically.
+     *
+     * <p>Through a temporary file and a rename: the config is read by both the app and the native
+     * side, and an interrupted write would leave half a JSON that nothing starts from.
+     */
+    private static void writeConfig(Context context, JSONObject root) throws Exception {
+        File out = configFile(context);
+        File tmp = new File(out.getParentFile(), out.getName() + ".tmp");
+        byte[] bytes = root.toString(2).getBytes(StandardCharsets.UTF_8);
+        try (FileOutputStream fos = new FileOutputStream(tmp);
+             FileChannel ch = fos.getChannel()) {
+            fos.write(bytes);
+            fos.flush();
+            ch.force(true);
+        }
+        if (!tmp.renameTo(out)) {
+            if (out.exists() && !out.delete()) {
+                throw new Exception("Cannot replace " + out.getAbsolutePath());
+            }
+            if (!tmp.renameTo(out)) {
+                throw new Exception("Atomic rename failed for " + out.getAbsolutePath());
+            }
+        }
+        Log.i(TAG, "Saved " + out.getAbsolutePath());
+    }
+
+    /**
+     * Write the selected car into `vehicle.name` without touching the rest of the config.
+     *
+     * <p>Separate from {@link #save}: that one writes the whole parameter set from memory, while the
+     * make is changed in the panel before those parameters belong to the new car. A targeted edit of
+     * one field.
+     *
+     * @param context Application context.
+     * @param carName A name from {@link AdasConfig#CARS}.
+     */
+    public static void setCarName(Context context, String carName) throws Exception {
+        JSONObject root = readJson(context);
+        if (root == null) {
+            throw new IllegalStateException("config is not readable");
+        }
+        JSONObject veh = root.optJSONObject("vehicle");
+        if (veh == null) {
+            veh = new JSONObject();
+            root.put("vehicle", veh);
+        }
+        veh.put("name", carName);
+        writeConfig(context, root);
     }
 
     public void save(Context context) throws Exception {
@@ -207,24 +283,7 @@ public final class RuntimeParams {
 
         root.put("supercombo_asset", supercomboAsset);
 
-        File out = configFile(context);
-        File tmp = new File(out.getParentFile(), out.getName() + ".tmp");
-        byte[] bytes = root.toString(2).getBytes(StandardCharsets.UTF_8);
-        try (FileOutputStream fos = new FileOutputStream(tmp);
-             FileChannel ch = fos.getChannel()) {
-            fos.write(bytes);
-            fos.flush();
-            ch.force(true);
-        }
-        if (!tmp.renameTo(out)) {
-            if (out.exists() && !out.delete()) {
-                throw new Exception("Cannot replace " + out.getAbsolutePath());
-            }
-            if (!tmp.renameTo(out)) {
-                throw new Exception("Atomic rename failed for " + out.getAbsolutePath());
-            }
-        }
-        Log.i(TAG, "Saved " + out.getAbsolutePath());
+        writeConfig(context, root);
     }
 
     private static JSONObject readJson(Context context) {

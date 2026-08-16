@@ -1,7 +1,8 @@
-#include "adas/lateral/flowpilot_mpc.hpp"
+#include "adas/lateral/flowpilot_mpc.h"
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
 
 namespace adas {
@@ -15,6 +16,29 @@ constexpr double kInvalidCost = 20000.0;
 
 inline double clampd(double v, double lo, double hi) { return std::max(lo, std::min(hi, v)); }
 inline double lerp(double a, double b, double t) { return a + (b - a) * t; }
+
+/**
+ * \brief Locate an arc length on a polyline: the segment it falls in, and how far along it sits.
+ *
+ * \details Every reference here is sampled the same way — walk the cumulative lengths, then blend the
+ * two endpoints. Only the quantity being blended differs, so the search lives in one place: two copies
+ * of it would let the epsilon or the clamp drift apart between the position reference and the yaw one.
+ *
+ * \param[in] s Cumulative arc length, non-decreasing, at least two entries.
+ * \param[in] dist Arc length to locate [m]; clamped to the polyline.
+ * \return Index of the segment end, and the fraction in [0, 1] from its start. A degenerate segment
+ *         gives fraction 0, which pins the result to the segment start instead of dividing by zero.
+ */
+std::pair<std::size_t, double> arcLengthAt(const std::vector<double>& s, double dist)
+{
+  const std::size_t n = s.size();
+  dist = clampd(dist, 0.0, s.back());
+  std::size_t i = 1;
+  while (i + 1 < n && s[i] < dist)
+    ++i;
+  const double s0 = s[i - 1], s1 = s[i];
+  return {i, (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0};
+}
 
 }  // namespace
 
@@ -64,12 +88,7 @@ void LateralMpc::buildRefs(const std::vector<Vec2>& poly_left, double v, std::ar
     return;
 
   auto sample = [&](double dist, double& y, double& psi) {
-    dist = clampd(dist, 0.0, s_end);
-    size_t i = 1;
-    while (i + 1 < n && s[i] < dist)
-      ++i;
-    const double s0 = s[i - 1], s1 = s[i];
-    const double a = (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0;
+    const auto [i, a] = arcLengthAt(s, dist);
     y = lerp(poly_left[i - 1].y(), poly_left[i].y(), a);
     psi = lerp(heading[i - 1], heading[i], a);
   };
@@ -104,7 +123,7 @@ void LateralMpc::buildRefsWithOrientation(const std::vector<Vec2>& poly_left, do
     buildRefs(y_src, v, y_ref, psi_unused, r_unused);
   }
 
-  if (plan_yaw_left.size() >= static_cast<size_t>(N + 1) && plan_yaw_rate_left.size() >= static_cast<size_t>(N + 1)) {
+  if (plan_yaw_left.size() >= static_cast<size_t>(N) + 1 && plan_yaw_rate_left.size() >= static_cast<size_t>(N) + 1) {
     for (int i = 0; i <= N; ++i) {
       psi_ref[i] = plan_yaw_left[static_cast<size_t>(i)];
       r_ref[i] = plan_yaw_rate_left[static_cast<size_t>(i)];
@@ -128,12 +147,7 @@ void LateralMpc::buildRefsWithOrientation(const std::vector<Vec2>& poly_left, do
     return;
 
   auto interp_at = [&](double dist, const std::vector<double>& vals) {
-    dist = clampd(dist, 0.0, s_end);
-    size_t i = 1;
-    while (i + 1 < n && s[i] < dist)
-      ++i;
-    const double s0 = s[i - 1], s1 = s[i];
-    const double a = (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0;
+    const auto [i, a] = arcLengthAt(s, dist);
     return lerp(vals[i - 1], vals[i], a);
   };
 

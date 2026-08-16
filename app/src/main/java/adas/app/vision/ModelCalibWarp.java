@@ -25,6 +25,8 @@ public final class ModelCalibWarp {
             1, 0, 0
     };
 
+    private static final String TAG = "ModelCalibWarp";
+
     private static volatile Boolean nativeWarpOk;
 
     private ModelCalibWarp() {}
@@ -54,6 +56,159 @@ public final class ModelCalibWarp {
      */
     private static native boolean nativeWarpYuvToFrame6(
             byte[] y, byte[] u, byte[] v, int width, int height, float[] mModelToCam, float[] out6);
+
+    /** Both warps in one go on the GPU. Implemented in libthneedrunner. */
+    private static native boolean nativeWarpPairGpu(
+            byte[] y, byte[] u, byte[] v, int width, int height,
+            float[] mNarrow, float[] mWide, float[] outNarrow, float[] outWide);
+
+    private static volatile Boolean gpuWarpOk;
+    /** GPU-versus-CPU check runs once: past that, this check is the only thing to trust. */
+    private static volatile boolean gpuWarpChecked;
+
+    /** Largest tolerated difference from the CPU version, in luminance units (0..255). */
+    private static final float GPU_WARP_TOLERANCE = 1.0f;
+
+    private static boolean ensureGpuWarp() {
+        Boolean ok = gpuWarpOk;
+        if (ok != null) {
+            return ok;
+        }
+        synchronized (ModelCalibWarp.class) {
+            if (gpuWarpOk != null) {
+                return gpuWarpOk;
+            }
+            try {
+                System.loadLibrary("thneedrunner");
+                gpuWarpOk = true;
+            } catch (Throwable e) {
+                android.util.Log.w(TAG, "libthneedrunner unavailable — the warp stays on the CPU");
+                gpuWarpOk = false;
+            }
+            return gpuWarpOk;
+        }
+    }
+
+    /**
+     * Prepare both model frames — narrow and wide — in one go.
+     *
+     * <p>On the GPU this is one and a half million independent bilinear samples, exactly the work it
+     * exists for. On the CPU the same two warps cost 12 ms out of 30 per frame.
+     *
+     * <p>The first call additionally computes the same thing on the CPU and compares. A wrong warp
+     * does not crash and gives nothing away: the model receives a plausible-looking picture and
+     * returns plausible-looking numbers, just not about this road. The check costs one frame per
+     * start.
+     */
+    public static void warpPair(YuvFrame src, float[] mNarrow, float[] mWide,
+                                float[] outNarrow, float[] outWide) {
+        if (ensureGpuWarp()) {
+            try {
+                if (nativeWarpPairGpu(src.y, src.u, src.v, src.width, src.height,
+                        mNarrow, mWide, outNarrow, outWide)) {
+                    if (!gpuWarpChecked) {
+                        gpuWarpChecked = true;
+                        boolean ok = verifyAgainstCpu(src, mNarrow, outNarrow, "narrow");
+                        ok &= verifyAgainstCpu(src, mWide, outWide, "wide");
+                        if (!ok) {
+                            // The frame the check disagreed on must not reach the model: it is
+                            // already in the output arrays, and returning now would feed the net
+                            // exactly what we just declared wrong. Recompute it on the CPU.
+                            gpuWarpOk = false;
+                            warpYuvToFrame6(src, mNarrow, outNarrow);
+                            warpYuvToFrame6(src, mWide, outWide);
+                            lastFocusScore = focusScore(outNarrow);
+                            return;
+                        }
+                    }
+                    lastFocusScore = focusScore(outNarrow);
+                    return;
+                }
+            } catch (UnsatisfiedLinkError e) {
+                gpuWarpOk = false;
+            }
+        }
+        warpYuvToFrame6(src, mNarrow, outNarrow);
+        warpYuvToFrame6(src, mWide, outWide);
+        lastFocusScore = focusScore(outNarrow);
+    }
+
+    /**
+     * Sharpness of the last prepared frame.
+     *
+     * <p>Computed here rather than in a runner because there are two paths and the question "does the
+     * camera see the road" is common to both. While the metric lived in the thneed runner, falling
+     * back to ONNX silently dropped the protection — precisely when something had already gone wrong.
+     *
+     * <p>Zero means "not measured yet".
+     */
+    public static float lastFocusScore() {
+        return lastFocusScore;
+    }
+
+    private static volatile float lastFocusScore;
+
+    /**
+     * How sharp the frame looked to the model.
+     *
+     * <p>Mean squared gradient over the luminance plane of the input — the very one the net receives,
+     * not the whole camera frame. The value is dimensionless; compare it against itself on other
+     * drives.
+     *
+     * <p>Why it lives here. Defocus breaks nothing visibly: the net runs, the numbers come out
+     * plausible, there are simply no lane lines in them. The drive of 2026-08-16 showed the price —
+     * line probabilities of 0.11 and 0.20, 82.6% of frames without either line, a pose unrelated to
+     * the wheels, and not a single message about it in fifty minutes. Frame sharpness was 9.9-14.9
+     * against 369-942 on the healthy drives of 08-13, a fiftyfold difference — plain to see if
+     * anyone looks.
+     */
+    public static float focusScore(float[] frame6) {
+        final int w = MODEL_W / 2;
+        final int h = MODEL_H / 2;
+        if (frame6 == null || frame6.length < w * h) {
+            return 0f;
+        }
+        double sum = 0;
+        int n = 0;
+        // The first plane is the luminance of even rows and columns; step by two to avoid paying
+        // for a full pass — more than enough for a sharpness estimate.
+        for (int y = 1; y < h - 1; y += 2) {
+            final int row = y * w;
+            for (int x = 1; x < w - 1; x += 2) {
+                final float dx = frame6[row + x + 1] - frame6[row + x - 1];
+                final float dy = frame6[row + w + x] - frame6[row - w + x];
+                sum += (double) dx * dx + (double) dy * dy;
+                n++;
+            }
+        }
+        return n > 0 ? (float) (sum / n) : 0f;
+    }
+
+    /** Compare one frame against the CPU version and log whether it agreed. Returns the verdict. */
+    private static boolean verifyAgainstCpu(YuvFrame src, float[] m, float[] gpu, String which) {
+        try {
+            float[] cpu = new float[gpu.length];
+            warpYuvToFrame6Java(src, m, cpu);
+            float worst = 0f;
+            int worstAt = -1;
+            for (int i = 0; i < cpu.length; i++) {
+                float d = Math.abs(cpu[i] - gpu[i]);
+                if (d > worst) {
+                    worst = d;
+                    worstAt = i;
+                }
+            }
+            boolean ok = worst <= GPU_WARP_TOLERANCE;
+            android.util.Log.i(TAG, String.format(java.util.Locale.US,
+                    "GPU warp vs CPU (%s): largest difference %.4f at index %d — %s",
+                    which, worst, worstAt, ok ? "agreed" : "DISAGREED, falling back to the CPU"));
+            return ok;
+        } catch (Throwable t) {
+            android.util.Log.w(TAG, "could not run the warp check", t);
+            // Unable to check does not mean wrong: stay on the GPU, but say so out loud.
+            return true;
+        }
+    }
 
     /**
      * @param rollRad  calib roll (rad)
@@ -204,9 +359,12 @@ public final class ModelCalibWarp {
                 int mx0 = 2 * i;
                 int my0 = 2 * j;
                 out6[0 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0, my0);
-                out6[1 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0, my0 + 1);
-                out6[2 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0 + 1, my0);
-                out6[3 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0 + 1, my0 + 1);
+                out6[1 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0,
+                        my0 + 1);
+                out6[2 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0 + 1,
+                        my0);
+                out6[3 * plane + idx] = sampleProj(y, sw, sh, m00, m01, m02, m10, m11, m12, m20, m21, m22, mx0 + 1,
+                        my0 + 1);
                 out6[4 * plane + idx] = sampleProj(u, uvW, uvH, u00, u01, u02, u10, u11, u12, u20, u21, u22, i, j);
                 out6[5 * plane + idx] = sampleProj(v, uvW, uvH, u00, u01, u02, u10, u11, u12, u20, u21, u22, i, j);
             }

@@ -1,4 +1,4 @@
-#include "adas/lateral/vp_planner.hpp"
+#include "adas/lateral/vp_planner.h"
 
 #include <algorithm>
 #include <cmath>
@@ -99,13 +99,7 @@ Output VpPlanner::update(const Input& in)
     delta_vp = deltas[0];
 
   out.steer_rad = -delta_vp;
-  out.dbg.mpc_delta_vp_rad = out.steer_rad;
-  const double lim = maxSteerRad(in.speed_mps, cfg_.limits);
-  out.max_steer_rad = lim;
-  out.dbg.mpc_max_steer_rad = lim;
-  if (lim > 1e-6)
-    out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
-  out.dbg.mpc_delta_clamped_rad = out.steer_rad;
+  applySteerLimit(out, in.speed_mps, cfg_.limits);
 
   if (cfg_.rate_limit_deg > 1e-9 && have_prev_) {
     const double v_eff = std::max(in.speed_mps, cfg_.rate_min_speed);
@@ -118,7 +112,7 @@ Output VpPlanner::update(const Input& in)
   last_steer_rad_ = out.steer_rad;
   have_prev_ = true;
 
-  out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
+  out.steer_norm = out.max_steer_rad > 1e-6 ? out.steer_rad / out.max_steer_rad : 0.0;
   out.has_target = true;
   out.status = "ok";
   return out;

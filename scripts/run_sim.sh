@@ -4,7 +4,7 @@
 set -euo pipefail
 # script lives in scripts/, project root is one level up
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCRIPTS="$ROOT/app/src/main/scripts"
+SCRIPTS="$ROOT/scripts"
 export PYTHONPATH="$SCRIPTS${PYTHONPATH:+:$PYTHONPATH}"
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 cd "$SCRIPTS"

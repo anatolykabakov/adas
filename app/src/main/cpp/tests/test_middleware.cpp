@@ -305,7 +305,7 @@ TEST(MiddlewareTest, ZmqBridgeForwardsOutboundTopicToSubscriber)
 }
 
 namespace {
-/// Считает доставленное по каждому топику, требуя ровно тот тип, который ждут настоящие сервисы.
+/// Counts what was delivered per topic, demanding exactly the type the real services expect.
 class InboundSink : public adas::middleware::Service {
 public:
   std::string_view getName() const override { return "inbound_sink"; }
@@ -433,12 +433,12 @@ TEST(MiddlewareParams, DuplicateRegistrationIsRefused)
   EXPECT_FALSE(svc->second) << "duplicate name must be rejected or one field silently wins";
 }
 
-// Входящая ветка моста: конверт с ZMQ разбирается на доменные сообщения, и сервис получает тот тип,
-// на который подписан. Проверяется тем же способом, что и исходящая, — через настоящий сокет.
+// The bridge's inbound path: a ZMQ envelope is unpacked into domain messages and the service receives
+// the type it subscribed to. Tested the same way as the outbound path — through a real socket.
 //
-// Ошибка здесь не роняет приложение, а тихо лишает сервис входа: при несовпадении типа посредник
-// пишет строчку в лог и выбрасывает сообщение. В машине это означает сервис без данных, и заметить
-// это можно только по отсутствию его публикаций.
+// A defect here does not crash the app, it quietly starves a service: on a type mismatch the broker
+// logs a line and drops the message. In the car that means a service without data, and the only sign
+// is that it stops publishing.
 TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
 {
   const std::string ep_in = "tcp://127.0.0.1:5593";
@@ -450,8 +450,8 @@ TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
   mw->registerService(std::static_pointer_cast<adas::middleware::Service>(sink));
 
   zmq::context_t ctx{1};
-  // Входящий сокет биндит мост, поэтому издатель к нему подключается: второй bind на тот же адрес
-  // — это «Address already in use», а не проверка.
+  // The bridge binds the inbound socket, so the publisher connects to it: a second bind on the same
+  // address is "Address already in use", not a test.
   zmq::socket_t pub{ctx, ZMQ_PUB};
   pub.connect(ep_in);
 
@@ -485,8 +485,8 @@ TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
   calib.set_topic(adas::topics::kCameraCalib);
   calib.mutable_camera_calib()->set_pitch_deg(1.0f);
 
-  // Доставка асинхронна, и один step() разбирает не всё присланное: ждём каждое сообщение, а не
-  // первое попавшееся, иначе тест закончится на самом быстром и промолчит об остальных.
+  // Delivery is asynchronous and one step() does not drain everything: wait for each message rather
+  // than the first to arrive, or the test ends on the fastest and stays silent about the rest.
   const auto all_arrived = [&] {
     return sink->car > 0 && sink->imu > 0 && sink->lanes > 0 && sink->model_long > 0 && sink->traffic > 0 &&
            sink->calib > 0;
@@ -504,11 +504,11 @@ TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  ASSERT_GT(sink->car, 0) << "конверт не разобрался — сервисы остались без входа";
-  EXPECT_FLOAT_EQ(13.5f, sink->v_ego) << "разобралось не то поле";
-  EXPECT_GT(sink->imu, 0) << "sensors/imu не доставлен";
-  EXPECT_GT(sink->lanes, 0) << "vision/lanes не доставлен";
-  EXPECT_GT(sink->model_long, 0) << "vision/model_long не доставлен";
-  EXPECT_GT(sink->traffic, 0) << "детекции не доставлены";
-  EXPECT_GT(sink->calib, 0) << "калибровка камеры не доставлена";
+  ASSERT_GT(sink->car, 0) << "the envelope did not unpack — the services got no input";
+  EXPECT_FLOAT_EQ(13.5f, sink->v_ego) << "the wrong field was unpacked";
+  EXPECT_GT(sink->imu, 0) << "sensors/imu was not delivered";
+  EXPECT_GT(sink->lanes, 0) << "vision/lanes was not delivered";
+  EXPECT_GT(sink->model_long, 0) << "vision/model_long was not delivered";
+  EXPECT_GT(sink->traffic, 0) << "the detections were not delivered";
+  EXPECT_GT(sink->calib, 0) << "the camera calibration was not delivered";
 }

@@ -124,7 +124,7 @@ TEST(ParamsLearner, ThePseudoObservationsBoundTheUncertainty)
   adas::ParamsLearner without(loose);
   for (int i = 0; i < 60000; ++i)
     without.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
-  EXPECT_GT(without.stiffnessStd(), bounded) << "без псевдонаблюдения прямая раздувает сигму";
+  EXPECT_GT(without.stiffnessStd(), bounded) << "without the pseudo-observation a straight road inflates sigma";
 }
 
 TEST(ParamsLearner, TheIntegratorIsStableAtTheUpstreamStep)
@@ -145,10 +145,10 @@ TEST(ParamsLearner, TheIntegratorIsStableAtTheUpstreamStep)
 TEST(ParamsLearner, GatesRefuseWhatTheModelCannotExplain)
 {
   adas::ParamsLearner est;
-  EXPECT_FALSE(est.update(0.5, 5.0, -0.05, 0.0, 0.5, kDt)) << "стоим";
-  EXPECT_FALSE(est.update(20.0, 60.0, -0.05, 0.0, 0.5, kDt)) << "за линейной областью шины";
-  EXPECT_FALSE(est.update(20.0, 5.0, -2.0, 0.0, 0.5, kDt)) << "рысканье за 1 рад/с";
-  EXPECT_FALSE(est.update(20.0, 5.0, -0.05, 0.0, 0.5, 0.0)) << "нет шага времени";
+  EXPECT_FALSE(est.update(0.5, 5.0, -0.05, 0.0, 0.5, kDt)) << "standing still";
+  EXPECT_FALSE(est.update(20.0, 60.0, -0.05, 0.0, 0.5, kDt)) << "beyond the tyre's linear region";
+  EXPECT_FALSE(est.update(20.0, 5.0, -2.0, 0.0, 0.5, kDt)) << "yaw rate beyond 1 rad/s";
+  EXPECT_FALSE(est.update(20.0, 5.0, -0.05, 0.0, 0.5, 0.0)) << "no time step";
   EXPECT_EQ(est.sampleCount(), 0);
 }
 
@@ -170,7 +170,7 @@ TEST(ParamsLearner, NotValidUntilItHasSeenCorners)
   adas::ParamsLearner est(movable());
   for (int i = 0; i < 5000; ++i)
     est.update(25.0, 0.0, 0.0, 0.0, 0.5, kDt);
-  EXPECT_FALSE(est.valid()) << "прямая ничему не учит, сколько бы отсчётов ни было";
+  EXPECT_FALSE(est.valid()) << "a straight road teaches nothing, however many samples";
 }
 
 TEST(ParamsLearner, ThePredictionIsTheControllersOwnModel)
@@ -234,10 +234,10 @@ TEST(ParamsLearner, TheWrongSteeringSignRunsItIntoTheBounds)
       }
     }
   }
-  EXPECT_GT(std::abs(flipped.stiffnessFactor() - 1.0), 0.3) << "неверный знак обязан испортить оценку";
+  EXPECT_GT(std::abs(flipped.stiffnessFactor() - 1.0), 0.3) << "a wrong sign must spoil the estimate";
 
   const auto right = learn(1.0, 15.7, 0.0, 0.0, false, truth_cfg);
-  EXPECT_NEAR(right.stiffnessFactor(), 1.0, 0.25) << "с верным знаком те же данные дают истину";
+  EXPECT_NEAR(right.stiffnessFactor(), 1.0, 0.25) << "with the right sign the same data yields the truth";
 }
 
 TEST(ShippedConfig, TheLearnerGetsTheSameSteeringSignAsTheController)
@@ -258,8 +258,8 @@ TEST(ShippedConfig, TheLearnerMayRunButTheControllerMayNotReadIt)
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(path, &ok);
   ASSERT_TRUE(ok) << "cannot parse " << path;
 
-  // Оценщик и чтение его результата больше не переключаются: осталась одна проверка — крен в
-  // оценщике всё ещё выключен, он не проверен заездом.
+  // The learner and the reading of its result are no longer switchable: one check remains — the road
+  // bank inside the learner is still off, because no drive has verified it.
   EXPECT_FALSE(cfg.localization.params.use_roll);
 }
 TEST(ShippedConfig, TheLearnerStartsFromTheParametersTheControllerUses)

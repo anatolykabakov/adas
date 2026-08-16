@@ -11,22 +11,51 @@ struct VehicleModelParams {
   double tire_stiffness_factor = 0.64;  ///< Scale on the reference car's stiffness; 1.0 is the reference itself.
 };
 
-inline double slipFactor(const VehicleModelParams& p)
-{
-  constexpr double kCivicMass = 1326.0 + 136.0;
-  constexpr double kCivicWheelbase = 2.70;
-  constexpr double kCivicC2F = kCivicWheelbase * 0.4;
-  constexpr double kCivicC2R = kCivicWheelbase - kCivicC2F;
-  constexpr double kCivicStiffFront = 192150.0;
-  constexpr double kCivicStiffRear = 202500.0;
+/**
+ * \brief The reference car every stiffness is expressed against.
+ *
+ * \details Cornering stiffness is not measured per car; it is scaled from a known one, and upstream
+ * that car is the Civic. The controller's slip factor and the parameter learner's base stiffness both
+ * scale from these numbers, so they live here once — two copies would let the learner estimate against
+ * one car while the controller steers by another, and the disagreement would read as estimator drift.
+ */
+struct ReferenceCar {
+  double mass_kg = 1326.0 + 136.0;      ///< Kerb mass plus a driver [kg].
+  double wheelbase_m = 2.70;            ///< Wheelbase [m].
+  double center_to_front_frac = 0.4;    ///< Distance to the front axle as a fraction of the wheelbase.
+  double stiff_front_n_rad = 192150.0;  ///< Front axle cornering stiffness [N/rad].
+  double stiff_rear_n_rad = 202500.0;   ///< Rear axle cornering stiffness [N/rad].
 
+  double centerToFront() const { return wheelbase_m * center_to_front_frac; }
+  double centerToRear() const { return wheelbase_m - centerToFront(); }
+};
+
+inline constexpr ReferenceCar kReferenceCar{};
+
+/**
+ * \brief Axle cornering stiffnesses for `p`, scaled from the reference car.
+ *
+ * \param[in] p Vehicle whose geometry and mass set the scaling.
+ * \param[in] stiffness_factor Scale on the reference stiffness; 1.0 gives the unscaled base.
+ * \param[out] cF,cR Front and rear cornering stiffness [N/rad].
+ */
+inline void referenceStiffness(const VehicleModelParams& p, double stiffness_factor, double& cF, double& cR)
+{
+  const ReferenceCar& r = kReferenceCar;
   const double wb = std::max(p.wheelbase_m, 1e-3);
   const double aF = wb * p.center_to_front_frac;
   const double aR = wb - aF;
-  const double cF =
-      kCivicStiffFront * p.tire_stiffness_factor * p.mass_kg / kCivicMass * (aR / wb) / (kCivicC2R / kCivicWheelbase);
-  const double cR =
-      kCivicStiffRear * p.tire_stiffness_factor * p.mass_kg / kCivicMass * (aF / wb) / (kCivicC2F / kCivicWheelbase);
+  cF = r.stiff_front_n_rad * stiffness_factor * p.mass_kg / r.mass_kg * (aR / wb) / (r.centerToRear() / r.wheelbase_m);
+  cR = r.stiff_rear_n_rad * stiffness_factor * p.mass_kg / r.mass_kg * (aF / wb) / (r.centerToFront() / r.wheelbase_m);
+}
+
+inline double slipFactor(const VehicleModelParams& p)
+{
+  const double wb = std::max(p.wheelbase_m, 1e-3);
+  const double aF = wb * p.center_to_front_frac;
+  const double aR = wb - aF;
+  double cF = 0.0, cR = 0.0;
+  referenceStiffness(p, p.tire_stiffness_factor, cF, cR);
   if (cF <= 0.0 || cR <= 0.0)
     return 0.0;
   return p.mass_kg * (cF * aF - cR * aR) / (wb * wb * cF * cR);

@@ -61,6 +61,7 @@ lateral::VehicleParams Control::vehicleParams() const
   v.wheelbase_m = config_.wheelbase_m;
   v.steer_ratio = ctl_.effectiveSteerRatio();
   v.tire_stiffness_factor = ctl_.effectiveStiffnessFactor();
+  v.use_vehicle_model = config_.lat_use_vehicle_model;
   v.steer_sign = config_.ctl.steer_sign < 0.0 ? -1.0 : 1.0;
   v.road_roll_rad = road_roll_rad_;
   v.road_roll_valid = road_roll_valid_;
@@ -77,6 +78,7 @@ void Control::registerParameters()
   registerParameter<double>(
       "tire_stiffness_factor", [this](const double& v) { ctl_.setTireStiffnessFactor(v); },
       [this] { return ctl_.effectiveStiffnessFactor(); });
+  registerParameter<bool>("lat_use_vehicle_model", config_.lat_use_vehicle_model);
   registerParameter<double>(
       "steer_slew_limit_deg",
       [this](const double& v) {

@@ -1,5 +1,7 @@
 #include "adas/utils/adas_config.h"
 
+#include "adas/platform/car_platform.h"
+
 #include <fstream>
 #include <string>
 
@@ -42,6 +44,57 @@ bool parseFile(const std::string& path, Json::Value* root, std::string* err)
   return Json::parseFromStream(builder, in, root, err);
 }
 
+/**
+ * \brief Derived fields of the parameter learner, in one place.
+ *
+ * \details The learner does not read the config itself: it is handed a vehicle it must agree with.
+ * Without this a simulated app builds the learner with steering sign +1 (the `ParamsLearner::Config`
+ * default) while the car drives with −1, and the model can only reconcile an inverted sign by driving
+ * stiffness into its clamp and the ratio sideways — the estimator diverges in every replay.
+ *
+ * Both construction paths call it, so the two cannot drift apart.
+ */
+/**
+ * \brief Fill in what the selected car is, before the config gets a say.
+ *
+ * \details Upstream keeps wheelbase, steering ratio and mass in `selfdrive/car/<brand>/interface.py`,
+ * not in a user config, and for good reason: nobody tunes the wheelbase of their Golf, and a config
+ * carried over from another car quietly describes the wrong vehicle. Here the platform supplies them
+ * first and `setDouble` overrides only the keys the config actually contains — so an untouched config
+ * means the car's own numbers, and a deliberate override still works for a trim that differs.
+ *
+ * \param[in,out] cfg Config whose vehicle fields are seeded from `cfg.vehicle_name`.
+ */
+void applyCarDefaults(AdasApp::Config& cfg)
+{
+  auto car = adas::platform::makeCarPlatform(cfg.vehicle_name, {});
+  if (!car) {
+    LOGW("config: vehicle.name '%s' is not a car we have — keeping the built-in defaults", cfg.vehicle_name.c_str());
+    return;
+  }
+  const adas::platform::VehicleDefaults d = car->defaults();
+  cfg.lane_keep.wheelbase_m = d.wheelbase_m;
+  cfg.lane_keep.steer_ratio = d.steer_ratio;
+  cfg.lane_keep.steer_sign = d.steer_sign;
+  cfg.lane_keep.tire_stiffness_factor = d.tire_stiffness_factor;
+  cfg.lane_keep.max_steer_deg = d.max_steer_deg;
+  cfg.localization.wheelbase_m = d.wheelbase_m;
+  // The longitudinal loop and Control take the same numbers from lane_keep (see
+  // AdasApp::controlConfig), so one place has to be seeded, not three.
+  LOGI("config: car %s — wheelbase %.3f m, steer ratio %.2f, sign %+.0f", car->name(), d.wheelbase_m, d.steer_ratio,
+       d.steer_sign);
+}
+
+void applyLearnerDefaults(AdasApp::Config& cfg)
+{
+  auto& pl = cfg.localization.params;
+  pl.vehicle.wheelbase_m = cfg.localization.wheelbase_m;
+  pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
+  pl.stiffness_init = cfg.lane_keep.tire_stiffness_factor;
+  pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
+  pl.steer_sign = cfg.lane_keep.steer_sign;
+}
+
 }  // namespace
 
 AdasApp::Config AdasApp::Config::forSimulated(double wheelbase_m, double pitch_deg, double yaw_deg,
@@ -67,16 +120,7 @@ AdasApp::Config AdasApp::Config::forSimulated(double wheelbase_m, double pitch_d
   cfg.localization.imu_mount_yaw_deg = yaw_deg;
   cfg.localization.imu_has_mount_prior = true;
 
-  // The learner's derived fields, in the same lines as in `loadFromFile`. Without them a simulated app
-  // builds the learner with steering sign +1 (the `ParamsLearner::Config` default) while the car drives
-  // with −1: the model can only reconcile an inverted sign by driving stiffness into its clamp and the
-  // ratio sideways, so the estimator diverges in every replay.
-  auto& pl = cfg.localization.params;
-  pl.vehicle.wheelbase_m = wheelbase_m;
-  pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
-  pl.stiffness_init = cfg.lane_keep.tire_stiffness_factor;
-  pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
-  pl.steer_sign = cfg.lane_keep.steer_sign;
+  applyLearnerDefaults(cfg);
   return cfg;
 }
 
@@ -107,11 +151,15 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
 
   const Json::Value& veh = root["vehicle"];
   setString(veh, "name", cfg.vehicle_name);
+  // Car first, config second: a key that is absent leaves the car's own number in place.
+  applyCarDefaults(cfg);
   setDouble(veh, "wheelbase_m", cfg.lane_keep.wheelbase_m);
   setDouble(veh, "wheelbase_m", cfg.localization.wheelbase_m);
-  setDouble(veh, "steer_ratio", cfg.lane_keep.steer_ratio);
   adas::LanePathConfig lane_path{};
-  double steer_ratio = 15.7;
+  // One steer ratio for everyone, and it starts from the car rather than a literal. There used to be
+  // two independent defaults for one key here: while the key was present in the config they agreed,
+  // and the moment it was removed the hardcoded 15.7 won over the selected car's number.
+  double steer_ratio = cfg.lane_keep.steer_ratio;
   setDouble(veh, "steer_ratio", steer_ratio);
   setDouble(veh, "path_lane_blend_scale", lane_path.lane_blend_scale);
   setDouble(veh, "path_camera_offset_m", lane_path.camera_offset_m);
@@ -178,6 +226,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "steer_slew_limit_deg", cfg.lane_keep.steer_slew_limit_deg);
   setDouble(veh, "vision_nominal_dt_s", cfg.lane_keep.vision_nominal_dt_s);
   setDouble(veh, "tire_stiffness_factor", cfg.lane_keep.tire_stiffness_factor);
+  setBool(veh, "lat_use_vehicle_model", cfg.lane_keep.lat_use_vehicle_model);
   setDouble(veh, "wheel_speed_factor", cfg.panda.speed_filter.wheel_speed_factor);
   setDouble(veh, "speed_accel_process_noise", cfg.panda.speed_filter.accel_process_noise);
   setDouble(veh, "speed_measurement_noise", cfg.panda.speed_filter.speed_measurement_noise);
@@ -260,12 +309,8 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(loc, "road_roll_min_speed_ms", rr.min_speed_ms);
   setDouble(loc, "gps_update_interval", cfg.localization.gps_update_interval);
 
+  applyLearnerDefaults(cfg);
   auto& pl = cfg.localization.params;
-  pl.vehicle.wheelbase_m = cfg.localization.wheelbase_m;
-  pl.vehicle.tire_stiffness_factor = cfg.lane_keep.tire_stiffness_factor;
-  pl.stiffness_init = cfg.lane_keep.tire_stiffness_factor;
-  pl.steer_ratio_init = cfg.lane_keep.steer_ratio;
-  pl.steer_sign = cfg.lane_keep.steer_sign;
   setDouble(loc, "params_angle_offset_init_deg", pl.angle_offset_init_deg);
   setDouble(loc, "imu_speed_threshold_kmh", cfg.localization.imu_speed_threshold_kmh);
   setBool(loc, "imu_invert_yaw_rate", cfg.localization.imu_invert_yaw_rate);

@@ -11,7 +11,7 @@
 #include "adas/mapmatch/search.h"
 #include "adas/mapmatch/track.h"
 #include "adas/mapmatch/window_search.h"
-#include "adas/lateral/visionpilot_mpc.hpp"
+#include "adas/lateral/visionpilot_mpc.h"
 #include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/values.h"
 
@@ -483,6 +483,8 @@ PYBIND11_MODULE(core, m)
            py::arg("epsi_alpha"), py::arg("cte_alpha"))
       .def("set_lane_keep_steer_slew_limit_deg", &AdasApp::setLaneKeepSteerSlewLimitDeg, py::arg("deg"))
       .def("set_lane_keep_tire_stiffness", &AdasApp::setLaneKeepTireStiffness, py::arg("tire_stiffness_factor"))
+      .def("set_lane_keep_vehicle_model", &AdasApp::setLaneKeepVehicleModel, py::arg("use_vehicle_model"),
+           py::arg("tire_stiffness_factor"))
       .def("set_lane_keep_fp_steer_delay_s", &AdasApp::setLaneKeepFpSteerDelayS, py::arg("seconds"))
       .def("set_lane_keep_fp_steering_rate_weight", &AdasApp::setLaneKeepFpSteeringRateWeight, py::arg("weight"))
       .def("set_lane_keep_cam_y_left_m", &AdasApp::setLaneKeepCamYLeftM, py::arg("m"))

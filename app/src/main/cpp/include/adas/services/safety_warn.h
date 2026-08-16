@@ -7,7 +7,7 @@
 #include "adas/utils/adas_topics.h"
 #include "adas/utils/proto_convert.h"
 #include "adas/utils/path_lateral_state.h"
-#include "adas/utils/safety_planner.hpp"
+#include "adas/utils/safety_planner.h"
 
 namespace adas {
 namespace services {

@@ -42,7 +42,7 @@
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
 
         <activity
-            android:name="adas.app.MainActivity"
+            android:name="adas.app.ui.MainActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize">
@@ -59,12 +59,17 @@
                 android:resource="@xml/device_filter" />
         </activity>
         <activity
-            android:name="adas.app.TrafficYoloBenchActivity"
+            android:name="adas.app.ui.SupercomboBenchActivity"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:label="Supercombo bench" />
+        <activity
+            android:name="adas.app.ui.TrafficYoloBenchActivity"
             android:exported="true"
             android:screenOrientation="landscape"
             android:label="Traffic YOLO Bench" />
         <service android:name="adas.app.AdasAppHandler"></service>
-        <service android:name="adas.app.ZMQBridgeService"></service>
+        <service android:name="adas.app.bridge.ZMQBridgeService"></service>
     </application>
 
 </manifest>

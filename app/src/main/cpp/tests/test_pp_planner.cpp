@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "adas/lateral/pp_planner.hpp"
+#include "adas/lateral/pp_planner.h"
 
 namespace {
 struct Expected {
@@ -61,7 +61,7 @@ TEST(PpPlannerPort, MatchesTheClassItReplaces)
     EXPECT_NEAR(got.target_x, want.target_x, 1e-12) << where;
     EXPECT_NEAR(got.target_y, want.target_y, 1e-12) << where;
 
-    // Постоянный потолок, как у сервиса на чистой погоне: срез — часть переносимого поведения.
+    // A constant ceiling, as the service has on pure pursuit: the clip is part of the ported behaviour.
     EXPECT_NEAR(got.steer_rad, std::clamp(want.steer_rad, -cfg.max_steer_rad, cfg.max_steer_rad), 1e-12) << where;
   }
 }

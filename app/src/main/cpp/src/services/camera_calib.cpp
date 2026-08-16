@@ -36,8 +36,66 @@ void CameraCalib::configure()
   subscribe<adas::proto::CameraOdometry>(
       topics::kCameraOdometry, [this](const adas::proto::CameraOdometry& payload) { onCameraOdometryProto(payload); });
   subscribe<LaneUvMsg>(topics::kCalibLaneUv, [this](const LaneUvMsg& m) { onLaneUv(m); });
-  LOGI("CameraCalib: %s + chassis (+ optional %s) → %s + %s", topics::kCameraOdometry, topics::kCalibLaneUv,
-       topics::kCameraCalib, topics::kCameraCalibDebug);
+  // The device tells us its own lens once the camera opens. Until this subscription existed the
+  // message was published and nobody listened, so the whole system ran on the config's prior — a
+  // number typed in for whichever phone it was typed in for.
+  subscribe<adas::proto::CameraIntrinsics>(topics::kCameraIntrinsics,
+                                           [this](const adas::proto::CameraIntrinsics& m) { onIntrinsics(m); });
+  LOGI("CameraCalib: %s + chassis (+ optional %s, %s) → %s + %s", topics::kCameraOdometry, topics::kCalibLaneUv,
+       topics::kCameraIntrinsics, topics::kCameraCalib, topics::kCameraCalibDebug);
+}
+
+/**
+ * \brief Adopt the intrinsics the device reports, once they look usable.
+ *
+ * \details The config value is a prior, not a measurement: it is right for the phone it was written
+ * for and silently wrong for any other. A report is taken only when it carries a plausible focal
+ * length — a zero or a near-zero means the device has the field but never filled it, which is common
+ * enough that Camera2 documents it.
+ */
+void CameraCalib::onIntrinsics(const adas::proto::CameraIntrinsics& msg)
+{
+  if (msg.intrinsic_calibration_size() < 4)
+    return;
+  const double fx = msg.intrinsic_calibration(0);
+  const double fy = msg.intrinsic_calibration(1);
+  const double cx = msg.intrinsic_calibration(2);
+  const double cy = msg.intrinsic_calibration(3);
+  if (!(fx > 1.0) || !(fy > 1.0))
+    return;
+
+  // Units. The numbers must belong to the same frame the rest of the system works in, and this is
+  // not a formality: on 2026-08-16 the intrinsics of the downscaled bag frame arrived here (fx
+  // 475.5, principal point 320x180), were taken as parameters of the 1280x720 frame, and the model
+  // warp built a projection at half the focal length with the centre in a corner. There are no lane
+  // lines in such a frame, and the drive merely looks unsuccessful.
+  //
+  // The check uses what the message says about itself: the principal point must sit near the middle
+  // of the declared frame. The tolerance is generous — a real principal point drifts off centre, but
+  // not by half a frame.
+  const double w = msg.capture_width();
+  const double h = msg.capture_height();
+  if (w > 1.0 && h > 1.0) {
+    const double dx = std::fabs(cx - w * 0.5) / w;
+    const double dy = std::fabs(cy - h * 0.5) / h;
+    if (dx > 0.25 || dy > 0.25) {
+      LOGW("CameraCalib: intrinsics rejected — centre (%.1f, %.1f) is not mid-frame for %.0fx%.0f; "
+           "they look computed for a different frame",
+           cx, cy, w, h);
+      return;
+    }
+  } else {
+    LOGW("CameraCalib: intrinsics without a frame size — nothing to check the units against, rejected");
+    return;
+  }
+
+  if (fx == fx_ && fy == fy_ && cx == cx_ && cy == cy_)
+    return;
+
+  LOGI("CameraCalib: intrinsics from the device (source %d): fx %.1f→%.1f fy %.1f→%.1f cx %.1f→%.1f cy %.1f→%.1f",
+       static_cast<int>(msg.source()), fx_, fx, fy_, fy, cx_, cx, cy_, cy);
+  setIntrinsics(fx, fy, cx, cy);
+  intrinsics_source_ = static_cast<int>(msg.source());
 }
 
 void CameraCalib::reset()

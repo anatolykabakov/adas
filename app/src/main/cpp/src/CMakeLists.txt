@@ -35,6 +35,9 @@ add_library(
   services/camera_calib.cpp
   services/internal_subscriber.cpp
   services/middleware_stats.cpp
+  platform/car_platform.cpp
+  platform/toyota/toyota_platform.cpp
+  platform/volkswagen/vw_platform.cpp
   platform/volkswagen/mqbcan.cpp
   platform/volkswagen/carcontroller.cpp
   platform/volkswagen/car_iface.cpp

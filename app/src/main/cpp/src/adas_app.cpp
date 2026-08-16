@@ -81,9 +81,9 @@ void AdasApp::setupRealtimeServices()
   middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime);
 
   if (cfg_.panda.usb_fd != -1 && f.enable_panda) {
-    platform_service_ = middleware_->registerService<adas::services::Platform>(
-        adas::services::Platform::Config{cfg_.panda.usb_fd, cfg_.panda.dbc_path, cfg_.panda.cruise_buttons_enabled,
-                                         cfg_.panda.cruise_tip_cooldown_ms, cfg_.panda.speed_filter});
+    platform_service_ = middleware_->registerService<adas::services::Platform>(adas::services::Platform::Config{
+        cfg_.panda.usb_fd, cfg_.panda.dbc_path, cfg_.vehicle_name, cfg_.panda.cruise_buttons_enabled,
+        cfg_.panda.cruise_tip_cooldown_ms, cfg_.panda.speed_filter});
     control_service_ = middleware_->registerService<adas::services::Control>(controlConfig());
   }
 
@@ -307,6 +307,12 @@ void AdasApp::setLaneKeepSteerSlewLimitDeg(double deg) { setParam("steer_slew_li
 
 void AdasApp::setLaneKeepTireStiffness(double tire_stiffness_factor)
 {
+  setParam("tire_stiffness_factor", tire_stiffness_factor);
+}
+
+void AdasApp::setLaneKeepVehicleModel(bool use_vehicle_model, double tire_stiffness_factor)
+{
+  setParam("lat_use_vehicle_model", use_vehicle_model);
   setParam("tire_stiffness_factor", tire_stiffness_factor);
 }
 

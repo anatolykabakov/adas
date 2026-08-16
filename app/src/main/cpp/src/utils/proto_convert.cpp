@@ -176,16 +176,16 @@ adas::proto::LongPlanState createLongPlan(const longplan::Input& in, const longp
   adas::proto::LongPlanState msg;
   auto* lp = &msg;
   lp->set_timestamp(now_ms);
-  lp->set_v_ego(in.v_ego);
-  lp->set_v_target(plan.v_target);
-  lp->set_a_target(plan.a_target);
-  lp->set_lead_d(in.lead.d_rel);
-  lp->set_lead_v(in.lead.v_lead);
-  lp->set_lead_prob(in.lead.prob);
+  lp->set_v_ego(static_cast<float>(in.v_ego));
+  lp->set_v_target(static_cast<float>(plan.v_target));
+  lp->set_a_target(static_cast<float>(plan.a_target));
+  lp->set_lead_d(static_cast<float>(in.lead.d_rel));
+  lp->set_lead_v(static_cast<float>(in.lead.v_lead));
+  lp->set_lead_prob(static_cast<float>(in.lead.prob));
   lp->set_has_lead(plan.has_lead);
   lp->set_source(plan.source);
-  lp->set_v_curv(plan.v_curv);
-  lp->set_kappa_ahead(plan.kappa_ahead);
+  lp->set_v_curv(static_cast<float>(plan.v_curv));
+  lp->set_kappa_ahead(static_cast<float>(plan.kappa_ahead));
   lp->set_status(plan.status);
   return msg;
 }
@@ -672,13 +672,24 @@ adas::proto::CarState carStateFromChassis(const ChassisSample& chassis)
 {
   adas::proto::CarState cs;
   cs.set_timestamp(chassis.timestamp_us / 1000);
-  cs.set_v_ego(chassis.speed_mps);
-  cs.set_yaw_rate(chassis.yaw_rate);
-  cs.set_steering_angle_deg(chassis.steering_angle_deg);
+  cs.set_v_ego(static_cast<float>(chassis.speed_mps));
+  cs.set_yaw_rate(static_cast<float>(chassis.yaw_rate));
+  cs.set_steering_angle_deg(static_cast<float>(chassis.steering_angle_deg));
   cs.set_steering_pressed(chassis.steering_pressed);
   cs.set_left_blinker(chassis.left_blinker);
   cs.set_right_blinker(chassis.right_blinker);
   return cs;
+}
+
+longplan::LeadState leadFromModel(const adas::proto::ModelLongPlan& plan)
+{
+  const auto& lead = plan.lead0();
+  longplan::LeadState out;
+  out.prob = lead.prob();
+  out.d_rel = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
+  out.v_lead = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
+  out.y_rel = lead.y_rel();
+  return out;
 }
 
 adas::proto::MapLocalState createMapLocal(const MapLocalInputs& in)

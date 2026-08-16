@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "adas/panda/health.h"
+#include "adas/platform/car_platform.h"
 #include "adas/platform/volkswagen/mqb_car_state_decoder.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
@@ -215,4 +216,34 @@ TEST(AlwaysOnLateral, TheGateTruthTable)
         EXPECT_TRUE(lateralActuationAllowed(true, on, c)) << "controls_allowed must imply actuation-allowed — "
                                                              "`vis.bag_io.lateral_actuation_on` ORs on it";
       }
+}
+
+/** The car is chosen by name, and an unknown name must not fall back to a car we happen to have:
+ *  guessing the make wrong is guessing the CAN layout wrong, and a frame built for the wrong layout
+ *  still means something on the bus it is sent to. */
+TEST(CarPlatformFactory, KnownNameBuildsAndUnknownRefuses)
+{
+  adas::platform::CarPlatformOptions opts;
+
+  for (const std::string& name : adas::platform::knownCarPlatforms()) {
+    auto car = adas::platform::makeCarPlatform(name, opts);
+    ASSERT_NE(car, nullptr) << name << " is advertised as known";
+    EXPECT_NE(car->dbcAssetName(), nullptr) << name << " must say which CAN database decodes it";
+  }
+
+  EXPECT_EQ(adas::platform::makeCarPlatform("", opts), nullptr);
+  EXPECT_EQ(adas::platform::makeCarPlatform("honda_civic", opts), nullptr);
+  EXPECT_EQ(adas::platform::makeCarPlatform("vw_golf_7", opts), nullptr) << "a near miss is still a miss";
+}
+
+/** The steering envelope reaches the controller through the neutral interface, not through the brand. */
+TEST(CarPlatformFactory, SteerLimitsComeThroughTheInterface)
+{
+  auto car = adas::platform::makeCarPlatform("vw_golf_7_mqb", {});
+  ASSERT_NE(car, nullptr);
+  const adas::platform::SteerLimits lim = car->steerLimits();
+  EXPECT_EQ(lim.maxTorqueCNm, 300);
+  EXPECT_EQ(lim.stepFrames, 2);
+  EXPECT_GT(lim.deltaDownPerStep, lim.deltaUpPerStep) << "releasing the rack is always safe, so it may be faster";
+  EXPECT_GT(lim.driverAllowanceCNm, 0);
 }

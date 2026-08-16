@@ -30,9 +30,9 @@ app/src/main/cpp/deactivate_conan*.sh
 **/cmake_install.cmake
 **/compile_commands.json
 
-# Generated protobuf bindings (app/src/main/scripts/generate_proto_python.sh)
-app/src/main/scripts/proto/*
-app/src/main/scripts/vis/proto/*
+# Generated protobuf bindings (scripts/generate_proto_python.sh)
+scripts/proto/*
+scripts/vis/proto/*
 
 # Packaged / copied native libs (built by scripts/build_project.sh or gradle)
 app/libs/
@@ -47,15 +47,15 @@ __pycache__/
 venv/
 
 # MetaDrive / bag dump dirs (sim.main --out-dir, default "run")
-app/src/main/scripts/run/
-app/src/main/scripts/run_*/
+scripts/run/
+scripts/run_*/
 
 # Run and analysis exports: sim.eval --csv/--json/--plot, bag_*.py, PlotJuggler.
 # Keep curated plots under docs/figures/; do not commit ad-hoc analysis dumps.
-app/src/main/scripts/*.csv
-app/src/main/scripts/*.json
-app/src/main/scripts/*.png
-app/src/main/scripts/*.npz
+scripts/*.csv
+scripts/*.json
+scripts/*.png
+scripts/*.npz
 
 # Bag sessions pulled from the phone (scripts/pull_bags.sh) — never commit these
 adas_logs/
@@ -85,3 +85,4 @@ docs/_site/
 out.png
 
 app/src/main/cpp/third_party/*
+app/src/main/cpp/clang_errors.txt

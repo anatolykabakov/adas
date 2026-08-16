@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "adas/lateral/kappa_solver_acados.hpp"
-#include "adas/lateral/kappa_solver_grad.hpp"
+#include "adas/lateral/kappa_solver_acados.h"
+#include "adas/lateral/kappa_solver_grad.h"
 #include "adas/utils/logger.h"
 
 namespace adas {

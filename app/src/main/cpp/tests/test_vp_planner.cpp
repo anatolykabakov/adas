@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "adas/lateral/convert.hpp"
-#include "adas/lateral/vp_planner.hpp"
+#include "adas/lateral/convert.h"
+#include "adas/lateral/vp_planner.h"
 #include "adas/middleware/manager.hpp"
 #include "adas/services/planner.h"
 #include "adas/utils/lane_path.h"
@@ -80,11 +80,11 @@ TEST(VpPlannerWiring, ServiceRunsThePlannerItAdvertises)
                                                      adas::lateral::VehicleParams{});
     const auto out = planner.update(in);
 
-    ASSERT_EQ("ok", lk->last().status) << "шаг " << step;
-    EXPECT_NEAR(lk->last().steer_rad, out.steer_rad, 1e-12) << "шаг " << step;
-    EXPECT_NEAR(lk->last().curvature, out.curvature, 1e-12) << "шаг " << step;
-    EXPECT_NEAR(lk->last().cte_m, out.cte_m, 1e-12) << "шаг " << step;
-    EXPECT_NEAR(lk->last().epsi_rad, out.epsi_rad, 1e-12) << "шаг " << step;
+    ASSERT_EQ("ok", lk->last().status) << "step " << step;
+    EXPECT_NEAR(lk->last().steer_rad, out.steer_rad, 1e-12) << "step " << step;
+    EXPECT_NEAR(lk->last().curvature, out.curvature, 1e-12) << "step " << step;
+    EXPECT_NEAR(lk->last().cte_m, out.cte_m, 1e-12) << "step " << step;
+    EXPECT_NEAR(lk->last().epsi_rad, out.epsi_rad, 1e-12) << "step " << step;
   }
 }
 

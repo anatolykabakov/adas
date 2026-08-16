@@ -25,7 +25,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     environment:
       - DISPLAY=${DISPLAY:-}
-      - PYTHONPATH=/workspace/adas/app/src/main/scripts
+      - PYTHONPATH=/workspace/adas/scripts
       - PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 volumes:

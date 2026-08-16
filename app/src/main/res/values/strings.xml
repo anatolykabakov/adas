@@ -8,7 +8,7 @@
     <string name="can_offline">offline</string>
     <string name="params_toggle">Parameters</string>
     <string name="params_title">Parameters</string>
-    <string name="params_hint">Live: rpy / X Y H move overlay (+ warp). PP/MPC/FP switches lane-keep instantly. Save writes filesDir for next native start.</string>
+    <string name="params_hint">Car and model apply on the next service start. Calibrate lens measures the optics of this phone against a printed chessboard.</string>
     <string name="params_section_camera">Lines: rpy + X Y H (live)</string>
     <string name="params_section_pp">Lane keep</string>
     <string name="params_lk_controller">Controller</string>
@@ -23,4 +23,6 @@
     <string name="params_lk_flowpilot">FP</string>
     <string name="params_reset">Reset</string>
     <string name="params_save">Save</string>
+    <string name="params_calibrate_intrinsics">Calibrate lens</string>
+    <string name="params_car">Car</string>
 </resources>

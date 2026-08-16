@@ -29,11 +29,11 @@ pip install -r book/requirements.txt
 ## Python для бегов
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # заглушки protobuf:
 ./generate_proto_python.sh
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-python3 latency.py /путь/к/adas_logs/СЕССИЯ
+python3 tools/latency.py /путь/к/adas_logs/СЕССИЯ
 ```
 
 ## AAD (по желанию)

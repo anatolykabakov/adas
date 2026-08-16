@@ -675,7 +675,7 @@ sweeping weights.
 ## Fair comparison
 
 One bag window, vision $\gtrsim 9$ Hz: |CTE| med/p95, |$\Delta$SWA|, straight vs arc separately.
-Tool: `bag_config_sweep.py --vision-latency ...` (also sweeps `--blend`).
+Tool: `bag/bag_config_sweep.py --vision-latency ...` (also sweeps `--blend`).
 
 ## Exercise
 

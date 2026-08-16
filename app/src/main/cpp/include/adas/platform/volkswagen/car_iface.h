@@ -15,15 +15,16 @@
 
 namespace volkswagen {
 /**
- * \brief Интерфейс машины: единственное место, знающее марку и CAN.
+ * \brief The car interface: the only place that knows the brand and the CAN layout.
  *
- * Это `CarInterfaceBase` апстрима: у них он тоже не процесс, а поле контроллера — `Controls.__init__`
- * держит `self.CI`, внутри которого `self.CS` (декодер) и `self.CC` (упаковщик кадров), а
- * `controlsd` зовёт `CI.update(can_strs)` и `CI.apply(CC)`. Сервисов три: планер, контроллер, платформа.
+ * \details This is upstream's `CarInterfaceBase`, and it is a field rather than a process there too:
+ * `Controls.__init__` holds `self.CI`, which owns `self.CS` (the decoder) and `self.CC` (the frame
+ * packer), and `controlsd` calls `CI.update(can_strs)` and `CI.apply(CC)`. We have three services
+ * around it: planner, controller, platform.
  *
- * Закон управления сюда не входит: он получает шасси и план, а про адреса, сигналы и счётчики кадров
- * знает только этот класс. Железа здесь тоже нет — кадры приходят и уходят значениями, поэтому
- * интерфейс проверяется на записи без панды.
+ * The control law is not part of this: it receives a chassis frame and a plan, while addresses,
+ * signals and frame counters are known only here. Neither is the hardware — frames arrive and leave
+ * by value, so the interface is testable against a recording without a panda.
  */
 class CarIface {
 public:
@@ -34,23 +35,23 @@ public:
 
   explicit CarIface(Config config);
 
-  /// Загрузить DBC. Без него разбор шасси выключен, отправка кадров продолжает работать.
+  /// Load the DBC. Without it chassis decoding is off, while sending frames keeps working.
   void init();
 
-  /// `CI.update`: кадры в шасси. true, если шасси изменилось и его стоит опубликовать.
+  /// `CI.update`: frames into a chassis state. \return True when it changed and is worth publishing.
   bool update(const adas::proto::CANData& msg, int64_t now_ms);
 
-  /// `CI.apply`: команда контроллера в кадры для платформы.
+  /// `CI.apply`: a controller command into frames for the platform.
   std::vector<can_frame> apply(const CarControl& cc, const CarStateView& cs) { return car_controller_.update(cc, cs); }
 
   const adas::proto::CarState& carState() const { return decoder_.state(); }
   CarStateView carStateView() const { return decoder_.toCarStateView(); }
 
-  /// Предел момента этой машины: контроллер считает нормированную команду, границу знает интерфейс.
+  /// This car's torque ceiling [cNm]: the controller computes a normalised command, the limit lives here.
   int maxTorqueCNm() const { return CarControllerParams::STEER_MAX; }
-  /// Тот ли режим безопасности в панде, при котором эта машина принимает момент.
+  /// Whether the panda's safety mode is the one under which this car accepts torque.
   bool safetyModelOk(uint32_t safety_mode) const { return safety_mode == MqbSafetyConstants::kVolkswagen; }
-  /// Пропускает ли машина момент прямо сейчас: TSK, EPS и статус помощи — знание марки.
+  /// Whether the car lets torque through right now: TSK, EPS and the assist status are brand knowledge.
   bool actuationAllowed(bool controls_allowed) const
   {
     return lateralActuationAllowed(controls_allowed, /*lat_always_on=*/true, carStateView());

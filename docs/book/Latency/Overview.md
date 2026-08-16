@@ -13,8 +13,8 @@ Break the e2e path into measurable segments — then compare sessions fairly.
 ## Metrics
 
 ```bash
-cd app/src/main/scripts
-python3 latency.py /path/to/session
+cd scripts
+python3 tools/latency.py /path/to/session
 ```
 
 | quantity | meaning |
@@ -25,7 +25,7 @@ python3 latency.py /path/to/session
 | capture → steer (fresh) | until command on actuation topic (stale-filtered) |
 
 ```{warning}
-Raw `controls/steer` contains chassis republishes with **stale** `vision_ts`. For e2e use the filter in `latency.py` (same idea as PlotJuggler `latency/` columns).
+Raw `controls/steer` contains chassis republishes with **stale** `vision_ts`. For e2e use the filter in `tools/latency.py` (same idea as PlotJuggler `latency/` columns).
 ```
 
 ## Session comparison
@@ -98,7 +98,7 @@ shaving 2.5 ms off a poll interval is not.
 
 ## Where the time goes, and what is left to cut
 
-Measured on a 28-minute night run at 13.24 Hz. Each figure below is a median from `latency.py`, and the
+Measured on a 28-minute night run at 13.24 Hz. Each figure below is a median from `tools/latency.py`, and the
 cumulative column is what that tool actually reports — worth keeping straight, because the stage
 durations and the cumulative stamps are different measurements and they do not have to add up exactly.
 
@@ -134,7 +134,7 @@ for infer in (45.6, 30.0, 25.0):
 Until 2026-08-06 the earliest timestamp on a frame was `capture_ts_ms`, which meant two very different
 failures looked identical: a frame that arrived 40 ms after exposure, and a frame that waited 40 ms in
 the buffer because inference was still busy. `vision/lanes` now also carries `submit_ts_ms`,
-`pickup_ts_ms` and `frames_dropped`, and `latency.py` reports them.
+`pickup_ts_ms` and `frames_dropped`, and `tools/latency.py` reports them.
 
 The diagnosis is a two-by-two:
 

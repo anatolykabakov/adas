@@ -21,6 +21,12 @@ add_executable(
   test_params_learner.cpp
   test_road_route.cpp
   test_map_data.cpp
+  test_toyota.cpp
+)
+
+target_compile_definitions(
+  adas_tests
+  PRIVATE ADAS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/.."
 )
 
 target_include_directories(

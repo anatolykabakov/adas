@@ -34,6 +34,8 @@ inline constexpr const char* kLocalizationPose = "localization/pose";
 inline constexpr const char* kSteerCommand = "controls/steer";
 inline constexpr const char* kCameraCalib = "calibration/camera";
 inline constexpr const char* kCameraCalibDebug = "calibration/camera_debug";
+/// Camera intrinsics as the device reports them, published once the camera opens.
+inline constexpr const char* kCameraIntrinsics = "camera/intrinsics";
 inline constexpr const char* kCalibLaneUv = "calibration/lane_uv";
 inline constexpr const char* kCameraOdometry = "model/camera_odometry";
 inline constexpr const char* kVisionModelLong = "vision/model_long";

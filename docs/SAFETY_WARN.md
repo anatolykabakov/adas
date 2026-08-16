@@ -84,11 +84,11 @@ limit, empty arc, slow target far ahead, following without closing, closing
 drift right/left, return to center, no lane markings, driver hands on wheel, no path,
 latch, turn signal on own and opposite side.
 
-**On recordings** — `bag_safety_warn.py` runs a bag through the real chain
+**On recordings** — `bag/bag_safety_warn.py` runs a bag through the real chain
 `vision/lanes → TopicConvert → vision/path → SafetyWarnService` and counts episodes (not frames):
 
 ```bash
-PYTHONPATH=app/src/main/scripts python3 app/src/main/scripts/bag_safety_warn.py adas_logs/<session>
+PYTHONPATH=scripts python3 scripts/bag/bag_safety_warn.py adas_logs/<session>
 ```
 
 Run `2026_07_26_20_55_20`, 7.3 min city, |CTE| median 0.16 m / p95 0.98:

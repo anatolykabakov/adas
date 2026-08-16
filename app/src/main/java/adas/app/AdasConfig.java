@@ -104,6 +104,87 @@ public final class AdasConfig {
         return nodeBool(context, "vision_traffic_lights", true);
     }
 
+    /** Known cars: the name for `vehicle.name` and the DBC that parses them. */
+    public static final String[][] CARS = {
+        {"vw_golf_7_mqb", "VW Golf 7 (MQB)", "vw_mqb_2010.dbc"},
+        {"toyota_tss2", "Toyota TSS2", "toyota_nodsu_pt_generated.dbc"},
+    };
+
+    /**
+     * Which car is selected — `vehicle.name` from the config.
+     *
+     * <p>An empty string means the config said nothing; the caller decides what to do, and no car may
+     * be substituted silently here: guessing the make means guessing the CAN layout.
+     */
+    public static String carName(Context context) {
+        try {
+            JSONObject veh = root(context).optJSONObject("vehicle");
+            String name = veh != null ? veh.optString("name", "") : "";
+            return name != null ? name.trim() : "";
+        } catch (Exception e) {
+            Log.w(TAG, "carName read failed", e);
+            return "";
+        }
+    }
+
+    /** DBC asset for the selected car; an empty string if the car is unknown. */
+    public static String dbcAssetFor(String carName) {
+        for (String[] car : CARS) {
+            if (car[0].equals(carName)) {
+                return car[2];
+            }
+        }
+        return "";
+    }
+
+    /**
+     * The phone model `intrinsics_prior` was taken on, or an empty string.
+     *
+     * <p>Needed to tell "ours, calibrated with a chessboard" from "foreign, inherited from a previous
+     * phone": the first is more accurate than the camera's factory characteristics, the second is
+     * worse than them.
+     */
+    public static String intrinsicsPriorDevice(Context context) {
+        try {
+            org.json.JSONObject calib = root(context).optJSONObject("calibration");
+            org.json.JSONObject cam = calib == null ? null : calib.optJSONObject("camera");
+            org.json.JSONObject intr = cam == null ? null : cam.optJSONObject("intrinsics_prior");
+            return intr == null ? "" : intr.optString("device", "");
+        } catch (Exception e) {
+            Log.w(TAG, "intrinsicsPriorDevice read failed", e);
+            return "";
+        }
+    }
+
+    /**
+     * Reference output signature on zero inputs for the named runner, or null.
+     *
+     * <p>The runners check every session they build against it and refuse to work on a mismatch. The
+     * value belongs to the **model file**, not to the code: after dropping another model in via
+     * `/sdcard/adas_models/`, its signature has to be placed alongside, or a perfectly good model gets
+     * rejected — and that path exists precisely so models can be swapped and measured.
+     *
+     * <p>Taken on a workstation: `tools/thneed_from_onnx.py` writes the reference next to the file and
+     * `tools/thneed_check.py` prints it.
+     *
+     * @param runner "onnx" or "thneed" — their precision differs, so their signatures differ
+     * @return {@code {mean, std}}, or null if nothing is set in the config
+     */
+    public static float[] zeroInputSignature(Context context, String runner) {
+        try {
+            org.json.JSONObject vision = root(context).optJSONObject("vision");
+            org.json.JSONObject sig = vision == null ? null : vision.optJSONObject("zero_input");
+            org.json.JSONObject one = sig == null ? null : sig.optJSONObject(runner);
+            if (one == null || !one.has("mean") || !one.has("std")) {
+                return null;
+            }
+            return new float[]{(float) one.optDouble("mean"), (float) one.optDouble("std")};
+        } catch (Exception e) {
+            Log.w(TAG, "zeroInputSignature read failed", e);
+            return null;
+        }
+    }
+
     public static boolean chessboardCapture(Context context) {
         try {
             org.json.JSONObject calib = root(context).optJSONObject("calibration");

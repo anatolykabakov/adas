@@ -7,25 +7,12 @@
 
 #include <Eigen/Dense>
 
+#include "adas/mapmatch/geometry.h"
+
 namespace adas {
 namespace mapmatch {
 namespace {
 thread_local std::vector<double> g_route_x, g_route_y;
-
-double distSqToSegment(double px, double py, double ax, double ay, double bx, double by, double* qx, double* qy)
-{
-  const double vx = bx - ax, vy = by - ay;
-  const double wx = px - ax, wy = py - ay;
-  const double vv = vx * vx + vy * vy;
-  double t = vv > 1e-12 ? (wx * vx + wy * vy) / vv : 0.0;
-  t = std::max(0.0, std::min(1.0, t));
-  const double dx = wx - t * vx, dy = wy - t * vy;
-  if (qx)
-    *qx = ax + t * vx;
-  if (qy)
-    *qy = ay + t * vy;
-  return dx * dx + dy * dy;
-}
 
 struct Layout {
   int n_turns = 0;
@@ -165,6 +152,31 @@ bool nearestOnRoute(const std::vector<double>& rx, const std::vector<double>& ry
   return true;
 }
 
+/**
+ * \brief Nearest reference point for a track sample: on the route if one is given, in the map otherwise.
+ *
+ * \details The two passes of the fit — building residuals and measuring the final error — ask the same
+ * question and differ only in the search radius and in what they do with the answer, so the choice of
+ * source lives here. It also swallows the edge id, which neither caller wants.
+ *
+ * \param[in] map Road graph, used when there is no route.
+ * \param[in] on_route True to walk the route with a moving cursor instead of searching the map.
+ * \param[in] x,y Track sample [m].
+ * \param[in,out] cursor Position along the route; carried between samples so the walk stays monotone.
+ * \param[in] window How far ahead of the cursor to look, in route points.
+ * \param[in] search_m Search radius in the map [m]; ignored on a route.
+ * \param[out] nx,ny Nearest point [m].
+ * \param[out] dist Distance to it [m].
+ * \return False when nothing was found within reach.
+ */
+bool nearestReference(const RoadMap& map, bool on_route, double x, double y, std::size_t& cursor, std::size_t window,
+                      double search_m, double& nx, double& ny, double& dist)
+{
+  std::uint32_t edge = 0xFFFFFFFFu;
+  return on_route ? nearestOnRoute(g_route_x, g_route_y, x, y, cursor, window, nx, ny, dist) :
+                    map.nearestPoint(x, y, nx, ny, dist, edge, search_m);
+}
+
 }  // namespace
 
 FitResult fitTrackToRoute(const RoadMap& map, const Track& track, const std::vector<std::uint32_t>& dir_edges,
@@ -277,9 +289,7 @@ FitResult fitTrack(const RoadMap& map, const Track& track, double x0_m, double y
     std::size_t cursor = 0;
     for (std::size_t k = 0; k < idx.size(); ++k) {
       double nx = 0.0, ny = 0.0, d = -1.0;
-      std::uint32_t ei = 0xFFFFFFFFu;
-      const bool found = on_route ? nearestOnRoute(g_route_x, g_route_y, xs[k], ys[k], cursor, window, nx, ny, d) :
-                                    map.nearestPoint(xs[k], ys[k], nx, ny, d, ei, search_m);
+      const bool found = nearestReference(map, on_route, xs[k], ys[k], cursor, window, search_m, nx, ny, d);
       if (!found) {
         continue;
       }
@@ -291,8 +301,9 @@ FitResult fitTrack(const RoadMap& map, const Track& track, double x0_m, double y
         wx *= scale;
         wy *= scale;
       }
-      r[2 * k] = wx * geo_w;
-      r[2 * k + 1] = wy * geo_w;
+      const auto row = static_cast<Eigen::Index>(2 * k);
+      r[row] = wx * geo_w;
+      r[row + 1] = wy * geo_w;
     }
     int j = n_geo;
     r[j++] = (q[3] - 1.0) / cfg.sigma_speed_scale;
@@ -324,8 +335,6 @@ FitResult fitTrack(const RoadMap& map, const Track& track, double x0_m, double y
         double scale = 1e-2;
         if (c < 2)
           scale = 0.5;
-        else if (c == 2)
-          scale = 1e-3;
         else if (c < 5)
           scale = 1e-3;
         else if (c >= lay.drift(0))
@@ -371,9 +380,7 @@ FitResult fitTrack(const RoadMap& map, const Track& track, double x0_m, double y
     std::size_t cursor = 0;
     for (std::size_t k = 0; k < idx.size(); ++k) {
       double nx = 0.0, ny = 0.0, d = -1.0;
-      std::uint32_t ei = 0xFFFFFFFFu;
-      const bool found = on_route ? nearestOnRoute(g_route_x, g_route_y, xs[k], ys[k], cursor, window, nx, ny, d) :
-                                    map.nearestPoint(xs[k], ys[k], nx, ny, d, ei, 250.0);
+      const bool found = nearestReference(map, on_route, xs[k], ys[k], cursor, window, 250.0, nx, ny, d);
       if (found)
         dists.push_back(d);
     }
@@ -402,7 +409,7 @@ FitResult fitTrack(const RoadMap& map, const Track& track, double x0_m, double y
     sum2 += d * d;
   res.rms_m = std::sqrt(sum2 / static_cast<double>(dists.size()));
   res.median_m = sorted[sorted.size() / 2];
-  res.p95_m = sorted[std::min(sorted.size() - 1, static_cast<std::size_t>(0.95 * sorted.size()))];
+  res.p95_m = sorted[std::min(sorted.size() - 1, static_cast<std::size_t>(0.95 * static_cast<double>(sorted.size())))];
 
   double deform = 0.0;
   deform += std::pow((p[3] - 1.0) / cfg.sigma_speed_scale, 2);

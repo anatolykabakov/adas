@@ -521,21 +521,21 @@ panda.set_alternative_experience(kAltExpDisableDisengageOnGas /* 1 */, 0);
 
 | что смотреть | чем |
 |---|---|
-| **посмотреть глазами, как ехали**: вид сверху, окно 40×40 м, MP4 | `app/src/main/scripts/bag_topdown_video.py` |
-| качество слежения по фазам дуги, только с включённым ассистом | `app/src/main/scripts/bag_override_episodes.py` |
-| смещение от центра полосы и разложение опоры | `bag_arc_offset.py --std-range 20 --recompute` |
-| σ линий по условиям, два бага | `bag_lane_sigma_ab.py` |
-| наш стек против записанного comma на одних входах | `rlog_lat_diff.py` |
-| выученные параметры машины | `bag_params_learner.py` |
+| **посмотреть глазами, как ехали**: вид сверху, окно 40×40 м, MP4 | `scripts/bag/bag_topdown_video.py` |
+| качество слежения по фазам дуги, только с включённым ассистом | `scripts/bag/bag_override_episodes.py` |
+| смещение от центра полосы и разложение опоры | `bag/bag_arc_offset.py --std-range 20 --recompute` |
+| σ линий по условиям, два бага | `bag/bag_lane_sigma_ab.py` |
+| наш стек против записанного comma на одних входах | `rlog/rlog_lat_diff.py` |
+| выученные параметры машины | `bag/bag_params_learner.py` |
 
 ### Как смотреть видео вида сверху
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # 1) найти участки, где рулить было разрешено, отсортированные по кривизне команды
-python3 bag_topdown_video.py <bag> --list-assist
+python3 bag/bag_topdown_video.py <bag> --list-assist
 # 2) снять окно оттуда
-python3 bag_topdown_video.py <bag> --start 2860 --duration 14 --out /tmp/hw.mp4
+python3 bag/bag_topdown_video.py <bag> --start 2860 --duration 14 --out /tmp/hw.mp4
 ```
 
 Один кадр видео = один кадр камеры. Цвет кузова машины — **факт актюации** (`HCA_01.HCA_Active` с шины), а не

@@ -1,17 +1,29 @@
-# Vision: supercombo ONNX (simple wrapper)
+# Vision: supercombo on the phone
 
-Based on driving-model `driving.cc` output layout (`supercombo.onnx`, out=6409).
+Output layout follows the driving model `driving.cc`. Two runners sit behind one interface, so the
+rest of the package does not care which one produced the vector.
 
 ## Classes
 
 | Class | Role |
 |-------|------|
-| `vision/ModelCalibWarp` | K + RPY → 3×3 warp (flowpilot `getWrapMatrix` / medmodel) |
-| `vision/SupercomboOnnxRunner` | Warp preprocess + ONNX Runtime + parse plan / lanes / edges |
-| `vision/LaneLines` | 4 lanes + 2 edges + best PLAN path at ego xyz |
-| `vision/LaneOverlayView` | Yellow lanes / red edges / **green PLAN** on camera |
-| `vision/CameraOdometry` | Pose slice from model output (for C++ calib) |
-| `vision/VisionPipeline` | Background thread wiring |
+| `ModelRunner` | The interface both runners implement |
+| `SupercomboOnnxRunner` | Warp preprocess + ONNX Runtime + parse plan / lanes / edges |
+| `SupercomboThneedRunner` | The same model on the GPU through thneed; output vector 6504 |
+| `ModelCalibWarp` | K + RPY → 3×3 warp (flowpilot `getWrapMatrix` / medmodel) |
+| `LaneLines` | 4 lanes + 2 edges + best PLAN path at ego xyz |
+| `LaneOverlayView` | Yellow lanes / red edges / **green PLAN** on camera |
+| `CameraOdometry` | Pose slice from the model output (for C++ calibration) |
+| `ModelLongParse` | Lead and PLAN velocity for the longitudinal side |
+| `YuvFrame` | Camera frame buffer handed to a runner |
+| `VisionPipeline` | Background thread wiring |
+| `TrafficVisionPipeline`, `TrafficYoloRunner`, `SpeedLimitOcr` | Signs and traffic lights: a separate model and its OCR |
+
+**The pose offset is computed, not hardcoded.** `CameraOdometry.poseIdx(length)` derives it from the
+vector length, because the pose sits last before the features and generations differ: the same formula
+that gives the right address for our layout gives 5980 instead of 5948 on 0.9.x. The pose struct
+itself — velocity_mean, rotation_mean, velocity_std, rotation_std — is identical across them; only its
+address moves. Pass an explicit offset to `parse(out, poseIdx)` when the layout is known.
 
 ## Calib warp
 
@@ -61,4 +73,5 @@ adb push /path/to/supercombo.onnx /sdcard/adas_models/supercombo.onnx
 ## Notes
 
 - Needs 2 frames before first result (temporal stack).
-- Bag `vision/lanes.model_out` stores the full ONNX flat vector (~6409) for offline re-parse.
+- Bag `vision/lanes.model_out` stores the full flat output vector for offline re-parse; its length
+  depends on the runner, so parse against the length rather than a constant.

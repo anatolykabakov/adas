@@ -185,6 +185,107 @@ public class LaneOverlayView extends View {
         setWillNotDraw(false);
     }
 
+    private volatile float[] calibCorners;
+    private volatile boolean calibAccepted;
+    private volatile boolean calibActive;
+    private volatile int calibKept;
+    private volatile int calibTarget = 30;
+    private volatile String calibMessage = "";
+    private final Paint calibPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint calibTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint calibPanelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /**
+     * Corners found by the lens calibration, for the driver to see what the detector sees.
+     *
+     * \param pts Flat x,y pairs in frame pixels; null when the board was not found this frame.
+     * \param accepted True when the view was kept — green — rather than rejected as a near-duplicate.
+     */
+    public void setCalibrationPoints(float[] pts, boolean accepted) {
+        this.calibCorners = pts;
+        this.calibAccepted = accepted;
+        postInvalidate();
+    }
+
+    /** Turns the calibration view on and off; off restores the normal lane overlay. */
+    public void setCalibrationActive(boolean active) {
+        this.calibActive = active;
+        if (!active) {
+            this.calibCorners = null;
+            this.calibMessage = "";
+            this.calibKept = 0;
+        }
+        postInvalidate();
+    }
+
+    /**
+     * How far the collection has got, and what to tell the driver.
+     *
+     * <p>On screen rather than in a toast: a toast queues, lags behind the camera and is gone before it
+     * is read, which is exactly wrong for something the driver is meant to react to while holding a
+     * board in front of the lens.
+     *
+     * \param kept Views collected so far.
+     * \param target Views needed.
+     * \param message One line of instruction or result; may be empty.
+     */
+    public void setCalibrationProgress(int kept, int target, String message) {
+        this.calibKept = kept;
+        this.calibTarget = Math.max(1, target);
+        this.calibMessage = message != null ? message : "";
+        postInvalidate();
+    }
+
+    private void drawCalibrationPanel(Canvas canvas) {
+        final float pad = 24f;
+        final float barH = 18f;
+        final float panelH = 132f;
+        final float w = getWidth();
+
+        calibPanelPaint.setColor(Color.argb(190, 0, 0, 0));
+        canvas.drawRect(0f, 0f, w, panelH, calibPanelPaint);
+
+        calibTextPaint.setColor(Color.WHITE);
+        calibTextPaint.setTextSize(40f);
+        calibTextPaint.setFakeBoldText(true);
+        canvas.drawText(calibKept + " / " + calibTarget, pad, 50f, calibTextPaint);
+
+        calibTextPaint.setTextSize(26f);
+        calibTextPaint.setFakeBoldText(false);
+        final String msg = calibMessage;
+        if (!msg.isEmpty()) {
+            canvas.drawText(msg, pad + 160f, 46f, calibTextPaint);
+        }
+
+        // Progress bar: how many views have been accepted out of the number required.
+        final float barY = panelH - pad - barH;
+        calibPanelPaint.setColor(Color.argb(120, 255, 255, 255));
+        canvas.drawRect(pad, barY, w - pad, barY + barH, calibPanelPaint);
+        calibPanelPaint.setColor(calibKept >= calibTarget ? Color.GREEN : Color.rgb(0, 170, 255));
+        final float frac = Math.min(1f, calibKept / (float) calibTarget);
+        canvas.drawRect(pad, barY, pad + (w - 2 * pad) * frac, barY + barH, calibPanelPaint);
+    }
+
+    private void drawCalibration(Canvas canvas) {
+        drawCalibrationPanel(canvas);
+        final float[] pts = calibCorners;
+        if (pts == null || pts.length < 2) {
+            return;
+        }
+        final float sx = getWidth() / frameW;
+        final float sy = getHeight() / frameH;
+        calibPaint.setColor(calibAccepted ? Color.GREEN : Color.rgb(255, 176, 0));
+        calibPaint.setStyle(Paint.Style.STROKE);
+        calibPaint.setStrokeWidth(3f);
+        for (int i = 0; i + 3 < pts.length; i += 2) {
+            canvas.drawLine(pts[i] * sx, pts[i + 1] * sy, pts[i + 2] * sx, pts[i + 3] * sy, calibPaint);
+        }
+        calibPaint.setStyle(Paint.Style.FILL);
+        for (int i = 0; i + 1 < pts.length; i += 2) {
+            canvas.drawCircle(pts[i] * sx, pts[i + 1] * sy, 7f, calibPaint);
+        }
+    }
+
     public void setIntrinsics(float fx, float fy, float cx, float cy, float frameW, float frameH) {
         this.fx = fx;
 
@@ -386,6 +487,13 @@ public class LaneOverlayView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        // Lens calibration takes over the view entirely: the lane overlay is drawn from intrinsics we
+        // are in the middle of measuring, so showing it here would be showing the answer to the
+        // question being asked.
+        if (calibCorners != null || calibActive) {
+            drawCalibration(canvas);
+            return;
+        }
         LaneLines ll = this.lanes;
         if (ll != null) {
             for (int i = 0; i < 2; i++) {
@@ -409,17 +517,13 @@ public class LaneOverlayView extends View {
 
         if (ppValid) {
             drawPurePursuit(canvas);
-            drawSteeringHud(canvas);
-            drawPpStatus(canvas);
-        }
-        if (hcaValid && !hcaStatus.isEmpty()) {
-            drawHcaStatus(canvas);
         }
         if (alertActive) {
             drawSafetyAlert(canvas);
         }
-        drawTrafficHud(canvas);
-        drawTrafficLatencyHud(canvas);
+        // Removed on request: the PP debug lines and panda status, plus traffic-light overlays and
+        // sign-detector timings. All of it goes into the bag and is parsed offline, while on screen it
+        // covered the road. The methods stay — bringing them back means bringing back one call.
     }
 
     private void drawTrafficLatencyHud(Canvas canvas) {

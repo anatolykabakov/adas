@@ -29,11 +29,11 @@ script separately verifies that every page has a counterpart — otherwise the s
 ## Python for bag
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # protobuf stubs:
 ./generate_proto_python.sh
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-python3 latency.py /path/to/adas_logs/SESSION
+python3 tools/latency.py /path/to/adas_logs/SESSION
 ```
 
 ## AAD (optional)

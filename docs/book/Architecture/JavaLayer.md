@@ -94,8 +94,8 @@ Push a new file to the phone without rebuilding APK: `./scripts/push_config.sh` 
 Students pull with `./scripts/pull_bags.sh`, then:
 
 ```bash
-cd app/src/main/scripts
-python3 latency.py /path/to/adas_logs/SESSION
+cd scripts
+python3 tools/latency.py /path/to/adas_logs/SESSION
 python3 -m vis.export_to_plotjuggler /path/to/SESSION -o /tmp/out
 ```
 

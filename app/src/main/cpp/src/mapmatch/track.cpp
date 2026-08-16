@@ -131,7 +131,6 @@ std::vector<double> imuYawRate(const ImuSamples& imu, const std::vector<double>&
       gy += imu.accel_y[i];
       gz += imu.accel_z[i];
     }
-    n = static_cast<int>(imu.t_s.size());
   }
   const double norm = std::sqrt(gx * gx + gy * gy + gz * gz);
   if (norm < 1e-6)
@@ -184,9 +183,10 @@ Track buildTrack(const std::vector<double>& t_s, const std::vector<double>& spee
     return out;
 
   // Prepare yaw rate: chosen source minus stop bias.
-  std::vector<double> omega(yaw_rate_rps.begin(), yaw_rate_rps.begin() + n);
-  const std::vector<double> t(t_s.begin(), t_s.begin() + n);
-  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + n);
+  const auto count = static_cast<std::ptrdiff_t>(n);
+  std::vector<double> omega(yaw_rate_rps.begin(), yaw_rate_rps.begin() + count);
+  const std::vector<double> t(t_s.begin(), t_s.begin() + count);
+  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + count);
 
   std::vector<double> omega_imu;
   if (!imu.empty() && cfg.yaw_source != TrackConfig::YawSource::Chassis) {
@@ -366,9 +366,10 @@ YawDiagnostics analyzeYaw(const std::vector<double>& t_s, const std::vector<doub
   const std::size_t n = std::min({t_s.size(), speed_mps.size(), yaw_rate_rps.size()});
   if (n < 10)
     return d;
-  const std::vector<double> t(t_s.begin(), t_s.begin() + n);
-  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + n);
-  const std::vector<double> w(yaw_rate_rps.begin(), yaw_rate_rps.begin() + n);
+  const auto count = static_cast<std::ptrdiff_t>(n);
+  const std::vector<double> t(t_s.begin(), t_s.begin() + count);
+  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + count);
+  const std::vector<double> w(yaw_rate_rps.begin(), yaw_rate_rps.begin() + count);
 
   const auto stops = findStops(t, v, cfg.stop_speed_mps, cfg.stop_min_s);
   d.n_stops = static_cast<int>(stops.size());

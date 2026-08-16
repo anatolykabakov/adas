@@ -1,5 +1,7 @@
 package adas.app;
 
+import adas.app.record.AudioRecorder;
+import adas.app.record.BagLogger;
 import adas.proto.Messages;
 
 import android.util.Log;

@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "adas/utils/curvature_preview.h"
-#include "adas/utils/long_planner.hpp"
+#include "adas/utils/long_planner.h"
 
 using adas::curvatureSpeedLimit;
 using adas::maxCurvatureAhead;

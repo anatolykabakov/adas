@@ -8,7 +8,7 @@ Engineering version with implementation details: `docs/IMAGE_TO_CAN_PIPELINE.md`
 
 The stages below are easier to hold onto if you watch a single frame move through them. Each number is a
 measured median from a 28-minute night run. Per-stage medians do not have to add up to cumulative medians —
-these are chosen to land on the two cumulative figures `latency.py` actually reports, 54 ms to the model
+these are chosen to land on the two cumulative figures `tools/latency.py` actually reports, 54 ms to the model
 output and **79 ms to the command**, so the arithmetic is checkable rather than decorative.
 
 ```python
@@ -56,7 +56,7 @@ That is correct behaviour and it creates a trap for anyone reading logs:
 ```python
 VISION_HZ = 13.24
 TX_HZ = 100.0
-FRESH_WINDOW_MS = 50.0        # latency.py keeps commands within this of their vision timestamp
+FRESH_WINDOW_MS = 50.0        # tools/latency.py keeps commands within this of their vision timestamp
 
 vision_period_ms = 1000.0 / VISION_HZ
 per_frame = TX_HZ / VISION_HZ

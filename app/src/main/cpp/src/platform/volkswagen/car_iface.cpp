@@ -10,11 +10,11 @@ CarIface::CarIface(Config config) : config_(std::move(config)) {}
 void CarIface::init()
 {
   if (config_.dbc_path.empty()) {
-    LOGW("CarIface: пути к DBC нет — разбор шасси выключен");
+    LOGW("CarIface: no DBC path — chassis decoding is off");
   } else {
     dbc_ = std::make_unique<DBSParser>(config_.dbc_path);
     decoder_.setDbc(dbc_.get());
-    LOGI("CarIface: DBC %s (%zu сообщений)", config_.dbc_path.c_str(), dbc_->getAllMessages().size());
+    LOGI("CarIface: DBC %s (%zu messages)", config_.dbc_path.c_str(), dbc_->getAllMessages().size());
   }
   decoder_.setSpeedFilterConfig(config_.speed_filter);
 }

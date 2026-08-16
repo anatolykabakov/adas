@@ -1,4 +1,4 @@
-#include "adas/lateral/visionpilot_mpc.hpp"
+#include "adas/lateral/visionpilot_mpc.h"
 
 #include <algorithm>
 #include <cmath>

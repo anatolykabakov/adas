@@ -15,7 +15,7 @@ large the *measured* gap to their stack is, and every item names their value, ou
 closes. Three things make this criterion usable rather than rhetorical: we have their code
 (`/home/anatoly/atom/dragonpilot`), their rlogs from this car and route
 (`7b63cf08132829d3_2026-08-03--19-01-52`), and a harness that pushes their recorded inputs through our stack
-(`app/src/main/scripts/rlog_lat_diff.py`). Divergences are enumerated in `DIFF_FROM_DP_RU.md`; this section
+(`scripts/rlog/rlog_lat_diff.py`). Divergences are enumerated in `DIFF_FROM_DP_RU.md`; this section
 ranks them.
 
 **What the criterion changes.** Two items that ranked high on the old ordering drop, and one that was not on
@@ -58,7 +58,7 @@ Six tests, `171` in the suite. **Not verified on road**: this withdraws control 
 of a drive like 08-06, which is correct behaviour but a large change in what the car does.
 
 **The second P0 item is done (2026-08-07), and its result was to delete a divergence rather than measure
-one.** `rlog_lat_diff.py` now runs all routes, feeds either their finished plan or their raw `modelV2`,
+one.** `rlog/rlog_lat_diff.py` now runs all routes, feeds either their finished plan or their raw `modelV2`,
 compares after the limiter as well as before, and survives damaged segments. Over **101 975** matched frames
 of the 28 usable segments:
 
@@ -307,7 +307,7 @@ setting), and copying their σ thresholds before #23 says the two σ are the sam
 
 Everything below is implemented in code and covered by tests, but **not verified on the road**. One run
 with logging enabled closes most of the list: topics `safety/warn`, `vision/model_long`, and
-`control/lane_keep_debug` are written to the bag; analysis uses `bag_safety_warn.py` and `bag_controller_ab.py`.
+`control/lane_keep_debug` are written to the bag; analysis uses `bag/bag_safety_warn.py` and `bag/bag_controller_ab.py`.
 
 | item | verify |
 |---|---|
@@ -319,7 +319,7 @@ with logging enabled closes most of the list: topics `safety/warn`, `vision/mode
 | `center_force` disabled (0.0) | at real command rate (12.5 Hz, not 20 as in replay) the term does nothing: offset magnitude 0.21 → 0.19 on right arc and 0.26 vs 0.25 on left. It also eats stability margin — at 1.2 the left arc diverges (0.81 m, p95 2.95). Comma-two logs show tracking error ~0 without centering because the loop runs at 100 Hz. Revisit only after speeding up the loop |
 | ~~`intrinsics_prior` fx 951 → 993.4 / 995.2~~ | **verified 2026-08-04**: camera odometry scale 0.844 → **0.888** vs expected +4.5 %. Remaining 11 % is not explained by focal length — model domain gap. 2026-08-04 bag |
 | ~~CAN receive 50 → 10 ms~~ | **verified 2026-08-04**: `vehicle/state` 10 ms (p99 18, max 88), `controls/steer` 10 ms, panda callback 1.1 ms, no drops. But a vision tail appeared — see section 2 |
-| **σ window 5–40 → 5–20 m** | the fix for the right-arc collapse, and the one lateral change for the next drive. Predicted: blending weight on arcs 0.19–0.20 → 0.24–0.26, share of frames with blending off 33 %/32 % → 22 %/25 %. Measure with `bag_arc_offset.py` and watch the `d` and `σ worst` columns, not just the totals. Raising `lane_std_bad_m` was swept and rejected (see Done 08-06) |
+| **σ window 5–40 → 5–20 m** | the fix for the right-arc collapse, and the one lateral change for the next drive. Predicted: blending weight on arcs 0.19–0.20 → 0.24–0.26, share of frames with blending off 33 %/32 % → 22 %/25 %. Measure with `bag/bag_arc_offset.py` and watch the `d` and `σ worst` columns, not just the totals. Raising `lane_std_bad_m` was swept and rejected (see Done 08-06) |
 | **cruise-button actuation after the fix** | four plan defects and the actuator ceiling are fixed with tests, and replay over run 08-06 gives 1.5 tips/min against 73.1 — but no drive yet. Enable deliberately (`--set vehicle.cruise_buttons=true`), not by default. Watch: tips per minute in single digits, `brake_needed` share, and that the set speed never rises above where the driver put it |
 | ~~calibration prior `rpy_deg`~~ | **superseded 2026-08-06**: the camera moves every mount, and the learned yaw went +1.67° (08-04) → +0.10° (08-06), so a prior from the previous drive is no better than the default. Convergence takes 30–60 s and costs 0.02 m of offset on straights, so no prior edit and no calibration gate is needed. Config carries `pitch −1.8 / yaw +0.5`. What the finding does mean is that **plan offsets are not comparable across runs with different learned yaw**, since yaw enters the input warp |
 | **left-arc tracking error +0.29 m** | what remains of the arc problem. The wheel *does* reach the commanded angle (+13.8° asked → +13.5° achieved), so the command is too small: understeer compensation is too weak. Step 0 no longer blocks this (see `BENCHMARK_COMMA2.md`) — try `tire_stiffness_factor` 0.50 then 0.40 and re-measure on the same road |
@@ -370,7 +370,7 @@ middleware. **Remaining**: separate HUD warning (currently visible only via assi
 of view 65.6° matched the EON camera (65.2°) the model was trained on, while 951 and flowpilot assumption
 930 gave 67.9° and 69.1°. **Principal point intentionally left at center**: its shift
 (1.04° yaw, 0.97° pitch) is equivalent to rotation and is already absorbed by online calibration; fixing
-it without reset doubles σ (0.25 → 0.55, verified with `bag_intrinsics_ab.py` on 90 frames). Fixing
+it without reset doubles σ (0.25 → 0.55, verified with `bag/bag_intrinsics_ab.py` on 90 frames). Fixing
 cx/cy only makes sense together with calibration reset — then the estimate stops being a mix of true
 mount angles and principal-point error; it does not improve σ.
 
@@ -421,7 +421,7 @@ openpilot does.
 
 **Why change the model at all.** Plan offset inside the arc (+0.12 / −0.25 on comma-two,
 +0.32 / −0.35 for us) exists on both, and tuning it with a coefficient failed — see section 4.
-Whether another model cuts less, **is measured offline on recorded frames** (`bag_intrinsics_ab.py`
+Whether another model cuts less, **is measured offline on recorded frames** (`bag/bag_intrinsics_ab.py`
 is built exactly for this — just swap the ONNX path), without a drive. Do this before any
 replacement. But priority is lower: upstream removes plan offset via lane blending, not model choice.
 
@@ -443,7 +443,7 @@ testing lives only on recordings (as now), or domain adaptation is separate majo
 * "HCA was steering" flag in offline analysis — `controls_allowed` from `panda/health`, not
   `steer_output_enabled`: the latter was 1 in all frames on the 02.08 run and filters nothing.
 
-**Upstream log reading pitfalls** (`rlog_arc_offset.py`), each of which made the first measurement
+**Upstream log reading pitfalls** (`rlog/rlog_arc_offset.py`), each of which made the first measurement
 zero or nonsense:
 
 * `controlsState.active` true in only 1 % — on comma `dp_atl` (always-on lateral) is enabled, and
@@ -464,7 +464,7 @@ offset is the integral of command, and steady error is invisible.
 
 **And it does not answer torque either, which cost us a wrong conclusion — 2026-08-07.** An open-loop replay
 feeds the controller a measured angle that *someone else's* torque produced, so an integrator accumulates an
-error our command cannot influence. In `rlog_lat_diff.py` this inflated our torque from a median of 78 cNm to
+error our command cannot influence. In `rlog/rlog_lat_diff.py` this inflated our torque from a median of 78 cNm to
 **229** against upstream's 69, and the ceiling share from 21.7 % to 35.1 %, while the setpoint the same run
 computed agreed with theirs to 0.08° at a correlation of 0.965. The rule this establishes: **in an open-loop
 replay, compare quantities upstream of the integrator, or turn it off.** Curvature and setpoint angle are
@@ -640,7 +640,7 @@ Ordered by effort:
    `TrafficYoloRunner.java:206` already has `addNnapi(EnumSet.of(NNAPIFlags.USE_FP16))` with fallback to
    plain NNAPI and then CPU. If it gives the usual 1.5–2× on this SoC: inference 45.5 → 25–30 ms, cycle
    ~40 ms → **20–22 Hz at ~65–70 ms to CAN**, i.e. upstream's planner rate. Risk: FP16 changes model
-   output; check offline on recorded frames the way `bag_intrinsics_ab.py` does (swap the session,
+   output; check offline on recorded frames the way `bag/bag_intrinsics_ab.py` does (swap the session,
    compare σ and plan on the same frames) — no drive needed;
 3. **Frame prep jitter** (mean 15.3 vs median 9, p95 37.6) — a few ms of median, much more of the tail,
    and the tail is exactly the frames where the reference ages past 150 ms;
@@ -677,7 +677,7 @@ average — `A = [[1, dt], [0, 1]]`, `C = [1, 0]`, `K = [0.174, 1.659]` at 100 H
 `aEgo` come out of it. The localizer is used for orientation and for `paramsd`, not for `vEgo`.
 
 We measured why that choice is defensible, and where it leaves a real gap
-(`bag_speed_sources.py`, GNSS Doppler as the reference, two runs):
+(`bag/bag_speed_sources.py`, GNSS Doppler as the reference, two runs):
 
 | quantity | run 08-06 | run 08-04 |
 |---|---|---|
@@ -731,14 +731,14 @@ recorded data p5/p95 ±0.6, extremes −4.0 and +3.1, RMS step **0.062**, and sp
 * **give the planners a choice of speed source** and A/B it. Right now `LaneKeepService` and
   `LongPlanService` both read `chassis_.speed_mps`. The filtered CAN speed is probably right for
   control — it is what upstream uses, and it has no GNSS latency — but that should be measured, not
-  assumed, and the harness for it is `bag_speed_sources.py` plus a replay;
+  assumed, and the harness for it is `bag/bag_speed_sources.py` plus a replay;
 * ~~road roll has no source at all~~ — **built 2026-08-06**, see below. What remains open is grade
   (longitudinal), which needs the same treatment with `f_x` and is not yet done.
 
 ### `paramsd`: ported, measured, and correctly left switched off
 
 **Done 2026-08-06.** `utils/params_learner.h`, twelve tests, published on `localization/pose`, replayable
-offline with `bag_params_learner.py` — and both flags ship `false`, because the replay said so. The result
+offline with `bag/bag_params_learner.py` — and both flags ship `false`, because the replay said so. The result
 is worth more than a working feature would have been, since two of the three premises that motivated the
 task turned out to be wrong, and one of them was a premise about the estimator built the day before.
 
@@ -905,7 +905,7 @@ so the failure the text predicts can be reproduced on the vehicle.
 | `Control/VehicleModel.md` | **done** — the calibration detective story: our 0.54 against comma's learned 1.319 on the same car, resolved by a third sensor (gyro/ESP 1.017, camera/ESP 0.849) rather than by argument, then what 0.64 → 0.50 actually bought (3–9 % more angle, a quarter of the tracking error), then why a constant cannot be the end. Latency table updated to the measured 54 / 79 / ~89 ms and the transport-versus-dynamics reason the lookahead exceeds the sum |
 | `Control/MPC_and_FP.md` | **done** — already built as seven steps for each controller; what it lacked was an ending. New section on the four kinds of limit a horizon does *not* remove: structural (a steady offset is nearly free in the cost function, because over the first four nodes the car cannot move sideways by more than 3.7 cm), a non-result (N=16 already puts 11 of 17 nodes inside the first second, same as N=32 — lengthening dilutes), upstream (the plan's own ±0.33 m arc bias, coupled to camera calibration, which is why the curvature coefficient was not reproducible between runs), and physical (65 % torque saturation, where feedback stops existing) |
 | `Architecture/Middleware.md` | **done** — a measured section answering "is the bus the bottleneck": publish calls `cv.notify_one()` so a subscriber is runnable at once, only the two boundaries with the outside world poll, and timer dt was 10.00 ms mean over 143 700 firings (worst 44.8, a USB stall). With a runnable comparison of polling against notification that also shows how picking a commensurate period flatters polling. Plus the queue-policy asymmetry: the bus drops the newest, `VisionPipeline` drops the oldest, and both are right |
-| `Architecture/Pipeline.md` | **done** — a runnable trace of one frame with an accumulating clock, arranged to land on the two cumulative figures `latency.py` reports (54 ms to model output, 79 to the command, 89 to the wire, 1.96 m of travel at 22 m/s). Plus "what happens between frames": 7.6 actuator ticks per vision frame, why 32 % of `controls/steer` are republishes on an older reference, and why "the command is fresh" and "the picture is fresh" are different claims — the distinction the 250 ms HCA timeout failed to make |
+| `Architecture/Pipeline.md` | **done** — a runnable trace of one frame with an accumulating clock, arranged to land on the two cumulative figures `tools/latency.py` reports (54 ms to model output, 79 to the command, 89 to the wire, 1.96 m of travel at 22 m/s). Plus "what happens between frames": 7.6 actuator ticks per vision frame, why 32 % of `controls/steer` are republishes on an older reference, and why "the command is fresh" and "the picture is fresh" are different claims — the distinction the 250 ms HCA timeout failed to make |
 | `Architecture/JavaLayer.md` | has examples; not yet restructured |
 
 **The course exists in Russian too**, at `/ru/`, with an **ENG/RU** button in the navbar that maps to the same
@@ -922,7 +922,7 @@ chapters as a side effect: `Safety/Warnings` still documented the pre-fix 3 m/s 
 that it is. The heading check itself was also wrong — it counted `#` comments inside code blocks as headings.
 
 **Road bank is estimated now** — the input `paramsd` needs to tell a banked road from an understeering car,
-and the last hard blocker on it. Measured first (`bag_road_roll.py`), built second.
+and the last hard blocker on it. Measured first (`bag/bag_road_roll.py`), built second.
 
 The relation is one line: in the vehicle frame with the road banked by φ the accelerometer reads
 `f_y = a_y − g·sin(φ)` with `a_y = −v·yaw_rate`, so `sin(φ) = (a_y − f_y)/g`. Everything interesting is

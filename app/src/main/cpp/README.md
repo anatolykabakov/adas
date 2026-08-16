@@ -1,293 +1,180 @@
-# ADAS C++ Application
+# ADAS C++
 
-Advanced Driver Assistance System (ADAS) application built with Middleware framework for Android.
+Всё управление и обработка: разметка → поперечный план → угол на руле, продольный план, локализация,
+калибровка камеры, предупреждения, карта. Один и тот же код работает на телефоне (Android, arm64),
+на хосте под тестами и как модуль Python в офлайн-разборах — разница только в источнике данных и в
+том, кто крутит время.
 
-## Project Structure
+## Структура
 
 ```
 cpp/
-├── include/                        # Public headers
-│   ├── adas_app.h
-│   ├── middleware/middleware.hpp
-│   ├── panda/                      # Panda USB / CAN headers
-│   ├── services/                   # Service headers
-│   ├── utils/
-│   └── volkswagen/                 # MQB CarController / mqbcan
-│
-├── src/                            # Implementation
-│   ├── CMakeLists.txt
-│   ├── adas_app.cpp
-│   ├── adas_app_android.cpp
-│   ├── adas_app_linux.cpp
-│   ├── panda/
-│   ├── services/
-│   ├── utils/
-│   └── volkswagen/
-│
-├── tests/                          # Unit tests
-├── profiles/                       # Conan profiles
-├── build_cpp.sh                    # Conan + CMake build
+├── include/adas/            публичные заголовки; путь включения повторяет пространство имён
+│   ├── middleware/          шина: сервисы, типизированный pub/sub, таймеры, реестр параметров
+│   ├── services/            сервисы — единицы работы на шине
+│   ├── lateral/             поперечные регуляторы и общая для них модель автомобиля
+│   ├── mapmatch/            дорожный граф OSM: привязка к дороге, кривизна впереди
+│   ├── platform/            автомобиль за интерфейсом; volkswagen/ — пока единственная марка
+│   ├── panda/               USB-драйвер и упаковка CAN
+│   ├── traffic/             разбор выходов детектора знаков
+│   ├── thneed/              вендоренный GPU-раннер из flowpilot (MIT)
+│   └── utils/               модель автомобиля, PID, фильтры, калибровки, конвертация протобуфов
+├── src/                     реализация, зеркало include/adas
+│   └── python/              модуль pybind11: тот же C++, импортируемый как pyadas
+├── tests/                   gtest, 223 случая
+├── profiles/                профили conan
+├── build_cpp.sh             conan + cmake, сборка и тесты
+├── .clang-tidy              конфигурация статического анализа
 ├── CMakeLists.txt
 └── conanfile.py
 ```
 
-## Architecture
+Пространства имён следуют каталогам: `adas/services/planner.h` объявляет `adas::services::Planner`,
+`adas/middleware/manager.hpp` — `adas::middleware::Manager`. Общие типы данных остаются в `adas`:
+они принадлежат системе, а не сервису, который их произвёл.
 
-### Service-Based Design
+## Архитектура
 
-The application uses a service-oriented architecture with the Middleware framework:
+Шина `middleware` даёт сервисам типизированный pub/sub, таймеры и живые параметры. В режиме
+`RealTime` у каждого сервиса свой поток, просыпающийся на публикации или сроке таймера; в режиме
+`Simulated` потоков нет вовсе — хост сам двигает время через `setTime` и `step`. Именно поэтому
+офлайн-разбор бега и телефон исполняют один код.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Middleware                           │
-│  (one thread per Service, pub/sub+timers)  │
-└─────────────────────────────────────────────────────────────┘
-              │         │         │
-    ┌─────────┘         │         └──────────┐
-    │                   │                    │
-    ▼                   ▼                    ▼
-┌──────────┐    ┌──────────────┐    ┌────────────────┐
-│  Panda   │    │  ZmqBridge   │    │ TopicConvert / │
-│ Service  │    │   Service    │    │ LaneKeep / …   │
-└──────────┘    └──────────────┘    └────────────────┘
-    │                   │                    │
-    │ sensors/can       │ External ZMQ       │ typed topics
-    │                   │ (tcp://...)        │
-    ▼                   ▼                    ▼
-┌───────────────────────────────────────────────────────┐
-│          Internal Topic Bus (Type-safe Pub/Sub)       │
-│  • sensors/imu            • sensors/gps/location      │
-│  • sensors/imu_raw        • sensors/imu_yaw           │
-│  • vehicle/chassis        • vision/path               │
-│  • control/lane_keep      • localization/pose         │
-│  • sensors/can                                        │
-└───────────────────────────────────────────────────────┘
+внешний мир                    шина                          сервисы
+──────────────────────────────────────────────────────────────────────────
+Java (камера, GNSS, IMU) ──┐
+                           ├─→ ZmqBridge ──→ типизированные топики ──→ Planner ──→ Control
+бег / офлайн-стенд ────────┘        ↑                                Localization
+                                    │                                CameraCalib
+panda (CAN, USB) ────→ Platform ────┘                                MapData, SafetyWarn, …
 ```
 
-### Data Flow
+`ZmqBridge` — единственное место, где внутренняя шина встречается с внешним миром. Входящие кадры
+разбираются в схемные сообщения и публикуются на шине; исходящие заворачиваются в конверт
+`ZMQMessage`. Сам конверт не существует больше нигде: сервисы обмениваются схемными сообщениями —
+теми же, что лежат в записанном заезде.
 
-1. **External Sources** → Sensors (Android), Panda device
-2. **ZmqBridgeService** → Polls external ZMQ topics (10ms timer)
-3. **External Topics** → Raw data published to ZMQ (`:5555` IN / `:5556` OUT, multipart topic+proto)
-4. **TopicConvert / ImuCalib / LaneKeep / Localization** → Subscribe to internal topics, process data
-5. **PandaService** → Reads CAN data, publishes to `sensors/can`; consumes `controls/steer`
+`Platform` — только драйвер панды: байты в обе стороны плюс надзор за безопасностью. Разбор
+`CarState` намеренно снаружи: это знание о марке, а не об USB, поэтому добавление автомобиля не
+трогает этот сервис.
 
-## Building
+## Сборка
 
-### Android (ARM64)
 ```bash
-./build_cpp.sh -t android
-# Output: build/libadas_app.so (64MB)
-# Copies to: ../libs/arm64-v8a/
+./build_cpp.sh -t android          # arm64-v8a, копирует .so в ../libs/arm64-v8a/
+./build_cpp.sh -t linux            # хост
+./build_cpp.sh -t linux --test     # хост + 223 теста; без --test тесты не собираются вовсе
+./build_cpp.sh -c -t linux         # начисто
 ```
 
-### Linux (x86_64)
-```bash
-./build_cpp.sh -t linux
-# Output: build/libadas_app.so
-```
+Сборка под Linux всегда включает биндинги Python и кладёт `pyadas/core*.so` в `scripts/pyadas/`.
 
-### With Tests
-```bash
-./build_cpp.sh -t linux --test
-# Runs: 10 Middleware tests + 1 ZMQ integration test
-```
+После структурных изменений собирайте начисто: инкрементальная сборка молча переиспользует
+объектные файлы, чей исходник не менялся, даже если менялся заголовок, и показывает зелёный свет на
+коде, который уже не компилируется.
 
-### Clean Build
-```bash
-./build_cpp.sh -c -t android  # Clean + Android
-./build_cpp.sh -c -t linux    # Clean + Linux
-```
+## Сервисы
 
-## Services
+| сервис | что делает |
+|---|---|
+| `Planner` | поперечный план: разметка → кривизна → требуемый угол колёс |
+| `Control` | угол → момент на руле: PID, ограничение скорости изменения, гейты актюации |
+| `Platform` | панда: приём и передача CAN, здоровье, надзор за безопасностью |
+| `ZmqBridge` | граница с внешним миром в обе стороны |
+| `Localization` | поза: EKF по колёсам, IMU и ГНСС |
+| `CameraCalib` | онлайн-калибровка камеры по точке схода |
+| `MapData` | OSM: где мы на дороге и что за поворот впереди |
+| `SafetyWarn` | FCW, AEB, LDW |
+| `TrafficSign` | состояние по знакам |
+| `MiddlewareStats` | телеметрия самой шины раз в секунду |
+| `InternalSubscriber` | доступ к топикам из офлайн-стенда |
 
-### PandaService
-- **Priority**: High
-- **Timer**: 50ms (20Hz)
-- **Function**: Reads CAN data from Panda device
-- **Publishes**: `sensors/can` with filtered CAN frames
-- **Filters**: Only addresses: 0xFC, 0x86, 0xFD, 0x3DC, 0x13D
+Регистрируются в `adas_app.cpp::setupRealtimeServices()` (и в упрощённом наборе для
+`Simulated`). Что именно поднимать, решает конфигурация.
 
-### ZmqBridgeService
-- **Priority**: High
-- **Timer**: 10ms (100Hz)
-- **Function**: Bridges external ZMQ ↔ internal topics (one IN + one OUT socket)
-- **IN** `tcp://127.0.0.1:5555`: bind SUB — sensors / commands, multipart `[topic][proto]`
-- **OUT** `tcp://127.0.0.1:5556`: bind PUB — can / vehicle / algorithms → Java BagLogger
-- **Publishes**: Raw messages to matching internal topics
+## Топики
 
-### TopicConvertService
-- **Priority**: High
-- **Function**: ZMQ protobuf → typed samples (`vision/path`, `vehicle/chassis`, `imu_raw`, GPS ENU)
-- **Subscribes**: `vision/lanes`, `vehicle/state`, `sensors/imu`, `sensors/gps/location`
+Канонический список — `include/adas/utils/adas_topics.h`. Основные:
 
-## Internal Topics
+| топик | тип | источник |
+|---|---|---|
+| `sensors/imu`, `sensors/imu_raw`, `sensors/imu_yaw` | IMU | Java → ZmqBridge → калибровка |
+| `sensors/gps/location`, `sensors/gps/data` | ГНСС | Java |
+| `vision/lanes` → `vision/path` | разметка и план пути | зрение → разбор |
+| `vehicle/state`, `vehicle/chassis` | состояние автомобиля | Platform / бег |
+| `can/rx`, `panda/health` | CAN и здоровье панды | Platform |
+| `control/lat_plan`, `control/lane_keep`, `control/lane_keep_debug` | поперечный план и отладка | Planner |
+| `controls/steer` | команда на руль | Control → Platform |
+| `control/long_plan`, `vision/model_long` | продольный план | продольная часть |
+| `localization/pose` | поза | Localization |
+| `calibration/camera`, `calibration/camera_debug`, `calibration/lane_uv` | калибровка | CameraCalib |
+| `map/local` | положение на дороге, кривизна впереди | MapData |
+| `safety/warn`, `traffic/state` | предупреждения и знаки | SafetyWarn, TrafficSign |
+| `middleware/stats` | телеметрия шины | MiddlewareStats |
 
-See `include/utils/adas_topics.h` for the canonical list.
+Что уходит наружу и попадает в бег — список `kZmqOutboundTopics` в `include/adas/services/zmq_bridge.h`.
 
-### Available Topics
-
-| Topic | Data Type | Source |
-|-------|-----------|--------|
-| `sensors/imu` | IMU protobuf | Android ZMQ |
-| `sensors/imu_raw` | RawImuSample | TopicConvert |
-| `sensors/imu_yaw` | ImuSample | ImuCalib |
-| `sensors/gps/location` | GPS / GpsSample ENU | Android → TopicConvert |
-| `vision/lanes` | LaneLines | Android vision |
-| `vision/path` | LanePathMsg | TopicConvert |
-| `vehicle/state` | CarState | Android / bag |
-| `vehicle/chassis` | ChassisSample | TopicConvert / Panda |
-| `control/lane_keep` | LaneKeepState | LaneKeep |
-| `controls/steer` | SteerCommand | LaneKeep → Panda |
-| `localization/pose` | LocalizationPose | Localization |
-| `sensors/can` | CAN Frames | Panda |
-
-## Creating Custom Services
-
-### Basic Template
+## Новый сервис
 
 ```cpp
-#include "middleware/middleware.hpp"
-#include "messages.pb.h"
+#include "adas/middleware/manager.hpp"
+#include "adas/utils/adas_topics.h"
 
-class MyService : public adas::Service
-{
+namespace adas {
+namespace services {
+
+/// \brief Одна строка о том, за что сервис отвечает.
+class MyService : public adas::middleware::Service {
 public:
-    void configure() override {
-        // Subscribe to topics
-        subscribe<ai::flow::adas::ZMQMessage>("sensors/imu",
-            [this](const auto& msg) {
-                if (msg.has_imu_data()) {
-                    const auto& imu = msg.imu_data();
-                    // Process IMU data
-                    float accel = sqrt(
-                        imu.accel_x() * imu.accel_x() +
-                        imu.accel_y() * imu.accel_y() +
-                        imu.accel_z() * imu.accel_z()
-                    );
-                    // Use acceleration...
-                }
-            });
+  void configure() override
+  {
+    subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& s) { onChassis(s); });
+    scheduleTimer(
+        50, [this] { tick(); }, "my_service");
+  }
 
-        // Set priority
-        setPriority(Priority::Normal);
-    }
-
-    void reset() override {
-        // Reset state
-    }
+  void reset() override { /* состояние в исходное */ }
+  std::string_view getName() const override { return "my_service"; }
 };
+
+}  // namespace services
+}  // namespace adas
 ```
 
-### Adding to AdasApp
+Дальше: файл в `src/services/`, заголовок в `include/adas/services/`, регистрация в
+`adas_app.cpp::setupRealtimeServices()`, тест в `tests/`. Публичный API документируется в стиле
+doxygen — `\brief`, `\param[in]`, и каждое поле `Config` с `///<`.
 
-Edit `adas_app.cpp::setupRealtimeServices()` and push your service into the `services` vector (gated by `runtime_cfg_` if needed).
+## Тесты
 
-## Testing
-
-### Run All Tests
 ```bash
-cd build
-./tests/adas_tests
+./build_cpp.sh -t linux --test                     # все 223
+
+# выборочно: conanrun.sh кладёт в LD_LIBRARY_PATH библиотеки acados,
+# без него бинарь не найдёт libhpipm.so
+cd build/linux/Release && . ./conanrun.sh
+./tests/adas_tests --gtest_filter='Planner*'
 ```
 
-### Run Specific Test
-```bash
-./tests/adas_tests --gtest_filter="MiddlewareTest.InternalTopicPublishing"
-```
+Покрыто: поперечные регуляторы (гейт по скорости, ограничения, смешивание разметки, упреждение),
+чистое преследование, PID, CAN VW (HCA, счётчик, CRC), шина, предупреждения FCW/AEB/LDW, выученные
+параметры автомобиля, крен дороги, фильтр скорости, EKF, привязка к дорожному графу, конфигурация.
 
-### Test Coverage
-- ✅ Service lifecycle (start, stop)
-- ✅ Pub/Sub functionality
-- ✅ Timer scheduling
-- ✅ Simulated mode (`setTime` + `step`)
-- ✅ Internal topic publishing
+Статический анализ — clang-tidy, [`scripts/cpp/README.md`](../../../../scripts/cpp/README.md).
 
-## Performance
+## Зависимости
 
-### Thread Configuration
-- **RealTime**: one worker thread per Service; wake on publish / timer deadline (`condition_variable`)
-- **Simulated**: no threads; host drives `setTime` + `step`
-- **Registration**: `registerService` / `registerService<T>(…)` then `startAll`
-- **Backpressure**: per-subscription slots (default capacity 100); drop-oldest + coalesced drain so inboxes cannot grow unbounded
-- **Stats**: `middleware/stats` @ 1 Hz (callback ms, timer dt, lagging, drops) → ZMQ OUT → bag; analyze with `scripts/bag_middleware_stats.py`
+Через conan (`conanfile.py`): protobuf 3.21.12, cppzmq 4.10.0, libusb 1.0.26, jsoncpp 1.9.6,
+eigen 3.4.0, acados 0.1.8; под тесты gtest 1.14.0, под биндинги pybind11 2.11.1.
 
-### Measured Performance
-- **Message processing**: <100μs per message
-- **Timer accuracy**: ±1ms
-- **ZMQ latency**: <10ms (external → internal)
-- **Throughput**: >1000 messages/second
+## Платформы
 
-## Dependencies
+**Android**: arm64-v8a, minSdk 24, compileSdk 34, приоритеты через `setpriority`, логи в logcat.
+**Linux**: x86_64, SCHED_RR (нужен `CAP_SYS_NICE`), логи в stdout, полный набор тестов и биндинги.
 
-Managed via `vcpkg.json`:
-- **protobuf** 5.29.3 - Message serialization
-- **cppzmq** 4.10.0 - ZMQ C++ bindings
-- **libusb** 1.0.27 - Panda USB communication
-- **gtest** 1.16.0 - Unit testing (Linux only)
+## Наблюдаемость
 
-## Platform Support
-
-### Android
-- **ABI**: arm64-v8a
-- **Min SDK**: 26 (Android 8.0)
-- **NDK**: 27.0.12077973
-- **Threading**: Android priority (setpriority)
-- **Logging**: Android logcat
-
-### Linux
-- **Arch**: x86_64
-- **Threading**: SCHED_RR (requires CAP_SYS_NICE)
-- **Logging**: stdout/stderr
-- **Testing**: Full test suite
-
-## Statistics & Monitoring
-
-```cpp
-// Print middleware summary (service / running counts)
-middleware->printStats();
-```
-
-## Troubleshooting
-
-### Build Issues
-
-**Problem**: `messaging/impl_zmq.h` not found
-- **Solution**: Use `messages.pb.h` directly (already fixed)
-
-**Problem**: Cannot link `-ludev`
-- **Solution**: `sudo apt-get install libudev-dev`
-
-**Problem**: Template errors in middleware.hpp
-- **Solution**: Ensure C++17 enabled and all headers included
-
-### Runtime Issues
-
-**Problem**: No messages received
-- **Solution**: Check ZMQ port conflicts, increase wait times, verify topic names
-
-**Problem**: High CPU usage
-- **Solution**: Reduce timer frequencies, unsubscribe from unused topics
-
-**Problem**: Messages dropped
-- **Solution**: Increase worker thread count, optimize message handlers
-
-## License
-
-This project is part of the ADAS Android application.
-
-## Contributing
-
-When adding new services:
-1. Create service files in `services/` directory
-2. Inherit from `adas::Service`
-3. Implement `configure()` and `reset()`
-4. Add to CMakeLists.txt
-5. Register in `adas_app.cpp::setupRealtimeServices()`
-6. Write tests in `tests/`
-
-## Support
-
-For questions or issues, refer to:
-- `include/utils/adas_topics.h` - Topic reference
-- `tests/test_middleware.cpp` - Test examples
+Не гадать, а смотреть: `MiddlewareStats` раз в секунду публикует время обратных вызовов, дрейф
+таймеров, отставания и потери. Это уходит в бег и разбирается через
+[`scripts/bag/bag_middleware_stats.py`](../../../../scripts/bag/bag_middleware_stats.py).

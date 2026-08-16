@@ -1,5 +1,7 @@
 
 #pragma once
+#include <cstdio>
+#include <stdexcept>
 #include <fstream>
 #include <string>
 #include <map>
@@ -10,6 +12,9 @@
 
 struct Signal {
   std::string name;
+  /// True for `@0` (Motorola, most significant bit first). VW writes `@1`, Toyota writes `@0`, and a
+  /// parser that assumes one silently returns nonsense for the other rather than failing.
+  bool is_big_endian = false;
   int start_bit;
   int length;
   bool is_signed;
@@ -63,9 +68,23 @@ private:
     }
 
     std::string line;
+    int line_no = 0;
+    int skipped = 0;
     while (std::getline(file, line)) {
-      parseLine(line);
+      ++line_no;
+      try {
+        parseLine(line);
+      } catch (const std::exception& e) {
+        // One line we cannot read must not void the whole database. A DBC that fails to load leaves
+        // the car undecoded, which looks exactly like a car that is not talking — and that is the
+        // wrong thing to conclude from a spacing difference on an unrelated message.
+        ++skipped;
+        if (skipped <= 5)
+          fprintf(stderr, "DBC %s:%d skipped (%s): %s\n", filename.c_str(), line_no, e.what(), line.c_str());
+      }
     }
+    if (skipped > 0)
+      fprintf(stderr, "DBC %s: %d line(s) skipped, %zu messages loaded\n", filename.c_str(), skipped, messages.size());
 
     return true;
   }
@@ -88,9 +107,17 @@ private:
     iss >> token;
     uint32_t id = std::stoul(token);
 
+    // The colon may be attached to the name or stand on its own: both `BO_ 170 WHEEL_SPEEDS: 8 XXX`
+    // and `BO_ 869 DSU_CRUISE : 7 DSU` are written by real tools, and the second shape used to throw
+    // on `stoul(":")` and take the entire file down with it.
     iss >> token;
-    size_t colon_pos = token.find(':');
+    const size_t colon_pos = token.find(':');
     std::string name = token.substr(0, colon_pos);
+    if (colon_pos == std::string::npos) {
+      iss >> token;
+      if (token != ":")
+        throw std::runtime_error("expected ':' after the message name");
+    }
 
     iss >> token;
     uint8_t length = static_cast<uint8_t>(std::stoul(token));
@@ -127,6 +154,11 @@ private:
 
     int length = std::stoi(length_str.substr(0, at_pos));
 
+    // "@0+" / "@1-" — byte order then sign, exactly two characters after the '@'.
+    const std::string order_sign = length_str.substr(at_pos + 1, 2);
+    const bool is_big_endian = !order_sign.empty() && order_sign[0] == '0';
+    const bool is_signed = order_sign.size() > 1 && order_sign[1] == '-';
+
     size_t paren_start = line.find('(');
     size_t paren_end = line.find(')');
     if (paren_start != std::string::npos && paren_end != std::string::npos) {
@@ -143,7 +175,8 @@ private:
 
       auto it = messages.find(current_message_id);
       if (it != messages.end()) {
-        it->second.signals[signal_name] = {signal_name, start_bit, length, false, factor, offset, 0.0, 655.35, "km/h"};
+        it->second.signals[signal_name] = {signal_name, is_big_endian, start_bit, length, is_signed,
+                                           factor,      offset,        0.0,       655.35, "km/h"};
       }
     }
   }

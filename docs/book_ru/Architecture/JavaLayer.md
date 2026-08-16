@@ -94,8 +94,8 @@ assert float("0.8") == ui_value
 Студенты забирают их через `./scripts/pull_bags.sh`, дальше:
 
 ```bash
-cd app/src/main/scripts
-python3 latency.py /path/to/adas_logs/SESSION
+cd scripts
+python3 tools/latency.py /path/to/adas_logs/SESSION
 python3 -m vis.export_to_plotjuggler /path/to/SESSION -o /tmp/out
 ```
 

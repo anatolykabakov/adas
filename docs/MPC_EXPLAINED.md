@@ -141,4 +141,4 @@ Correct lever — **κ estimate quality**, not feedback gains:
 - CTE/epsi/κ estimate (poly fit): `app/src/main/cpp/src/utils/path_lateral_state.cpp`
 - tuning config: `app/src/main/assets/config.json` (`vehicle` block)
 - debug topic with controller internals: `control/lane_keep_debug` (`LaneKeepDebug`, per-frame)
-- bug analysis in Python: `app/src/main/scripts/vis/bag_io.py` (`load_topic_messages`)
+- bug analysis in Python: `scripts/vis/bag_io.py` (`load_topic_messages`)

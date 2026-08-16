@@ -181,6 +181,7 @@ public:
   void setLaneKeepMpcEmaAlphas(double kappa_alpha, double epsi_alpha, double cte_alpha);
   void setLaneKeepSteerSlewLimitDeg(double deg);
   void setLaneKeepTireStiffness(double tire_stiffness_factor);
+  void setLaneKeepVehicleModel(bool use_vehicle_model, double tire_stiffness_factor);
   void setLaneKeepFpSteerDelayS(double seconds);
   void setLaneKeepFpSteeringRateWeight(double weight);
   void setLaneKeepCamYLeftM(double m);

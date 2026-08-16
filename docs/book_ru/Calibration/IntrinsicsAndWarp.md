@@ -32,10 +32,10 @@ $$
 числа углов, переопределяет их, и OpenCV решает задачу вместе с дисторсией объектива.
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # Из каталога снимков или прямо из записанного заезда, в котором доска попала в кадр.
-python3 camera_calib_chessboard.py --images ~/calib_shots --pattern 9x6
-python3 camera_calib_chessboard.py --bag ../../../../adas_logs/<session> --pattern 9x6
+python3 tools/camera_calib_chessboard.py --images ~/calib_shots --pattern 9x6
+python3 tools/camera_calib_chessboard.py --bag ../adas_logs/<session> --pattern 9x6
 ```
 
 `--pattern` считает **внутренние** углы, поэтому доска из 10×7 клеток — это `9x6`. Скрипт ещё требует
@@ -104,7 +104,7 @@ print("offset within a minute of driving. Correcting it in the intrinsics as wel
 ```
 
 Проверено, а не предположено: исправление $c_x, c_y$ **без** сброса оценки экстринсиков удвоило σ разметки с
-0.25 до 0.55, измеренное на 90 кадрах через `bag_intrinsics_ab.py`. Две поправки боролись друг с другом.
+0.25 до 0.55, измеренное на 90 кадрах через `bag/bag_intrinsics_ab.py`. Две поправки боролись друг с другом.
 Исправлять главную точку имеет смысл только вместе со сбросом калибровки, и даже тогда σ не улучшается — просто
 та же информация переезжает из одного места в другое.
 

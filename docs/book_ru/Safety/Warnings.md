@@ -271,8 +271,8 @@ print([int(L.update(bool(x))) for x in seq])
 **Эпизоды по бегу** (настоящая цепочка Java→конвертация→сервис через `pyadas`):
 
 ```bash
-PYTHONPATH=app/src/main/scripts \
-  python3 app/src/main/scripts/bag_safety_warn.py adas_logs/<session>
+PYTHONPATH=scripts \
+  python3 scripts/bag/bag_safety_warn.py adas_logs/<session>
 ```
 
 Сообщайте **эпизоды**, а не сырые количества кадров.
@@ -285,7 +285,7 @@ PYTHONPATH=app/src/main/scripts \
 
 1. Прогоните примеры `forward_warning`; найдите пару `(gap, Δv)`, которая даёт FCW, но не AEB.
 2. Объясните одним предложением, почему ускорение IDM было плохим триггером для FCW.
-3. По бегу прогоните `bag_safety_warn.py` и запишите количества эпизодов LDW / FCW / AEB плюс темп зрения.
+3. По бегу прогоните `bag/bag_safety_warn.py` и запишите количества эпизодов LDW / FCW / AEB плюс темп зрения.
 
 <!-- next-chapter -->
 ---

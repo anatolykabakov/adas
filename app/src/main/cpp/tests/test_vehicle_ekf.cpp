@@ -192,11 +192,13 @@ TEST(VehicleEkfSpeed, CountersSeparateWheelFromGps)
 }
 
 namespace {
-/** Прямая с постоянным смещением рыска и с GPS, чей курс верен, а позиция уже далеко.
+/** A straight road with a constant yaw-rate bias and a GPS whose course is right while its position
+ *  is already far away.
  *
- *  Так выглядел заезд 2026_08_13_23_01_56: курс защёлкнулся неверно на ходу, позиция уехала за ворота
- *  инновации, и оттуда возврата не было — коррекция курса жила внутри ветки принятой позиции.
- *  `bias_rad_s` — смещение датчика рыска, `far_m` — насколько позиция GPS расходится с состоянием. */
+ *  This is what drive 2026_08_13_23_01_56 looked like: the heading snapped wrong while moving, the
+ *  position drifted outside the innovation gate, and there was no way back — the course correction
+ *  lived inside the accepted-position branch.
+ *  `bias_rad_s` is the gyro bias, `far_m` how far the GPS position disagrees with the state. */
 double headingErrorAfter(double seconds, double bias_rad_s, double far_m, double snap_hold_s)
 {
   adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
@@ -208,17 +210,17 @@ double headingErrorAfter(double seconds, double bias_rad_s, double far_m, double
   for (int i = 0; i < static_cast<int>(seconds / dt); ++i) {
     t += dt;
     std::optional<adas::GpsSample> gps;
-    if (i % 100 == 0) {  // 1 Гц, как у телефона
+    if (i % 100 == 0) {  // 1 Hz, as the phone reports
       adas::GpsSample g;
       g.valid = true;
       g.course_valid = true;
       g.timestamp_us = static_cast<int64_t>(t * 1e6);
-      g.yaw_enu = 0.0;         // машина едет прямо на восток, и GPS это знает
-      g.x = 25.0 * t + far_m;  // позиция заведомо за воротами инновации
+      g.yaw_enu = 0.0;         // the car drives due east and the GPS knows it
+      g.x = 25.0 * t + far_m;  // a position deliberately outside the innovation gate
       g.y = 0.0;
       g.vx = 25.0;
       g.vy = 0.0;
-      g.accuracy_m = 10.0;  // точность проходит порог 25 м
+      g.accuracy_m = 10.0;  // the accuracy passes the 25 m threshold
       gps = g;
     }
     loc.step(dt, 25.0, 0.0, bias_rad_s, gps);
@@ -227,22 +229,22 @@ double headingErrorAfter(double seconds, double bias_rad_s, double far_m, double
 }
 }  // namespace
 
-// Курс правится по GPS, даже когда позиция отвергнута: иначе ошибка курса сама уводит позицию за
-// ворота, ворота закрываются, и лекарство перестаёт поступать вместе с болезнью.
+// The course is corrected from GPS even when the position is rejected: otherwise heading error pushes
+// the position outside the gate, the gate closes, and the cure stops arriving along with the disease.
 TEST(OnlineLocalizerYaw, GpsCourseCorrectsEvenWhenPositionIsRejected)
 {
-  const double bias = 0.0034;  // 0.19 °/с — столько намерено по заезду
+  const double bias = 0.0034;  // 0.19 deg/s — the value measured on that drive
   const double err = headingErrorAfter(120.0, bias, /*far_m=*/500.0, /*snap_hold_s=*/3.0);
-  EXPECT_LT(err, 0.15) << "курс ушёл на " << err * 180.0 / M_PI << "° при исправном GPS-курсе";
+  EXPECT_LT(err, 0.15) << "the heading drifted by " << err * 180.0 / M_PI << " deg while the GPS course was healthy";
 }
 
-// Защёлка обязана срабатывать на ходу: условие «несколько совпадающих фиксов в радиусе 8 м» на
-// скорости не выполняется никогда, и без времени большая ошибка оставалась бы навсегда.
+// The snap must work while moving: "several agreeing fixes within 8 m" never holds at speed, and
+// without the time-based route a large error would stay forever.
 TEST(OnlineLocalizerYaw, LargeHeadingErrorSnapsWhileMoving)
 {
   adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
   loc.yaw_snap_hold_s = 3.0;
-  loc.reset(0.0, 0.0, 1.2, 25.0, 0.0);  // 69° мимо: так и начался тот заезд
+  loc.reset(0.0, 0.0, 1.2, 25.0, 0.0);  // 69 deg off: that is how the drive started
 
   const double dt = 0.01;
   double t = 0.0;
@@ -264,11 +266,11 @@ TEST(OnlineLocalizerYaw, LargeHeadingErrorSnapsWhileMoving)
     }
     loc.step(dt, 25.0, 0.0, 0.0, gps);
   }
-  EXPECT_LT(std::abs(adas::normalizeAngle(loc.yaw())), 0.1) << "защёлка на ходу не сработала";
+  EXPECT_LT(std::abs(adas::normalizeAngle(loc.yaw())), 0.1) << "the snap while moving did not fire";
 }
 
-// Уехавшая позиция обязана возвращаться на ходу. Раньше пересев требовал трёх совпадающих фиксов в
-// радиусе 8 м — то есть стоянки, и в заезде 2026_08_13_23_01_56 позиция ждала её 350 с, накопив 2.8 км.
+// A runaway position must come back while moving. Reseeding used to require three agreeing fixes
+// within 8 m, i.e. a standstill: on 2026_08_13_23_01_56 the position waited 350 s for one, 2.8 km off.
 TEST(OnlineLocalizerPos, FarPositionReseedsWhileMoving)
 {
   adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
@@ -288,7 +290,7 @@ TEST(OnlineLocalizerPos, FarPositionReseedsWhileMoving)
       g.course_valid = true;
       g.timestamp_us = static_cast<int64_t>(t * 1e6);
       g.yaw_enu = 0.0;
-      gx = 25.0 * t + 500.0;  // состояние отстало на 500 м — это за воротами инновации
+      gx = 25.0 * t + 500.0;  // the state lags by 500 m, which is outside the innovation gate
       g.x = gx;
       g.y = 0.0;
       g.vx = 25.0;
@@ -300,5 +302,5 @@ TEST(OnlineLocalizerPos, FarPositionReseedsWhileMoving)
     if (i % 100 == 0)
       err = std::abs(loc.x() - gx);
   }
-  EXPECT_LT(err, 30.0) << "позиция осталась в " << err << " м от GPS, пересев на ходу не сработал";
+  EXPECT_LT(err, 30.0) << "the position stayed " << err << " m from the GPS: reseeding while moving did not work";
 }

@@ -64,7 +64,7 @@ std::vector<can_frame> CarController::update(const CarControl& CC, const CarStat
           hca_enabled = true;
           if (apply_steer_last_ == apply_steer) {
             hca_same_torque_count_ += 1;
-            if (hca_same_torque_count_ > static_cast<int>(1.9 * (100 / P::STEER_STEP))) {
+            if (hca_same_torque_count_ > static_cast<int>(1.9 * (100.0 / P::STEER_STEP))) {
               apply_steer -= (apply_steer < 0) ? -1 : 1;
               hca_same_torque_count_ = 0;
             }

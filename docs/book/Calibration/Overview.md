@@ -114,7 +114,7 @@ Before raising Pure Pursuit or MPC gains, compare **prior vs live RPY** in the b
 
 * Do not judge lane-keep quality in the first minutes after a cold calib start.
 * Persistent lateral bias on a straight **without** HCA engaged is a calib / offset candidate, not a `pp_k_dd` candidate.
-* Chessboard intrinsics (`camera_calib_chessboard.py`) refine $f_x,f_y$; extrinsics remain a separate story.
+* Chessboard intrinsics (`tools/camera_calib_chessboard.py`) refine $f_x,f_y$; extrinsics remain a separate story.
 
 ## What bags can and cannot measure
 

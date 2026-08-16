@@ -11,7 +11,7 @@
 #   ./scripts/docker.sh run <command>    run arbitrary command inside
 #
 # Examples:
-#   ./scripts/docker.sh run python3 app/src/main/scripts/bag_controller_ab.py \
+#   ./scripts/docker.sh run python3 scripts/bag/bag_controller_ab.py \
 #                              adas_logs/<session> --controllers fp,mpc
 #   ./scripts/docker.sh run ./scripts/run_bag_vis.sh adas_logs/<session>
 #
@@ -64,7 +64,7 @@ case "$cmd" in
 
   host)
     run_in "$BUILD_ENV ./app/src/main/cpp/build_cpp.sh -t linux"
-    echo "pyadas built → app/src/main/scripts/pyadas/"
+    echo "pyadas built → scripts/pyadas/"
     ;;
 
   tests)
@@ -81,7 +81,7 @@ case "$cmd" in
 
   sim)
     # pyadas must be built first: ./scripts/docker.sh host
-    run_in "cd app/src/main/scripts && python3 -m sim.eval ${*:-}"
+    run_in "cd scripts && python3 -m sim.eval ${*:-}"
     ;;
 
   run)

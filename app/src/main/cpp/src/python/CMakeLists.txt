@@ -32,8 +32,8 @@ file(
   "${acados_PACKAGE_FOLDER_DEBUG}/lib/*.so"
 )
 
-# Copy next to bag/host scripts (app/src/main/scripts/pyadas).
-set(SCRIPTS_PYADAS "${PROJECT_SOURCE_DIR}/../scripts/pyadas")
+get_filename_component(REPO_ROOT "${PROJECT_SOURCE_DIR}/../../../.." ABSOLUTE)
+set(SCRIPTS_PYADAS "${REPO_ROOT}/scripts/pyadas")
 add_custom_command(
   TARGET core
   POST_BUILD

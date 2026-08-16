@@ -289,7 +289,7 @@ vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID �
 
 1. Change `K_dd` in the toy loop: how does settling of $y$ change?
 2. Put TP at $(8, 0)$ vs $(8, 3)$: print $\delta$.
-3. Bag sweep: `bag_config_sweep.py` Pareto |CTE| vs |$\Delta$SWA|.
+3. Bag sweep: `bag/bag_config_sweep.py` Pareto |CTE| vs |$\Delta$SWA|.
 4. In the look-ahead sweep above, find the distance that minimises the spread across the three paths.
    Then explain why that distance is the *worst* choice rather than the best one.
 5. Add the understeer correction from the [vehicle model](./VehicleModel.md) to `pp_delta` and re-run the

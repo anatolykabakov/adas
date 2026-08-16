@@ -1,5 +1,9 @@
 package adas.app.vision;
 
+import adas.app.AdasConfig;
+import adas.app.TimeUtil;
+import adas.app.bridge.ProtoUtils;
+import adas.app.bridge.ZMQBridgeService;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
@@ -11,8 +15,8 @@ import java.util.concurrent.Executors;
 
 import adas.app.Logger;
 import adas.proto.Messages;
-import adas.app.ProtoUtils;
-import adas.app.ZMQBridgeService;
+import adas.app.bridge.ProtoUtils;
+import adas.app.bridge.ZMQBridgeService;
 
 /**
  * Vision infer is single-flight on {@code SupercomboInfer}, but camera keeps a
@@ -27,6 +31,9 @@ public class VisionPipeline {
     private final Handler handler;
     private final ExecutorService bagExecutor;
     /** The model is an implementation detail behind {@link ModelRunner}. */
+    /** Input sharpness floor: below it there is nothing to look at. Rationale in SupercomboThneedRunner. */
+    private static final float FOCUS_MIN_SCORE = 60f;
+
     private final ModelRunner runner;
     private final LaneOverlayView overlay;
     private final boolean publishPose;
@@ -74,6 +81,19 @@ public class VisionPipeline {
             t.setPriority(Thread.NORM_PRIORITY - 1);
             return t;
         });
+    }
+
+    /**
+     * Whether vision sees the road — that is, whether what it produces can be trusted.
+     *
+     * <p>For now this is only input sharpness: out of focus there are no lane lines, yet the numbers
+     * come out plausible. The metric is shared by both runners — it is computed where the frame is
+     * prepared. Line probabilities belong here too in time: the same question from the other side.
+     */
+    public boolean seesRoad() {
+        final float score = ModelCalibWarp.lastFocusScore();
+        // Zero means "not measured yet" — nothing to forbid on the first frames.
+        return score <= 0f || score >= FOCUS_MIN_SCORE;
     }
 
     /** Falls back to ONNX: thneed is a separate .so on the GPU and must never take the app down. */

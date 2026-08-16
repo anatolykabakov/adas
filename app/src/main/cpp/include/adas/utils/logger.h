@@ -16,25 +16,38 @@
 
 #define LOG_TAG "AdasApp"
 
+// The do/while makes each macro a single statement. Without it the three calls below are three
+// statements, so `if (cond) LOGW(...)` without braces printed the newline and flushed on every pass,
+// not only when the condition held.
 #define LOGI(...)                                                                                                      \
-  printf("[INFO] " LOG_TAG ": " __VA_ARGS__);                                                                          \
-  printf("\n");                                                                                                        \
-  fflush(stdout)
+  do {                                                                                                                 \
+    printf("[INFO] " LOG_TAG ": " __VA_ARGS__);                                                                        \
+    printf("\n");                                                                                                      \
+    fflush(stdout);                                                                                                    \
+  } while (0)
 #define LOGE(...)                                                                                                      \
-  printf("[ERROR] " LOG_TAG ": " __VA_ARGS__);                                                                         \
-  printf("\n");                                                                                                        \
-  fflush(stdout)
+  do {                                                                                                                 \
+    printf("[ERROR] " LOG_TAG ": " __VA_ARGS__);                                                                       \
+    printf("\n");                                                                                                      \
+    fflush(stdout);                                                                                                    \
+  } while (0)
 #define LOGD(...)                                                                                                      \
-  printf("[DEBUG] " LOG_TAG ": " __VA_ARGS__);                                                                         \
-  printf("\n");                                                                                                        \
-  fflush(stdout)
+  do {                                                                                                                 \
+    printf("[DEBUG] " LOG_TAG ": " __VA_ARGS__);                                                                       \
+    printf("\n");                                                                                                      \
+    fflush(stdout);                                                                                                    \
+  } while (0)
 #define LOGW(...)                                                                                                      \
-  printf("[WARN] " LOG_TAG ": " __VA_ARGS__);                                                                          \
-  printf("\n");                                                                                                        \
-  fflush(stdout)
+  do {                                                                                                                 \
+    printf("[WARN] " LOG_TAG ": " __VA_ARGS__);                                                                        \
+    printf("\n");                                                                                                      \
+    fflush(stdout);                                                                                                    \
+  } while (0)
 #define LOGV(...)                                                                                                      \
-  printf("[VERBOSE] " LOG_TAG ": " __VA_ARGS__);                                                                       \
-  printf("\n");                                                                                                        \
-  fflush(stdout)
+  do {                                                                                                                 \
+    printf("[VERBOSE] " LOG_TAG ": " __VA_ARGS__);                                                                     \
+    printf("\n");                                                                                                      \
+    fflush(stdout);                                                                                                    \
+  } while (0)
 
 #endif

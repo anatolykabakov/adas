@@ -8,7 +8,7 @@
 
 Этапы ниже держать в голове проще, если смотреть, как через них движется один кадр. Каждое число — измеренная
 медиана с ночного заезда длиной 28 минут. Медианы по этапам не обязаны складываться в накопленные медианы —
-эти подобраны так, чтобы попасть в две накопленные величины, которые `latency.py` реально печатает: 54 мс до
+эти подобраны так, чтобы попасть в две накопленные величины, которые `tools/latency.py` реально печатает: 54 мс до
 выхода модели и **79 мс до команды**, — чтобы арифметику можно было проверить, а не принять на слово.
 
 ```python
@@ -56,7 +56,7 @@ print("That is what fp_steer_delay_s compensates, and why it is a feedforward in
 ```python
 VISION_HZ = 13.24
 TX_HZ = 100.0
-FRESH_WINDOW_MS = 50.0        # latency.py keeps commands within this of their vision timestamp
+FRESH_WINDOW_MS = 50.0        # tools/latency.py keeps commands within this of their vision timestamp
 
 vision_period_ms = 1000.0 / VISION_HZ
 per_frame = TX_HZ / VISION_HZ

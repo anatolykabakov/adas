@@ -16,8 +16,8 @@
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/pose_calibrator.h"
 #include "adas/utils/vanishing_point_calib.h"
-#include "adas/utils/long_planner.hpp"
-#include "adas/utils/safety_planner.hpp"
+#include "adas/utils/long_planner.h"
+#include "adas/utils/safety_planner.h"
 #include "messages.pb.h"
 #include "lane_keep.pb.h"
 #include "steer.pb.h"
@@ -177,6 +177,19 @@ struct MapLocalInputs {
 
   const mapmatch::RouteAhead* route = nullptr;
 };
+
+/**
+ * \brief Lead vehicle from the model's longitudinal output.
+ *
+ * \details The model reports the lead twice over: as scalars, and as the first element of the
+ * prediction arrays. Which one is filled depends on the model generation, so every reader needs the
+ * same fallback — take the scalar when it is set, the first array element otherwise. Two services read
+ * this message, and a fallback written out twice is a protocol agreement recorded nowhere.
+ *
+ * \param[in] plan The model's longitudinal message.
+ * \return Probability, longitudinal and lateral gap [m], and the lead's speed [m/s].
+ */
+longplan::LeadState leadFromModel(const adas::proto::ModelLongPlan& plan);
 
 adas::proto::MapLocalState createMapLocal(const MapLocalInputs& in);
 

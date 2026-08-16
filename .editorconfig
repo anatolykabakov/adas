@@ -1,0 +1,28 @@
+# Formatting shared by every editor. The C++ side is governed by .clang-format; this file covers the
+# rest, and gives Java the line limit it never had — 22 lines were over 120 columns when it was added.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{java,xml}]
+indent_size = 4
+max_line_length = 120
+
+[*.{cpp,h,hpp,cc}]
+indent_size = 2
+max_line_length = 120
+
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+[*.{md,json,yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

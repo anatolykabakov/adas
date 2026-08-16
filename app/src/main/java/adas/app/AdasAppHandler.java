@@ -1,5 +1,6 @@
 package adas.app;
 
+import adas.app.bridge.ZMQBridgeService;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -52,7 +53,8 @@ public class AdasAppHandler extends Service {
     public static final boolean nativeLoaded;
 
     private static final String ACTION_USB_PERMISSION = "adas.app.USB_PERMISSION";
-    private static final String DBC_ASSET = "vw_mqb_2010.dbc";
+    /** Fallback DBC when `vehicle.name` is unset in the config or unknown. */
+    private static final String DBC_ASSET_FALLBACK = "vw_mqb_2010.dbc";
 
     private static final int PANDA_VID = 0xbbaa;
     private static final int PANDA_PID = 0xddcc;
@@ -63,7 +65,7 @@ public class AdasAppHandler extends Service {
 
     private UsbDeviceConnection pandaConnection;
     private boolean nativeStarted;
-    /** Дескриптор, с которым поднята нативная часть. -1 значит «без панды». */
+    /** The descriptor the native side was started with. -1 means "no panda". */
     private int startedFd = -1;
 
     private BroadcastReceiver usbReceiver = new BroadcastReceiver() {
@@ -90,7 +92,16 @@ public class AdasAppHandler extends Service {
         super.onCreate();
         Log.i(TAG, "AdasAppHandler created (nativeLoaded=" + nativeLoaded + ")");
 
-        dbcPath = ensureAssetCopied(this, DBC_ASSET, /*force=*/false);
+        // The DBC is chosen by the car rather than hardcoded: a different make means a different bus layout.
+        final String carName = AdasConfig.carName(this);
+        String dbcAsset = AdasConfig.dbcAssetFor(carName);
+        if (dbcAsset.isEmpty()) {
+            Log.w(TAG, "vehicle.name='" + carName + "' not recognised, taking " + DBC_ASSET_FALLBACK);
+            dbcAsset = DBC_ASSET_FALLBACK;
+        } else {
+            Log.i(TAG, "car " + carName + ", DBC " + dbcAsset);
+        }
+        dbcPath = ensureAssetCopied(this, dbcAsset, /*force=*/false);
         configPath = ensureAssetCopied(this, AdasConfig.ASSET, /*force=*/false);
         Log.i(TAG, "DBC path: " + dbcPath);
         Log.i(TAG, "Config path: " + configPath);
@@ -124,8 +135,9 @@ public class AdasAppHandler extends Service {
                     maybeRequestUSBPermission(usbDevice, this);
                 }
             }
-            // Панды нет — поднимаемся без неё. Планер, локализация, калибровка, зрение и запись от
-            // железа не зависят, а ждать панду значило бы не иметь стенда без машины вообще.
+            // No panda — start without it. The planner, localisation, calibration, vision and
+            // logging do not depend on the hardware, and waiting for a panda would mean having no
+            // test bench at all without a car.
             startNative(-1);
         }, 1500);
 
@@ -196,7 +208,8 @@ public class AdasAppHandler extends Service {
             openPandaAndStartNative(usbManager, usbDevice);
         } else {
             Log.i(TAG, "Requesting USB permission for panda: " + usbDevice.getDeviceName());
-            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE);
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION),
+                    PendingIntent.FLAG_IMMUTABLE);
             usbManager.requestPermission(usbDevice, permissionIntent);
         }
     }
@@ -218,11 +231,11 @@ public class AdasAppHandler extends Service {
         startNative(fd);
     }
 
-    /** Поднять нативную часть на этом дескрипторе.
+    /** Start the native side on this descriptor.
      *
-     *  Панда может прийти позже стенда: тогда живой процесс без неё останавливается и поднимается
-     *  заново уже с дескриптором. Сервисы стороны машины создаются один раз при старте, и подсунуть
-     *  им железо на ходу нельзя — перезапуск честнее, чем половина живого приложения. */
+     *  The panda may arrive after the bench does: a live process running without one is then stopped
+     *  and started again with the descriptor. Car-side services are created once at startup and
+     *  cannot be handed hardware on the fly — a restart is honester than half a living app. */
     private synchronized void startNative(int fd) {
         if (nativeStarted) {
             if (fd == -1 || startedFd == fd) {

@@ -75,7 +75,8 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame, int64_t now_ms)
 
         const double v_raw = (fl_ms + fr_ms + rl_ms + rr_ms) * 0.25;
         const int64_t now = now_ms;
-        const double dt_s = prev_v_ts_ms_ > 0 && now > prev_v_ts_ms_ ? (now - prev_v_ts_ms_) * 1e-3 : 0.0;
+        const double dt_s =
+            prev_v_ts_ms_ > 0 && now > prev_v_ts_ms_ ? static_cast<double>(now - prev_v_ts_ms_) * 1e-3 : 0.0;
         prev_v_ts_ms_ = now;
         speed_filter_.update(v_raw, dt_s);
 

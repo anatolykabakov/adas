@@ -33,4 +33,14 @@ message CameraIntrinsics {
     // Camera information
     string camera_id = 12;
     string distortion_model = 13; // "radial_tangential" or "fisheye"
+
+    // Where fx/fy/cx/cy actually came from. Three sources give the same fields but not the same
+    // trust, and without this a bag cannot tell a measured lens from a hardcoded guess.
+    enum Source {
+        SOURCE_UNKNOWN = 0;
+        SOURCE_LENS_CALIBRATION = 1;  // LENS_INTRINSIC_CALIBRATION, the camera's own numbers
+        SOURCE_FOCAL_ESTIMATE = 2;    // computed from physical focal length and sensor size
+        SOURCE_FALLBACK = 3;          // nothing was available; a fixed default was used
+    }
+    Source source = 14;
 }

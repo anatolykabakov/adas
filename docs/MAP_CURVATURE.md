@@ -7,7 +7,7 @@ it against the road the car actually drove is the work that decides whether it s
 controller. That check has now been run: the geometry holds up, the peak curvature does not. See
 [below](#the-test-that-actually-convicts-it).
 
-    python3 bag_map_data.py adas_logs/<run> --vs-driven --compare-vision --plot out.png
+    python3 bag/bag_map_data.py adas_logs/<run> --vs-driven --compare-vision --plot out.png
 
 ## Why bother when the model already sees curvature
 
@@ -173,7 +173,7 @@ second place to keep in sync.
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 # on a phone that has run the app before: "Reset params from assets" in the UI — see below
 # drive, then:
-python3 bag_map_data.py adas_logs/<run> --vs-driven --plot out.png
+python3 bag/bag_map_data.py adas_logs/<run> --vs-driven --plot out.png
 ```
 
 **The stale-config trap.** `ensureAssetCopied` does not overwrite an existing `filesDir/config.json`, and
@@ -200,5 +200,5 @@ fixes: it is the optimistic case for position.
 | `cpp/include/adas/services/map_data_service.h`, `cpp/src/services/map_data_service.cpp` | the service: inputs, anchoring, publishing |
 | `proto/map_data.proto` | `MapLocalState` — what lands in the bag |
 | `cpp/tests/test_road_route.cpp`, `cpp/tests/test_map_data_service.cpp` | the maths, and the wiring |
-| `scripts/bag_map_data.py` | run analysis, logged or replayed |
+| `scripts/bag/bag_map_data.py` | run analysis, logged or replayed |
 | `maps/Moscow.osm.admap` | 46 545 nodes, 57 677 edges — built by `scripts/mapmatch/osm_graph.py` |

@@ -726,7 +726,7 @@ private:
     {
       for (auto& [_, entry] : entries_) {
         std::visit(
-            [](auto& e) {
+            [](auto& e) -> void {
               if (!e.dirty)
                 return;
               e.dirty = false;

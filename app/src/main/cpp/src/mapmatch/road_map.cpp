@@ -5,12 +5,15 @@
 #include <cstring>
 #include <fstream>
 
+#include "adas/mapmatch/geometry.h"
 #include "adas/utils/logger.h"
 
 namespace adas {
 namespace mapmatch {
 namespace {
 constexpr char kMagic[8] = {'A', 'D', 'A', 'S', 'M', 'A', 'P', '1'};
+// Upper bound on the ring search below: the radius doubles each ring, so 40 covers any map.
+constexpr int kMaxSearchRings = 40;
 
 template <typename T>
 T take(const std::vector<char>& buf, std::size_t& off)
@@ -19,22 +22,6 @@ T take(const std::vector<char>& buf, std::size_t& off)
   std::memcpy(&v, buf.data() + off, sizeof(T));
   off += sizeof(T);
   return v;
-}
-
-double distSqToSegment(double px, double py, double ax, double ay, double bx, double by, double* qx = nullptr,
-                       double* qy = nullptr)
-{
-  const double vx = bx - ax, vy = by - ay;
-  const double wx = px - ax, wy = py - ay;
-  const double vv = vx * vx + vy * vy;
-  double t = vv > 1e-12 ? (wx * vx + wy * vy) / vv : 0.0;
-  t = std::max(0.0, std::min(1.0, t));
-  const double dx = wx - t * vx, dy = wy - t * vy;
-  if (qx)
-    *qx = ax + t * vx;
-  if (qy)
-    *qy = ay + t * vy;
-  return dx * dx + dy * dy;
 }
 
 }  // namespace
@@ -178,7 +165,14 @@ std::uint32_t RoadMap::nearestEdge(double x, double y, double* dist_m, double se
 {
   std::uint32_t best = 0xFFFFFFFFu;
   double best_d2 = search_m * search_m;
-  for (double r = grid_cell_m_; r <= std::max(search_m, grid_cell_m_) * 4.0; r *= 2.0) {
+  // Rings grow by doubling until they cover the search box. The ring index is the loop counter so
+  // the loop is exactly bounded; ldexp scales by a power of two, matching the previous `r *= 2.0`
+  // bit for bit.
+  const double r_max = std::max(search_m, grid_cell_m_) * 4.0;
+  for (int ring = 0; ring < kMaxSearchRings; ++ring) {
+    const double r = std::ldexp(grid_cell_m_, ring);
+    if (r > r_max)
+      break;
     const auto cand = edgesInBBox(x - r, y - r, x + r, y + r);
     for (const std::uint32_t ei : cand) {
       const RoadEdge& e = edges_[ei];
@@ -205,7 +199,14 @@ bool RoadMap::nearestPoint(double x, double y, double& nx, double& ny, double& d
   edge = 0xFFFFFFFFu;
   double best_d2 = search_m * search_m;
   double bx = 0.0, by = 0.0;
-  for (double r = grid_cell_m_; r <= std::max(search_m, grid_cell_m_) * 4.0; r *= 2.0) {
+  // Rings grow by doubling until they cover the search box. The ring index is the loop counter so
+  // the loop is exactly bounded; ldexp scales by a power of two, matching the previous `r *= 2.0`
+  // bit for bit.
+  const double r_max = std::max(search_m, grid_cell_m_) * 4.0;
+  for (int ring = 0; ring < kMaxSearchRings; ++ring) {
+    const double r = std::ldexp(grid_cell_m_, ring);
+    if (r > r_max)
+      break;
     for (const std::uint32_t ei : edgesInBBox(x - r, y - r, x + r, y + r)) {
       const RoadEdge& e = edges_[ei];
       for (std::uint32_t k = 1; k < e.point_count; ++k) {

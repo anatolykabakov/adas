@@ -1,5 +1,9 @@
 package adas.app.vision;
 
+import adas.app.AdasConfig;
+import adas.app.TimeUtil;
+import adas.app.bridge.ProtoUtils;
+import adas.app.bridge.ZMQBridgeService;
 import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -8,8 +12,8 @@ import android.util.Log;
 
 import adas.app.Logger;
 import adas.proto.Messages;
-import adas.app.ProtoUtils;
-import adas.app.ZMQBridgeService;
+import adas.app.bridge.ProtoUtils;
+import adas.app.bridge.ZMQBridgeService;
 
 /**
  * Low-frequency traffic YOLO on a dedicated {@code TrafficYoloInfer} thread.

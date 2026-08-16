@@ -9,11 +9,12 @@
 #include <json/json.h>
 
 #include "adas/adas_app.h"
+#include "adas/lateral/limits.h"
 #include "adas/utils/adas_config.h"
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/proto_convert.h"
-#include "adas/lateral/angle_control.hpp"
-#include "adas/lateral/pp_planner.hpp"
+#include "adas/lateral/angle_control.h"
+#include "adas/lateral/pp_planner.h"
 #include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/values.h"
 
@@ -168,7 +169,7 @@ TEST(LatControlPid, TheFittedGainAsksSeveralTimesMoreThanUpstream)
 }
 
 namespace {
-// Те же настройки, что были у PurePursuit(0.4, 2.636, 1.4, 3.0, 20.0).
+// The same settings PurePursuit(0.4, 2.636, 1.4, 3.0, 20.0) had.
 adas::lateral::PpPlanner::Config ppConfig()
 {
   adas::lateral::PpPlanner::Config c;
@@ -673,11 +674,11 @@ TEST(DpParity, LanelessHysteresisFollowsUpstreamThresholds)
     return adas::laneLinesToPath(ll, cfg, &state).lanelines_active;
   };
 
-  EXPECT_TRUE(run(0.9f, 0.9f)) << "обе уверенные — режим разметки";
-  EXPECT_TRUE(run(0.35f, 0.35f)) << "между 0.3 и 0.5 гистерезис держит прежний режим";
-  EXPECT_FALSE(run(0.2f, 0.2f)) << "обе ниже 0.3 — уходим на чистый план модели";
-  EXPECT_FALSE(run(0.45f, 0.45f)) << "чтобы вернуться, мало быть выше 0.3";
-  EXPECT_TRUE(run(0.55f, 0.1f)) << "одной выше 0.5 достаточно: у них OR, а не AND";
+  EXPECT_TRUE(run(0.9f, 0.9f)) << "both confident — lane mode";
+  EXPECT_TRUE(run(0.35f, 0.35f)) << "between 0.3 and 0.5 the hysteresis keeps the previous mode";
+  EXPECT_FALSE(run(0.2f, 0.2f)) << "both below 0.3 — fall back to the model plan alone";
+  EXPECT_FALSE(run(0.45f, 0.45f)) << "coming back takes more than being above 0.3";
+  EXPECT_TRUE(run(0.55f, 0.1f)) << "one above 0.5 is enough: theirs is an OR, not an AND";
 }
 
 TEST(DpParity, LanelessModeStopsTheBlendEntirely)
@@ -691,22 +692,23 @@ TEST(DpParity, LanelessModeStopsTheBlendEntirely)
   auto weak = frameWithProbs(0.1f, 0.1f);
   const double laneless = pathYAt10m(adas::laneLinesToPath(weak, cfg, &state));
 
-  EXPECT_NEAR(laneless, 0.4, 1e-6) << "laneless — это ровно план модели, без следа разметки";
+  EXPECT_NEAR(laneless, 0.4, 1e-6) << "laneless is exactly the model plan, with no trace of the lines";
   EXPECT_NE(with_lines, laneless);
 }
 TEST(DpParity, RollCompensationMatchesUpstreamFormula)
 {
   const double sf = 0.0015, v = 20.0, roll = 0.05;
   EXPECT_NEAR(adas::rollCompensationCurvature(roll, v, sf), 9.81 * roll / (1.0 / sf - v * v), 1e-12);
-  EXPECT_DOUBLE_EQ(adas::rollCompensationCurvature(roll, v, 0.0), 0.0) << "без сноса нечего вычитать";
-  EXPECT_GT(adas::rollCompensationCurvature(0.05, v, sf), 0.0) << "завал вправо тянет вправо";
+  EXPECT_DOUBLE_EQ(adas::rollCompensationCurvature(roll, v, 0.0), 0.0) << "with no slip there is nothing to subtract";
+  EXPECT_GT(adas::rollCompensationCurvature(0.05, v, sf), 0.0) << "a bank to the right pulls to the right";
   EXPECT_LT(adas::rollCompensationCurvature(-0.05, v, sf), 0.0);
 }
 
 // ---------------------------------------------------------------- lateral::AngleControl
 //
-// Угловой контур без middleware: то, что переедет в сервис Control. Проверяется здесь же, потому что
-// поднимать приложение ради арифметики угла незачем — как longplan::compute и safety::SafetyPlanner.
+// The angle loop without middleware — what moved into the Control service. Tested here because
+// bringing an application up for angle arithmetic buys nothing, same as longplan::compute and
+// safety::SafetyPlanner.
 
 namespace {
 
@@ -738,7 +740,7 @@ TEST(AngleControl, RoadWheelAngleBecomesSteeringWheelAngleWithSignAndRatio)
 {
   adas::lateral::AngleControl ctl(ctlConfig());
   ctl.setSetpointFromSteer(0.01);
-  // Знак CAN отрицательный, поэтому положительный дорожный угол даёт отрицательный угол руля.
+  // The CAN sign is negative, so a positive road-wheel angle yields a negative steering-wheel angle.
   EXPECT_NEAR(ctl.desiredSwaDeg(), -0.01 * 180.0 / M_PI * 15.6, 1e-9);
 }
 
@@ -748,7 +750,7 @@ TEST(AngleControl, LearnedOffsetIsAddedNotSubtracted)
   adas::lateral::AngleControl ctl(cfg);
   ctl.setLearnedParams(true, 1.0, 15.6, 0.8);
   ctl.setSetpointFromSteer(0.0);
-  // Оценщик решал delta = (SWA - offset) / ratio; обратное соотношение прибавляет ноль руля.
+  // The estimator solved delta = (SWA - offset) / ratio; the inverse relation adds the wheel zero back.
   EXPECT_NEAR(ctl.desiredSwaDeg(), 0.8, 1e-9);
 }
 
@@ -762,7 +764,7 @@ TEST(AngleControl, LosingValidityWalksParametersBackToConfigured)
 
   ctl.setLearnedParams(false, 1.4, 17.0, 0.5);
   EXPECT_FALSE(ctl.usingLearnedParams());
-  EXPECT_NEAR(ctl.effectiveSteerRatio(), 15.6, 1e-9) << "потеря валидности откатывает, а не морозит";
+  EXPECT_NEAR(ctl.effectiveSteerRatio(), 15.6, 1e-9) << "losing validity rolls back rather than freezing";
   EXPECT_NEAR(ctl.effectiveAngleOffsetDeg(), 0.0, 1e-9);
 }
 
@@ -771,8 +773,8 @@ TEST(AngleControl, ConfiguredRatioSurvivesLearnedOne)
   auto cfg = ctlConfig();
   adas::lateral::AngleControl ctl(cfg);
   ctl.setLearnedParams(true, 1.0, 17.0, 0.0);
-  // Измеренный угол руля переводится в дорожный настроенным передаточным: подмена на выученное
-  // была бы тихой сменой того, что считается входом.
+  // A measured steering-wheel angle is converted with the configured ratio: substituting the learned
+  // one would quietly change what counts as the input.
   EXPECT_NEAR(ctl.steerRatio(), 15.6, 1e-9);
   EXPECT_NEAR(ctl.effectiveSteerRatio(), 17.0, 1e-9);
 }
@@ -780,12 +782,12 @@ TEST(AngleControl, ConfiguredRatioSurvivesLearnedOne)
 TEST(AngleControl, ClearSetpointZeroesTheCommandAndTheIntegrator)
 {
   adas::lateral::AngleControl ctl(ctlConfig());
-  // 0.001 рад дорожного угла — около 0.9 град руля: ошибка внутри линейной зоны, иначе антивиндап
-  // законно не даёт интегратору расти и проверять было бы нечего.
+  // 0.001 rad of road-wheel angle is about 0.9 deg at the wheel: an error inside the linear region,
+  // otherwise anti-windup legitimately stops the integrator and there would be nothing to check.
   ctl.setSetpointFromSteer(0.001);
   for (int i = 0; i < 50; ++i)
     ctl.update(true, chassisAt(20.0, 0.0));
-  ASSERT_GT(std::abs(ctl.update(true, chassisAt(20.0, 0.0)).i), 1e-6) << "интегратор должен был набрать";
+  ASSERT_GT(std::abs(ctl.update(true, chassisAt(20.0, 0.0)).i), 1e-6) << "the integrator should have accumulated";
 
   ctl.clearSetpoint();
   EXPECT_NEAR(ctl.desiredSwaDeg(), 0.0, 1e-12);
@@ -794,8 +796,8 @@ TEST(AngleControl, ClearSetpointZeroesTheCommandAndTheIntegrator)
 
 TEST(AngleControl, IntegratorRateDoesNotDependOnCallCadence)
 {
-  // Свойство паритета: у апстрима PIDController(rate=100) фиксирован при создании. Значит одно и то
-  // же число вызовов даёт один и тот же интеграл, как бы часто их ни делали.
+  // The parity property: upstream's PIDController(rate=100) is fixed at construction. So the same
+  // number of calls yields the same integral, however often they are made.
   auto run = [](int n) {
     adas::lateral::AngleControl ctl(ctlConfig());
     ctl.setSetpointFromSteer(0.001);
@@ -805,7 +807,7 @@ TEST(AngleControl, IntegratorRateDoesNotDependOnCallCadence)
     return last;
   };
   EXPECT_NEAR(run(10), run(10), 1e-12);
-  EXPECT_GT(std::abs(run(20)), std::abs(run(10))) << "больше вызовов — больше интеграла";
+  EXPECT_GT(std::abs(run(20)), std::abs(run(10))) << "more calls, more integral";
 }
 
 TEST(AngleControl, SlewGuardLimitsTheStepAndRemembersTheLast)
@@ -814,9 +816,9 @@ TEST(AngleControl, SlewGuardLimitsTheStepAndRemembersTheLast)
   ctl.setSlewConfig({/*limit_deg=*/1.0, /*max_lateral_jerk=*/1e9, /*rate_min_speed=*/2.0,
                      /*Lf=*/2.67, /*max_gap_frames=*/10});
   double steer = 0.0;
-  EXPECT_FALSE(ctl.applySlew(steer, 20.0, 0.05, true)) << "первый кадр не с чем сравнивать";
+  EXPECT_FALSE(ctl.applySlew(steer, 20.0, 0.05, true)) << "the first frame has nothing to compare against";
 
-  steer = 1.0;  // рад, много больше потолка 1 градус
+  steer = 1.0;  // rad, far beyond the 1-degree ceiling
   EXPECT_TRUE(ctl.applySlew(steer, 20.0, 0.05, true));
   EXPECT_NEAR(steer, 1.0 * M_PI / 180.0, 1e-9);
 }
@@ -832,4 +834,20 @@ TEST(AngleControl, DriverOverrideUnwindsTheIntegratorInsteadOfGrowingIt)
   for (int i = 0; i < 20; ++i)
     ctl.update(true, chassisAt(20.0, 0.0, /*pressed=*/true));
   EXPECT_LT(std::abs(ctl.update(true, chassisAt(20.0, 0.0, true)).i), wound);
+}
+
+/** The kinematic mode is what a simulated ego needs: MetaDrive's car turns as geometry says, and the
+ *  Golf understeer model would over-turn every arc. The switch was lost once in a refactor and the
+ *  Python bench died on a missing binding, so both ends are pinned here. */
+TEST(VehicleModel, ClearingTheFlagLeavesTheKinematicModel)
+{
+  adas::lateral::VehicleParams v;
+  v.wheelbase_m = 2.636;
+  v.tire_stiffness_factor = 0.64;
+
+  v.use_vehicle_model = true;
+  EXPECT_NE(adas::lateral::slipFactorOrZero(v), 0.0) << "the slip model must contribute something";
+
+  v.use_vehicle_model = false;
+  EXPECT_EQ(adas::lateral::slipFactorOrZero(v), 0.0) << "no slip term means the kinematic bicycle model";
 }

@@ -8,8 +8,8 @@
 
 #include "adas/middleware/manager.hpp"
 #include "messages.pb.h"
-#include "adas/lateral/angle_control.hpp"
-#include "adas/lateral/limits.hpp"
+#include "adas/lateral/angle_control.h"
+#include "adas/lateral/limits.h"
 #include "adas/utils/lane_keep_gates.h"
 
 namespace adas {
@@ -43,6 +43,7 @@ public:
     lateral::AngleControl::Config ctl{};
     lateral::SlewGuard::Config slew{};  ///< Rate limit applied to the command before the PID sees it.
     double wheelbase_m = 2.636;         ///< Wheelbase [m], for the slip model.
+    bool lat_use_vehicle_model = true;  ///< False drops the slip term, leaving the kinematic model.
     /** \brief Lever arm for converting curvature into a steering angle [m].
      *
      *  The solver calls this `mpc_Lf`; the wheelbase goes into the slip model instead. The two numbers

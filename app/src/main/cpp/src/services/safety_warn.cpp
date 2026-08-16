@@ -161,16 +161,16 @@ void SafetyWarn::tick()
   double lead_prob = 0.0;
   bool has_lead = false;
   if (have_model_) {
-    const auto& lead = model_.lead0();
-    lead_prob = lead.prob();
-    lead_d = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
-    lead_v = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
+    const longplan::LeadState lead = leadFromModel(model_);
+    lead_prob = lead.prob;
+    lead_d = lead.d_rel;
+    lead_v = lead.v_lead;
     if (lead_prob >= cfg.lead_prob_thresh && lead_d > 1.0 && lead_d < 150.0) {
       has_lead = true;
       in.cipo.present = true;
       in.cipo.speed_ms = lead_v;
       in.cipo.gap_m = std::max(0.5, lead_d - cfg.front_bumper_offset_m);
-      in.cipo.offset_m = lead.y_rel();
+      in.cipo.offset_m = lead.y_rel;
     }
   }
 

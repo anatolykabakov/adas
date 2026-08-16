@@ -10,15 +10,15 @@
 
 #include "adas/middleware/manager.hpp"
 #include "adas/utils/adas_topics.h"
-#include "adas/lateral/learned_vehicle.hpp"
+#include "adas/lateral/learned_vehicle.h"
 #include "adas/utils/interval_filter.h"
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/math_utils.h"
-#include "adas/lateral/pp_planner.hpp"
-#include "adas/lateral/vp_planner.hpp"
-#include "adas/lateral/fp_planner.hpp"
-#include "adas/lateral/planner.hpp"
-#include "adas/utils/long_planner.hpp"
+#include "adas/lateral/pp_planner.h"
+#include "adas/lateral/vp_planner.h"
+#include "adas/lateral/fp_planner.h"
+#include "adas/lateral/planner.h"
+#include "adas/utils/long_planner.h"
 
 namespace adas {
 namespace services {
@@ -89,6 +89,7 @@ public:
     double steer_slew_limit_deg = 8.0;  ///< Rate limit on the commanded steering-wheel angle [deg/s].
 
     double tire_stiffness_factor = 0.64;  ///< Scale on the reference tyre stiffness; 1.0 is the reference car.
+    bool lat_use_vehicle_model = true;    ///< False drops the slip term, leaving the kinematic model.
     std::string fp_solver = "grad";       ///< Numerical method inside fp: "grad" or "acados".
 
     double fp_steer_delay_s = 0.35;  ///< Actuator delay the fp solver compensates for [s].
@@ -231,6 +232,16 @@ public:
     }
   }
 
+  /// \brief Choose between the slip model and plain kinematics, and set the stiffness scale.
+  ///
+  /// \param[in] on False leaves the kinematic bicycle model, which is what a simulated ego needs.
+  /// \param[in] tire_stiffness_factor Scale on the reference tyre stiffness; ignored when <= 0.05.
+  void setVehicleModel(bool on, double tire_stiffness_factor)
+  {
+    config_.lat_use_vehicle_model = on;
+    setTireStiffnessFactor(tire_stiffness_factor);
+  }
+
   /// \param[in] w Cost weight on steering rate in the fp solver; higher is smoother and slower to react.
   void setFpSteeringRateWeight(double w)
   {
@@ -290,6 +301,7 @@ private:
     v.wheelbase_m = config_.wheelbase_m;
     v.steer_ratio = veh_.effectiveSteerRatio();
     v.tire_stiffness_factor = veh_.effectiveStiffnessFactor();
+    v.use_vehicle_model = config_.lat_use_vehicle_model;
     v.steer_sign = config_.steer_sign < 0.0 ? -1.0 : 1.0;
     v.road_roll_rad = road_roll_rad_;
     v.road_roll_valid = road_roll_valid_;

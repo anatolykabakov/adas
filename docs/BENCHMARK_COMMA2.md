@@ -1,7 +1,7 @@
 # Benchmark vs comma-two and closing the gap
 
 Compiled 2026-08-03/04 from dragonpilot logs on **the same Golf 7 and roads**, plus our
-`bag_arc_offset.py` metrics. Replaces the former `VS_DRAGONPILOT_0803` / `PLAN_TO_COMMA2` pair.
+`bag/bag_arc_offset.py` metrics. Replaces the former `VS_DRAGONPILOT_0803` / `PLAN_TO_COMMA2` pair.
 
 ---
 
@@ -10,8 +10,8 @@ Compiled 2026-08-03/04 from dragonpilot logs on **the same Golf 7 and roads**, p
 comma-two + dragonpilot: `dragonpilot_rlog_lite/rlog_lite`, 4 routes, 33 segments, 26.1 min,
 42 % usable (`carControl.latActive`, hands off, lanes visible).
 
-Tool: `app/src/main/scripts/rlog_arc_offset.py` (`OPENPILOT_ROOT` / `--op-root`) — same metric
-as `bag_arc_offset.py`.
+Tool: `scripts/rlog/rlog_arc_offset.py` (`OPENPILOT_ROOT` / `--op-root`) — same metric
+as `bag/bag_arc_offset.py`.
 
 | quantity | source |
 |---|---|
@@ -102,7 +102,7 @@ Does **not** promise comma-two σ on phone camera.
 
 ## 5a. Differential replay: their inputs through our stack (2026-08-07)
 
-`app/src/main/scripts/rlog_lat_diff.py` pushes their recorded route through `AdasApp` and diffs stage by
+`scripts/rlog/rlog_lat_diff.py` pushes their recorded route through `AdasApp` and diffs stage by
 stage. 101 975 matched frames, 28 usable segments, `v > 10 m/s`, both sides actuating:
 
 | stage | theirs | ours | agreement |

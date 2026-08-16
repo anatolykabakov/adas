@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "adas/lateral/acados_lat_mpc.hpp"
-#include "adas/lateral/flowpilot_mpc.hpp"
+#include "adas/lateral/acados_lat_mpc.h"
+#include "adas/lateral/flowpilot_mpc.h"
 #include "adas/adas_app.h"
 #include "messages.pb.h"
 #include "adas/middleware/manager.hpp"
@@ -16,7 +16,7 @@
 #include "adas/utils/path_lateral_state.h"
 #include "adas/utils/proto_convert.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
-#include "adas/lateral/visionpilot_mpc.hpp"
+#include "adas/lateral/visionpilot_mpc.h"
 
 using adas::estimatePathLateralState;
 using adas::PathLateralState;
@@ -34,7 +34,7 @@ std::vector<Vec2> straightLaneRightOffset(double offset_m)
   return poly;
 }
 
-// Кормить kVisionPath значило бы проверять сервис против сообщения, которого он не слушает.
+// Feeding kVisionPath would test the service against a message it does not subscribe to.
 adas::proto::LaneLines lanesFromPolyline(const std::vector<Vec2>& poly, int64_t ts_us)
 {
   adas::proto::LaneLines ll;
@@ -338,8 +338,9 @@ TEST(LaneKeepServiceMpc, LowSpeedGateHoldsZeroAndHasHysteresis)
 }
 
 namespace {
-/** Контроллер под конфиг планера. Гейты и PID переехали к нему, поэтому тест про снятие команды
- *  обязан поднимать оба сервиса: планер отдаёт кривизну, команду считает `Control`. */
+/** A controller built from the planner's config. The gates and the PID moved into it, so a test about
+ *  withdrawing the command has to bring up both services: the planner emits curvature, `Control`
+ *  turns it into a command. */
 adas::services::Control::Config controlFor(const Planner::Config& lk)
 {
   adas::services::Control::Config c;
@@ -375,7 +376,8 @@ public:
 
   bool last_enabled = false;
   int last_torque = 0;
-  // Гейты и их отчёт теперь у контроллера: планер о них не знает, поэтому и проверяются они здесь.
+  // The gates and their status live in the controller now; the planner knows nothing about them, which
+  // is why they are checked here.
   bool last_assist_allowed = false;
   bool last_assist_known = false;
   std::string last_status;
@@ -408,9 +410,9 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
     ch.speed_mps = 14.0;
     ch.steering_angle_deg = 0.0;
     mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
-    // Модельное время двигается на каждой подаче: тик контроллера фиксированный, и без сдвига
-    // команда пересчитана не будет. Два шага: на первом план доходит до контроллера и наступает
-    // его тик, на втором команда доходит до подписчика.
+    // Virtual time advances on every publish: the controller's tick is fixed, and without moving the
+    // clock the command is never recomputed. Two steps: the first delivers the plan and fires the
+    // tick, the second delivers the command to the subscriber.
     mw.setTime(mw.now() + 20'000);
     mw.step();
     mw.step();
@@ -450,8 +452,8 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
   ch.timestamp_us = old_us;
   ch.speed_mps = 14.0;
   mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
-  // Тик контроллера фиксированный: без сдвига модельного времени он не наступит, а команда дойдёт
-  // до подписчика только следующим шагом — сервисов теперь три.
+  // The controller's tick is fixed: without advancing virtual time it never fires, and the command
+  // reaches the subscriber only on the next step — there are three services now.
   mw.setTime(mw.now() + 20'000);
   mw.step();
   mw.step();
@@ -481,8 +483,8 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
   // passed through a stuck status rather than through the timer.
   uint64_t sim_us = 1'000'000;
   auto feed = [&](bool left, bool right) {
-    // Время двигается на каждой подаче, иначе тик контроллера не наступает: он фиксированный, а
-    // раньше гейт считался в тот же миг, что и план, и часы можно было держать на месте.
+    // Time advances on every publish, or the controller's tick never fires: it is fixed, whereas the
+    // gate used to be evaluated at the same instant as the plan and the clock could stand still.
     sim_us += 20'000;
     mw.setTime(sim_us);
     const int64_t ts = static_cast<int64_t>(sim_us);
@@ -494,8 +496,7 @@ TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
     ch.left_blinker = left;
     ch.right_blinker = right;
     mw.publish(adas::topics::kVehicleState, adas::carStateFromChassis(ch));
-    // Два шага: на первом план доходит до контроллера и наступает его тик, на втором команда
-    // доходит до подписчика.
+    // Two steps: the first delivers the plan and fires the tick, the second delivers the command.
     mw.step();
     mw.step();
   };
@@ -548,7 +549,7 @@ struct AssistRig {
   {
     now_us += 20'000;
     mw.setTime(now_us);
-    // По шине ходит схема, поэтому тест подаёт то же, что подал бы транспорт.
+    // The bus carries schema messages, so the test publishes exactly what the transport would.
     mw.publish(adas::topics::kVisionLanes, lanesFromPolyline(straightLaneRightOffset(0.4), now_us));
 
     adas::proto::CarState cs;
@@ -556,7 +557,7 @@ struct AssistRig {
     cs.set_v_ego(14.0);
     cs.set_steering_angle_deg(0.0);
     mw.publish(adas::topics::kVehicleState, cs);
-    // Модельное время двигается на каждой подаче: тик контроллера фиксированный.
+    // Virtual time advances on every publish: the controller tick is fixed.
     mw.step();
     mw.step();
   }
@@ -705,9 +706,9 @@ TEST(SetpointRecompute, SpeedIsWhatMovesIt)
 TEST(AcadosLatMpc, LoadsAndSolves)
 {
   adas::flowpilot::AcadosLatMpc mpc;
-  ASSERT_TRUE(mpc.available()) << "библиотека не загрузилась — проверьте scripts/vendor_acados.py";
+  ASSERT_TRUE(mpc.available()) << "the library did not load — check scripts/vendor_acados.py";
   EXPECT_EQ(adas::flowpilot::AcadosLatMpc::horizonNodes(), 16);
-  EXPECT_NEAR(adas::flowpilot::AcadosLatMpc::nodeTime(16), 2.5, 1e-9) << "тот же горизонт, что у нашего решателя";
+  EXPECT_NEAR(adas::flowpilot::AcadosLatMpc::nodeTime(16), 2.5, 1e-9) << "the same horizon as our own solver";
 }
 
 namespace {
@@ -734,20 +735,20 @@ TEST(AcadosLatMpc, DISABLED_Bisect)
 {
   adas::flowpilot::AcadosLatMpc mpc;
   ASSERT_TRUE(mpc.available());
-  std::printf("создан\n");
+  std::printf("created\n");
   std::fflush(stdout);
   mpc.setWeights({});
-  std::printf("веса заданы\n");
+  std::printf("weights set\n");
   std::fflush(stdout);
   const auto refs = arcRefs(0.01, 14.0);
   auto r = mpc.solve(14.0, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
-  std::printf("solve без reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
+  std::printf("solve without reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
   std::fflush(stdout);
   mpc.reset();
-  std::printf("reset прошёл\n");
+  std::printf("reset done\n");
   std::fflush(stdout);
   r = mpc.solve(14.0, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
-  std::printf("solve после reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
+  std::printf("solve after reset: ok=%d status=%d kappa=%.5f\n", (int)r.ok, r.status, r.desired_curvature);
 }
 
 TEST(AcadosLatMpc, FollowsTheArcItIsGiven)
@@ -763,14 +764,14 @@ TEST(AcadosLatMpc, FollowsTheArcItIsGiven)
   for (int i = 0; i < 5; ++i)
     r = mpc.solve(v, 0.0, 0.0, refs.y, refs.psi, refs.r, 0.2);
 
-  ASSERT_TRUE(r.ok) << "статус решателя " << r.status;
-  EXPECT_GT(r.desired_curvature, 0.0) << "дуга влево — и кривизна влево";
-  EXPECT_NEAR(r.desired_curvature, kappa, 0.5 * kappa) << "и по величине это та же дуга";
+  ASSERT_TRUE(r.ok) << "solver status " << r.status;
+  EXPECT_GT(r.desired_curvature, 0.0) << "an arc to the left gives curvature to the left";
+  EXPECT_NEAR(r.desired_curvature, kappa, 0.5 * kappa) << "and in magnitude it is the same arc";
 
   const auto mirrored = arcRefs(-kappa, v);
   for (int i = 0; i < 5; ++i)
     r = mpc.solve(v, 0.0, 0.0, mirrored.y, mirrored.psi, mirrored.r, 0.2);
-  EXPECT_LT(r.desired_curvature, 0.0) << "зеркальная дуга — зеркальный знак";
+  EXPECT_LT(r.desired_curvature, 0.0) << "a mirrored arc gives a mirrored sign";
 }
 
 TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
@@ -789,7 +790,7 @@ TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
   std::vector<Vec2> arc;
   for (int i = 2; i <= 80; ++i) {
     const double x = static_cast<double>(i);
-    arc.emplace_back(x, -0.5 * kappa * x * x);  // тот же поворот, но в device-кадре: y вправо
+    arc.emplace_back(x, -0.5 * kappa * x * x);  // the same turn, in the device frame: y to the right
   }
   adas::flowpilot::LateralMpc ours;
   adas::flowpilot::LatMpcResult ro;
@@ -798,7 +799,8 @@ TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
   ASSERT_TRUE(ro.ok);
 
   EXPECT_GT(ra.desired_curvature * ro.desired_curvature, 0.0)
-      << "решатели обязаны хотеть одну сторону: acados " << ra.desired_curvature << ", наш " << ro.desired_curvature;
-  EXPECT_NEAR(ra.desired_curvature, ro.desired_curvature, 0.5 * std::abs(kappa)) << "и близкую величину — постановка "
-                                                                                    "задачи одна и та же";
+      << "the solvers must want the same side: acados " << ra.desired_curvature << ", ours " << ro.desired_curvature;
+  EXPECT_NEAR(ra.desired_curvature, ro.desired_curvature, 0.5 * std::abs(kappa)) << "and a close magnitude — the "
+                                                                                    "problem "
+                                                                                    "is the same one";
 }

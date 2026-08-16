@@ -4,7 +4,7 @@
 #include <optional>
 #include <string>
 
-#include "adas/lateral/types.hpp"
+#include "adas/lateral/types.h"
 
 namespace adas {
 namespace lateral {

@@ -1,4 +1,4 @@
-#include "adas/lateral/fp_planner.hpp"
+#include "adas/lateral/fp_planner.h"
 
 #include <algorithm>
 #include <cmath>
@@ -68,13 +68,7 @@ Output FpPlanner::update(const Input& in)
   out.dbg.mpc_dkappa_ds = kappa_rate;
 
   out.steer_rad = steerRaw(kappa_cmd, in.speed_mps, in.vehicle);
-  out.dbg.mpc_delta_vp_rad = out.steer_rad;
-  const double lim = maxSteerRad(in.speed_mps, cfg_.limits);
-  out.max_steer_rad = lim;
-  out.dbg.mpc_max_steer_rad = lim;
-  if (lim > 1e-6)
-    out.steer_rad = std::clamp(out.steer_rad, -lim, lim);
-  out.dbg.mpc_delta_clamped_rad = out.steer_rad;
+  applySteerLimit(out, in.speed_mps, cfg_.limits);
 
   if (cfg_.steer_slew_limit_deg > 1e-9 && have_prev_) {
     const double ceil = cfg_.steer_slew_limit_deg * M_PI / 180.0;
@@ -84,7 +78,7 @@ Output FpPlanner::update(const Input& in)
   last_steer_rad_ = out.steer_rad;
   have_prev_ = true;
 
-  out.steer_norm = lim > 1e-6 ? out.steer_rad / lim : 0.0;
+  out.steer_norm = out.max_steer_rad > 1e-6 ? out.steer_rad / out.max_steer_rad : 0.0;
   out.has_target = true;
   out.status = "ok";
   return out;
@@ -97,10 +91,8 @@ std::optional<FpPlanner::Recompute> FpPlanner::recomputeSteer(double speed_mps, 
   if (!k)
     return std::nullopt;
 
-  double steer = steerRaw(*k, speed_mps, vehicle);
-  const double lim = maxSteerRad(speed_mps, cfg_.limits);
-  if (lim > 1e-6)
-    steer = std::clamp(steer, -lim, lim);
+  double lim = 0.0;
+  double steer = clampToSteerLimit(steerRaw(*k, speed_mps, vehicle), speed_mps, cfg_.limits, &lim);
 
   if (cfg_.steer_slew_limit_deg > 1e-9 && have_prev_) {
     const double ceil = cfg_.steer_slew_limit_deg * M_PI / 180.0;

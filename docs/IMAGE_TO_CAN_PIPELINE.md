@@ -370,8 +370,8 @@ CAN online LED: `panda/health` freshness ≤ 500 ms.
 | `BagLogger` + `Logger` | session under `/sdcard/adas_logs/...` |
 | `pull_bags.sh` | `adb pull` → `./adas_logs/`, clear on device |
 | `./scripts/run_bag_vis.sh` | `vis/interactive_visualizer.py` |
-| `bag_overlay_lanes.py` | lane overlay on JPEG |
-| `bag_lane_keep_offline.py` | PP via `pyadas.AdasApp` |
+| `bag/bag_overlay_lanes.py` | lane overlay on JPEG |
+| `bag/bag_lane_keep_offline.py` | PP via `pyadas.AdasApp` |
 | `export_to_plotjuggler.py` | topic time series |
 
 Typical bag topics: camera JPEG, intrinsics, IMU/GPS, `vision/lanes`(+model_out), odometry, outbound `vehicle/state`, `control/lane_keep`, `controls/steer`, `calibration/camera`, `panda/health`, …

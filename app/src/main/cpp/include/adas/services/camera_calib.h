@@ -1,5 +1,7 @@
 #pragma once
 
+#include "camera_intrinsics.pb.h"
+
 #include "adas/middleware/manager.hpp"
 #include "adas/utils/adas_topics.h"
 #include "adas/utils/proto_convert.h"
@@ -52,6 +54,9 @@ public:
    * is off by a factor of two, and every projection made with it lands beside the road.
    */
   void setIntrinsics(double fx, double fy, double cx, double cy);
+
+  /// Which source the running intrinsics came from, as `CameraIntrinsics.Source`.
+  int intrinsicsSource() const { return intrinsics_source_; }
   /// \param[in] height_m Camera height above the road [m].
   void setHeight(double height_m);
   /**
@@ -92,6 +97,7 @@ public:
 
 private:
   void onLaneUv(const LaneUvMsg& msg);
+  void onIntrinsics(const adas::proto::CameraIntrinsics& msg);
   void onCameraOdometryProto(const adas::proto::CameraOdometry& odom);
   void onCameraOdometry(const CameraOdometrySample& msg);
   void onChassis(const ChassisSample& msg);
@@ -102,6 +108,8 @@ private:
   VanishingPointCalibrator vp_calib_;
   double height_m_ = 1.40;
   double fx_ = 930.0, fy_ = 930.0, cx_ = 640.0, cy_ = 360.0;
+  /// Which source the current intrinsics came from; 0 until the device reports its own.
+  int intrinsics_source_ = 0;
   CameraCalibrationState last_;
 };
 

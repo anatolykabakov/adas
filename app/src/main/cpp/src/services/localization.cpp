@@ -153,8 +153,9 @@ void Localization::onRawImu(const adas::proto::IMUData& payload)
   msg.valid = true;
   imu_ = msg;
 
-  const double dt =
-      last_imu_us_ > 0 && msg.timestamp_us > last_imu_us_ ? (msg.timestamp_us - last_imu_us_) * 1e-6 : 0.0;
+  const double dt = last_imu_us_ > 0 && msg.timestamp_us > last_imu_us_ ?
+                        static_cast<double>(msg.timestamp_us - last_imu_us_) * 1e-6 :
+                        0.0;
   last_imu_us_ = msg.timestamp_us;
   if (msg.lat_accel_valid && have_chassis_)
     road_roll_.update(chassis_.speed_mps, chassis_.yaw_rate, msg.lat_accel, dt);
@@ -170,7 +171,7 @@ void Localization::onChassis(const ChassisSample& msg)
 {
   double dt = 0.05;
   if (last_t_us_ > 0 && msg.timestamp_us > last_t_us_) {
-    dt = (msg.timestamp_us - last_t_us_) * 1e-6;
+    dt = static_cast<double>(msg.timestamp_us - last_t_us_) * 1e-6;
   }
   if (dt > 0.2)
     dt = 0.05;

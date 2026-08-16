@@ -103,9 +103,9 @@ jobs:
                 set -euo pipefail
                 conan profile detect --force >/dev/null 2>&1 || true
                 ./app/src/main/cpp/build_cpp.sh -t linux
-                test -f app/src/main/scripts/pyadas/core*.so \
-                  || { echo \"pyadas core.so missing after build\" >&2; ls -la app/src/main/scripts/pyadas; exit 1; }
-                cd app/src/main/scripts
+                test -f scripts/pyadas/core*.so \
+                  || { echo \"pyadas core.so missing after build\" >&2; ls -la scripts/pyadas; exit 1; }
+                cd scripts
                 python3 -c \"from pyadas import core; print(core)\"
                 python3 -m sim.eval --track highway --controllers fp --max-steps 1400 --json /tmp/highway.json
                 python3 -m sim.eval --track curvy   --controllers fp --max-steps 1300 --json /tmp/curvy.json

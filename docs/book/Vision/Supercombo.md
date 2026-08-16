@@ -54,8 +54,8 @@ change queued, so it waits its turn as a single-variable experiment.
 
 ```bash
 # The offline check, on frames where both lane lines are visible. No drive needed.
-cd app/src/main/scripts
-python3 bag_fp16_ab.py ../../../../adas_logs/<session> --n 200 --t0 900 --t1 1100
+cd scripts
+python3 bag_fp16_ab.py ../adas_logs/<session> --n 200 --t0 900 --t1 1100
 ```
 
 ### What healthy looks like
@@ -280,7 +280,7 @@ Optional traffic YOLO shares the phone with ORT — enable it for demos, **disab
 ## Exercise
 
 
-1. On a bag, plot vision rate and `infer_ms` vs time (`latency.py` / PlotJuggler).
+1. On a bag, plot vision rate and `infer_ms` vs time (`tools/latency.py` / PlotJuggler).
 2. Mark windows with Hz $< 9$. Do **not** use them for controller Pareto sweeps.
 3. Optional: re-run offline parse on one JPEG with the shipped warp and compare lane $y$ at $x=10$ m to the logged polyline.
 
