@@ -36,9 +36,7 @@ target_include_directories(
 )
 
 set(_adas_shipped_config "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/config.json")
-set(_adas_test_map
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../maps/Moscow.osm.admap"
-)
+set(_adas_test_map "${CMAKE_CURRENT_SOURCE_DIR}/data/test_road.admap")
 target_compile_definitions(
   adas_tests
   PRIVATE

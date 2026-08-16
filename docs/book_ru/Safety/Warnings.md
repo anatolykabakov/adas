@@ -19,8 +19,8 @@ AEB перебивает FCW, когда сработали бы оба.
 ## Путь данных
 
 ```text
-vision/lanes (Java) → TopicConvert → vision/path   ─┐
-vision/model_long (lead0, …)                       ─┼→ SafetyWarnService @ 50 ms
+vision/lanes (Java) → proto_convert → vision/path  ─┐
+vision/model_long (lead0, …)                       ─┼→ SafetyWarn @ 50 ms
 vehicle/chassis (v, blinker, steering_pressed)     ─┘
         → safety/warn → ZMQ OUT → HUD / bag
 ```

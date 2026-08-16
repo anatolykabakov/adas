@@ -85,7 +85,7 @@ drift right/left, return to center, no lane markings, driver hands on wheel, no 
 latch, turn signal on own and opposite side.
 
 **On recordings** — `bag/bag_safety_warn.py` runs a bag through the real chain
-`vision/lanes → TopicConvert → vision/path → SafetyWarnService` and counts episodes (not frames):
+`vision/lanes → proto_convert → vision/path → SafetyWarn` and counts episodes (not frames):
 
 ```bash
 PYTHONPATH=scripts python3 scripts/bag/bag_safety_warn.py adas_logs/<session>

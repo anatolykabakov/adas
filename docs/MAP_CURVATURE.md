@@ -32,9 +32,9 @@ for.
 | resample | `resamplePolyline` | fixed 5 m steps along the route |
 | curvature | `curvatureAlong` | heading change over a 25 m window, positive left |
 | sections | `turnSections` | \|kappa\| >= 0.002 1/m, split by sign and by peak, `v = sqrt(2.6 / kappa)` |
-| publish | `services/map_data_service.cpp` | `map/local` at 2 Hz, into the bag via the ZMQ bridge |
+| publish | `services/map_data.cpp` | `map/local` at 2 Hz, into the bag via the ZMQ bridge |
 
-The bag cost is measured, not estimated (`tests/test_map_data_service.cpp` prints and pins it): **5.2 kB per
+The bag cost is measured, not estimated (`tests/test_map_data.cpp` prints and pins it): **5.2 kB per
 message** for the route, plus **15 kB** for the surrounding road graph, which rides along every 5 s rather
 than every tick. About 45 MB/hour at the defaults — the same class as `vision/model_long` (45 MB/h on these
 runs) and far under `localization/pose` (73 MB/h).
@@ -74,7 +74,7 @@ the structure (map geometry in, resampled grid only as query points) cannot be q
 
 **Position is anchored, not fused.** The map needs latitude and longitude, and only the raw
 `sensors/gps/data` message still has them — by the time anything in C++ sees `sensors/gps/location`,
-`TopicConvertService` has projected it into a frame whose origin is private to that projector. But GPS on
+`proto_convert` has projected it into a frame whose origin is private to that projector. But GPS on
 these runs arrives at 0.1–1 Hz and jumps, while `localization/pose` is 100 Hz. So each fix anchors the map
 frame and pose deltas carry the position between fixes. The drift in between is **measured, not assumed**:
 `pose_gps_gap_m` in every message is the error at the moment the next fix arrived.
@@ -197,8 +197,8 @@ fixes: it is the optimistic case for position.
 |---|---|
 | `cpp/include/adas/mapmatch/road_route.h`, `cpp/src/mapmatch/road_route.cpp` | match, walk, resample, curvature, sections |
 | `cpp/include/adas/mapmatch/dir_edge.h` | directed-edge helpers, shared with `mapmatch/search.cpp` |
-| `cpp/include/adas/services/map_data_service.h`, `cpp/src/services/map_data_service.cpp` | the service: inputs, anchoring, publishing |
+| `cpp/include/adas/services/map_data.h`, `cpp/src/services/map_data.cpp` | the service: inputs, anchoring, publishing |
 | `proto/map_data.proto` | `MapLocalState` — what lands in the bag |
-| `cpp/tests/test_road_route.cpp`, `cpp/tests/test_map_data_service.cpp` | the maths, and the wiring |
+| `cpp/tests/test_road_route.cpp`, `cpp/tests/test_map_data.cpp` | the maths, and the wiring |
 | `scripts/bag/bag_map_data.py` | run analysis, logged or replayed |
 | `maps/Moscow.osm.admap` | 46 545 nodes, 57 677 edges — built by `scripts/mapmatch/osm_graph.py` |

@@ -78,7 +78,7 @@ python3 bag/bag_report.py <bag> --only notes               # дальше из �
 |---|---|
 | `bag/bag_arc_offset.py` | раскладывает смещение на слежение и опору, а опору — на план, разметку и сдвиг; тяжёлый и с своими ключами |
 | `bag/bag_feedforward_ab.py` | воспроизводит внутренний контур с другими гейнами; **разомкнуто**, читать как верхнюю границу |
-| `bag/bag_controller_ab.py` | гоняет настоящий C++ `LaneKeepService` через `pyadas` для сравнения pp/mpc/fp |
+| `bag/bag_controller_ab.py` | гоняет настоящие C++ `Planner` и `Control` через `pyadas` для сравнения pp/mpc/fp |
 | `tools/latency.py` | подробная разбивка задержек по этапам конвейера |
 
 Первые два уже ходят через кэш.

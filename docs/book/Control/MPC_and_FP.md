@@ -10,9 +10,16 @@ Pure Pursuit picks **one** $\delta$ that hits a look-ahead point.
 
 Appendix with real-arc forensics: `docs/MPC_EXPLAINED.md`.
 
-* VisionPilot `mpc`: `lateral/lateral_planning.cpp` ($N{=}20$, path-domain $ds$).
-* flowpilot `fp`: `lateral/lateral_mpc.cpp` ($N{=}16$, time grid → 2.5 s).
-* Path fusion (lanes↔plan): `laneLinesToPath` / `core/path_fusion.py`.
+The three live behind one interface, `IPlanner`, and the `Planner` service holds exactly one of them:
+
+* pure pursuit `pp`: `lateral/pp_planner.cpp`.
+* VisionPilot `mpc`: `lateral/vp_planner.cpp` + `visionpilot_mpc.cpp` ($N{=}20$, path-domain $ds$).
+* flowpilot `fp`: `lateral/fp_planner.cpp` + `flowpilot_mpc.cpp` ($N{=}16$, time grid → 2.5 s), with a
+  swappable numerical method — `kappa_solver_grad` or `kappa_solver_acados`.
+* Path fusion (lanes↔plan): `laneLinesToPath` in `utils/lane_path.cpp` / `core/path_fusion.py`.
+
+All three emit **curvature**, never an angle. That is what lets them be swapped at runtime and compared on
+the same bag: the conversion to steering happens once, downstream, in `Control`.
 
 ## State symbols
 
@@ -256,7 +263,7 @@ delta_plan = sol[1] if len(sol) > 1 else sol[0]   # "look ahead" one sample
 d_prev = 0.0
 d_out, swa = apply_limits(delta_plan, d_prev, v=18.0)
 print(f"wheel {math.degrees(d_out):.2f}°  SWA {math.degrees(swa):.1f}°  "
-      f"(PID→torque happens in LaneKeepService / PandaService)")
+      f"(PID→torque happens in Control, CAN framing in Platform)")
 ```
 
 Saturation at ±300 cNm means the **plant** cannot follow — not that the cost wanted more. Debug flag / UI: steering-limit indication.
@@ -298,7 +305,7 @@ Only the first command is applied; the rest of the horizon is thrown away. If ev
 
 Both `fp` and `mpc` / `pp` track a **reference polyline** on topic `vision/path`.
 That polyline is **not** raw paint and **not** raw Supercombo plan — it is a fusion in
-`laneLinesToPath` (`topic_convert` / Python mirror `core/path_fusion.py`).
+`laneLinesToPath` (`utils/lane_path.cpp` / Python mirror `core/path_fusion.py`).
 
 ### Why fuse?
 
@@ -396,8 +403,8 @@ Expect: `blend=0` follows the cutting plan; `blend=1` sits on lane mid ($≈0$);
 
 ## `fp` model (flowpilot time-domain MPC)
 
-Road default (`lane_keep_controller=fp`). Code: `lateral/lateral_mpc.cpp`,
-wired in `LaneKeepService::stepFlowpilot`.
+Road default (`lane_keep_controller=fp`). Code: `lateral/fp_planner.cpp` and `lateral/flowpilot_mpc.cpp`,
+selected by `Planner` through `makeKappaSolver`.
 
 Opposite of VisionPilot's **path-domain** $\delta$-MPC:
 
@@ -619,8 +626,8 @@ first_second_32 = sum(1 for i in range(33) if 10.0 * (i / 32.0) ** 2 <= 1.0)
 print(f"N=32    : {first_second_32} of 33 nodes inside the first second, horizon "
       f"{10.0 * (32 / 32.0) ** 2:.2f} s")
 print("\nThe near zone is already as densely sampled as theirs. Doubling N adds far nodes, which at equal")
-print("weights dilutes the near zone that actually matters, and costs about 4x more to solve because we")
-print("use gradient descent rather than acados.")
+print("weights dilutes the near zone that actually matters, and costs about 4x more to solve under the")
+print("gradient solver.")
 ```
 
 ### 3. The plan it optimises has its own bias

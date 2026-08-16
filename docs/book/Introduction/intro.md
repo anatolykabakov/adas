@@ -29,9 +29,9 @@ Camera → Supercombo → metric path → lane-keep → Panda / HCA.
 ```
 
 1. Phone camera captures a frame.
-2. Supercombo (ONNX Runtime) publishes lane polylines / plan in meters.
-3. `LaneKeepService` (`pp` | `mpc` | `fp`) computes desired SWA / torque.
-4. Panda sends `HCA_01`; EPS applies torque (supervised use only).
+2. Supercombo (on the GPU, ONNX as fallback) publishes lane polylines / plan in meters.
+3. `Planner` (`pp` | `mpc` | `fp`) produces a plan in curvature; `Control` turns it into SWA / torque.
+4. `Platform` sends `HCA_01`; EPS applies torque (supervised use only).
 
 ## Difference from AAD
 

@@ -104,8 +104,8 @@ print("offset within a minute of driving. Correcting it in the intrinsics as wel
 ```
 
 Verified rather than assumed: fixing $c_x, c_y$ **without** resetting the extrinsics estimate doubled lane
-$\sigma$ from 0.25 to 0.55, measured on 90 frames with `bag/bag_intrinsics_ab.py`. The two corrections were
-fighting each other. Fixing the principal point only makes sense together with a calibration reset, and even
+$\sigma$ from 0.25 to 0.55, measured on 90 frames of a recorded drive (the one-off A/B script that produced
+this has since been removed; the number is what survives). The two corrections were fighting each other. Fixing the principal point only makes sense together with a calibration reset, and even
 then it does not improve $\sigma$ — it just moves the same information from one place to another.
 
 ```{admonition} The rule
@@ -258,6 +258,12 @@ Read it right to left, which is how it acts on a model-frame pixel: undo the can
 out the mounting angles, project through our real lens. $V$ is `view_from_device`, the fixed permutation
 from device axes (x forward, y right, z down) to camera axes.
 
+The matrix is built once per calibration update; applying it to 1.5 million pixels happens every frame, and
+that part runs as an OpenCL kernel on the GPU (4.6 ms, against 12.1 on the CPU). The arithmetic is the same
+either way — and it is verified to be the same, by computing the first frame after startup both ways and
+comparing them bit-for-bit. On a Mali GPU that comparison caught a chroma plane coming back wrong and moved
+the warp back to the CPU on the second frame, which is the entire reason the check exists.
+
 ```python
 import numpy as np
 
@@ -332,9 +338,12 @@ downstream escapes it.
 ```json
 "calibration": {
   "camera": {
+    "chessboard_capture": false,
     "position_m": { "x_forward": 1.5, "y_left": 0.0, "z_up": 1.1 },
     "rpy_deg":    { "roll": 0.0, "pitch": -1.8, "yaw": 0.5 },
-    "intrinsics_prior": { "fx": 993.4, "fy": 995.2, "cx": 640.0, "cy": 360.0,
+    "intrinsics_from_device": true,
+    "intrinsics_prior": { "device": "HD1901",
+                          "fx": 993.4, "fy": 995.2, "cx": 640.0, "cy": 360.0,
                           "width": 1280, "height": 720 }
   }
 }
@@ -343,6 +352,31 @@ downstream escapes it.
 `rpy_deg` is a starting guess that the online estimator replaces within a minute; the intrinsics are not a
 guess and should not be edited without a chessboard. The principal point stays at frame centre on purpose —
 step 1.
+
+### Whose intrinsics are these, anyway?
+
+`device: "HD1901"` is the field that makes the block honest. 993.4 px was measured with a chessboard on
+*that* phone, and on any other phone it is simply someone else's number — on a Xiaomi 14 it produced 993.4
+where the camera itself reports 951, which bends the lane geometry with nothing in the log to say so.
+
+So the order of preference is:
+
+1. **your own chessboard measurement**, when `intrinsics_prior.device` matches this phone;
+2. **what the camera reports** — `LENS_INTRINSIC_CALIBRATION` if the vendor fills it in, otherwise the focal
+   length and sensor size from the camera characteristics;
+3. someone else's prior — which is to say, nothing at all.
+
+The log states which one was taken. If it says the prior was dropped as "unknown device", that is the
+mechanism working, not a failure.
+
+```{admonition} Two unit traps in this block, both of which have bitten
+:class: warning
+The numbers here are **full-frame** units, 1280×720. A bag frame is 640×360, and publishing bag-frame
+numbers into a topic that is read as full-frame cost a drive — see [the calibration
+overview](./Overview.md). And $f_y$ must be scaled by the same factor as $f_x$: the 16:9 stream is a crop of
+a 4:3 sensor that preserves horizontal field of view, so scaling $f_y$ by the active array *height* produced
+`fx=427.5` next to `fy=320.6` on square pixels.
+```
 
 ## Exercises
 

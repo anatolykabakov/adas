@@ -1,6 +1,6 @@
 # Controller run on a track in the simulator
 
-Closed loop: real C++ `LaneKeepService` (via `pyadas`) steers a car in MetaDrive on a
+Closed loop: the real C++ `Planner` and `Control` (via `pyadas`) steer a car in MetaDrive on a
 generated track; evaluation uses ground truth: distance from lane center, separately on straights
 and on arcs of known radius. Metric idea matches the control test in
 [AAD](https://github.com/thomasfermi/Algorithms-for-Automated-Driving) (distance to reference

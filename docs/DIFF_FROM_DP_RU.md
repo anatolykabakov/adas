@@ -51,13 +51,15 @@
 `scripts/rlog/rlog_lat_diff.py`.
 
 **Чем это уже обошлось:** сервис, который читает стенные часы напрямую, ломает реплей молча.
-`LaneKeepService` так и делал — `utils::getCurrentTimestamp()` вместо `Service::now()` — и в офлайне опора
-«устаревала» на часы, гейт гасил **каждую** команду, а PID получал бессмысленный `dt`. Исправлено
-2026-08-06. **Тот же дефект остаётся в `panda_service.cpp`.**
+Сервис удержания полосы так и делал — `utils::getCurrentTimestamp()` вместо `Service::now()` — и в офлайне
+опора «устаревала» на часы, гейт гасил **каждую** команду, а PID получал бессмысленный `dt`. Исправлено
+2026-08-06. Тот же дефект оставался тогда в сервисе панды; **сейчас закрыт и там**: `services/platform.cpp`
+берёт время только через `nowMs()`, то есть через `Service::now()`, а `getCurrentTimestamp` в нативном коде
+не осталось ни одного вызова (проверено 17.08.2026).
 
 ### Темп зрения и главное структурное расхождение
 
-У них модель идёт 20 Гц, у нас измеренные **13–14 Гц** (`frame_dt` 78 мс). Но важнее не это, а что делает
+У них модель идёт 20 Гц, у нас измеренные **30 Гц** (`frame_dt` 33 мс) — было 13–14, пока модель считалась на процессоре. Но важнее не это, а что делает
 контроллер между кадрами:
 
 * openpilot вызывает `get_lag_adjusted_curvature` и `LaC.update` **на 100 Гц** в `controlsd`; план обновляется
@@ -86,7 +88,7 @@ l_prob *= l_std_mod
 ```
 
 ```cpp
-// у нас, topic_convert.cpp
+// у нас, utils/lane_path.cpp
 l_prob *= stdConfidence(medianLaneStd(lanes(1), ll, /*range*/ 20.0), /*good*/ 0.3, /*bad*/ 1.5);
 ```
 
@@ -198,7 +200,7 @@ def roll_compensation(self, roll, u):
 У них выбирают **контроллер момента**: `pid`, `indi`, `lqr`, `torque`. У нас выбирают **планировщик**: `pp`
 (pure pursuit), `mpc` (visionpilot), `fp` (порт flowpilot MPC), а контроллер момента всегда один — угловой
 PID. И сам MPC у них сгенерирован acados (`lateral_mpc_lib`), у нас написан руками
-(`lateral/lateral_mpc.cpp`).
+(`lateral/flowpilot_mpc.cpp`).
 
 ---
 
@@ -381,11 +383,11 @@ ATL. Что именно портировать — в BACKLOG §0. Задача
 
    Важная связка: гейт по факту актюации (пункт 1 ниже) читал `controls_allowed`, который при ALKA остаётся
    ложным — то есть две правки погасили бы друг друга. Теперь `PandaService` публикует
-   `panda/health.lat_actuation_allowed`, и `LaneKeepService` читает это поле.
+   `panda/health.lat_actuation_allowed`, и `Control` читает это поле.
 
 1. **сброс контроллера, когда момент не доходит до рейки.** У них `LaC.update` получает `active` и при
    `not active` обнуляет выход и сбрасывает PID (`latcontrol_pid.py`); у нас `active` не содержал факта
-   актюации вообще. Теперь `LaneKeepService` подписан на `panda/health`, гейт `lat_require_assist` отгружён
+   актюации вообще. Теперь `Control` подписан на `panda/health`, гейт `lat_require_assist` отгружён
    включённым, а флаги `assist_allowed` / `assist_known` пишутся в `control/lane_keep_debug` независимо от
    гейта. Снятый на стенде виндап: секунда мнимой рулёжки давала 283 cNm против честных 203. Шесть тестов,
    на дороге не проверено.

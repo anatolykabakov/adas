@@ -15,6 +15,9 @@
 | `BENCHMARK_COMMA2.md` | сравнение с comma-two и план сокращения разрыва |
 | `SAFETY_WARN.md` | FCW / AEB / LDW |
 | `MPC_EXPLAINED.md` | MPC из VisionPilot |
+| `THNEED.md` | путь через GPU: что такое thneed, как наш собирается и проверяется |
+| `NEW_PHONE.md` | подъём на новом телефоне и что замерить до выезда |
+| `PORTING.md` | подключение машины за `CarPlatform` |
 | `PARAMSD.md` / `MAPMATCH.md` | обучение параметров / офлайн-привязка к карте |
 | глава книги `Localization/Overview.md` | ENU из GPS, IMU телефона, живой EKF |
 | `TRAFFIC_VISION.md` / `MODEL_LONG_PLAN.md` / `CRUISE_BUTTONS.md` | смежное |
@@ -24,11 +27,14 @@
 
 | путь | зачем |
 |---|---|
-| `middleware/middleware.hpp` | Service / ParamBag |
-| `test_middleware.cpp` | самые маленькие примеры |
-| `VisionPipeline.java` | очередь инференса |
-| `lane_keep_service.cpp` | выбор контроллера |
-| `safety_warn_service.cpp` | FCW / AEB / LDW |
+| `include/adas/middleware/manager.hpp` | Service / ParamBag |
+| `tests/test_middleware.cpp` | самые маленькие примеры |
+| `VisionPipeline.java` | выбор раннера, очередь инференса |
+| `src/services/planner.cpp` | какая поперечная стратегия работает |
+| `src/services/control.cpp` | закон управления, ни одного упоминания CAN |
+| `src/services/platform.cpp` и `src/platform/` | шина и единственное место, где названа марка |
+| `src/services/safety_warn.cpp` | FCW / AEB / LDW |
+| `scripts/tools/thneed_from_onnx.py` | ONNX → прогон на GPU и проверки вокруг него |
 | `online_localizer` / `imu_calibrator` / `gps_local_projector` | поза в ENU / захват IMU / GPS |
 | `assets/config.json` | все рычаги |
 

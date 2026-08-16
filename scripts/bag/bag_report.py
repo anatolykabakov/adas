@@ -265,7 +265,11 @@ def sec_offset(d):
 
 
 def sec_latency(d):
-    """Цепочка кадр камеры -> инференс -> публикация команды. Разности, а не абсолютные метки."""
+    """Цепочка кадр камеры -> инференс -> публикация плана. Разности, а не абсолютные метки.
+
+    Это тики control/lane_keep, то есть план, а не команда на шине: до неё ещё закон управления и
+    таймер передачи панды. Полную цепочку до controls/steer печатает tools/latency.py.
+    """
     cap, vis, pub = d["ctrl_capture_t"], d["ctrl_vision_t"], d["ctrl_publish_t"]
     ok = (cap > 0) & (pub > 0)
     if ok.sum() < 100:
@@ -273,7 +277,7 @@ def sec_latency(d):
     print("\n== задержка ==")
     full = (pub - cap)[ok].astype(float)
     print(
-        f"  кадр -> команда:   медиана {np.median(full):5.1f} мс  p95 {_pct(full, 95):5.1f}  max {full.max():5.0f}"
+        f"  кадр -> план:      медиана {np.median(full):5.1f} мс  p95 {_pct(full, 95):5.1f}  max {full.max():5.0f}"
     )
     okv = ok & (vis > 0)
     if okv.sum() > 100:
@@ -283,7 +287,7 @@ def sec_latency(d):
             f"  кадр -> инференс:  медиана {np.median(infer):5.1f} мс  p95 {_pct(infer, 95):5.1f}"
         )
         print(
-            f"  инференс -> команда: медиана {np.median(post):5.1f} мс  p95 {_pct(post, 95):5.1f}"
+            f"  инференс -> план:  медиана {np.median(post):5.1f} мс  p95 {_pct(post, 95):5.1f}"
         )
     fdt = d["ctrl_frame_dt"]
     fdt = fdt[fdt > 0]

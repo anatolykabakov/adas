@@ -36,7 +36,7 @@ namespace services {
 class Planner : public adas::middleware::Service {
 public:
   struct Config {
-    std::string controller = "pp";  ///< Active planner: "pp", "vp" or "fp".
+    std::string controller = "pp";  ///< Active planner: "pp", "mpc" or "fp" — `vehicle.lane_keep_controller`.
     double wheelbase_m = 2.636;     ///< Wheelbase [m].
     double max_steer_deg = 8.0;     ///< Ceiling on the commanded road-wheel angle [deg].
     double pp_k_dd = 0.4;           ///< Pure pursuit: lookahead per unit speed [s].

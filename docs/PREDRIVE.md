@@ -335,9 +335,9 @@ describes the asset, not what the phone will load.
 Delete the stale copy and let the app re-copy it:
 
 ```bash
-adb shell am force-stop ai.flow.adas
-adb shell run-as ai.flow.adas rm -f files/config.json
-adb shell run-as ai.flow.adas ls -l files/          # config.json must be gone
+adb shell am force-stop adas.app
+adb shell run-as adas.app rm -f files/config.json
+adb shell run-as adas.app ls -l files/          # config.json must be gone
 # start the app, then confirm it copied the new one:
 adb logcat -d | grep "Copied asset config.json"
 ```
@@ -348,7 +348,7 @@ This touches only `config.json` — the learned calibration lives elsewhere in `
 Then confirm the values actually loaded, which is the only check that means anything:
 
 ```bash
-adb logcat -d | grep -E "alt_exp=|LaneKeepService: controller=|learn_params="
+adb logcat -d | grep -E "alt_exp=|Planner: controller=|learn_params="
 ```
 
 `alt_exp=17` is the one that proves `lat_always_on` reached the native side.
@@ -397,8 +397,8 @@ GRADLE_USER_HOME=/path/to/writable/gradle_home \
    ```
    LaneKeep: torque reaching the rack again
    ```
-   That single pair exercises the whole chain — `PandaService` computing the gate, publishing
-   `lat_actuation_allowed` on `panda/health`, `LaneKeepService` receiving it, clearing the command and
+   That single pair exercises the whole chain — `Platform` computing the gate, publishing
+   `lat_actuation_allowed` on `panda/health`, `Control` receiving it, clearing the command and
    resetting the PID — which nothing else on this drive will, because with always-on lateral the gate is open
    almost all the time. If the lines never appear, the feedback is not reaching the lane-keep service and the
    `no_assist` status in the bag will be meaningless.

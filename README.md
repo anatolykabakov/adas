@@ -1,26 +1,31 @@
 # ADAS — phone-based LKA / AEB / FCW / LDW / ACC (Android + C++)
 
-Phone-based ADAS for VW Golf 7 (MQB): camera → supercombo ONNX → lateral MPC (LKA) and
+Phone-based ADAS for VW Golf 7 (MQB): camera → supercombo on the GPU → lateral MPC (LKA) and
 longitudinal/safety functions (ACC, FCW, AEB, LDW) → HCA / related CAN via Panda. Plus bag
 recording, offline analysis tools, and MetaDrive sim.
 
-**All algorithms are in C++** (services inside `AdasApp`). Java handles the camera, ONNX, UI, and
+**All algorithms are in C++** (services inside `AdasApp`). Java handles the camera, inference, UI, and
 logging; Python is offline only: bag visualizer, simulator, analysis (`publish → step →
 pop_messages` via `pyadas`).
 
-**Status:** MVP drives on the highway. Vision runs at the full camera rate — **30.3 Hz** on the road
-(frame interval median 33.0 ms), inference 15.9 ms on the GPU, and capture → steering command on CAN
-**37 ms** median (p95 56). Latest run 2026-08-13 — 30.1 minutes recorded, **17.9 min with assist
-engaged**: lane-centre offset **0.054 m** median on straights (R > 500 m) and 0.063 m on gentle arcs
-(R 167–500 m), angle tracking error 0.55° and 0.92° on the same two; the driver overrode the wheel in
-28 episodes totalling 38 s, **2.1%** of assisted time.
+**Status:** MVP drives on the highway. Vision runs at the full camera rate — **30.0 Hz** published on
+the road, 0 frames dropped in 52 690, frame interval median 33.0 ms. Inference is **17.6 ms** on the
+GPU and frame preparation 4.6 ms, so capture → model output is **22 ms**; capture → plan is 31 ms and
+capture → steering command **52 ms** (p95 69), with the panda's own 10 ms transmit timer after that.
 
-Two caveats those numbers do not carry. The offset is measured only where the lane was recognised —
-**31.8%** of controlled ticks — and on 12.5% of frames both of our lines sit below 0.3 confidence
-without the system saying so ([task #40](docs/BACKLOG.md)). And torque reaches the 300 cNm panda
-ceiling on 15.8% of ticks overall: 13% on straights but **33% on gentle arcs and 64–86% on tight
-ones**, which is where the tracking error grows to 2.7–12.9°. Tight bends are outside what this
-assistant does today.
+Latest run 2026-08-16 — 29.3 minutes: lane-centre offset **−0.001 m** median on straights (R > 500 m)
+and +0.142 m on gentle arcs (R 167–500 m), angle tracking error **0.32°** and 1.08° on the same two,
+line probabilities 0.84 / 0.81. The middleware lost nothing: 0 drops across 10 services, no timer lag
+in any snapshot.
+
+Three caveats those numbers do not carry. The offset is measured only where the lane was recognised —
+**40.0%** of controlled ticks — and on 17.5% of frames both of our lines sit below 0.3 confidence
+without the system saying so ([task #40](docs/BACKLOG.md)). Torque reaches the 300 cNm panda ceiling
+on 17.5% of ticks overall: 8% on straights but **45% on gentle arcs and 67–93% on tight ones**, which
+is where the tracking error grows to 2.4–10.1°; tight bends are outside what this assistant does
+today. And the model's own pose still reads short by a constant factor of 0.679 against the wheels,
+with the yaw sign inverted ([task #37](docs/BACKLOG.md)) — which is why localisation does not use
+it.
 
 Which question the next drive asks, and what would count as an answer, is written down before it
 happens — [`docs/PREDRIVE.md`](docs/PREDRIVE.md). Applicability limits and what the system cannot do —
@@ -37,6 +42,7 @@ happens — [`docs/PREDRIVE.md`](docs/PREDRIVE.md). Applicability limits and wha
 No host install — use the container (docker only):
 
 ```bash
+git lfs install && git lfs pull                            # models and map are LFS objects
 ./scripts/docker.sh build                                  # image with C++/python environment
 ./scripts/docker.sh tests                                  # unit tests
 ./scripts/docker.sh host                                   # host build + pyadas
@@ -76,11 +82,11 @@ app/src/main/
 │   └── ui/                 screens and overlays
 ├── cpp/                    AdasApp: all control and processing
 │   ├── include/adas/       public headers; the include path mirrors the namespace
-│   ├── tests/              gtest: 223 cases
+│   ├── tests/              gtest: 230 cases
 │   └── src/
-│       ├── services/       lane_keep, panda, localization, camera_calib, map_data, …
-│       ├── lateral/        the three lateral controllers: flowpilot_mpc, visionpilot_mpc, pp
-│       ├── platform/       the car behind an interface: volkswagen/ is the only make so far
+│       ├── services/       planner, control, platform, localization, camera_calib, map_data, …
+│       ├── lateral/        the three lateral strategies behind IPlanner: fp, vp, pp, plus the solvers
+│       ├── platform/       the car behind CarPlatform: volkswagen/ and toyota/
 │       ├── mapmatch/       OSM road graph: localization, curvature ahead
 │       ├── panda/          USB driver and CAN framing
 │       ├── python/         pybind11 module: the same C++ the phone runs, importable as pyadas
@@ -109,7 +115,7 @@ Namespaces follow directories: `adas/services/planner.h` declares `adas::service
 ## Control pipeline
 
 ```
-camera 30 Hz → calibration warp → supercombo (thneed 15.9 ms on GPU, or ONNX 44.7 ms)
+camera 30 Hz → calibration warp (GPU, 4.6 ms) → supercombo (thneed 17.6 ms on GPU, or ONNX 48.5 ms)
         │
         └─► vision/lanes ─ZMQ→ ZmqBridge ─► vision/path (plan + lane markings)
                                                     │
@@ -123,11 +129,17 @@ camera 30 Hz → calibration warp → supercombo (thneed 15.9 ms on GPU, or ONNX
 Full chain with all fields and timings:
 [`docs/IMAGE_TO_CAN_PIPELINE.md`](docs/IMAGE_TO_CAN_PIPELINE.md).
 
-Measured on run 2026_08_13_18_45_14 with the thneed model: frame interval 33.0 ms (**30.3 Hz**),
-capture → steering command on CAN **37 ms** median, of which 28 ms is capture → inference and 8 ms is
-inference → command. The vision rate matters because it sets the size of a setpoint step: halving the
-interval roughly halved it on arcs, and tracking error fell with it. How that was established —
-[`docs/VISION_RATE.md`](docs/VISION_RATE.md).
+Measured on run 2026_08_16_23_59_45 with the thneed model, and worth keeping the three stages apart
+because they are routinely conflated: capture → model output **22 ms**, capture → plan
+(`control/lane_keep`) **31 ms**, capture → steering command (`controls/steer`) **52 ms**, plus the
+panda's 10 ms transmit timer to the wire. The vision rate matters because it sets the size of a
+setpoint step: halving the interval roughly halved it on arcs, and tracking error fell with it. How
+that was established — [`docs/VISION_RATE.md`](docs/VISION_RATE.md).
+
+The model runs the same network on either path — `assets/supercombo.onnx` is the source, and
+`assets/supercombo.thneed` is generated from it. Both runners check themselves against a zero-input
+reference before accepting a frame; how the thneed is built and verified, and what it takes on a
+phone that is not this one — [`docs/THNEED.md`](docs/THNEED.md), [`docs/NEW_PHONE.md`](docs/NEW_PHONE.md).
 
 ### Controllers
 
@@ -144,7 +156,7 @@ Switch in `config.json` (`vehicle.lane_keep_controller`) or in the in-app parame
 | key | value | meaning |
 |---|---|---|
 | `vehicle.lane_keep_controller` | `fp` | active lateral controller |
-| `vehicle.fp_solver` | `acados` | numerical method inside `fp`: `grad` or `acados` |
+| `vehicle.fp_solver` | `acados` | numerical method inside `fp`: `grad` or `acados` (the key's own `comment_*` argues for `grad` on a measurement — the shipped value and that comment disagree, see below) |
 | `vision.model_runner` | `thneed` | which model runs vision: `thneed` (GPU) or `onnx` |
 | `vehicle.lat_pid_kf` | `6e-05` | feedforward `kf·SWA·(v² + v₀²)`, fitted over three drives |
 | `vehicle.tire_stiffness_factor` | `1.0` | κ→angle understeer correction; `lat_use_vehicle_model` off leaves plain kinematics |
@@ -152,6 +164,11 @@ Switch in `config.json` (`vehicle.lane_keep_controller`) or in the in-app parame
 | `vehicle.lane_max_age_s` | `0.3` | a plan older than this withdraws the command — 8 m of road at 100 km/h |
 | `vehicle.assist_max_age_s` | `0.5` | how long a panda health report stays usable; five publish periods |
 | `localization.use_camera_odometry` | `false` | off: the model yaw rate is sign-inverted against CAN |
+
+`vehicle.fp_solver` is shipped as `acados` while its `comment_fp_solver` records that on run
+2026_08_10_02_07_55 acados differed from a converged `grad` by 0.36° median and jittered more between
+frames, concluding "therefore grad by default". The code default is `grad`; the shipped config
+overrides it. One of the two should move — that is a driving decision, not a documentation one.
 
 The values above drift as tuning continues — `config.json` itself is the reference, not this table.
 Eight of its keys carry a `comment_*` next to them spelling out what was measured and why the value
@@ -204,7 +221,7 @@ python3 bag/bag_safety_warn.py <bag>                         # replay the warnin
 ## Tests
 
 ```bash
-./app/src/main/cpp/build_cpp.sh -t linux --test     # 223 tests
+./app/src/main/cpp/build_cpp.sh -t linux --test     # 230 tests
 ./scripts/docker.sh tests                           # same in container
 ```
 

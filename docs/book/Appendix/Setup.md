@@ -6,7 +6,10 @@ Android ADAS root:
 
 ```bash
 cd <repository root>
+git lfs install && git lfs pull   # the models and the map are LFS objects
 ```
+
+Without that second line the network assets are 133-byte pointer files and the app starts without a model.
 
 See also `README.md` at the repository root: APK build, `run_bag_vis.sh`, `run_sim.sh`, Java/C++/scripts layout.
 
@@ -47,7 +50,9 @@ Recommended order: AAD Lane Detection overview + Control/PP → this book (Archi
 ## Phone
 
 * Android arm64, USB OTG + Panda;
-* model `/sdcard/adas_models/supercombo.onnx` or assets;
+* models come from the APK assets (`supercombo.onnx`, `supercombo.thneed`); `/sdcard/adas_models/` overrides
+  them when you want to test a different file without rebuilding;
+* new phone: `python3 tools/model_device_probe.py --iters 50` before anything else — see `docs/NEW_PHONE.md`;
 * logging → `/sdcard/adas_logs/…`;
 * for teaching measurements: `vision_traffic: false`, `phone_stats: true`.
 
