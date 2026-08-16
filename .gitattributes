@@ -1,0 +1,4 @@
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.thneed filter=lfs diff=lfs merge=lfs -text
+*.osm.pbf filter=lfs diff=lfs merge=lfs -text
+*.admap filter=lfs diff=lfs merge=lfs -text
