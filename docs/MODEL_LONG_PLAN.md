@@ -56,8 +56,8 @@ adb push models/sc_v0.8.13.onnx /sdcard/adas_models/supercombo.onnx
 Lateral: **FP/MPC no regression** across 6409↔6472 vs bag `lane_keep_debug`; PP stays noisy offline.
 
 ```bash
-python model_ab_sim.py ../../../adas_logs/<bag> \
+python model_ab_sim.py ../adas_logs/<bag> \
   --models ../../../models/sc_v0.8.5.onnx ../../../models/sc_v0.8.13.onnx \
   --n-frames 40 --controllers pp,fp,mpc -o /tmp/model_ab.csv
-python bag_long_sim.py ../../../adas_logs/<bag> -o /tmp/long.csv
+python bag/bag_long_sim.py ../adas_logs/<bag> -o /tmp/long.csv
 ```

@@ -4,7 +4,9 @@ Detailed path from phone camera frame to Volkswagen MQB `HCA_01` frames on the b
 
 Configuration this chain describes:
 
-- model = `supercombo.onnx` (v0.8.13) + Java ONNX Runtime, NNAPI with CPU fallback;
+- model = supercombo **0.9.7**, shipped twice: `assets/supercombo.thneed` on the GPU (default,
+  `vision.model_runner`) and `assets/supercombo.onnx` through ONNX Runtime as the fallback. Both are the
+  same network — the thneed is generated from the ONNX;
 - lateral control = `fp` (flowpilot MPC port) → κ → steering angle via vehicle model →
   angle-PID → HCA torque. All three available controllers are covered below;
 - target vehicle = VW Golf 7 MQB.
@@ -14,7 +16,7 @@ the three places a command dies silently: [`LATERAL_CHAIN_RU.md`](LATERAL_CHAIN_
 topology map — where the messages go; that one explains why each step is shaped the way it is.
 
 Related overviews: root [`README.md`](../README.md),
-[`vision/README.md`](../app/src/main/java/ai/flow/adas/vision/README.md),
+[`vision/README.md`](..app/src/main/java/adas/app/vision/README.md),
 [`cpp/README.md`](../app/src/main/cpp/README.md), applicability limits —
 [`CONTROLLER_LIMITS.md`](CONTROLLER_LIMITS.md).
 
@@ -29,8 +31,8 @@ Camera2 YUV 1280×720
         ├─► grayscale JPEG @ 640×360 ──► bag (camera)          [if logging]
         └─► ARGB Bitmap ──► VisionPipeline (background thread)
                               │
-                              ├─ ModelCalibWarp (512×256)
-                              ├─ SupercomboOnnxRunner (ORT)
+                              ├─ ModelCalibWarp (OpenCL, CPU fallback)
+                              ├─ SupercomboThneedRunner (GPU) | SupercomboOnnxRunner (ORT)
                               ├─ parse → LaneLines (+ CameraOdometry)
                               ├─ LaneOverlayView (UI)
                               ├─ bag: vision/lanes (+ model_out)
@@ -41,12 +43,12 @@ Camera2 YUV 1280×720
  Native ZmqBridgeService  SUB :5555
         │
         ▼
- TopicConvertService
+ proto_convert
         ├─ vision/lanes  → vision/path   (LanePathMsg polyline)
         └─ vehicle/state → vehicle/chassis
         │
         ▼
- LaneKeepService
+ Planner → Control
         ├─ PurePursuit(polyline, v) → δ_road (device Y right+)
         ├─ desired_SWA = steer_sign × δ × steer_ratio
         ├─ LatControlPID(desired, actual_SWA) → steer_norm
@@ -54,7 +56,7 @@ Camera2 YUV 1280×720
         └─ controls/steer      (torque_cNm, enabled)
         │
         ▼
- PandaService @ 100 Hz TX
+ Platform @ 100 Hz TX
         ├─ safety: ignition + controls_allowed + cmd age ≤ 250 ms
         ├─ CarController → HCA_01 + LDW HUD
         └─ panda.can_send(...)
@@ -148,22 +150,29 @@ M_{\text{model→cam}} = K_{\text{cam}} \cdot V \cdot R(\text{rpy}) \cdot (K_{\t
 
 ---
 
-## Stage 4. ONNX Supercombo
+## Stage 4. Supercombo
 
-**Code:** `vision/SupercomboOnnxRunner.java`
+**Code:** `vision/SupercomboThneedRunner.java` (default), `vision/SupercomboOnnxRunner.java` (fallback),
+both behind `vision/ModelRunner.java`. Whichever loads, it first runs the network on zero inputs and
+compares the output signature with `vision.zero_input` from the config; a runner that computes something
+else refuses to start.
 
 | Input | Size / meaning |
 |------|----------------|
-| Image tensor | 12×128×256 = 2 frames × 6 ch (YUV-like layout after warp+resize) |
-| desire | 8 |
-| traffic | 2 |
-| rnn state | 512 (recurrent between frames) |
+| `input_imgs` | 12×128×256 = 2 frames × 6 ch (YUV-like layout after warp+resize) |
+| `big_input_imgs` | same shape; the wide camera we do not have, fed the same frames |
+| `desire` | 100×8 |
+| `traffic_convention` | 2 — currently zero on both paths (task #48) |
+| `lateral_control_params` | 2 — speed and steer delay; the 0.9.x model takes them as input |
+| `prev_desired_curv` | 100×1, shifted by one value each frame |
+| `features_buffer` | 99×512 history, shifted by one frame each frame |
 
 First useful output — after **2** frames (`hasPrev`).
 
-Model: `/sdcard/adas_models/supercombo.onnx` → filesDir cache → `assets/supercombo.onnx` (`AdasConfig`).
+Model: `/sdcard/adas_models/supercombo.{onnx,thneed}` → filesDir cache → `assets/` (`AdasConfig`). The
+`/sdcard` path exists so a different file can be measured without rebuilding the APK.
 
-### Output parsing (layout driving.cc, out≈6409)
+### Output parsing (supercombo 0.9.7, out = 6504)
 
 | Slice | Content |
 |------|------------|
@@ -171,7 +180,12 @@ Model: `/sdcard/adas_models/supercombo.onnx` → filesDir cache → `assets/supe
 | `[4955:5483)` | 4 lanes × 33 × (y,z) + stds |
 | `[5483:5491)` | lane probs — `sigmoid(prob[i*2+1])` |
 | `[5491:5755)` | 2 road edges × 33 × (y,z) |
-| further | pose / other → `CameraOdometry` |
+| `[5948:…)` | pose → `CameraOdometry` |
+| `[5990:…)` | desired curvature |
+| `[5992:6504)` | 512 features, fed back on the next frame |
+
+The tail moved between 0.8.x and 0.9.x while the prefix did not, which is exactly the kind of difference
+that produces finite, smooth, wrong numbers rather than a crash — see task #36 for the time it did.
 
 Coordinate system **device**: X forward, **Y right+**, Z up (as flowpilot Parser).
 Lane order in proto: leftFar, leftNear, rightNear, rightFar (near = indices 1 and 2).
@@ -208,9 +222,9 @@ Outbound topics (native → Java), see `kZmqOutboundTopics`:
 
 ---
 
-## Stage 6. TopicConvert: lanes → path, carState → chassis
+## Stage 6. proto_convert: lanes → path, carState → chassis
 
-**Code:** `topic_convert_service.cpp`, `utils/topic_convert.cpp`
+**Code:** `utils/proto_convert.cpp` (wire → internal), `utils/lane_path.cpp` (`laneLinesToPath`, called from `services/planner.cpp`)
 
 ### `vision/lanes` → `vision/path` (`laneLinesToPath`)
 
@@ -239,7 +253,7 @@ Without correct SWA/pressed LatPID and driver override on MQB work incorrectly.
 
 ## Stage 7. LaneKeep: planner → steering angle → torque
 
-**Code:** `lane_keep_service.cpp`, `lateral/lateral_mpc.cpp`, `utils/vehicle_model.h`,
+**Code:** `services/planner.cpp`, `services/control.cpp`, `lateral/fp_planner.cpp`, `lateral/flowpilot_mpc.cpp`, `utils/vehicle_model.h`,
 `pure_pursuit.cpp`, `lat_control_pid.h`
 
 Controller choice — `vehicle.lane_keep_controller` in `config.json`:
@@ -296,13 +310,13 @@ Publications:
 | `controls/steer` | `torque_cNm`, `enabled` |
 
 `control/lane_keep` goes to `:5556` → UI overlay (PP arc, HUD).
-`controls/steer` subscribed by PandaService.
+`controls/steer` subscribed by `Platform`.
 
 ---
 
 ## Stage 8. Panda → CAN HCA
 
-**Code:** `panda_service.cpp`, `volkswagen/carcontroller.cpp`, `mqbcan.cpp`
+**Code:** `services/platform.cpp`, `platform/volkswagen/carcontroller.cpp`, `platform/volkswagen/mqbcan.cpp`
 
 ### RX / state
 
@@ -370,8 +384,8 @@ CAN online LED: `panda/health` freshness ≤ 500 ms.
 | `BagLogger` + `Logger` | session under `/sdcard/adas_logs/...` |
 | `pull_bags.sh` | `adb pull` → `./adas_logs/`, clear on device |
 | `./scripts/run_bag_vis.sh` | `vis/interactive_visualizer.py` |
-| `bag_overlay_lanes.py` | lane overlay on JPEG |
-| `bag_lane_keep_offline.py` | PP via `pyadas.AdasApp` |
+| `bag/bag_overlay_lanes.py` | lane overlay on JPEG |
+| `bag/bag_lane_keep_offline.py` | PP via `pyadas.AdasApp` |
 | `export_to_plotjuggler.py` | topic time series |
 
 Typical bag topics: camera JPEG, intrinsics, IMU/GPS, `vision/lanes`(+model_out), odometry, outbound `vehicle/state`, `control/lane_keep`, `controls/steer`, `calibration/camera`, `panda/health`, …
@@ -386,7 +400,7 @@ Bag lane projection: **Y right+** → in visualizer often `y_sign=-1` for ISO le
 
 1. MetaDrive RGB camera;
 2. lanes = GT centerline **or** host `supercombo.onnx`;
-3. `LaneKeepController` → Simulated `AdasApp.publish_chassis/lanes` → `step` → PP from **same** C++ `LaneKeepService`;
+3. `LaneKeepController` → Simulated `AdasApp.publish_chassis/lanes` → `step` → PP from the **same** C++ `Planner` / `Control`;
 4. steer in MetaDrive; optional overlay.
 
 No Panda/CAN in sim — tests vision→path→PP, not HCA.
@@ -405,10 +419,11 @@ No Panda/CAN in sim — tests vision→path→PP, not HCA.
 | `ProtoUtils.java` | protobuf ZMQMessage |
 | `ZMQBridgeService.java` | Java ↔ ZMQ |
 | `zmq_bridge_service.cpp` | ZMQ ↔ Middleware |
-| `topic_convert*.cpp` | lanes→path, carState→chassis |
-| `lane_keep_service.cpp` | PP + PID |
+| `utils/proto_convert.cpp`, `utils/lane_path.cpp` | wire→internal, lanes→path |
+| `services/planner.cpp` | which strategy runs, plan in curvature |
+| `services/control.cpp` | angle PID → torque, engagement, HUD |
 | `pure_pursuit.cpp` | geometry |
-| `panda_service.cpp` | RX/TX orchestration |
+| `services/platform.cpp` | RX/TX orchestration, no brand named |
 | `carcontroller.cpp` / `mqbcan.cpp` | HCA_01 |
 | `LaneOverlayView.java` | visualization |
 | `MainActivity.java` | wiring params / calib / HCA UI |

@@ -18,10 +18,10 @@ adas_logs/<session>/
 cd <корень репозитория>
 ./scripts/run_bag_vis.sh /path/to/session
 
-cd app/src/main/scripts
+cd scripts
 ./generate_proto_python.sh
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-python3 latency.py /path/to/session
+python3 tools/latency.py /path/to/session
 python3 vis/export_to_plotjuggler.py /path/to/session -o /tmp/out
 ```
 
@@ -39,10 +39,10 @@ python3 vis/export_to_plotjuggler.py /path/to/session -o /tmp/out
 ## Как читать бег самому
 
 `load_topic_messages(session, topic)` возвращает список `(timestamp_ms, payload, envelope)`. Это весь API.
-Всё в `app/src/main/scripts` построено на нём, и каждый анализ в этом курсе тоже.
+Всё в `scripts` построено на нём, и каждый анализ в этом курсе тоже.
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 export PYTHONPATH=.
 ```
 

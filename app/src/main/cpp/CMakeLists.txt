@@ -4,6 +4,7 @@ project(adas_app LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(BUILD_FOR_ANDROID "Build Android shared library" ON)
 option(BUILD_TESTING "Build unit tests" OFF)
@@ -14,6 +15,7 @@ find_package(cppzmq REQUIRED)
 find_package(libusb REQUIRED)
 find_package(jsoncpp REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(acados REQUIRED)
 
 file(
   GLOB PROTO_FILES CONFIGURE_DEPENDS

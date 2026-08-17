@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black"
-    tools:context="ai.flow.adas.MainActivity">
+    tools:context="adas.app.ui.MainActivity">
 
     <TextureView
         android:id="@+id/textureView"
@@ -16,7 +16,7 @@
         app:layout_constraintStart_toEndOf="@id/flowStrip"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ai.flow.adas.vision.LaneOverlayView
+    <adas.app.vision.LaneOverlayView
         android:id="@+id/laneOverlay"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -142,28 +142,35 @@
                 style="@style/ParamsSection"
                 android:text="@string/params_section_camera" />
 
-            <include
-                android:id="@+id/rowRoll"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowPitch"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowYaw"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowHeight"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowCamX"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowCamY"
-                layout="@layout/row_param_slider" />
-
             <TextView
                 style="@style/ParamsSection"
                 android:text="@string/params_section_vision" />
+
+            <!-- Марка машины. Меняет и раскладку CAN, и параметры автомобиля, поэтому применяется
+                 только после перезапуска сервиса — трогать на ходу нечего. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:text="@string/params_car"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp" />
+
+                <Spinner
+                    android:id="@+id/carSpinner"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:popupBackground="#F0101014" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -269,27 +276,16 @@
                 </RadioGroup>
             </LinearLayout>
 
-            <include
-                android:id="@+id/rowPpKdd"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowPpLdMin"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowPpLdMax"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowWheelbase"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowPpShift"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowSteerRatio"
-                layout="@layout/row_param_slider" />
-            <include
-                android:id="@+id/rowLaneBlend"
-                layout="@layout/row_param_slider" />
+            <!-- Своя строка: это режим, а не действие над формой, и в одном ряду с Reset/Save
+                 кнопка выталкивала их за край. -->
+            <Button
+                android:id="@+id/paramsCalibrateIntrinsicsButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/params_calibrate_intrinsics"
+                android:textColor="#FFFFFFFF" />
 
             <LinearLayout
                 android:layout_width="match_parent"

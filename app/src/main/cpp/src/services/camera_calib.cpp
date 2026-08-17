@@ -1,5 +1,7 @@
 #include "adas/services/camera_calib.h"
 
+#include "adas/utils/proto_convert.h"
+
 #include <cmath>
 
 #include "messages.pb.h"
@@ -7,7 +9,6 @@
 
 namespace adas {
 namespace services {
-
 CameraCalib::CameraCalib(Config config)
   : config_(config)
   , pose_calib_(config.pitch_deg, config.yaw_deg, config.height_m)
@@ -29,12 +30,72 @@ CameraCalib::CameraCalib(Config config)
 
 void CameraCalib::configure()
 {
-  subscribe<CameraOdometrySample>(topics::kCameraOdometry,
-                                  [this](const CameraOdometrySample& m) { onCameraOdometry(m); });
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::CameraOdometry>(
+      topics::kCameraOdometry, [this](const adas::proto::CameraOdometry& payload) { onCameraOdometryProto(payload); });
   subscribe<LaneUvMsg>(topics::kCalibLaneUv, [this](const LaneUvMsg& m) { onLaneUv(m); });
-  LOGI("CameraCalib: %s + chassis (+ optional %s) → %s + %s", topics::kCameraOdometry, topics::kCalibLaneUv,
-       topics::kCameraCalib, topics::kCameraCalibDebug);
+  // The device tells us its own lens once the camera opens. Until this subscription existed the
+  // message was published and nobody listened, so the whole system ran on the config's prior — a
+  // number typed in for whichever phone it was typed in for.
+  subscribe<adas::proto::CameraIntrinsics>(topics::kCameraIntrinsics,
+                                           [this](const adas::proto::CameraIntrinsics& m) { onIntrinsics(m); });
+  LOGI("CameraCalib: %s + chassis (+ optional %s, %s) → %s + %s", topics::kCameraOdometry, topics::kCalibLaneUv,
+       topics::kCameraIntrinsics, topics::kCameraCalib, topics::kCameraCalibDebug);
+}
+
+/**
+ * \brief Adopt the intrinsics the device reports, once they look usable.
+ *
+ * \details The config value is a prior, not a measurement: it is right for the phone it was written
+ * for and silently wrong for any other. A report is taken only when it carries a plausible focal
+ * length — a zero or a near-zero means the device has the field but never filled it, which is common
+ * enough that Camera2 documents it.
+ */
+void CameraCalib::onIntrinsics(const adas::proto::CameraIntrinsics& msg)
+{
+  if (msg.intrinsic_calibration_size() < 4)
+    return;
+  const double fx = msg.intrinsic_calibration(0);
+  const double fy = msg.intrinsic_calibration(1);
+  const double cx = msg.intrinsic_calibration(2);
+  const double cy = msg.intrinsic_calibration(3);
+  if (!(fx > 1.0) || !(fy > 1.0))
+    return;
+
+  // Units. The numbers must belong to the same frame the rest of the system works in, and this is
+  // not a formality: on 2026-08-16 the intrinsics of the downscaled bag frame arrived here (fx
+  // 475.5, principal point 320x180), were taken as parameters of the 1280x720 frame, and the model
+  // warp built a projection at half the focal length with the centre in a corner. There are no lane
+  // lines in such a frame, and the drive merely looks unsuccessful.
+  //
+  // The check uses what the message says about itself: the principal point must sit near the middle
+  // of the declared frame. The tolerance is generous — a real principal point drifts off centre, but
+  // not by half a frame.
+  const double w = msg.capture_width();
+  const double h = msg.capture_height();
+  if (w > 1.0 && h > 1.0) {
+    const double dx = std::fabs(cx - w * 0.5) / w;
+    const double dy = std::fabs(cy - h * 0.5) / h;
+    if (dx > 0.25 || dy > 0.25) {
+      LOGW("CameraCalib: intrinsics rejected — centre (%.1f, %.1f) is not mid-frame for %.0fx%.0f; "
+           "they look computed for a different frame",
+           cx, cy, w, h);
+      return;
+    }
+  } else {
+    LOGW("CameraCalib: intrinsics without a frame size — nothing to check the units against, rejected");
+    return;
+  }
+
+  if (fx == fx_ && fy == fy_ && cx == cx_ && cy == cy_)
+    return;
+
+  LOGI("CameraCalib: intrinsics from the device (source %d): fx %.1f→%.1f fy %.1f→%.1f cx %.1f→%.1f cy %.1f→%.1f",
+       static_cast<int>(msg.source()), fx_, fx, fy_, fy, cx_, cx, cy_, cy);
+  setIntrinsics(fx, fy, cx, cy);
+  intrinsics_source_ = static_cast<int>(msg.source());
 }
 
 void CameraCalib::reset()
@@ -80,6 +141,13 @@ void CameraCalib::setVEgo(double v_ego_mps) { pose_calib_.setVEgo(v_ego_mps); }
 
 void CameraCalib::onChassis(const ChassisSample& msg) { pose_calib_.setVEgo(msg.speed_mps); }
 
+void CameraCalib::onCameraOdometryProto(const adas::proto::CameraOdometry& odom)
+{
+  const auto sample = cameraOdometryToSample(odom);
+  if (sample.valid)
+    onCameraOdometry(sample);
+}
+
 void CameraCalib::onCameraOdometry(const CameraOdometrySample& msg) { updateFromPose(msg); }
 
 bool CameraCalib::updateFromPose(const CameraOdometrySample& odom, double v_ego_mps)
@@ -90,9 +158,9 @@ bool CameraCalib::updateFromPose(const CameraOdometrySample& odom, double v_ego_
   syncLastFromPose(odom.timestamp_us);
 
   if (accepted || pose_calib_.calibrated() || (pose_calib_.calPercent() % 5 == 0)) {
-    publishState(odom.timestamp_us);
+    publish(topics::kCameraCalib, createCameraCalibState(last_, odom.timestamp_us));
   }
-  publishDebug(odom.timestamp_us, "pose");
+  publish(topics::kCameraCalibDebug, createCameraCalibDebug(last_, pose_calib_, vp_calib_, odom.timestamp_us, "pose"));
   return accepted;
 }
 
@@ -129,92 +197,10 @@ bool CameraCalib::updateFromUv(const std::vector<Vec2>& left_uv, const std::vect
     last_.vp_u = vp_calib_.vpU();
     last_.vp_v = vp_calib_.vpV();
     last_.timestamp_us = timestamp_us;
-    publishState(timestamp_us);
-    publishDebug(timestamp_us, "vp");
+    publish(topics::kCameraCalib, createCameraCalibState(last_, timestamp_us));
+    publish(topics::kCameraCalibDebug, createCameraCalibDebug(last_, pose_calib_, vp_calib_, timestamp_us, "vp"));
   }
   return committed;
-}
-
-void CameraCalib::publishState(int64_t timestamp_us)
-{
-  ai::flow::adas::ZMQMessage zmq;
-  zmq.set_timestamp(timestamp_us / 1000);
-  zmq.set_topic(topics::kCameraCalib);
-  auto* c = zmq.mutable_camera_calib();
-  c->set_timestamp(timestamp_us / 1000);
-  c->set_roll_deg(last_.roll_deg);
-  c->set_pitch_deg(last_.pitch_deg);
-  c->set_yaw_deg(last_.yaw_deg);
-  c->set_camera_height_m(last_.camera_height_m);
-  c->set_fx(last_.fx);
-  c->set_fy(last_.fy);
-  c->set_cx(last_.cx);
-  c->set_cy(last_.cy);
-  c->set_calibration_success(last_.calibration_success);
-  c->set_n_updates(last_.n_updates);
-  c->set_vp_u(last_.vp_u);
-  c->set_vp_v(last_.vp_v);
-  c->set_has_vp(last_.has_vp);
-  c->set_cal_percent(last_.cal_percent);
-  c->set_cal_status(last_.cal_status);
-  // Host/pyadas may construct the service without middleware::Manager — keep state only.
-  if (middleware())
-    publish(topics::kCameraCalib, zmq);
-}
-
-void CameraCalib::publishDebug(int64_t timestamp_us, const char* source)
-{
-  if (!middleware())
-    return;
-
-  ai::flow::adas::ZMQMessage zmq;
-  zmq.set_timestamp(timestamp_us / 1000);
-  zmq.set_topic(topics::kCameraCalibDebug);
-  auto* d = zmq.mutable_camera_calib_debug();
-  d->set_timestamp(timestamp_us / 1000);
-  d->set_source(source ? source : "none");
-  d->set_status(PoseCalibrator::statusName(pose_calib_.status()));
-  d->set_cal_status(static_cast<int>(pose_calib_.status()));
-  d->set_cal_percent(pose_calib_.calPercent());
-  d->set_calibration_success(pose_calib_.calibrated() || (last_.has_vp && vp_calib_.success()));
-  d->set_roll_deg(last_.roll_deg);
-  d->set_pitch_deg(last_.pitch_deg);
-  d->set_yaw_deg(last_.yaw_deg);
-  d->set_height_m(last_.camera_height_m);
-
-  const auto& s = pose_calib_.lastSample();
-  d->set_sample_accepted(s.accepted);
-  d->set_v_ego(s.v_ego);
-  d->set_odom_trans_x(s.odom_trans_x);
-  d->set_odom_trans_y(s.odom_trans_y);
-  d->set_odom_trans_z(s.odom_trans_z);
-  d->set_odom_rot_z(s.odom_rot_z);
-  d->set_odom_angle_std(s.odom_angle_std);
-  d->set_gate_speed(s.gate_speed);
-  d->set_gate_yaw_rate(s.gate_yaw_rate);
-  d->set_gate_rpy_certain(s.gate_rpy_certain);
-  d->set_gate_odom_valid(s.odom_valid);
-  d->set_observed_pitch_deg(s.observed_pitch_deg);
-  d->set_observed_yaw_deg(s.observed_yaw_deg);
-  d->set_reject_reason(s.reject_reason ? s.reject_reason : "");
-
-  const Vec3 spread = pose_calib_.calibSpread();
-  d->set_spread_pitch_deg(spread.y() * 180.0 / M_PI);
-  d->set_spread_yaw_deg(spread.z() * 180.0 / M_PI);
-  d->set_spread_max_deg(spread.maxCoeff() * 180.0 / M_PI);
-  d->set_valid_blocks(pose_calib_.validBlocks());
-  d->set_block_idx(pose_calib_.blockIdx());
-  d->set_sample_in_block(pose_calib_.sampleInBlock());
-  d->set_old_rpy_weight(pose_calib_.oldRpyWeight());
-
-  d->set_has_vp(vp_calib_.hasVp());
-  d->set_vp_u(vp_calib_.vpU());
-  d->set_vp_v(vp_calib_.vpV());
-  d->set_vp_n_updates(vp_calib_.nUpdates());
-  d->set_vp_history(vp_calib_.historySize());
-  d->set_vp_success(vp_calib_.success());
-
-  publish(topics::kCameraCalibDebug, zmq);
 }
 
 }  // namespace services

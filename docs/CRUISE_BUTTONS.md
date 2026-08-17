@@ -6,11 +6,11 @@ Speed authority = **stock PCM cruise** + steering-wheel stalk spoof on **`GRA_AC
 ## Architecture
 
 ```
-vision/model_long ──► LongPlanService ──► control/long_plan (v_target)
+vision/model_long ──►    Planner    ──► control/long_plan (v_target)
                                               │
 vehicle/state (GRA RX, TSK cruise_engaged)    │
                                               ▼
-                                         PandaService
+                                          Platform
                                     computeCruiseButtons()
                                               │
                                               ▼
@@ -38,7 +38,7 @@ Gas/brake → tips paused. Disengage → stop.
 
 ## How much deceleration actually exists (measured, 2026-08-06)
 
-`bag_coast_decel.py` over four 2026-08-04 bags — 125 intervals with both pedals up and speed falling
+`bag/bag_coast_decel.py` over four 2026-08-04 bags — 125 intervals with both pedals up and speed falling
 monotonically, which is exactly the state the car enters when the set speed drops below current speed:
 
 | speed, m/s | n | median | p10 |
@@ -78,10 +78,10 @@ Run `2026_08_06_00_36_42` had `cruise_buttons` on for 28 minutes. The plan asked
 - **target derived from `a_target`**, not set to the lead's speed. A lead 100 m ahead and 5 m/s slower
   needs no action, but the actuator reads any deficit past its deadband as "tip down".
 
-And in `PandaService`: **the speed the driver had at engage is a ceiling** for the whole engagement. The
+And in `Platform`: **the speed the driver had at engage is a ceiling** for the whole engagement. The
 assistant may hand speed back and restore it, never ask for more than was chosen.
 
-Replayed over the same run with `bag_long_replay.py`: median `v_target − v_ego` −4.81 → +0.00 m/s, ticks
+Replayed over the same run with `bag/bag_long_replay.py`: median `v_target − v_ego` −4.81 → +0.00 m/s, ticks
 wanting over 0.5 m/s² of braking 66.9 → 0.0 %, tips **73.1 → 1.5 per minute**. Not yet driven.
 
 ## Limits (important)

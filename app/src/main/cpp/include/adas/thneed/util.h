@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-//#include <zmq.h>
 
 #include <algorithm>
 #include <atomic>
@@ -17,7 +16,6 @@
 #include <thread>
 #include <vector>
 
-// keep trying if x gets interrupted by a signal
 #define HANDLE_EINTR(x)                                                                                                \
   ({                                                                                                                   \
     decltype(x) ret_;                                                                                                  \
@@ -40,7 +38,6 @@ const double METER_TO_MILE = KM_TO_MILE / 1000.0;
 const double METER_TO_FOOT = 3.28084;
 
 namespace util {
-
 void set_thread_name(const char* name);
 int set_realtime_priority(int level);
 int set_core_affinity(std::vector<int> cores);
@@ -49,19 +46,6 @@ int set_file_descriptor_limit(uint64_t limit);
 // ***** Time helpers *****
 struct tm get_time();
 bool time_valid(struct tm sys_time);
-
-// ***** math helpers *****
-
-// map x from [a1, a2] to [b1, b2]
-/*template <typename T>
-T map_val(T x, T a1, T a2, T b1, T b2) {
-  x = std::clamp(x, a1, a2);
-  T ra = a2 - a1;
-  T rb = b2 - b1;
-  return (x - a1) * rb / ra + b1;
-}*/
-
-// ***** string helpers *****
 
 template <typename... Args>
 std::string string_format(const std::string& format, Args... args)

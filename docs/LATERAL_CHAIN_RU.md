@@ -19,10 +19,10 @@
 
 | этап | частота | вход → выход | код |
 |---|---|---|---|
-| 1 | ~14 Гц (кадр) | `LaneLines` → `vision/path` | `utils/topic_convert.cpp` |
-| 2 | ~14 Гц (кадр) | полилиния → `steer_rad`, `desired_swa_deg` | `services/lane_keep_service.cpp::onLanes` |
+| 1 | ~14 Гц (кадр) | `LaneLines` → `vision/path` | `utils/lane_path.cpp` |
+| 2 | ~14 Гц (кадр) | полилиния → `steer_rad`, `desired_swa_deg` | `services/planner.cpp::onLanes` |
 | 3 | 100 Гц (шасси) | уставка + факт с CAN → момент, cNm | `updateTorqueFromAngle`, `utils/lat_control_pid.h` |
-| 4 | 50 Гц (шина) | момент → кадр `HCA_01` | `services/panda_service.cpp`, `volkswagen/carcontroller.cpp`, `volkswagen/mqbcan.cpp` |
+| 4 | 50 Гц (шина) | момент → кадр `HCA_01` | `services/platform.cpp`, `platform/volkswagen/carcontroller.cpp`, `volkswagen/mqbcan.cpp` |
 
 Две частоты и один сдвиг фаз: уставка обновляется по кадру камеры, а отрабатывается по шасси. Один и тот же
 `desired_swa_deg` PID видит примерно **семь раз**.
@@ -31,7 +31,7 @@
 
 ## Этап 1. Из `vision/lanes` в `vision/path`
 
-`utils/topic_convert.cpp`, функция `laneLinesToPath`, вызов из `TopicConvertService::onVisionLanes`.
+`utils/lane_path.cpp`, функция `laneLinesToPath`, вызов из `services/planner.cpp::onLanes`.
 
 Это единственное место, где из выхода нейросети получается опорная траектория. Дальше по тракту никто не
 знает про линии разметки — контроллер видит только полилинию.
@@ -148,7 +148,7 @@ pt.y() = d_prob * y_lane + (1 - d_prob) * pt.y();
 
 ## Этап 2. Из полилинии в угол колёс
 
-`services/lane_keep_service.cpp`, `onLanes` → `step` → `stepFlowpilot` (отгружается контроллер `fp`).
+`services/planner.cpp`, `onLanes` → `step` → `FpPlanner` (контроллер `fp` по умолчанию).
 
 ### 2.0 Скоростной гейт с гистерезисом
 
@@ -187,7 +187,7 @@ CAN**. То есть решается не «догнать полилинию»
 
 ### 2.4 `lagAdjustedCurvature` — сердце этапа
 
-`lateral/lateral_mpc.cpp`:
+`lateral/flowpilot_mpc.cpp`:
 
 ```cpp
 delay      = max(steer_delay_s /* 0.35 */, dt);
@@ -268,7 +268,7 @@ desired_swa_deg_ = steer_sign_ * (steer_rad_deg) * effectiveSteerRatio() + effec
 
 ## Этап 3. Угол руля → момент (угловой PID, 100 Гц)
 
-`updateTorqueFromAngle` в `lane_keep_service.cpp`, сам регулятор — `utils/lat_control_pid.h`.
+`AngleControl::update` в `lateral/angle_control.h`, вызывается из `services/control.cpp`; сам регулятор — `utils/lat_control_pid.h`.
 
 ### 3.1 Темп из фактических интервалов
 
@@ -364,7 +364,7 @@ cmd.set_torque_cnm(enabled ? torque : 0);
 
 ## Этап 4. Момент → кадр на шине
 
-`services/panda_service.cpp` → `volkswagen/carcontroller.cpp` → `volkswagen/mqbcan.cpp`.
+`services/platform.cpp` → `platform/volkswagen/carcontroller.cpp` → `platform/volkswagen/mqbcan.cpp`.
 
 ### 4.1 Приём команды
 
@@ -521,21 +521,21 @@ panda.set_alternative_experience(kAltExpDisableDisengageOnGas /* 1 */, 0);
 
 | что смотреть | чем |
 |---|---|
-| **посмотреть глазами, как ехали**: вид сверху, окно 40×40 м, MP4 | `app/src/main/scripts/bag_topdown_video.py` |
-| качество слежения по фазам дуги, только с включённым ассистом | `app/src/main/scripts/bag_override_episodes.py` |
-| смещение от центра полосы и разложение опоры | `bag_arc_offset.py --std-range 20 --recompute` |
-| σ линий по условиям, два бага | `bag_lane_sigma_ab.py` |
-| наш стек против записанного comma на одних входах | `rlog_lat_diff.py` |
-| выученные параметры машины | `bag_params_learner.py` |
+| **посмотреть глазами, как ехали**: вид сверху, окно 40×40 м, MP4 | `scripts/bag/bag_topdown_video.py` |
+| качество слежения по фазам дуги, только с включённым ассистом | `scripts/bag/bag_override_episodes.py` |
+| смещение от центра полосы и разложение опоры | `bag/bag_arc_offset.py --std-range 20 --recompute` |
+| σ линий по условиям, два бага | `bag/bag_lane_sigma_ab.py` |
+| наш стек против записанного comma на одних входах | `rlog/rlog_lat_diff.py` |
+| выученные параметры машины | `bag/bag_params_learner.py` |
 
 ### Как смотреть видео вида сверху
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # 1) найти участки, где рулить было разрешено, отсортированные по кривизне команды
-python3 bag_topdown_video.py <bag> --list-assist
+python3 bag/bag_topdown_video.py <bag> --list-assist
 # 2) снять окно оттуда
-python3 bag_topdown_video.py <bag> --start 2860 --duration 14 --out /tmp/hw.mp4
+python3 bag/bag_topdown_video.py <bag> --start 2860 --duration 14 --out /tmp/hw.mp4
 ```
 
 Один кадр видео = один кадр камеры. Цвет кузова машины — **факт актюации** (`HCA_01.HCA_Active` с шины), а не

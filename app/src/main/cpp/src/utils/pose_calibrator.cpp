@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace {
-
 constexpr double kPitchLo = -0.09074112085129739;
 constexpr double kPitchHi = 0.17;
 constexpr double kYawLo = -0.06912048084718224;

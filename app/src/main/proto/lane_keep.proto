@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ai.flow.adas;
+package adas.proto;
 
 option java_outer_classname = "LaneKeepOuter";
 
@@ -88,4 +88,16 @@ message LaneKeepDebug {
 
   bool assist_allowed = 84;
   bool assist_known = 85;
+
+  // Режим слияния: true — разметка подмешивается, false — едем по чистому плану модели.
+  bool lanelines_active = 86;
+  // Крен дороги, применённый к требуемой кривизне, в градусах; 0 когда оценка невалидна.
+  double road_roll_deg = 87;
+
+  // Численный метод, посчитавший кадр: "grad" или "acados". Пусто для pp и mpc.
+  string kappa_solver = 88;
+  // Члены углового PID по отдельности: без них по багу нельзя отличить упреждение от интеграла.
+  double pid_p = 89;
+  double pid_i = 90;
+  double pid_f = 91;
 }

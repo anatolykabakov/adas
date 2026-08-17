@@ -1,6 +1,6 @@
 # Controller run on a track in the simulator
 
-Closed loop: real C++ `LaneKeepService` (via `pyadas`) steers a car in MetaDrive on a
+Closed loop: the real C++ `Planner` and `Control` (via `pyadas`) steer a car in MetaDrive on a
 generated track; evaluation uses ground truth: distance from lane center, separately on straights
 and on arcs of known radius. Metric idea matches the control test in
 [AAD](https://github.com/thomasfermi/Algorithms-for-Automated-Driving) (distance to reference
@@ -9,7 +9,7 @@ line), but on physics and map already used in the project.
 The controller reads `assets/config.json`, so the run checks what would ship in the APK.
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 
 python3 -m sim.eval --list-tracks
 python3 -m sim.eval --track highway --controllers fp
@@ -168,12 +168,12 @@ Therefore:
 
 * closed loop runs only on `--lanes gt` — control-law test;
 * `--lanes supercombo` useful to visually inspect model output parsing and overlay;
-* full pipeline test is on recordings (`bag_controller_ab.py`, `bag_config_sweep.py`), not in
+* full pipeline test is on recordings (`bag/bag_controller_ab.py`, `bag/bag_config_sweep.py`), not in
   simulator.
 
 ## Bag replay run: fixes 2026-08-03
 
-`bag_config_sweep.py` — closed loop on a bag window: recorded lane markings reprojected into
+`bag/bag_config_sweep.py` — closed loop on a bag window: recorded lane markings reprojected into
 simulated car frame, fed to live C++ controller, its angle integrated by `LateralPlant`.
 Three fixes without which runs could not be trusted:
 

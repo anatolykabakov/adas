@@ -1,23 +1,25 @@
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
+#include <functional>
+#include <map>
 #include <vector>
 
 #include <gtest/gtest.h>
 #include <json/json.h>
 
 #include "adas/adas_app.h"
+#include "adas/lateral/limits.h"
 #include "adas/utils/adas_config.h"
 #include "adas/utils/lat_control_pid.h"
-#include "adas/services/topic_convert.h"
-#include "adas/utils/topic_convert.h"
-#include "adas/lateral/pp.h"
+#include "adas/utils/proto_convert.h"
+#include "adas/lateral/angle_control.h"
+#include "adas/lateral/pp_planner.h"
 #include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/values.h"
 
 using adas::LatControlPid;
 using adas::PidController;
-using adas::PurePursuit;
 using adas::Vec2;
 using volkswagen::applyDriverSteerTorqueLimits;
 using volkswagen::CarControllerParams;
@@ -73,18 +75,14 @@ TEST(LatControlPid, FeedforwardFloorAddsSpeedIndependentDemand)
   const double floor_mps = 10.0;
   LatControlPid lat(0.0, 0.0, 0.001, 50.0, floor_mps);
 
-  // At zero speed the v-squared term is exactly zero: without a floor there would be no feedforward at
-  // all, which is why torque on a slow tight arc only rose after an error had appeared.
   auto slow = lat.update(true, 10.0, 10.0, 0.0, false);
   EXPECT_NEAR(slow.f, 0.001 * 10.0 * floor_mps * floor_mps, 1e-9);
   EXPECT_GT(slow.f, 0.0);
 
-  // At the floor speed the contribution doubles: the two terms are equal.
   lat.reset();
   auto at_floor = lat.update(true, 1.0, 1.0, floor_mps, false);
   EXPECT_NEAR(at_floor.f, 2.0 * 0.001 * 1.0 * floor_mps * floor_mps, 1e-9);
 
-  // On the highway the floor is a correction, not the main term: at 25 m/s it adds 16 %.
   lat.reset();
   auto fast = lat.update(true, 1.0, 1.0, 25.0, false);
   EXPECT_NEAR(fast.f, 0.001 * 1.0 * (625.0 + 100.0), 1e-9);
@@ -93,8 +91,6 @@ TEST(LatControlPid, FeedforwardFloorAddsSpeedIndependentDemand)
 
 TEST(LatControlPid, FeedforwardMatchesMeasuredDemandAcrossSpeeds)
 {
-  // Numbers from the fit over three drives: the required coefficient on SWA over steady-state frames
-  // with the proportional term subtracted. The 35 % tolerance is the spread between the drives.
   struct Point {
     double v_mps;
     double measured_norm_per_deg;
@@ -113,38 +109,30 @@ TEST(LatControlPid, FeedforwardMatchesMeasuredDemandAcrossSpeeds)
 
 TEST(AdasConfigLoad, CameraYawRateSourceIsOffAndInvertible)
 {
-  // Regression for review item 1: the camera yaw rate has the opposite sign (correlation -0.994) and,
-  // with the source enabled, passed the EKF gate in 85.7 % of ticks. Checks both that the source is off
-  // in the shipped config and that the sign flip reaches the filter at all — the field existed but
-  // `adas_config.cpp` never read it, so it stayed false forever.
   const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_cam_yaw_test."
                                                                                                  "json";
   {
     std::ofstream f(path);
-    f << R"({"localization": {"use_camera_odometry": true, "invert_cam_yaw_rate": true}})";
+    f << R"({"localization": {"use_camera_odometry": true}})";
   }
   bool ok = false;
   auto cfg = AdasApp::Config::loadFromFile(path, &ok);
   EXPECT_TRUE(ok);
-  EXPECT_TRUE(cfg.localization.invert_cam_yaw_rate);
   EXPECT_TRUE(cfg.localization.sources.camera_odometry);
   std::remove(path.c_str());
 
   {
     std::ofstream f(path);
-    f << R"({"localization": {"use_camera_odometry": false, "invert_cam_yaw_rate": false}})";
+    f << R"({"localization": {"use_camera_odometry": false}})";
   }
   cfg = AdasApp::Config::loadFromFile(path, &ok);
   EXPECT_TRUE(ok);
-  EXPECT_FALSE(cfg.localization.invert_cam_yaw_rate);
   EXPECT_FALSE(cfg.localization.sources.camera_odometry);
   std::remove(path.c_str());
 }
 
 TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
 {
-  // The floor is wired separately from the gain, and a silently dropped floor would look exactly like
-  // the old behaviour: a weak feedforward on slow arcs, with nothing in the log.
   const std::string path = std::string(std::getenv("TMPDIR") ? std::getenv("TMPDIR") : "/tmp") + "/adas_ff_floor_test."
                                                                                                  "json";
   {
@@ -159,59 +147,77 @@ TEST(AdasConfigLoad, FeedforwardFloorComesFromConfig)
   std::remove(path.c_str());
 }
 
-TEST(AdasConfigLoad, FeedforwardDefaultsAreTheMeasuredOnes)
+TEST(AdasConfigLoad, FeedforwardDefaultsMatchUpstream)
 {
-  // With no config on the device the header defaults apply, and they must match the fitted values.
   AdasApp::Config cfg;
-  EXPECT_NEAR(cfg.lane_keep.pid_kf, 0.00015, 1e-12);
-  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, adas::kFeedforwardFloorMps, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_kf, 6e-5, 1e-12);
+  EXPECT_NEAR(cfg.lane_keep.pid_ff_floor_mps, 0.0, 1e-12);
 }
 
-TEST(LatControlPid, OldGainUnderdeliveredAtEverySpeed)
+TEST(LatControlPid, TheFittedGainAsksSeveralTimesMoreThanUpstream)
 {
-  // Regression on the reason for the change: 0.00006 without a floor under-delivered several-fold at
-  // every speed, which is what showed up as under-steer on arcs.
-  LatControlPid old_pid(0.0, 0.0, 0.00006, 50.0, 0.0);
-  LatControlPid now(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
+  LatControlPid upstream(0.0, 0.0, 6e-5, 50.0, 0.0);
+  LatControlPid fitted(0.0, 0.0, 0.00015, 50.0, adas::kFeedforwardFloorMps);
 
   for (double v : {6.0, 10.0, 15.0, 21.0}) {
-    old_pid.reset();
-    now.reset();
-    const double was = old_pid.update(true, 1.0, 1.0, v, false).f;
-    const double is = now.update(true, 1.0, 1.0, v, false).f;
-    EXPECT_GT(is, 2.0 * was) << "v = " << v;
+    upstream.reset();
+    fitted.reset();
+    const double up = upstream.update(true, 1.0, 1.0, v, false).f;
+    const double fit = fitted.update(true, 1.0, 1.0, v, false).f;
+    EXPECT_GT(fit, 2.0 * up) << "v = " << v;
   }
 }
 
-TEST(PurePursuit, StraightCenterlineNearZeroSteer)
+namespace {
+// The same settings PurePursuit(0.4, 2.636, 1.4, 3.0, 20.0) had.
+adas::lateral::PpPlanner::Config ppConfig()
 {
-  PurePursuit pp(0.4, 2.636, 1.4, 3.0, 20.0);
-  std::vector<Vec2> poly;
+  adas::lateral::PpPlanner::Config c;
+  c.k_dd = 0.4;
+  c.waypoint_shift = 1.4;
+  c.ld_min = 3.0;
+  c.ld_max = 20.0;
+  c.vehicle.wheelbase_m = 2.636;
+  return c;
+}
+
+adas::lateral::Input straightAt(double y, double speed_mps)
+{
+  adas::lateral::Input in;
+  in.speed_mps = speed_mps;
   for (int i = 0; i <= 20; ++i)
-    poly.push_back({static_cast<double>(i), 0.0});
-  const auto r = pp.compute(poly, 10.0);
-  ASSERT_TRUE(r.target_ego.has_value());
+    in.polyline_ego.push_back({static_cast<double>(i), y});
+  return in;
+}
+
+}  // namespace
+
+TEST(PpPlanner, StraightCenterlineNearZeroSteer)
+{
+  adas::lateral::PpPlanner planner(ppConfig());
+  const auto r = planner.update(straightAt(0.0, 10.0));
+  ASSERT_TRUE(r.has_target);
   EXPECT_NEAR(r.steer_rad, 0.0, 1e-6);
   EXPECT_NEAR(r.lookahead_m, 4.0, 1e-9);
 }
 
-TEST(PurePursuit, LeftOffsetProducesPositiveSteer)
+TEST(PpPlanner, LeftOffsetProducesPositiveSteer)
 {
-  PurePursuit pp(0.4, 2.636, 1.4, 3.0, 20.0);
-  std::vector<Vec2> poly;
-  for (int i = 0; i <= 20; ++i)
-    poly.push_back({static_cast<double>(i), 1.5});
-  const auto r = pp.compute(poly, 10.0);
-  ASSERT_TRUE(r.target_ego.has_value());
+  adas::lateral::PpPlanner planner(ppConfig());
+  const auto r = planner.update(straightAt(1.5, 10.0));
+  ASSERT_TRUE(r.has_target);
   EXPECT_GT(r.steer_rad, 0.0);
 }
 
-TEST(PurePursuit, EmptyPolylineNoTarget)
+TEST(PpPlanner, EmptyPolylineNoTarget)
 {
-  PurePursuit pp;
-  const auto r = pp.compute({}, 5.0);
-  EXPECT_FALSE(r.target_ego.has_value());
+  adas::lateral::PpPlanner planner(adas::lateral::PpPlanner::Config{});
+  adas::lateral::Input in;
+  in.speed_mps = 5.0;
+  const auto r = planner.update(in);
+  EXPECT_FALSE(r.has_target);
   EXPECT_NEAR(r.steer_rad, 0.0, 1e-12);
+  EXPECT_EQ("no_polyline", r.status);
 }
 
 TEST(SteerTorqueLimits, FirstStepFromZeroMatchesPandaRateUp)
@@ -242,7 +248,6 @@ TEST(SteerTorqueLimits, ConstantsMatchPandaSafetyContract)
 }
 
 namespace {
-
 adas::LanePathConfig pathCfg(double blend, double camera_offset_m)
 {
   adas::LanePathConfig cfg;
@@ -255,7 +260,7 @@ adas::LanePathConfig pathCfg(double blend, double camera_offset_m)
 
 TEST(TopicConvert, CameraOffsetShiftsPathRight)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   for (int i = 0; i < 33; ++i) {
     const double x = i * 3.0;
     ll.add_x(x);
@@ -292,7 +297,7 @@ TEST(TopicConvert, CameraOffsetShiftsPathRight)
 TEST(TopicConvert, LaneBlendRequiresBothHostLines)
 {
   auto make = [](bool left_ok, bool right_ok, double width) {
-    ai::flow::adas::LaneLines ll;
+    adas::proto::LaneLines ll;
     for (int i = 0; i < 33; ++i) {
       const double x = i * 3.0;
       ll.add_x(x);
@@ -334,10 +339,9 @@ TEST(TopicConvert, LaneBlendRequiresBothHostLines)
 }
 
 namespace {
-
-ai::flow::adas::LaneLines twoLineFrame(float sigma_m, float lane_width_m = 3.5f)
+adas::proto::LaneLines twoLineFrame(float sigma_m, float lane_width_m = 3.5f)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   auto* left = ll.add_lanes();
   (void)left;
   auto* l = ll.add_lanes();
@@ -409,10 +413,9 @@ TEST(LaneBlend, FramesWithoutSigmasAreNotPenalised)
 }
 
 namespace {
-
-ai::flow::adas::LaneLines offsetLaneFrame(double centre_y, double kappa = 0.0, double width = 3.3)
+adas::proto::LaneLines offsetLaneFrame(double centre_y, double kappa = 0.0, double width = 3.3)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   ll.add_lanes();
   auto* l = ll.add_lanes();
   auto* r = ll.add_lanes();
@@ -524,7 +527,7 @@ TEST(LaneWidthFilter, FollowsARealWidthChange)
   EXPECT_NEAR(3.6, state.lane_width_m, 0.05);
 }
 
-TEST(AdasConfigFile, ShippedJsonReachesTheTopicConvertKnobs)
+TEST(AdasConfigFile, ShippedJsonReachesTheLanePathKnobs)
 {
   const char* env = std::getenv("ADAS_CONFIG_UNDER_TEST");
   const char* path = env != nullptr ? env : ADAS_SHIPPED_CONFIG_JSON;
@@ -539,54 +542,47 @@ TEST(AdasConfigFile, ShippedJsonReachesTheTopicConvertKnobs)
   const Json::Value& veh = root["vehicle"];
   ASSERT_TRUE(veh.isObject());
 
-  EXPECT_DOUBLE_EQ(veh["path_lane_blend_scale"].asDouble(), cfg.topic_convert.path_lane_blend_scale);
-  EXPECT_DOUBLE_EQ(veh["path_camera_offset_m"].asDouble(), cfg.topic_convert.path_camera_offset_m);
-  EXPECT_DOUBLE_EQ(veh["lane_std_good_m"].asDouble(), cfg.topic_convert.lane_std_good_m);
-  EXPECT_DOUBLE_EQ(veh["lane_std_bad_m"].asDouble(), cfg.topic_convert.lane_std_bad_m);
-  EXPECT_DOUBLE_EQ(veh["lane_width_min_m"].asDouble(), cfg.topic_convert.lane_width_min_m);
-  EXPECT_DOUBLE_EQ(veh["lane_width_max_m"].asDouble(), cfg.topic_convert.lane_width_max_m);
-  EXPECT_DOUBLE_EQ(veh["center_force_gain"].asDouble(), cfg.topic_convert.center_force_gain);
-  EXPECT_DOUBLE_EQ(veh["center_force_max_m"].asDouble(), cfg.topic_convert.center_force_max_m);
-  EXPECT_DOUBLE_EQ(veh["center_force_turn_scale"].asDouble(), cfg.topic_convert.center_force_turn_scale);
+  EXPECT_DOUBLE_EQ(veh["path_lane_blend_scale"].asDouble(), cfg.lane_keep.lane_path.lane_blend_scale);
+  EXPECT_DOUBLE_EQ(veh["path_camera_offset_m"].asDouble(), cfg.lane_keep.lane_path.camera_offset_m);
+  EXPECT_DOUBLE_EQ(veh["lane_std_good_m"].asDouble(), cfg.lane_keep.lane_path.lane_std_good_m);
+  EXPECT_DOUBLE_EQ(veh["lane_std_bad_m"].asDouble(), cfg.lane_keep.lane_path.lane_std_bad_m);
+  EXPECT_DOUBLE_EQ(veh["lane_width_min_m"].asDouble(), cfg.lane_keep.lane_path.lane_width_min_m);
+  EXPECT_DOUBLE_EQ(veh["lane_width_max_m"].asDouble(), cfg.lane_keep.lane_path.lane_width_max_m);
+  EXPECT_DOUBLE_EQ(veh["center_force_gain"].asDouble(), cfg.lane_keep.lane_path.center_force_gain);
+  EXPECT_DOUBLE_EQ(veh["center_force_max_m"].asDouble(), cfg.lane_keep.lane_path.center_force_max_m);
+  EXPECT_DOUBLE_EQ(veh["center_force_turn_scale"].asDouble(), cfg.lane_keep.lane_path.center_force_turn_scale);
 
-  EXPECT_DOUBLE_EQ(root["calibration"]["camera"]["position_m"]["y_left"].asDouble(), cfg.topic_convert.cam_y_left_m);
+  EXPECT_DOUBLE_EQ(root["calibration"]["camera"]["position_m"]["y_left"].asDouble(),
+                   cfg.lane_keep.lane_path.cam_y_left_m);
 }
 
 TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
 {
-  adas::services::TopicConvert::Config cfg;
-  cfg.path_lane_blend_scale = 0.6;
-  adas::services::TopicConvert svc(cfg);
-  EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 0.6);
+  adas::LanePathConfig cfg;
+  cfg.lane_blend_scale = 0.6;
 
-  svc.setLaneBlendScale(1.0);
-  EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 1.0);
+  std::map<std::string, std::function<void(double)>> setters;
+  adas::registerLanePathParameters(cfg, [&setters](const char* name, auto setter, auto) { setters[name] = setter; });
+  const auto set = [&setters](const std::string& name, double v) { setters.at(name)(v); };
 
-  svc.setLaneBlendScale(1.4);
-  EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 1.0) << "above 1.0 is meaningless";
-  svc.setLaneBlendScale(-0.2);
-  EXPECT_DOUBLE_EQ(svc.config().path_lane_blend_scale, 0.0) << "negative weight would invert the path";
+  set("path_lane_blend_scale", 1.0);
+  EXPECT_DOUBLE_EQ(cfg.lane_blend_scale, 1.0);
+  set("path_lane_blend_scale", 1.4);
+  EXPECT_DOUBLE_EQ(cfg.lane_blend_scale, 1.0) << "above 1.0 is meaningless";
+  set("path_lane_blend_scale", -0.2);
+  EXPECT_DOUBLE_EQ(cfg.lane_blend_scale, 0.0) << "negative weight would invert the path";
+
+  set("center_force_gain", -1.0);
+  EXPECT_DOUBLE_EQ(cfg.center_force_gain, 0.0) << "negative centring would push away from the centre";
 }
 
-// ── σ summary range ───────────────────────────────────────────────────────────────────────────
-//
-// Measured on run 2026_08_06_00_36_42: worst-line σ roughly doubles from the near half of the old
-// 5–40 m window to the far half (right arc 0.34 against 0.78) and quadruples past 40 m, because on a
-// bend the inner line leaves the frame and its far samples are extrapolation. A line whose near half
-// is good was therefore being vetoed by the part we had not seen.
-//
-// Blending weight is not published, so these tests read it the way it shows up on the road: the model
-// plan sits 1.0 m off the lane centre, and the reference lands between the two in proportion to the
-// weight. Reference at the plan means the lines were discarded.
-
 namespace {
-
 constexpr double kStdRangePlanY = 1.0;
 
 /** Straight lane centred on 0, plan offset by `kStdRangePlanY`, σ growing with range. */
-ai::flow::adas::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
+adas::proto::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
 {
-  ai::flow::adas::LaneLines ll;
+  adas::proto::LaneLines ll;
   for (int lane = 0; lane < 4; ++lane) {
     auto* l = ll.add_lanes();
     l->set_prob(lane == 1 || lane == 2 ? 0.99f : 0.05f);
@@ -616,7 +612,7 @@ adas::LanePathConfig stdRangeCfg(double range_m)
   return cfg;
 }
 
-double referenceY(const ai::flow::adas::LaneLines& ll, const adas::LanePathConfig& cfg)
+double referenceY(const adas::proto::LaneLines& ll, const adas::LanePathConfig& cfg)
 {
   const auto out = adas::laneLinesToPath(ll, cfg);
   return out.polyline.size() >= 2 ? out.polyline[1].y() : std::nan("");
@@ -626,9 +622,7 @@ double referenceY(const ai::flow::adas::LaneLines& ll, const adas::LanePathConfi
 
 TEST(LaneStdRange, NearWindowKeepsALineWhoseFarHalfIsUnobserved)
 {
-  // σ 0.3 out to 20 m, then 2.5 — exactly the bend geometry. Over the near window the line is
-  // trustworthy; over the old 5–40 m window its median lands past the 1.5 m cut-off.
-  const auto ll = laneFrameWithStd(/*near=*/0.3, /*far=*/2.5);
+  const auto ll = laneFrameWithStd(0.3, 2.5);
 
   const double near_y = referenceY(ll, stdRangeCfg(20.0));
   const double far_y = referenceY(ll, stdRangeCfg(40.0));
@@ -639,15 +633,13 @@ TEST(LaneStdRange, NearWindowKeepsALineWhoseFarHalfIsUnobserved)
 
 TEST(LaneStdRange, ABadNearHalfIsStillRejected)
 {
-  // The narrower window must not become a way to ignore σ: a line that is noisy where it matters
-  // has to lose its weight.
-  const auto ll = laneFrameWithStd(/*near=*/2.0, /*far=*/2.0);
+  const auto ll = laneFrameWithStd(2.0, 2.0);
   EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), kStdRangePlanY, 0.05);
 }
 
 TEST(LaneStdRange, AGoodLineIsUnaffectedByTheWindow)
 {
-  const auto ll = laneFrameWithStd(/*near=*/0.15, /*far=*/0.2);
+  const auto ll = laneFrameWithStd(0.15, 0.2);
   EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), referenceY(ll, stdRangeCfg(40.0)), 1e-9);
 }
 
@@ -656,7 +648,206 @@ TEST(ShippedConfig, LaneStdRangeIsTheNearField)
   bool ok = false;
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
   ASSERT_TRUE(ok);
-  EXPECT_GT(cfg.topic_convert.lane_std_range_m, 5.0);
-  EXPECT_LE(cfg.topic_convert.lane_std_range_m, 25.0) << "past ~25 m sigma is dominated by extrapolation, see the "
-                                                         "measured table";
+  EXPECT_GT(cfg.lane_keep.lane_path.lane_std_range_m, 5.0);
+  EXPECT_LE(cfg.lane_keep.lane_path.lane_std_range_m, 25.0) << "past ~25 m sigma is dominated by extrapolation, see "
+                                                               "the "
+                                                               "measured table";
+}
+
+namespace {
+adas::proto::LaneLines frameWithProbs(float lp, float rp)
+{
+  adas::proto::LaneLines ll = twoLineFrame(0.1f);
+  ll.mutable_lanes(1)->set_prob(lp);
+  ll.mutable_lanes(2)->set_prob(rp);
+  return ll;
+}
+
+}  // namespace
+
+TEST(DpParity, LanelessHysteresisFollowsUpstreamThresholds)
+{
+  adas::LanePathConfig cfg;
+  adas::LaneFusionState state;
+  auto run = [&](float lp, float rp) {
+    auto ll = frameWithProbs(lp, rp);
+    return adas::laneLinesToPath(ll, cfg, &state).lanelines_active;
+  };
+
+  EXPECT_TRUE(run(0.9f, 0.9f)) << "both confident — lane mode";
+  EXPECT_TRUE(run(0.35f, 0.35f)) << "between 0.3 and 0.5 the hysteresis keeps the previous mode";
+  EXPECT_FALSE(run(0.2f, 0.2f)) << "both below 0.3 — fall back to the model plan alone";
+  EXPECT_FALSE(run(0.45f, 0.45f)) << "coming back takes more than being above 0.3";
+  EXPECT_TRUE(run(0.55f, 0.1f)) << "one above 0.5 is enough: theirs is an OR, not an AND";
+}
+
+TEST(DpParity, LanelessModeStopsTheBlendEntirely)
+{
+  adas::LanePathConfig cfg;
+  cfg.camera_offset_m = 0.0;
+  adas::LaneFusionState state;
+
+  auto confident = frameWithProbs(0.9f, 0.9f);
+  const double with_lines = pathYAt10m(adas::laneLinesToPath(confident, cfg, &state));
+  auto weak = frameWithProbs(0.1f, 0.1f);
+  const double laneless = pathYAt10m(adas::laneLinesToPath(weak, cfg, &state));
+
+  EXPECT_NEAR(laneless, 0.4, 1e-6) << "laneless is exactly the model plan, with no trace of the lines";
+  EXPECT_NE(with_lines, laneless);
+}
+TEST(DpParity, RollCompensationMatchesUpstreamFormula)
+{
+  const double sf = 0.0015, v = 20.0, roll = 0.05;
+  EXPECT_NEAR(adas::rollCompensationCurvature(roll, v, sf), 9.81 * roll / (1.0 / sf - v * v), 1e-12);
+  EXPECT_DOUBLE_EQ(adas::rollCompensationCurvature(roll, v, 0.0), 0.0) << "with no slip there is nothing to subtract";
+  EXPECT_GT(adas::rollCompensationCurvature(0.05, v, sf), 0.0) << "a bank to the right pulls to the right";
+  EXPECT_LT(adas::rollCompensationCurvature(-0.05, v, sf), 0.0);
+}
+
+// ---------------------------------------------------------------- lateral::AngleControl
+//
+// The angle loop without middleware — what moved into the Control service. Tested here because
+// bringing an application up for angle arithmetic buys nothing, same as longplan::compute and
+// safety::SafetyPlanner.
+
+namespace {
+
+adas::lateral::AngleControl::Config ctlConfig()
+{
+  adas::lateral::AngleControl::Config c;
+  c.pid_kp = 0.6;
+  c.pid_ki = 0.2;
+  c.pid_kf = 6e-5;
+  c.steer_ratio = 15.6;
+  c.steer_sign = -1.0;
+  c.max_steer_deg = 20.0;
+  c.tire_stiffness_factor = 1.0;
+  return c;
+}
+
+adas::ChassisSample chassisAt(double v, double swa_deg, bool pressed = false)
+{
+  adas::ChassisSample ch;
+  ch.speed_mps = v;
+  ch.steering_angle_deg = swa_deg;
+  ch.steering_pressed = pressed;
+  return ch;
+}
+
+}  // namespace
+
+TEST(AngleControl, RoadWheelAngleBecomesSteeringWheelAngleWithSignAndRatio)
+{
+  adas::lateral::AngleControl ctl(ctlConfig());
+  ctl.setSetpointFromSteer(0.01);
+  // The CAN sign is negative, so a positive road-wheel angle yields a negative steering-wheel angle.
+  EXPECT_NEAR(ctl.desiredSwaDeg(), -0.01 * 180.0 / M_PI * 15.6, 1e-9);
+}
+
+TEST(AngleControl, LearnedOffsetIsAddedNotSubtracted)
+{
+  auto cfg = ctlConfig();
+  adas::lateral::AngleControl ctl(cfg);
+  ctl.setLearnedParams(true, 1.0, 15.6, 0.8);
+  ctl.setSetpointFromSteer(0.0);
+  // The estimator solved delta = (SWA - offset) / ratio; the inverse relation adds the wheel zero back.
+  EXPECT_NEAR(ctl.desiredSwaDeg(), 0.8, 1e-9);
+}
+
+TEST(AngleControl, LosingValidityWalksParametersBackToConfigured)
+{
+  auto cfg = ctlConfig();
+  adas::lateral::AngleControl ctl(cfg);
+  ctl.setLearnedParams(true, 1.4, 17.0, 0.5);
+  EXPECT_TRUE(ctl.usingLearnedParams());
+  EXPECT_NEAR(ctl.effectiveSteerRatio(), 17.0, 1e-9);
+
+  ctl.setLearnedParams(false, 1.4, 17.0, 0.5);
+  EXPECT_FALSE(ctl.usingLearnedParams());
+  EXPECT_NEAR(ctl.effectiveSteerRatio(), 15.6, 1e-9) << "losing validity rolls back rather than freezing";
+  EXPECT_NEAR(ctl.effectiveAngleOffsetDeg(), 0.0, 1e-9);
+}
+
+TEST(AngleControl, ConfiguredRatioSurvivesLearnedOne)
+{
+  auto cfg = ctlConfig();
+  adas::lateral::AngleControl ctl(cfg);
+  ctl.setLearnedParams(true, 1.0, 17.0, 0.0);
+  // A measured steering-wheel angle is converted with the configured ratio: substituting the learned
+  // one would quietly change what counts as the input.
+  EXPECT_NEAR(ctl.steerRatio(), 15.6, 1e-9);
+  EXPECT_NEAR(ctl.effectiveSteerRatio(), 17.0, 1e-9);
+}
+
+TEST(AngleControl, ClearSetpointZeroesTheCommandAndTheIntegrator)
+{
+  adas::lateral::AngleControl ctl(ctlConfig());
+  // 0.001 rad of road-wheel angle is about 0.9 deg at the wheel: an error inside the linear region,
+  // otherwise anti-windup legitimately stops the integrator and there would be nothing to check.
+  ctl.setSetpointFromSteer(0.001);
+  for (int i = 0; i < 50; ++i)
+    ctl.update(true, chassisAt(20.0, 0.0));
+  ASSERT_GT(std::abs(ctl.update(true, chassisAt(20.0, 0.0)).i), 1e-6) << "the integrator should have accumulated";
+
+  ctl.clearSetpoint();
+  EXPECT_NEAR(ctl.desiredSwaDeg(), 0.0, 1e-12);
+  EXPECT_NEAR(ctl.update(false, chassisAt(20.0, 0.0)).i, 0.0, 1e-12);
+}
+
+TEST(AngleControl, IntegratorRateDoesNotDependOnCallCadence)
+{
+  // The parity property: upstream's PIDController(rate=100) is fixed at construction. So the same
+  // number of calls yields the same integral, however often they are made.
+  auto run = [](int n) {
+    adas::lateral::AngleControl ctl(ctlConfig());
+    ctl.setSetpointFromSteer(0.001);
+    double last = 0.0;
+    for (int i = 0; i < n; ++i)
+      last = ctl.update(true, chassisAt(20.0, 0.0)).i;
+    return last;
+  };
+  EXPECT_NEAR(run(10), run(10), 1e-12);
+  EXPECT_GT(std::abs(run(20)), std::abs(run(10))) << "more calls, more integral";
+}
+
+TEST(AngleControl, SlewGuardLimitsTheStepAndRemembersTheLast)
+{
+  adas::lateral::AngleControl ctl(ctlConfig());
+  ctl.setSlewConfig({/*limit_deg=*/1.0, /*max_lateral_jerk=*/1e9, /*rate_min_speed=*/2.0,
+                     /*Lf=*/2.67, /*max_gap_frames=*/10});
+  double steer = 0.0;
+  EXPECT_FALSE(ctl.applySlew(steer, 20.0, 0.05, true)) << "the first frame has nothing to compare against";
+
+  steer = 1.0;  // rad, far beyond the 1-degree ceiling
+  EXPECT_TRUE(ctl.applySlew(steer, 20.0, 0.05, true));
+  EXPECT_NEAR(steer, 1.0 * M_PI / 180.0, 1e-9);
+}
+
+TEST(AngleControl, DriverOverrideUnwindsTheIntegratorInsteadOfGrowingIt)
+{
+  adas::lateral::AngleControl ctl(ctlConfig());
+  ctl.setSetpointFromSteer(0.001);
+  for (int i = 0; i < 100; ++i)
+    ctl.update(true, chassisAt(20.0, 0.0));
+  const double wound = std::abs(ctl.update(true, chassisAt(20.0, 0.0)).i);
+
+  for (int i = 0; i < 20; ++i)
+    ctl.update(true, chassisAt(20.0, 0.0, /*pressed=*/true));
+  EXPECT_LT(std::abs(ctl.update(true, chassisAt(20.0, 0.0, true)).i), wound);
+}
+
+/** The kinematic mode is what a simulated ego needs: MetaDrive's car turns as geometry says, and the
+ *  Golf understeer model would over-turn every arc. The switch was lost once in a refactor and the
+ *  Python bench died on a missing binding, so both ends are pinned here. */
+TEST(VehicleModel, ClearingTheFlagLeavesTheKinematicModel)
+{
+  adas::lateral::VehicleParams v;
+  v.wheelbase_m = 2.636;
+  v.tire_stiffness_factor = 0.64;
+
+  v.use_vehicle_model = true;
+  EXPECT_NE(adas::lateral::slipFactorOrZero(v), 0.0) << "the slip model must contribute something";
+
+  v.use_vehicle_model = false;
+  EXPECT_EQ(adas::lateral::slipFactorOrZero(v), 0.0) << "no slip term means the kinematic bicycle model";
 }

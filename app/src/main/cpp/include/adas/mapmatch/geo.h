@@ -7,7 +7,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct LocalFrame {
   double lat0_deg = 55.7539;
   double lon0_deg = 37.6208;

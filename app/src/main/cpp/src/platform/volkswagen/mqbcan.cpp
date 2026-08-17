@@ -5,7 +5,6 @@
 
 namespace volkswagen {
 namespace {
-
 constexpr long MSG_HCA_01 = 0x126;
 constexpr long MSG_LDW_02 = 0x397;
 constexpr long MSG_GRA_ACC_01 = 0x12B;
@@ -132,11 +131,11 @@ can_frame create_acc_buttons_control(int bus, const GraStockValues& gra_stock, c
     std::memcpy(data, gra_stock.data, 8);
   }
   // Clear tip / cancel / resume / set — keep Hauptschalter, Codierung, Typ*, etc.
-  set_bits(data, 0, 13, 1);  // GRA_Abbrechen
-  set_bits(data, 0, 16, 1);  // GRA_Tip_Setzen
-  set_bits(data, 0, 17, 1);  // GRA_Tip_Hoch
-  set_bits(data, 0, 18, 1);  // GRA_Tip_Runter
-  set_bits(data, 0, 19, 1);  // GRA_Tip_Wiederaufnahme
+  set_bits(data, 0, 13, 1);
+  set_bits(data, 0, 16, 1);
+  set_bits(data, 0, 17, 1);
+  set_bits(data, 0, 18, 1);
+  set_bits(data, 0, 19, 1);
 
   const uint8_t cnt = static_cast<uint8_t>(((data[1] & 0x0F) + 1) & 0x0F);
   set_bits(data, cnt, 8, 4);

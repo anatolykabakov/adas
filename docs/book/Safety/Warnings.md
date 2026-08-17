@@ -19,8 +19,8 @@ AEB overrides FCW when both would fire.
 ## Data path
 
 ```text
-vision/lanes (Java) → TopicConvert → vision/path   ─┐
-vision/model_long (lead0, …)                       ─┼→ SafetyWarnService @ 50 ms
+vision/lanes (Java) → proto_convert → vision/path  ─┐
+vision/model_long (lead0, …)                       ─┼→ SafetyWarn @ 50 ms
 vehicle/chassis (v, blinker, steering_pressed)     ─┘
         → safety/warn → ZMQ OUT → HUD / bag
 ```
@@ -272,8 +272,8 @@ Node switch: `nodes.safety_warn: true`.
 **Bag episodes** (real Java→convert→service chain via `pyadas`):
 
 ```bash
-PYTHONPATH=app/src/main/scripts \
-  python3 app/src/main/scripts/bag_safety_warn.py adas_logs/<session>
+PYTHONPATH=scripts \
+  python3 scripts/bag/bag_safety_warn.py adas_logs/<session>
 ```
 
 Report **episodes**, not raw frame counts.
@@ -286,7 +286,7 @@ Many road bags lack usable `vision/model_long` → FCW/AEB stay silent. LDW stil
 
 1. Run the `forward_warning` examples; find a `(gap, Δv)` that is FCW but not AEB.
 2. Explain in one sentence why IDM accel was a bad FCW trigger.
-3. On a bag, run `bag_safety_warn.py` and record LDW / FCW / AEB episode counts + vision Hz.
+3. On a bag, run `bag/bag_safety_warn.py` and record LDW / FCW / AEB episode counts + vision Hz.
 
 <!-- next-chapter -->
 ---

@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-PKG="ai.flow.adas"
+PKG="adas.app"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSET="${PROJECT_DIR}/app/src/main/assets/config.json"
 # Absolute path: `run-as pkg sh -c` does not start in the app directory, and a relative
@@ -166,6 +166,8 @@ fi
 # redirection inside `run-as pkg sh -c "cat > ..."` is blocked by SELinux (Permission denied),
 # while read and `cp` with the same run-as are allowed — verified on OnePlus 7T / Android 12.
 # Write to a temp file first, then mv — a mid-write failure will not leave a broken config.
+adb "${SERIAL[@]}" shell run-as "$PKG" mkdir -p "$(dirname "$REMOTE")"
+
 STAGE="/data/local/tmp/adas_config_push.json"
 adb "${SERIAL[@]}" push "$TMP/merged.json" "$STAGE" >/dev/null
 adb "${SERIAL[@]}" shell run-as "$PKG" cp "$STAGE" "${REMOTE}.tmp"

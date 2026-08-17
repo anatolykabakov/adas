@@ -5,7 +5,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 struct PathLateralState {
   bool valid = false;
   double cte_m = 0.0;

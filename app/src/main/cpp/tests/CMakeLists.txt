@@ -8,8 +8,11 @@ add_executable(
   test_zmq_imu.cpp
   test_utils.cpp
   test_lat_control.cpp
+  test_pp_planner.cpp
+  test_vp_planner.cpp
+  test_lane_keep_gates.cpp
   test_panda_mqb.cpp
-  test_vp_lane_keep.cpp
+  test_planner.cpp
   test_safety_warn.cpp
   test_long_plan.cpp
   test_vehicle_ekf.cpp
@@ -18,6 +21,12 @@ add_executable(
   test_params_learner.cpp
   test_road_route.cpp
   test_map_data.cpp
+  test_toyota.cpp
+)
+
+target_compile_definitions(
+  adas_tests
+  PRIVATE ADAS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/.."
 )
 
 target_include_directories(
@@ -27,9 +36,7 @@ target_include_directories(
 )
 
 set(_adas_shipped_config "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/config.json")
-set(_adas_test_map
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../maps/Moscow.osm.admap"
-)
+set(_adas_test_map "${CMAKE_CURRENT_SOURCE_DIR}/data/test_road.admap")
 target_compile_definitions(
   adas_tests
   PRIVATE

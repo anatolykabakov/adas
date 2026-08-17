@@ -5,7 +5,6 @@
 #include <unordered_map>
 
 namespace volkswagen {
-
 struct CanBus {
   static constexpr int pt = 0;
   static constexpr int cam = 2;

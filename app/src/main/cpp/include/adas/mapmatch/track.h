@@ -6,7 +6,6 @@
 
 namespace adas {
 namespace mapmatch {
-
 struct ImuSamples {
   std::vector<double> t_s;
   std::vector<double> gyro_x, gyro_y, gyro_z;
@@ -16,16 +15,16 @@ struct ImuSamples {
 };
 
 struct TrackConfig {
-  double min_speed_mps = 0.5;
+  double min_speed_mps = 0.5;  ///< Samples below this speed are dropped [m/s]: at rest the heading is undefined.
   enum class YawSource { Chassis = 0, Imu = 1, Blend = 2 };
-  YawSource yaw_source = YawSource::Chassis;
-  bool rezero_yaw_at_stops = false;
-  double stop_speed_mps = 0.2;
-  double stop_min_s = 1.0;
-  double blend_imu_hf = 0.5;
-  double resample_m = 2.0;
-  double speed_scale = 1.0;
-  double yaw_rate_scale = 1.0;
+  YawSource yaw_source = YawSource::Chassis;  ///< Which yaw rate builds the track: CAN, phone gyro, or a blend.
+  bool rezero_yaw_at_stops = false;           ///< Re-zero the gyro bias at every stop, which is where it is observable.
+  double stop_speed_mps = 0.2;                ///< Speed below which the car counts as stopped [m/s].
+  double stop_min_s = 1.0;                    ///< How long that must hold before it counts as a stop [s].
+  double blend_imu_hf = 0.5;                  ///< Crossover for the blend: gyro above it, CAN below.
+  double resample_m = 2.0;                    ///< Track is resampled to this spacing [m].
+  double speed_scale = 1.0;                   ///< Correction on wheel speed; the 1.2 % scale error lives here.
+  double yaw_rate_scale = 1.0;                ///< Correction on the yaw rate.
 };
 
 struct Maneuver {

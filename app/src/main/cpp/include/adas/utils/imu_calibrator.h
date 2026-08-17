@@ -10,7 +10,14 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
+/**
+ * \brief Finds which way the phone is mounted from gravity and rotation.
+ *
+ * \details A phone in a windshield cradle has no known orientation, so the yaw axis has to be estimated:
+ * on one recorded mount it turned out to be the sensor's x axis, correlating with the ESP yaw rate at
+ * 0.999 while the z axis correlated at -0.52. Feeding a raw axis straight into the filter is therefore a
+ * guess, and this class exists so nothing has to guess.
+ */
 class ImuCalibrator {
 public:
   explicit ImuCalibrator(double speed_threshold_mps = 0.5 / 3.6, int min_samples = 50, int max_buffer = 400,

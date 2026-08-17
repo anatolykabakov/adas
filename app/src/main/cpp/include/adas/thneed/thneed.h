@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #ifndef __user
 #define __user __attribute__(())
 #endif
@@ -14,12 +16,7 @@
 
 #include "adas/thneed/msm_kgsl.h"
 
-//#define QCOM2
-//#define USE_PRECOMPILED
-
 using namespace std;
-
-// cl_int thneed_clSetKernelArg(cl_kernel kernel, cl_uint arg_index, size_t arg_size, const void *arg_value);
 
 namespace json11 {
 class Json;
@@ -100,6 +97,21 @@ class Thneed {
 public:
   Thneed(bool do_clinit = false, cl_context _context = NULL);
   void stop();
+
+  /**
+   * \brief Serialise the recorded run into a file.
+   *
+   * \details The other half of `load`, which we never had: without it the recording lives only in
+   * memory and dies with the process. Same format — JSON length, JSON, then blobs back to back.
+   *
+   * \param filename Where to write.
+   * \param save_binaries true — store compiled GPU binaries: fast to load, but valid only for this
+   *        GPU and driver. false — store kernel **sources**: the file is portable across devices and
+   *        compilation happens at load time.
+   * \return true if the file was written in full.
+   */
+  bool save(const char* filename, bool save_binaries = false);
+
   void execute(float** finputs, float* foutput, bool slow = false);
   void wait();
 
@@ -113,7 +125,22 @@ public:
   cl_device_id device_id;
   int context_id;
 
-  // protected?
+  /**
+   * \brief Host-side copies of the weights, taken at load time.
+   *
+   * \details `save` takes the weights from here instead of reading them back from the GPU. Upstream
+   * read from the device and, to do so, cleared the `CL_MEM_HOST_WRITE_ONLY` flag straight inside the
+   * driver structure at offset 0x14 — a trick that returns zeros on Adreno 640 under Android 15. The
+   * weights already passed through our own memory at load time, so reading them back is pointless.
+   */
+  std::map<cl_mem, std::string> loaded_constants;
+
+  /// Input names in declaration order: `save` must write them back or the binding is lost.
+  std::vector<std::string> input_names;
+
+  /// Output size in bytes, as declared by the file.
+  int output_size = 0;
+
   bool record = false;
   int debug;
   int timestamp;
@@ -130,7 +157,6 @@ public:
   cl_int clexec();
   vector<shared_ptr<CLQueuedKernel> > kq;
 
-  // pending CL kernels
   vector<shared_ptr<CLQueuedKernel> > ckq;
 
   // loading

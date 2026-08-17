@@ -3,14 +3,13 @@ plugins {
     id 'com.google.protobuf'
 }
 
-// Packaged vision model: prefer downloaded OP v0.8.13 (full F2 / lead alive).
 // Override: ./gradlew assembleDebug -PsupercomboModel=/path/to.onnx
 def supercomboSrc = file(findProperty('supercomboModel')
-        ?: "${rootProject.projectDir}/models/sc_v0.8.13.onnx")
+        ?: "${rootProject.projectDir}/models/supercombo_097_fp32.onnx")
 def supercomboDst = file("${projectDir}/src/main/assets/supercombo.onnx")
 
 tasks.register('syncSupercomboModel', Copy) {
-    description = 'Copy models/sc_v0.8.13.onnx → assets/supercombo.onnx for APK'
+    description = 'Copy models/supercombo_097_fp32.onnx → assets/supercombo.onnx for APK'
     onlyIf {
         if (!supercomboSrc.isFile()) {
             logger.warn("supercombo source missing: ${supercomboSrc} — keeping existing assets/supercombo.onnx")
@@ -80,12 +79,12 @@ tasks.register('syncTrafficYoloModel', Copy) {
 }
 
 android {
-    namespace 'ai.flow.adas'
+    namespace 'adas.app'
     compileSdk 34
     buildToolsVersion "34.0.0"
 
     defaultConfig {
-        applicationId "ai.flow.adas"
+        applicationId "adas.app"
         minSdk 24
         targetSdk 34
         versionCode 1
@@ -141,6 +140,7 @@ dependencies {
     implementation 'org.slf4j:slf4j-simple:1.7.30'
 
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.3'
+    implementation 'org.opencv:opencv:4.12.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

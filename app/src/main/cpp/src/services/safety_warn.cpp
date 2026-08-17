@@ -3,19 +3,22 @@
 #include <algorithm>
 
 #include "adas/utils/logger.h"
-#include "adas/utils/protobuf_utils.h"
+#include "adas/utils/math_utils.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
 namespace services {
-
 void SafetyWarn::configure()
 {
-  subscribe<LanePathMsg>(topics::kVisionPath, [this](const LanePathMsg& m) { onPath(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kVisionModelLong,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onModelLong(m); });
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
-  subscribe<ai::flow::adas::ZMQMessage>(topics::kSteerCommand,
-                                        [this](const ai::flow::adas::ZMQMessage& m) { onSteer(m); });
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::LanePath>(
+      topics::kVisionPath, [this](const adas::proto::LanePath& payload) { onPath(lanePathFromProto(payload)); });
+  subscribe<adas::proto::ModelLongPlan>(topics::kVisionModelLong,
+                                        [this](const adas::proto::ModelLongPlan& m) { onModelLong(m); });
+  subscribe<adas::proto::SteerCommand>(topics::kSteerCommand,
+                                       [this](const adas::proto::SteerCommand& m) { onSteer(m); });
   scheduleTimer(
       50, [this] { tick(); }, "tick");
   LOGI("SafetyWarn: path + model_long + chassis → %s (FCW/AEB/LDW, no actuation)", topics::kSafetyWarn);
@@ -47,11 +50,9 @@ void SafetyWarn::reset()
   rebuildLatches();
 }
 
-void SafetyWarn::onSteer(const ai::flow::adas::ZMQMessage& msg)
+void SafetyWarn::onSteer(const adas::proto::SteerCommand& payload)
 {
-  if (!msg.has_steer_command())
-    return;
-  if (msg.steer_command().enabled())
+  if (payload.enabled())
     lat_active_ts_us_ = static_cast<int64_t>(now());
 }
 
@@ -75,11 +76,9 @@ void SafetyWarn::onPath(const LanePathMsg& msg)
   lane_anchored_ = msg.lane_anchored;
 }
 
-void SafetyWarn::onModelLong(const ai::flow::adas::ZMQMessage& msg)
+void SafetyWarn::onModelLong(const adas::proto::ModelLongPlan& payload)
 {
-  if (!msg.has_model_long_plan())
-    return;
-  model_ = msg.model_long_plan();
+  model_ = payload;
   have_model_ = true;
 }
 
@@ -89,17 +88,48 @@ void SafetyWarn::onChassis(const ChassisSample& msg)
   have_chassis_ = true;
 }
 
-void SafetyWarn::tick()
-{
-  if (!have_chassis_)
-    return;
+namespace {
 
-  const auto& cfg = config_.planner;
+/// The plan's warning list as flags. The planner returns an unordered vector; the message and the HUD
+/// want four named booleans, and each of them is latched separately.
+struct WarningFlags {
+  bool fcw = false;
+  bool aeb = false;
+  bool lldw = false;
+  bool rldw = false;
+};
+
+WarningFlags flattenWarnings(const std::vector<safety::Warning>& warnings)
+{
+  WarningFlags f;
+  for (const auto w : warnings) {
+    switch (w) {
+      case safety::Warning::FCW:
+        f.fcw = true;
+        break;
+      case safety::Warning::AEB:
+        f.aeb = true;
+        break;
+      case safety::Warning::LLDW:
+        f.lldw = true;
+        break;
+      case safety::Warning::RLDW:
+        f.rldw = true;
+        break;
+      default:
+        break;
+    }
+  }
+  return f;
+}
+
+}  // namespace
+
+safety::PlannerInput SafetyWarn::buildPlannerInput() const
+{
   safety::PlannerInput in;
   in.ego_speed_ms = std::max(0.0, chassis_.speed_mps);
   in.driver_steering = chassis_.steering_pressed;
-  // Same freshness window as the command in Panda (kHcaCmdTimeoutMs): holding the suppression
-  // longer would keep LDW silent after the assistant has already let go of the wheel.
   constexpr int64_t kLatActiveTimeoutUs = 250'000;
   in.lat_active = lat_active_ts_us_ > 0 && (static_cast<int64_t>(now()) - lat_active_ts_us_) <= kLatActiveTimeoutUs;
   in.left_blinker = chassis_.left_blinker;
@@ -112,80 +142,50 @@ void SafetyWarn::tick()
     in.lateral.lane_anchored = lane_anchored_;
     in.lateral.valid = true;
   }
+  return in;
+}
 
+void SafetyWarn::tick()
+{
+  if (!have_chassis_)
+    return;
+
+  const auto& cfg = config_.planner;
+  safety::PlannerInput in = buildPlannerInput();
+
+  // The lead is read here and not in buildPlannerInput because its raw numbers go into the message as
+  // well as into the planner: when a warning looks wrong in a bag, the first question is what distance
+  // and closing speed it was raised on, and a gate that dropped the lead would erase exactly that.
   double lead_d = 0.0;
   double lead_v = 0.0;
   double lead_prob = 0.0;
   bool has_lead = false;
   if (have_model_) {
-    const auto& lead = model_.lead0();
-    lead_prob = lead.prob();
-    lead_d = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
-    lead_v = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
+    const longplan::LeadState lead = leadFromModel(model_);
+    lead_prob = lead.prob;
+    lead_d = lead.d_rel;
+    lead_v = lead.v_lead;
     if (lead_prob >= cfg.lead_prob_thresh && lead_d > 1.0 && lead_d < 150.0) {
       has_lead = true;
       in.cipo.present = true;
       in.cipo.speed_ms = lead_v;
       in.cipo.gap_m = std::max(0.5, lead_d - cfg.front_bumper_offset_m);
-      in.cipo.offset_m = lead.y_rel();
+      in.cipo.offset_m = lead.y_rel;
     }
   }
 
   const safety::SafetyPlan plan = safety::computeSafetyPlan(cfg, in);
+  const WarningFlags raw = flattenWarnings(plan.warnings);
 
-  bool raw_fcw = false, raw_aeb = false, raw_lldw = false, raw_rldw = false;
-  for (const auto w : plan.warnings) {
-    switch (w) {
-      case safety::Warning::FCW:
-        raw_fcw = true;
-        break;
-      case safety::Warning::AEB:
-        raw_aeb = true;
-        break;
-      case safety::Warning::LLDW:
-        raw_lldw = true;
-        break;
-      case safety::Warning::RLDW:
-        raw_rldw = true;
-        break;
-      default:
-        break;
-    }
-  }
+  const bool fcw = fcw_latch_.update(raw.fcw);
+  const bool aeb = aeb_latch_.update(raw.aeb);
+  const bool lldw = lldw_latch_.update(raw.lldw);
+  const bool rldw = rldw_latch_.update(raw.rldw);
 
-  const bool fcw = fcw_latch_.update(raw_fcw);
-  const bool aeb = aeb_latch_.update(raw_aeb);
-  const bool lldw = lldw_latch_.update(raw_lldw);
-  const bool rldw = rldw_latch_.update(raw_rldw);
-
-  ai::flow::adas::ZMQMessage zmq;
-  const int64_t ms = utils::getCurrentTimestamp();
-  zmq.set_timestamp(ms);
-  zmq.set_topic(topics::kSafetyWarn);
-  auto* sw = zmq.mutable_safety_warn();
-  sw->set_timestamp(ms);
-  sw->set_accel_ms2(static_cast<float>(plan.acceleration_ms2));
-  sw->set_cte_m(static_cast<float>(in.lateral.cte_m));
-  sw->set_epsi_rad(static_cast<float>(in.lateral.epsi_rad));
-  sw->set_kappa(static_cast<float>(in.lateral.kappa));
-  sw->set_lateral_valid(in.lateral.valid);
-  sw->set_v_ego(static_cast<float>(in.ego_speed_ms));
-  sw->set_lead_d(static_cast<float>(lead_d));
-  sw->set_lead_v(static_cast<float>(lead_v));
-  sw->set_lead_prob(static_cast<float>(lead_prob));
-  sw->set_has_lead(has_lead);
-  sw->set_fcw(fcw);
-  sw->set_aeb(aeb);
-  sw->set_lldw(lldw);
-  sw->set_rldw(rldw);
-  sw->set_cte_rate_ms(static_cast<float>(in.lateral.cte_rate_ms));
-  sw->set_ttc_s(static_cast<float>(plan.threat.valid ? plan.threat.ttc_s : 0.0));
-  sw->set_a_req_ms2(static_cast<float>(plan.threat.valid ? plan.threat.a_req_ms2 : 0.0));
-  sw->set_threat_valid(plan.threat.valid);
-  sw->set_driver_steering(in.driver_steering);
-  sw->set_lane_anchored(in.lateral.lane_anchored);
-  sw->set_status(have_lateral_ ? "ok" : "no_path");
-  publish(topics::kSafetyWarn, zmq);
+  publish(topics::kSafetyWarn,
+          createSafetyWarn(
+              in, plan, {lead_d, lead_v, lead_prob, has_lead, fcw, aeb, lldw, rldw, have_lateral_ ? "ok" : "no_path"},
+              nowMs()));
 }
 
 }  // namespace services

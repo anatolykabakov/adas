@@ -7,7 +7,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 double clampd(double v, double lo, double hi) { return std::max(lo, std::min(hi, v)); }
 
 /** Mean over ±half window in path-sampled array indices. */
@@ -125,14 +124,13 @@ std::vector<double> imuYawRate(const ImuSamples& imu, const std::vector<double>&
     gz += imu.accel_z[i];
     ++n;
   }
-  if (n < 10) {  // no stops — use whole recording just to get an axis
+  if (n < 10) {
     gx = gy = gz = 0.0;
     for (std::size_t i = 0; i < imu.t_s.size(); ++i) {
       gx += imu.accel_x[i];
       gy += imu.accel_y[i];
       gz += imu.accel_z[i];
     }
-    n = static_cast<int>(imu.t_s.size());
   }
   const double norm = std::sqrt(gx * gx + gy * gy + gz * gz);
   if (norm < 1e-6)
@@ -185,16 +183,16 @@ Track buildTrack(const std::vector<double>& t_s, const std::vector<double>& spee
     return out;
 
   // Prepare yaw rate: chosen source minus stop bias.
-  std::vector<double> omega(yaw_rate_rps.begin(), yaw_rate_rps.begin() + n);
-  const std::vector<double> t(t_s.begin(), t_s.begin() + n);
-  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + n);
+  const auto count = static_cast<std::ptrdiff_t>(n);
+  std::vector<double> omega(yaw_rate_rps.begin(), yaw_rate_rps.begin() + count);
+  const std::vector<double> t(t_s.begin(), t_s.begin() + count);
+  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + count);
 
   std::vector<double> omega_imu;
   if (!imu.empty() && cfg.yaw_source != TrackConfig::YawSource::Chassis) {
     const std::vector<double> raw = imuYawRate(imu, t, v, cfg.stop_speed_mps);
     if (!raw.empty()) {
       omega_imu = resample(imu.t_s, raw, t);
-      // “Up” axis sign from accelerometer is unknown — pick sign by agreement with ESP while moving.
       double num = 0.0, den = 0.0;
       for (std::size_t i = 0; i < n; ++i) {
         if (v[i] <= cfg.stop_speed_mps)
@@ -224,7 +222,6 @@ Track buildTrack(const std::vector<double>& t_s, const std::vector<double>& spee
     if (cfg.yaw_source == TrackConfig::YawSource::Imu) {
       omega = omega_imu;
     } else if (cfg.yaw_source == TrackConfig::YawSource::Blend) {
-      // Low frequencies from ESP (calibrated), high from IMU (faster, no 0.01°/s quantization).
       const double a = std::clamp(cfg.blend_imu_hf, 0.0, 1.0);
       double lp_esp = omega.empty() ? 0.0 : omega[0];
       double lp_imu = omega_imu[0];
@@ -252,7 +249,6 @@ Track buildTrack(const std::vector<double>& t_s, const std::vector<double>& spee
   if (s <= cfg.resample_m * 3.0)
     return out;
 
-  // 2. Resample by path: shape no longer depends on how long we waited at lights.
   const std::size_t m = static_cast<std::size_t>(s / cfg.resample_m) + 1;
   out.s_m.reserve(m);
   out.theta_rad.reserve(m);
@@ -267,8 +263,6 @@ Track buildTrack(const std::vector<double>& t_s, const std::vector<double>& spee
     out.theta_rad.push_back(th_dense[j - 1] + w * (th_dense[j] - th_dense[j - 1]));
   }
 
-  // 3. Heading → coordinates. Start at origin, X along initial heading: map overlay still
-  //    finds rotation and shift, but the track is easier to read.
   out.x_m.assign(out.size(), 0.0);
   out.y_m.assign(out.size(), 0.0);
   const double th0 = out.theta_rad.front();
@@ -314,13 +308,12 @@ std::vector<Maneuver> segmentManeuvers(const Track& track, const SegmentConfig& 
     if (sign == 0)
       continue;
     if (!spans.empty() && spans.back().sign == sign && (track.s_m[i] - track.s_m[spans.back().b]) <= cfg.merge_gap_m) {
-      spans.back().b = i;  // same turn captured in two passes
+      spans.back().b = i;
     } else {
       spans.push_back({i, i, sign});
     }
   }
 
-  // Drop weak candidates: lane weaving, not a maneuver.
   std::vector<Span> turns;
   for (const auto& sp : spans) {
     const double angle = (track.theta_rad[sp.b] - track.theta_rad[sp.a]) * 180.0 / M_PI;
@@ -366,7 +359,6 @@ std::vector<Maneuver> segmentManeuvers(const Track& track, const SegmentConfig& 
 
 namespace adas {
 namespace mapmatch {
-
 YawDiagnostics analyzeYaw(const std::vector<double>& t_s, const std::vector<double>& speed_mps,
                           const std::vector<double>& yaw_rate_rps, const ImuSamples& imu, const TrackConfig& cfg)
 {
@@ -374,9 +366,10 @@ YawDiagnostics analyzeYaw(const std::vector<double>& t_s, const std::vector<doub
   const std::size_t n = std::min({t_s.size(), speed_mps.size(), yaw_rate_rps.size()});
   if (n < 10)
     return d;
-  const std::vector<double> t(t_s.begin(), t_s.begin() + n);
-  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + n);
-  const std::vector<double> w(yaw_rate_rps.begin(), yaw_rate_rps.begin() + n);
+  const auto count = static_cast<std::ptrdiff_t>(n);
+  const std::vector<double> t(t_s.begin(), t_s.begin() + count);
+  const std::vector<double> v(speed_mps.begin(), speed_mps.begin() + count);
+  const std::vector<double> w(yaw_rate_rps.begin(), yaw_rate_rps.begin() + count);
 
   const auto stops = findStops(t, v, cfg.stop_speed_mps, cfg.stop_min_s);
   d.n_stops = static_cast<int>(stops.size());

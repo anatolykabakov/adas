@@ -9,10 +9,6 @@
 
 namespace adas {
 namespace mapmatch {
-
-/** Directed edge: `2 * edge_id + reversed`, so a route is a plain `uint32` array — the encoding the map
- *  format itself uses (see `docs/MAPMATCH.md`). The graph stores each way once, undirected; direction of
- *  travel lives in the low bit. */
 inline constexpr std::uint32_t kNoEdge = 0xFFFFFFFFu;
 
 inline std::uint32_t edgeOf(std::uint32_t de) { return de >> 1; }

@@ -20,11 +20,20 @@ target_include_directories(
 
 set_target_properties(
   core
-  PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/pyadas"
+  PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/pyadas"
+    BUILD_RPATH "$ORIGIN"
+    INSTALL_RPATH "$ORIGIN"
+)
+target_link_options(core PRIVATE "-Wl,--disable-new-dtags")
+
+file(
+  GLOB ACADOS_RUNTIME_LIBS "${acados_PACKAGE_FOLDER_RELEASE}/lib/*.so"
+  "${acados_PACKAGE_FOLDER_DEBUG}/lib/*.so"
 )
 
-# Copy next to bag/host scripts (app/src/main/scripts/pyadas).
-set(SCRIPTS_PYADAS "${PROJECT_SOURCE_DIR}/../scripts/pyadas")
+get_filename_component(REPO_ROOT "${PROJECT_SOURCE_DIR}/../../../.." ABSOLUTE)
+set(SCRIPTS_PYADAS "${REPO_ROOT}/scripts/pyadas")
 add_custom_command(
   TARGET core
   POST_BUILD
@@ -34,6 +43,9 @@ add_custom_command(
     ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/pyadas/__init__.py"
     "${SCRIPTS_PYADAS}/__init__.py"
+  COMMAND
+    ${CMAKE_COMMAND} -E copy_if_different ${ACADOS_RUNTIME_LIBS}
+    "${SCRIPTS_PYADAS}/"
   COMMENT "Copy pyadas core module into scripts/"
   VERBATIM
 )

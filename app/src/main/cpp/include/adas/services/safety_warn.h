@@ -1,21 +1,36 @@
 #pragma once
 
+#include "adas/utils/lane_path.h"
+
 #include "adas/middleware/manager.hpp"
 #include "messages.pb.h"
 #include "adas/utils/adas_topics.h"
+#include "adas/utils/proto_convert.h"
 #include "adas/utils/path_lateral_state.h"
-#include "adas/utils/safety_planner.hpp"
+#include "adas/utils/safety_planner.h"
 
 namespace adas {
-
 namespace services {
-
+/**
+ * \brief Forward-collision and lane-departure warnings, latched for the HUD.
+ *
+ * \details Warnings are computed from the lead the model reports and the lateral state of the path, then
+ * each is latched separately: a warning that flickers at tick rate is invisible on a display and useless
+ * in a bag. Driver intent suppresses lane-departure warnings — a blinker means the departure is
+ * deliberate.
+ *
+ * The service warns and never actuates. Braking on its own decision would need a different safety
+ * argument than a light and a chime.
+ */
 class SafetyWarn : public middleware::Service {
 public:
   struct Config {
-    safety::SafetyPlannerConfig planner{};
-    int warn_set_frames = 3;
-    int warn_hold_frames = 10;
+    safety::SafetyPlannerConfig planner{};  ///< Thresholds the warnings are computed from.
+    int warn_set_frames = 3;                ///< Frames a warning must hold before it is raised.
+    int warn_hold_frames = 10;              ///< Frames it stays on after the cause is gone, so the driver can see it.
+
+    LanePathConfig lane_path{};  ///< How lane lines become a path, for the lateral part of the warning.
+    double steer_ratio = 15.7;   ///< Steering ratio, for turning the wheel angle into a road-wheel angle.
   };
 
   SafetyWarn() : SafetyWarn(Config{}) {}
@@ -27,11 +42,15 @@ public:
   const Config& config() const { return config_; }
 
 private:
+  LaneFusionState lane_fusion_{};
   void onPath(const LanePathMsg& msg);
-  void onModelLong(const ai::flow::adas::ZMQMessage& msg);
+  void onModelLong(const adas::proto::ModelLongPlan& payload);
   void onChassis(const ChassisSample& msg);
-  void onSteer(const ai::flow::adas::ZMQMessage& msg);
+  void onSteer(const adas::proto::SteerCommand& payload);
   void tick();
+  /// Chassis, lateral state and driver intent as the planner's input. Everything the warning
+  /// thresholds are evaluated against, and nothing about the warnings themselves.
+  safety::PlannerInput buildPlannerInput() const;
   void rebuildLatches();
 
   Config config_;
@@ -43,9 +62,8 @@ private:
   bool lane_anchored_ = false;
   double last_cte_m_ = 0.0;
   int64_t last_path_ts_us_ = 0;
-  ai::flow::adas::ModelLongPlan model_{};
+  adas::proto::ModelLongPlan model_{};
   bool have_model_ = false;
-  /** Last `controls/steer` with enabled = true; LDW is suppressed while it is fresh. */
   int64_t lat_active_ts_us_ = 0;
 
   safety::WarningLatch fcw_latch_{};

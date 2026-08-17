@@ -1,21 +1,31 @@
 #pragma once
 
+#include "adas/traffic/traffic_state.hpp"
+
 #include "adas/middleware/manager.hpp"
 #include "messages.pb.h"
 #include "adas/utils/adas_topics.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
-
 namespace services {
-
+/**
+ * \brief Assesses traffic-sign detections against the car's state.
+ *
+ * \details A detection is not yet a fact: the same speed-limit plate is reported on and off across
+ * frames, and a sign on a side road looks like a sign on ours. This service accumulates detections over
+ * time and reports what currently holds, so consumers see a stable assessment rather than per-frame
+ * flicker.
+ */
 class TrafficSign : public middleware::Service {
 public:
   struct Config {
-    double overspeed_margin_kmh = 5.0;
-    int64_t speed_limit_hold_ms = 60000;
-    int64_t tfl_hold_ms = 1500;
-    double min_tfl_conf = 0.35;
-    double min_sign_conf = 0.40;
+    double overspeed_margin_kmh = 5.0;  ///< Tolerated excess over the posted limit before it counts as speeding [km/h].
+    int64_t speed_limit_hold_ms = 60000;  ///< How long a seen limit stays in force without being seen again [ms].
+    int64_t tfl_hold_ms = 1500;           ///< How long a traffic-light state is held after the last detection [ms].
+    double min_tfl_conf = 0.35;           ///< Detection confidence needed for a traffic light.
+    double min_sign_conf = 0.40;          ///< Detection confidence needed for a sign.
+    double steer_ratio = 15.7;            ///< Steering ratio, used to tell which road a sign belongs to.
   };
 
   TrafficSign() : TrafficSign(Config{}) {}
@@ -27,24 +37,17 @@ public:
   const Config& config() const { return config_; }
 
 private:
-  void onDets(const ai::flow::adas::ZMQMessage& msg);
+  void onDets(const adas::proto::TrafficDetections& payload);
   void onChassis(const ChassisSample& msg);
   void tick();
-  void publishState(int64_t now_ms);
 
   Config config_;
   ChassisSample chassis_{};
   bool have_chassis_ = false;
 
-  int speed_limit_kmh_ = 0;
-  std::string speed_limit_label_;
-  int64_t speed_limit_ts_ms_ = 0;
+  void publishTraffic(int64_t now_ms);
 
-  ai::flow::adas::TrafficLightColor tfl_color_ = ai::flow::adas::TFL_UNKNOWN;
-  float tfl_conf_ = 0.f;
-  int64_t tfl_ts_ms_ = 0;
-  int n_dets_ = 0;
-  std::string status_ = "init";
+  traffic::State state_;
 };
 
 }  // namespace services

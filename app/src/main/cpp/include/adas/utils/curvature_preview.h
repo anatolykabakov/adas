@@ -7,7 +7,6 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-
 inline double maxCurvatureAhead(const std::vector<Vec2>& polyline, double from_m, double to_m, double window_m = 25.0,
                                 double percentile = 0.8)
 {

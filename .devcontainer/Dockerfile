@@ -43,8 +43,8 @@ RUN groupadd --gid $USER_GID $USERNAME 2>/dev/null || true \
 
 # Python deps are pinned at image build time, not on the host.
 # MetaDrive is a separate file: controller run (sim.eval) will not start without it.
-COPY app/src/main/scripts/requirements.txt /tmp/requirements.txt
-COPY app/src/main/scripts/sim/requirements.txt /tmp/sim-requirements.txt
+COPY scripts/requirements.txt /tmp/requirements.txt
+COPY scripts/sim/requirements.txt /tmp/sim-requirements.txt
 RUN pip3 install --no-cache-dir --upgrade pip \
     && pip3 install --no-cache-dir -r /tmp/requirements.txt \
     && pip3 install --no-cache-dir metadrive-simulator>=0.4.2.4 \

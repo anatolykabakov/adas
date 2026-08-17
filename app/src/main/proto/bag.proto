@@ -7,5 +7,5 @@ import "messages.proto";
 
 message Bag {
     google.protobuf.Timestamp timestamp = 1;
-    repeated ai.flow.adas.ZMQMessage messages = 2;
+    repeated adas.proto.ZMQMessage messages = 2;
 }

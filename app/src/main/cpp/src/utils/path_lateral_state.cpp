@@ -5,7 +5,6 @@
 #include <vector>
 
 namespace adas {
-
 PathLateralState estimatePathLateralState(const std::vector<Vec2>& polyline_ego, double x_min_m, double x_max_m)
 {
   PathLateralState out;
@@ -20,8 +19,6 @@ PathLateralState estimatePathLateralState(const std::vector<Vec2>& polyline_ego,
   if (pts.size() < 5)
     return out;
 
-  // Least-squares fit y = a x² + b x + c  (y right+)
-  // Normal equations for [a,b,c].
   double s0 = 0, sx = 0, sx2 = 0, sx3 = 0, sx4 = 0;
   double sy = 0, sxy = 0, sx2y = 0;
   for (const auto& p : pts) {
@@ -40,10 +37,6 @@ PathLateralState estimatePathLateralState(const std::vector<Vec2>& polyline_ego,
     sx2y += x2 * y;
   }
 
-  // Solve 3x3 via Cramer's / elimination
-  // | sx4 sx3 sx2 | |a|   |sx2y|
-  // | sx3 sx2 sx  | |b| = |sxy |
-  // | sx2 sx  s0  | |c|   |sy  |
   const double A11 = sx4, A12 = sx3, A13 = sx2;
   const double A21 = sx3, A22 = sx2, A23 = sx;
   const double A31 = sx2, A32 = sx, A33 = s0;

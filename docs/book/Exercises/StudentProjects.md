@@ -26,7 +26,7 @@ Read [Localization](../Localization/Overview.md). On a bag: (1) ENU track from G
 ## B — offline control
 
 ### B1 Pure Pursuit sweep
-`bag_config_sweep.py` on `pp_*`. Pareto |CTE| vs |$\Delta$SWA|.
+`bag/bag_config_sweep.py` on `pp_*`. Pareto |CTE| vs |$\Delta$SWA|.
 **Deliverable:** knee point you would ship and why.
 
 ### B2 Delay sensitivity
@@ -54,8 +54,8 @@ Compare `pp` vs `fp` on a fixed scenario (`sim.eval`); report the same metrics a
 ### C4 FCW / AEB / LDW
 Read [Warnings](../Safety/Warnings.md). Run unit tests touching `test_safety_warn`, then:
 ```bash
-PYTHONPATH=app/src/main/scripts \
-  python3 app/src/main/scripts/bag_safety_warn.py adas_logs/<session>
+PYTHONPATH=scripts \
+  python3 scripts/bag/bag_safety_warn.py adas_logs/<session>
 ```
 **Deliverable:** episode table + one false-positive that the gated rules correctly suppress (or explain why the bag cannot show FCW).
 

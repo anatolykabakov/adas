@@ -8,7 +8,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 constexpr double kDeg = M_PI / 180.0;
 
 /** Closest point on segment a->b, plus the parameter t along it. */
@@ -54,7 +53,7 @@ void resamplePolyline(const std::vector<double>& xs, const std::vector<double>& 
   out_x.push_back(xs[0]);
   out_y.push_back(ys[0]);
 
-  double carry = 0.0;  // distance already walked past the last emitted sample
+  double carry = 0.0;
   double s_total = 0.0;
   for (std::size_t k = 1; k < xs.size(); ++k) {
     const double dx = xs[k] - xs[k - 1];
@@ -63,7 +62,7 @@ void resamplePolyline(const std::vector<double>& xs, const std::vector<double>& 
     if (len < 1e-9)
       continue;
 
-    double pos = step_m - carry;  // distance into this segment of the next sample
+    double pos = step_m - carry;
     while (pos <= len) {
       const double u = pos / len;
       s_total = out_s.back() + step_m;
@@ -98,7 +97,7 @@ HeadingProfile headingProfile(const std::vector<double>& xs, const std::vector<d
     const double th = std::atan2(dy, dx);
     unwrapped = first ? th : unwrapped + wrapPi(th - unwrapped);
     first = false;
-    hp.s_m.push_back(run + 0.5 * len);  // midpoint: where this chord's heading is the true heading
+    hp.s_m.push_back(run + 0.5 * len);
     hp.theta_rad.push_back(unwrapped);
     run += len;
   }
@@ -107,7 +106,6 @@ HeadingProfile headingProfile(const std::vector<double>& xs, const std::vector<d
 }
 
 namespace {
-
 double thetaAt(const HeadingProfile& hp, double s)
 {
   if (hp.s_m.empty())
@@ -146,7 +144,6 @@ std::vector<double> curvatureAlong(const std::vector<double>& src_x, const std::
 }
 
 namespace {
-
 TurnSection sectionFrom(const std::vector<double>& s, const std::vector<double>& kappa, std::size_t from,
                         std::size_t to, const RouteConfig& cfg)
 {
@@ -189,7 +186,6 @@ void splitByDegree(const std::vector<double>& s, const std::vector<double>& kapp
     return;
   }
 
-  // Half-arc of `max_curv_split_arc_deg` around the peak, in samples.
   const double arc_side_m = (cfg.max_curv_split_arc_deg * kDeg / std::max(max_curv, 1e-9)) / 2.0;
   const auto arc_side = static_cast<std::size_t>(std::ceil(arc_side_m / std::max(cfg.step_m, 1e-6)));
 
@@ -225,7 +221,6 @@ std::vector<TurnSection> turnSections(const std::vector<double>& s, const std::v
       ++i;
       continue;
     }
-    // Run of over-threshold samples, cut at every sign change (dragonpilot splits an S-bend in two).
     const std::size_t from = i;
     const int sign = kappa[i] > 0 ? 1 : -1;
     std::size_t j = i;
@@ -254,7 +249,6 @@ std::uint32_t matchDirectedEdge(const RoadMap& map, double x, double y, double y
     if (xs.size() < 2)
       continue;
 
-    // Closest segment of this edge, and the arc length up to the projection.
     double run = 0.0, at_s = 0.0, qx = 0.0, qy = 0.0, seg_heading = 0.0;
     double d2 = std::numeric_limits<double>::max();
     for (std::size_t k = 1; k < xs.size(); ++k) {
@@ -323,7 +317,6 @@ RouteAhead buildRouteAhead(const RoadMap& map, double x, double y, double yaw_ra
   out.y_m = snap_y;
   out.road_name = map.edgeName(edgeOf(start_de));
 
-  // Geometry of the current edge from the snapped point onwards.
   std::vector<double> xs, ys, px, py;
   dirPolyline(map, start_de, xs, ys);
   {
@@ -344,9 +337,6 @@ RouteAhead buildRouteAhead(const RoadMap& map, double x, double y, double yaw_ra
   for (std::size_t k = 1; k < px.size(); ++k)
     have_m += std::hypot(px[k] - px[k - 1], py[k] - py[k - 1]);
 
-  // Grow forward: straightest continuation, with the same road name winning ties. Without the name rule the
-  // route takes an exit ramp whenever the ramp happens to leave more straight-on than the road does — the
-  // single most common way this kind of walk goes wrong.
   std::unordered_set<std::uint32_t> used{edgeOf(start_de)};
   std::uint32_t cur = start_de;
   std::string cur_name = out.road_name;
@@ -381,7 +371,7 @@ RouteAhead buildRouteAhead(const RoadMap& map, double x, double y, double yaw_ra
     dirPolyline(map, next, xs, ys);
     if (xs.size() < 2)
       break;
-    for (std::size_t k = 1; k < xs.size(); ++k) {  // k=1: first point repeats the previous edge's last
+    for (std::size_t k = 1; k < xs.size(); ++k) {
       px.push_back(xs[k]);
       py.push_back(ys[k]);
       have_m += std::hypot(xs[k] - xs[k - 1], ys[k] - ys[k - 1]);
@@ -399,7 +389,6 @@ RouteAhead buildRouteAhead(const RoadMap& map, double x, double y, double yaw_ra
   if (out.s_m.size() < 3)
     return out;
 
-  // Trim to the horizon: the last edge usually overshoots it.
   if (out.s_m.back() > cfg.horizon_m) {
     const auto keep = static_cast<std::size_t>(cfg.horizon_m / cfg.step_m) + 1;
     if (keep >= 3 && keep < out.s_m.size()) {
@@ -410,8 +399,6 @@ RouteAhead buildRouteAhead(const RoadMap& map, double x, double y, double yaw_ra
   }
 
   out.length_m = out.s_m.back();
-  // Curvature comes from the map geometry (`px`/`py`), sampled onto the resampled grid — not from the
-  // resampled points themselves, which no longer carry where the map's nodes were.
   out.kappa = curvatureAlong(px, py, out.s_m, cfg.window_m);
   out.turns = turnSections(out.s_m, out.kappa, cfg);
 

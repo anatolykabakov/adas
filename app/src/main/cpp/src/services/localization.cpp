@@ -2,42 +2,74 @@
 
 #include "messages.pb.h"
 #include "adas/utils/logger.h"
+#include "adas/utils/proto_convert.h"
 
 namespace adas {
 namespace services {
-
 Localization::Localization(Config config)
   : config_(config), loc_(config.wheelbase_m, config.gps_noise_pos, config.gps_update_interval, true)
 {
-  loc_.invert_cam_yaw_rate = config.invert_cam_yaw_rate;
+  imu_calib_ = ImuCalibrator(config.imu_speed_threshold_kmh / 3.6, config.imu_min_samples,
+                             std::max(400, config.imu_min_samples * 4), config.imu_invert_yaw_rate);
+  if (config.imu_has_mount_prior)
+    imu_calib_.setMountPrior(config.imu_mount_roll_deg, config.imu_mount_pitch_deg, config.imu_mount_yaw_deg);
   road_roll_.setConfig(config.road_roll);
   params_.setConfig(config.params);
-  loc_.use_gps_position = config.sources.gps_position;
-  loc_.use_gps_course = config.sources.gps_course;
-  loc_.use_gps_velocity = config.sources.gps_velocity;
-  // The bicycle model is a measurement now, not the source of truth — see `VehicleEKF::setYawRateIsAState`.
+  loc_.max_gps_accuracy_m = config.gps_max_accuracy_m;
   loc_.ekf().setYawRateIsAState(true);
-  if (!config.sources.bicycle_model) {
-    // Push its noise far out rather than adding a branch in the hot path: an observation with an
-    // enormous R changes nothing, and the state still exists for the gyro to correct.
-    loc_.ekf().setYawRateIsAState(true, 1e3);
-  }
+}
+
+void Localization::registerParameters()
+{
+  registerParameter<double>(
+      "gps_max_accuracy_m",
+      [this](const double& v) {
+        config_.gps_max_accuracy_m = v;
+        loc_.max_gps_accuracy_m = v;
+      },
+      [this] { return config_.gps_max_accuracy_m; });
+
+  const auto learner = [this](const char* name, double& field) {
+    registerParameter<double>(
+        name,
+        [this, &field](const double& v) {
+          field = v;
+          params_.setConfig(config_.params);
+        },
+        [&field] { return field; });
+  };
+  auto& pl = config_.params;
+  learner("params_stiffness_init", pl.stiffness_init);
+  learner("params_steer_ratio_init", pl.steer_ratio_init);
+  learner("params_angle_offset_init_deg", pl.angle_offset_init_deg);
+  learner("params_stiffness_p0_std", pl.stiffness_p0_std);
+  learner("params_stiffness_process_std", pl.stiffness_process_std);
+  learner("params_steer_ratio_process_std", pl.steer_ratio_process_std);
+  learner("params_min_speed_ms", pl.min_speed_ms);
+  learner("params_max_lateral_jerk", pl.max_lateral_jerk);
+  learner("params_max_roll_std_deg", pl.max_roll_std_deg);
+  registerParameter<bool>(
+      "params_use_roll",
+      [this](const bool& v) {
+        config_.params.use_roll = v;
+        params_.setConfig(config_.params);
+      },
+      [this] { return config_.params.use_roll; });
 }
 
 void Localization::configure()
 {
-  subscribe<ChassisSample>(topics::kVehicleChassis, [this](const ChassisSample& m) { onChassis(m); });
-  subscribe<GpsSample>(topics::kGpsLocation, [this](const GpsSample& m) { onGps(m); });
-  subscribe<ImuSample>(topics::kImuYaw, [this](const ImuSample& m) { onImu(m); });
-  if (config_.sources.camera_odometry) {
-    subscribe<CameraOdometrySample>(topics::kCameraOdometry,
-                                    [this](const CameraOdometrySample& m) { onCameraOdometry(m); });
-  }
-  const auto& src = config_.sources;
-  LOGI("Localization → %s  sources: gps[pos=%d course=%d vel=%d] imu=%d chassis_yaw=%d cam_odo=%d "
-       "bicycle=%d learn_params=%d",
-       topics::kLocalizationPose, src.gps_position, src.gps_course, src.gps_velocity, src.imu_yaw_rate,
-       src.chassis_yaw_rate, src.camera_odometry, src.bicycle_model, config_.learn_vehicle_params);
+  subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    onChassis(carStateToChassis(payload, config_.steer_ratio));
+  });
+  subscribe<adas::proto::GPSLocation>(topics::kGpsLocation,
+                                      [this](const adas::proto::GPSLocation& payload) { onGpsProto(payload); });
+  subscribe<adas::proto::CameraOdometry>(
+      topics::kCameraOdometry, [this](const adas::proto::CameraOdometry& payload) { onCameraOdometryProto(payload); });
+  registerParameters();
+  subscribe<adas::proto::IMUData>(topics::kImu, [this](const adas::proto::IMUData& payload) { onRawImu(payload); });
+  LOGI("Localization → %s  camera odometry %s", topics::kLocalizationPose,
+       config_.sources.camera_odometry ? "on" : "off");
 }
 
 void Localization::reset()
@@ -66,6 +98,26 @@ void Localization::resetPose(double x, double y, double yaw, double v, double ya
   last_pose_.yaw_rate = yaw_rate;
 }
 
+void Localization::onGpsProto(const adas::proto::GPSLocation& g)
+{
+  const bool ok_fix =
+      g.fix_type() != adas::proto::GPSLocation::NO_FIX && g.fix_type() != adas::proto::GPSLocation::TIME_ONLY;
+  GpsSample sample = gps_proj_.project(static_cast<int64_t>(g.timestamp()) * 1000, g.latitude(), g.longitude(), ok_fix,
+                                       g.speed(), g.bearing());
+  if (!sample.valid)
+    return;
+  sample.accuracy_m = g.horizontal_accuracy();
+  sample.satellites = g.satellites_used();
+  onGps(sample);
+}
+
+void Localization::onCameraOdometryProto(const adas::proto::CameraOdometry& odom)
+{
+  const auto sample = cameraOdometryToSample(odom);
+  if (sample.valid)
+    onCameraOdometry(sample);
+}
+
 void Localization::onGps(const GpsSample& msg)
 {
   gps_ = msg;
@@ -77,14 +129,33 @@ void Localization::onGps(const GpsSample& msg)
   }
 }
 
-void Localization::onImu(const ImuSample& msg)
+void Localization::onRawImu(const adas::proto::IMUData& payload)
 {
+  const RawImuSample raw = imuToRaw(payload);
+  if (have_chassis_)
+    imu_calib_.setSpeed(chassis_.speed_mps);
+  const auto yaw_rate = imu_calib_.push(raw);
+  if (!yaw_rate)
+    return;
+
+  if (!imu_calib_.orientationLocked())
+    return;
+  if (!imu_lock_logged_) {
+    LOGI("Localization: IMU orientation locked (bias gz=%.5f)", imu_calib_.bias().z());
+    imu_lock_logged_ = true;
+  }
+
+  ImuSample msg;
+  msg.timestamp_us = raw.timestamp_us;
+  msg.yaw_rate = *yaw_rate;
+  msg.lat_accel = imu_calib_.lastLatAccel();
+  msg.lat_accel_valid = imu_calib_.hasHeading();
+  msg.valid = true;
   imu_ = msg;
 
-  // Road bank rides on the IMU stream rather than the chassis tick: it needs the lateral specific force,
-  // which only this message carries, and its own 10 s time constant makes the exact cadence irrelevant.
-  const double dt =
-      last_imu_us_ > 0 && msg.timestamp_us > last_imu_us_ ? (msg.timestamp_us - last_imu_us_) * 1e-6 : 0.0;
+  const double dt = last_imu_us_ > 0 && msg.timestamp_us > last_imu_us_ ?
+                        static_cast<double>(msg.timestamp_us - last_imu_us_) * 1e-6 :
+                        0.0;
   last_imu_us_ = msg.timestamp_us;
   if (msg.lat_accel_valid && have_chassis_)
     road_roll_.update(chassis_.speed_mps, chassis_.yaw_rate, msg.lat_accel, dt);
@@ -100,50 +171,54 @@ void Localization::onChassis(const ChassisSample& msg)
 {
   double dt = 0.05;
   if (last_t_us_ > 0 && msg.timestamp_us > last_t_us_) {
-    dt = (msg.timestamp_us - last_t_us_) * 1e-6;
+    dt = static_cast<double>(msg.timestamp_us - last_t_us_) * 1e-6;
   }
-  // Clamp absurd dt (USB stalls / clock glitches) so one tick cannot teleport.
   if (dt > 0.2)
     dt = 0.05;
   last_t_us_ = msg.timestamp_us;
   chassis_ = msg;
   have_chassis_ = true;
 
-  // Yaw rate: phone gyro first, then the ESP sensor from CAN. Each is switchable so that a run can
-  // answer "what would the heading do without this one" instead of leaving it to argument.
-  std::optional<double> yr;
-  if (config_.sources.imu_yaw_rate && imu_.valid) {
-    yr = imu_.yaw_rate;
-  } else if (config_.sources.chassis_yaw_rate && std::abs(msg.yaw_rate) > 1e-9) {
-    yr = msg.yaw_rate;
-  }
-
-  // Only fuse fresh GPS — stale first-fix at ENU (0,0) used to pin EKF at origin.
-  std::optional<GpsSample> gps;
-  if (gps_.valid) {
-    const int64_t age = msg.timestamp_us - gps_.timestamp_us;
-    if (gps_.timestamp_us <= 0 || (age >= -500'000 && age <= config_.gps_max_age_us))
-      gps = gps_;
-  }
-
-  std::optional<double> cam_w;
-  if (config_.sources.camera_odometry && have_cam_odo_ && cam_odo_.valid) {
-    const double rstd = cam_odo_.rot_std[2];
-    if (rstd < 0.5)
-      cam_w = cam_odo_.rot[2];
-  }
-
-  loc_.step(dt, msg.speed_mps, msg.steer_rad, yr, gps, std::nullopt, cam_w);
+  loc_.step(dt, msg.speed_mps, msg.steer_rad, yawRateMeasurement(msg), freshGps(msg.timestamp_us), std::nullopt,
+            camYawRate());
 
   // The learner rides the chassis tick because every one of its inputs is on this message. It is fed the
-  // raw CAN yaw rate rather than `loc_.ekf().yawRate()` on purpose: the EKF's yaw rate is partly produced by
-  // the very bicycle model whose parameters are being learned, so using it would close a loop and the filter
-  // would happily confirm whatever it already believed.
-  if (config_.learn_vehicle_params) {
-    params_.update(msg.speed_mps, msg.steering_angle_deg, msg.yaw_rate, road_roll_.rollDeg(), road_roll_.rollStdDeg(),
-                   dt);
-  }
+  // raw CAN yaw rate rather than `loc_.ekf().yawRate()` on purpose: the EKF's yaw rate is partly produced
+  // by the bicycle model, whose stiffness and steering ratio are exactly what the learner estimates, so
+  // closing that loop would have it fit its own output.
+  params_.update(msg.speed_mps, msg.steering_angle_deg, msg.yaw_rate, road_roll_.rollDeg(), road_roll_.rollStdDeg(),
+                 dt);
   publishPose(msg.timestamp_us);
+}
+
+std::optional<double> Localization::yawRateMeasurement(const ChassisSample& msg) const
+{
+  if (imu_.valid)
+    return imu_.yaw_rate;
+  if (std::abs(msg.yaw_rate) > 1e-9)
+    return msg.yaw_rate;
+  return std::nullopt;
+}
+
+std::optional<GpsSample> Localization::freshGps(int64_t chassis_ts_us) const
+{
+  if (!gps_.valid)
+    return std::nullopt;
+  // A fix stamped in the future by up to half a second is still the same instant: the two clocks are the
+  // phone's and the receiver's, and the offset between them is not zero.
+  const int64_t age = chassis_ts_us - gps_.timestamp_us;
+  if (gps_.timestamp_us <= 0 || (age >= -500'000 && age <= config_.gps_max_age_us))
+    return gps_;
+  return std::nullopt;
+}
+
+std::optional<double> Localization::camYawRate() const
+{
+  if (!config_.sources.camera_odometry || !have_cam_odo_ || !cam_odo_.valid)
+    return std::nullopt;
+  if (cam_odo_.rot_std[2] >= 0.5)
+    return std::nullopt;
+  return cam_odo_.rot[2];
 }
 
 void Localization::publishPose(int64_t timestamp_us)
@@ -163,7 +238,7 @@ void Localization::publishPose(int64_t timestamp_us)
   pose.learned_angle_offset_deg = params_.angleOffsetDeg();
   pose.learned_stiffness_std = params_.stiffnessStd();
   pose.learned_steer_ratio_std = params_.steerRatioStd();
-  pose.learned_params_valid = config_.learn_vehicle_params && params_.valid();
+  pose.learned_params_valid = params_.valid();
   pose.learned_sample_count = params_.sampleCount();
   pose.odom_x = loc_.odomX().empty() ? 0.0 : loc_.odomX().back();
   pose.odom_y = loc_.odomY().empty() ? 0.0 : loc_.odomY().back();
@@ -171,31 +246,7 @@ void Localization::publishPose(int64_t timestamp_us)
   pose.ekf_y = loc_.ekfY().empty() ? pose.y : loc_.ekfY().back();
   last_pose_ = pose;
 
-  ai::flow::adas::ZMQMessage zmq;
-  zmq.set_timestamp(timestamp_us / 1000);
-  zmq.set_topic(topics::kLocalizationPose);
-  auto* p = zmq.mutable_localization_pose();
-  p->set_timestamp(timestamp_us / 1000);
-  p->set_x(pose.x);
-  p->set_y(pose.y);
-  p->set_yaw(pose.yaw);
-  p->set_road_roll_deg(pose.road_roll_deg);
-  p->set_road_roll_std_deg(pose.road_roll_std_deg);
-  p->set_road_roll_valid(pose.road_roll_valid);
-  p->set_learned_stiffness_factor(pose.learned_stiffness_factor);
-  p->set_learned_steer_ratio(pose.learned_steer_ratio);
-  p->set_learned_angle_offset_deg(pose.learned_angle_offset_deg);
-  p->set_learned_stiffness_std(pose.learned_stiffness_std);
-  p->set_learned_steer_ratio_std(pose.learned_steer_ratio_std);
-  p->set_learned_params_valid(pose.learned_params_valid);
-  p->set_learned_sample_count(pose.learned_sample_count);
-  p->set_v(pose.v);
-  p->set_yaw_rate(pose.yaw_rate);
-  p->set_odom_x(pose.odom_x);
-  p->set_odom_y(pose.odom_y);
-  p->set_ekf_x(pose.ekf_x);
-  p->set_ekf_y(pose.ekf_y);
-  publish(topics::kLocalizationPose, zmq);
+  publish(topics::kLocalizationPose, createLocalizationPose(pose, timestamp_us));
 }
 
 std::tuple<double, double, double> Localization::step(double dt, double speed_mps, double steer_rad,

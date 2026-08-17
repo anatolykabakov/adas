@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ai.flow.adas;
+package adas.proto;
 
 // One periodic timer on a service thread (Ratekeeper-style interval stats).
 message TimerTiming {

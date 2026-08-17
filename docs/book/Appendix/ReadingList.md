@@ -15,6 +15,9 @@
 | `BENCHMARK_COMMA2.md` | vs comma-two + closing plan |
 | `SAFETY_WARN.md` | FCW / AEB / LDW |
 | `MPC_EXPLAINED.md` | VisionPilot MPC |
+| `THNEED.md` | the GPU path: what a thneed is, how ours is generated and checked |
+| `NEW_PHONE.md` | bringing up a new phone, and what to measure before driving |
+| `PORTING.md` | adding a car behind `CarPlatform` |
 | `PARAMSD.md` / `MAPMATCH.md` | params learning / offline map match |
 | book `Localization/Overview.md` | GPS ENU, phone IMU, live EKF |
 | `TRAFFIC_VISION.md` / `MODEL_LONG_PLAN.md` / `CRUISE_BUTTONS.md` | adjacent |
@@ -24,11 +27,14 @@
 
 | path | why |
 |---|---|
-| `middleware/middleware.hpp` | Service / ParamBag |
-| `test_middleware.cpp` | smallest examples |
-| `VisionPipeline.java` | inference queue |
-| `lane_keep_service.cpp` | controller selection |
-| `safety_warn_service.cpp` | FCW / AEB / LDW |
+| `include/adas/middleware/manager.hpp` | Service / ParamBag |
+| `tests/test_middleware.cpp` | smallest examples |
+| `VisionPipeline.java` | runner selection, inference queue |
+| `src/services/planner.cpp` | which lateral strategy runs |
+| `src/services/control.cpp` | the control law, no CAN in sight |
+| `src/services/platform.cpp` + `src/platform/` | the bus, and the only place a brand is named |
+| `src/services/safety_warn.cpp` | FCW / AEB / LDW |
+| `scripts/tools/thneed_from_onnx.py` | ONNX → GPU run, and the checks around it |
 | `online_localizer` / `imu_calibrator` / `gps_local_projector` | ENU pose / IMU lock / GPS |
 | `assets/config.json` | all levers |
 

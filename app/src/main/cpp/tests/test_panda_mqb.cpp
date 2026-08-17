@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "adas/panda/health.h"
+#include "adas/platform/car_platform.h"
 #include "adas/platform/volkswagen/mqb_car_state_decoder.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
@@ -130,14 +131,12 @@ TEST(PandaHealth, V11ReadAsV16MisparsesExactlyAsInTheRun)
   EXPECT_FLOAT_EQ(wrong.interrupt_load_pkt, 2.3509887e-38f);
 }
 
-// Always-on lateral. Both halves of it are one number and one gate, and the number is not a guess: it is
 // the `alternativeExperience` dragonpilot ran on this car, read out of its own `pandaStates`.
 TEST(AlwaysOnLateral, TheAlternativeExperienceMatchesWhatWorkedOnThisFirmware)
 {
   using C = volkswagen::MqbSafetyConstants;
   EXPECT_EQ(C::kAltExpDisableDisengageOnGas, 1);
   EXPECT_EQ(C::kAltExpAlka, 16);
-  // 17 is the value observed in their logs, over every route, with `safety_tx_blocked` never incrementing
   // and torque applied in 96.3 % of the frames where `controls_allowed` was false.
   EXPECT_EQ(C::kAltExpDisableDisengageOnGas | C::kAltExpAlka, 17);
 }
@@ -166,7 +165,6 @@ TEST(AlwaysOnLateral, ReverseIsGearSix)
   EXPECT_FALSE(gearIsReverse(0)) << "0 is 'frame not seen yet', not a gear";
 }
 
-// The gate keys on the main switch, not on engagement — that distinction is the whole feature. On the run
 // that prompted this work `TSK_Status` was 2 (main on, not engaged) for 70.7 % of the time.
 TEST(AlwaysOnLateral, TheMainSwitchIsWhatTheGateNeeds)
 {
@@ -176,7 +174,6 @@ TEST(AlwaysOnLateral, TheMainSwitchIsWhatTheGateNeeds)
   EXPECT_FALSE(cruiseEngagedFromTsk(2)) << "TSK_Status 2 is exactly the 70.7 % where we used to give up";
 }
 
-// The decision that puts torque on the rack, as a truth table. Every row is a case that occurs on the road,
 // and two of them are the ones this feature exists for.
 TEST(AlwaysOnLateral, TheGateTruthTable)
 {
@@ -189,32 +186,26 @@ TEST(AlwaysOnLateral, TheGateTruthTable)
   cs.gearKnown = true;
 
   // Off: exactly the old behaviour, whatever the car state says.
-  EXPECT_TRUE(lateralActuationAllowed(/*controls_allowed=*/true, /*always_on=*/false, cs));
+  EXPECT_TRUE(lateralActuationAllowed(true, false, cs));
   EXPECT_FALSE(lateralActuationAllowed(false, false, cs)) << "this is the 70.7 % we used to give up";
 
-  // On: the main switch is enough. Below ~30 km/h and on brake the stock cruise disengages and
   // `controls_allowed` goes false — that is the whole point.
   EXPECT_TRUE(lateralActuationAllowed(false, true, cs));
 
-  // Reverse is a hard no even with the switch on.
   cs.gearReverse = true;
   EXPECT_FALSE(lateralActuationAllowed(false, true, cs));
   EXPECT_TRUE(lateralActuationAllowed(true, true, cs)) << "if the panda already allows control, honour it";
   cs.gearReverse = false;
 
-  // Main switch off — the driver has not asked for any assistance at all.
   cs.cruiseAvailable = false;
   EXPECT_FALSE(lateralActuationAllowed(false, true, cs));
   cs.cruiseAvailable = true;
 
-  // Gear not seen yet: Getriebe_11 reads as 0, so "not reverse" is formally true but substantially
-  // unknown — between app start and the first frame the car may be in reverse.
   cs.gearKnown = false;
   EXPECT_FALSE(lateralActuationAllowed(false, true, cs)) << "unknown gear must not open lateral actuation";
   EXPECT_TRUE(lateralActuationAllowed(true, true, cs)) << "panda already allows control — honour it";
   cs.gearKnown = true;
 
-  // And the superset property the bag analysis relies on: whenever `controls_allowed` holds, so does this.
   for (bool avail : {false, true})
     for (bool rev : {false, true})
       for (bool on : {false, true}) {
@@ -225,4 +216,34 @@ TEST(AlwaysOnLateral, TheGateTruthTable)
         EXPECT_TRUE(lateralActuationAllowed(true, on, c)) << "controls_allowed must imply actuation-allowed — "
                                                              "`vis.bag_io.lateral_actuation_on` ORs on it";
       }
+}
+
+/** The car is chosen by name, and an unknown name must not fall back to a car we happen to have:
+ *  guessing the make wrong is guessing the CAN layout wrong, and a frame built for the wrong layout
+ *  still means something on the bus it is sent to. */
+TEST(CarPlatformFactory, KnownNameBuildsAndUnknownRefuses)
+{
+  adas::platform::CarPlatformOptions opts;
+
+  for (const std::string& name : adas::platform::knownCarPlatforms()) {
+    auto car = adas::platform::makeCarPlatform(name, opts);
+    ASSERT_NE(car, nullptr) << name << " is advertised as known";
+    EXPECT_NE(car->dbcAssetName(), nullptr) << name << " must say which CAN database decodes it";
+  }
+
+  EXPECT_EQ(adas::platform::makeCarPlatform("", opts), nullptr);
+  EXPECT_EQ(adas::platform::makeCarPlatform("honda_civic", opts), nullptr);
+  EXPECT_EQ(adas::platform::makeCarPlatform("vw_golf_7", opts), nullptr) << "a near miss is still a miss";
+}
+
+/** The steering envelope reaches the controller through the neutral interface, not through the brand. */
+TEST(CarPlatformFactory, SteerLimitsComeThroughTheInterface)
+{
+  auto car = adas::platform::makeCarPlatform("vw_golf_7_mqb", {});
+  ASSERT_NE(car, nullptr);
+  const adas::platform::SteerLimits lim = car->steerLimits();
+  EXPECT_EQ(lim.maxTorqueCNm, 300);
+  EXPECT_EQ(lim.stepFrames, 2);
+  EXPECT_GT(lim.deltaDownPerStep, lim.deltaUpPerStep) << "releasing the rack is always safe, so it may be faster";
+  EXPECT_GT(lim.driverAllowanceCNm, 0);
 }

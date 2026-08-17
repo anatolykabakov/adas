@@ -1,13 +1,14 @@
 #include "adas/utils/online_localizer.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace adas {
-
 OnlineLocalizer::OnlineLocalizer(double wheelbase, double gps_noise_pos, double gps_update_interval,
                                  bool imu_every_step)
   : ekf_(wheelbase, gps_noise_pos, 0.05)
   , wheelbase_(wheelbase)
+  , gps_noise_pos_(gps_noise_pos)
   , gps_update_interval_(gps_update_interval)
   , imu_every_step_(imu_every_step)
 {
@@ -90,47 +91,100 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
   }
 
   if (yaw_seeded_ && cam_yaw_rate && std::abs(v) > 1.0) {
-    double w = *cam_yaw_rate;
-    if (invert_cam_yaw_rate)
-      w = -w;
+    // The camera measures yaw rate in its own sign convention, which is the opposite of ours.
+    const double w = -*cam_yaw_rate;
     if (std::abs(w) < 1.5 && std::abs(w - yr_bicycle) < imu_agree_rad_s) {
       ekf_.updateCamOdoYawRate(w, cam_odo_R);
     }
   }
 
   t_ += dt;
-  const bool gps_new = gps && gps->valid && (gps->timestamp_us <= 0 || gps->timestamp_us > last_gps_msg_us_);
+  bool gps_new = gps && gps->valid && (gps->timestamp_us <= 0 || gps->timestamp_us > last_gps_msg_us_);
+  if (gps_new && max_gps_speed_mismatch_mps > 0.0 && have_last_fix_) {
+    const double dt_fix = t_ - last_fix_t_;
+    if (dt_fix > 1e-3) {
+      const double implied = std::hypot(gps->x - last_fix_x_, gps->y - last_fix_y_) / dt_fix;
+      if (std::abs(implied - std::abs(speed_mps)) > max_gps_speed_mismatch_mps) {
+        ++gps_unphysical_count;
+        gps_new = false;
+      }
+    }
+  }
+  if (gps_new) {
+    last_fix_x_ = gps->x;
+    last_fix_y_ = gps->y;
+    last_fix_t_ = t_;
+    have_last_fix_ = true;
+  }
+
   if (gps_new && (t_ - last_gps_t_) >= gps_update_interval_) {
     if (gps->timestamp_us > 0)
       last_gps_msg_us_ = gps->timestamp_us;
 
-    if (!yaw_seeded_ && gps->course_valid && use_gps_course)
+    if (!yaw_seeded_ && gps->course_valid)
       snapYaw(gps->yaw_enu);
 
-    // With position off the filter is dead reckoning: no update, and no reseed either, so the pose is
-    // whatever the yaw-rate chain and the wheel speed make of it. That is the point of the switch.
-    const auto pos = use_gps_position ? ekf_.updateGps(gps->x, gps->y, 25.0, 50.0) : VehicleEKF::GpsPosResult::Accepted;
-    if (pos != VehicleEKF::GpsPosResult::Rejected) {
+    if (pending_agree_ > 0 && std::hypot(gps->x - pending_x_, gps->y - pending_y_) > reseed_agree_radius_m)
+      pending_agree_ = 0;
+    pending_x_ = gps->x;
+    pending_y_ = gps->y;
+    ++pending_agree_;
+    // Agreeing fixes is a standstill condition and never holds at 25 m/s. The second route is time: a
+    // position rejected for longer than `pos_reseed_hold_s` in a row is no longer a receiver outlier.
+    const bool stuck_far = pos_bad_since_ > 0.0 && (t_ - pos_bad_since_) >= pos_reseed_hold_s;
+    const bool may_reseed = pending_agree_ >= reseed_agree_count || stuck_far;
+
+    const double acc = gps->accuracy_m > 0.0 ? gps->accuracy_m : 0.0;
+
+    const bool acc_usable = acc <= 0.0 || acc <= max_gps_accuracy_m;
+    const double max_innov = acc > 0.0 ? std::clamp(2.0 * acc, 10.0, 30.0) : 25.0;
+    const double reseed_innov = std::max(3.0 * max_innov, reseed_agree_radius_m * 4.0);
+    // The reported accuracy *is* the position noise, whenever the receiver states it.
+    const double pos_R = acc > 0.0 ? acc * acc : gps_noise_pos_ * gps_noise_pos_;
+
+    const bool use_pos = acc_usable;
+    if (!acc_usable)
+      ++gps_rejected_accuracy_;
+    const auto pos = use_pos ? ekf_.updateGps(gps->x, gps->y, max_innov, reseed_innov, may_reseed, pos_R) :
+                               VehicleEKF::GpsPosResult::Rejected;
+    if (pos == VehicleEKF::GpsPosResult::Rejected) {
+      // Only count against usable fixes: rejecting a bad one is caution, not divergence.
+      if (acc_usable && pos_bad_since_ <= 0.0)
+        pos_bad_since_ = t_;
+    } else {
+      pos_bad_since_ = 0.0;
       last_gps_t_ = t_;
-
-      if (gps->course_valid) {
-        if (use_gps_course) {
-          const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
-          if (pos == VehicleEKF::GpsPosResult::Reseeded || yaw_err > 0.5) {
-            snapYaw(gps->yaw_enu);
-          } else {
-            ekf_.updateGpsYaw(gps->yaw_enu, 0.05);
-          }
-        }
-        if (use_gps_velocity)
-          ekf_.updateGpsVel(gps->vx, gps->vy, gps_vel_R);
-      }
-
       if (pos == VehicleEKF::GpsPosResult::Reseeded) {
         odom_x_ = ekf_.x();
         odom_y_ = ekf_.y();
         odom_yaw_ = ekf_.yaw();
       }
+    }
+
+    // GPS course and velocity do not depend on whether the position was accepted. The velocity vector's
+    // direction is trustworthy on a 10 m fix, and it stays trustworthy when the position is rejected on
+    // innovation — yet the course used to be discarded along with it. That made a funnel: heading error
+    // pushed the position outside the innovation gate, the gate closed, and the very course correction
+    // that would have fixed it stopped arriving. This is how 62° accumulate over 320 s on a healthy
+    // receiver.
+    if (gps->course_valid) {
+      const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
+      if (yaw_err > yaw_snap_err_rad) {
+        if (yaw_bad_since_ <= 0.0)
+          yaw_bad_since_ = t_;
+      } else {
+        yaw_bad_since_ = 0.0;
+      }
+      // Snap while moving: a disagreement past the threshold that persists longer than
+      // `yaw_snap_hold_s` is a diverged state, not a manoeuvre. No standstill is required for it.
+      const bool held_wrong = yaw_bad_since_ > 0.0 && (t_ - yaw_bad_since_) >= yaw_snap_hold_s;
+      if (pos == VehicleEKF::GpsPosResult::Reseeded || (yaw_err > yaw_snap_err_rad && may_reseed) || held_wrong) {
+        snapYaw(gps->yaw_enu);
+        yaw_bad_since_ = 0.0;
+      } else {
+        ekf_.updateGpsYaw(gps->yaw_enu, 0.05);
+      }
+      ekf_.updateGpsVel(gps->vx, gps->vy, gps_vel_R);
     }
   }
 

@@ -26,7 +26,7 @@
 ## B — офлайн-управление
 
 ### B1 Перебор Pure Pursuit
-`bag_config_sweep.py` по `pp_*`. Парето |CTE| против |$\Delta$SWA|.
+`bag/bag_config_sweep.py` по `pp_*`. Парето |CTE| против |$\Delta$SWA|.
 **Результат:** точка изгиба, которую вы бы поставили, и почему.
 
 ### B2 Чувствительность к задержке
@@ -54,8 +54,8 @@
 ### C4 FCW / AEB / LDW
 Прочитайте главу [про предупреждения](../Safety/Warnings.md). Прогоните юнит-тесты, задевающие `test_safety_warn`, затем:
 ```bash
-PYTHONPATH=app/src/main/scripts \
-  python3 app/src/main/scripts/bag_safety_warn.py adas_logs/<session>
+PYTHONPATH=scripts \
+  python3 scripts/bag/bag_safety_warn.py adas_logs/<session>
 ```
 **Результат:** таблица эпизодов и одно ложное срабатывание, которое правила с гейтами корректно подавляют (или объяснение, почему по этому бегу FCW показать нельзя).
 

@@ -3,7 +3,6 @@
 #include <cmath>
 
 namespace adas {
-
 VehicleEKF::VehicleEKF(double wheelbase_, double gps_noise_pos, double imu_noise_yaw_rate) : wheelbase(wheelbase_)
 {
   Q_.setZero();
@@ -45,8 +44,6 @@ void VehicleEKF::predict(double v_measured, double steering_angle, double dt)
   if (have_model)
     yaw_rate_model = v_measured * std::tan(steering_angle) / wheelbase;
 
-  // Which yaw rate advances heading: the state (random walk, corrected by the gyro) or the bicycle
-  // model. See `setYawRateIsAState` for why the model is the wrong thing to trust on this car.
   const double yaw_rate_used = yaw_rate_is_state_ ? state_(4) : yaw_rate_model;
 
   state_(0) = x + v * std::cos(yaw) * dt;
@@ -67,13 +64,8 @@ void VehicleEKF::predict(double v_measured, double steering_angle, double dt)
   P_ = F * P_ * F.transpose() + Q_;
   ++prediction_count;
 
-  // The model is information, just weak information. Folding it in here keeps the filter usable when
-  // the gyro is invalid and CAN still reports steering — the case the old overwrite handled by
-  // accident and this branch handles on purpose.
   if (yaw_rate_is_state_ && have_model)
     applyYawRateUpdate(yaw_rate_model, R_model_, YawRateSource::BicycleModel);
-  // The wheel speed is a good measurement, just a scaled one. As a measurement it leaves room for GPS
-  // velocity to matter; as an assignment it erased it twenty times per GPS sample.
   if (speed_is_state_)
     applySpeedUpdate(v_measured, R_wheel_);
 }
@@ -98,12 +90,12 @@ void VehicleEKF::applySpeedUpdate(double v_meas, double R)
 }
 
 VehicleEKF::GpsPosResult VehicleEKF::updateGps(double gps_x, double gps_y, double max_innovation,
-                                               double reseed_innovation)
+                                               double reseed_innovation, bool allow_reseed, double R_pos)
 {
   const Vec2 innov(gps_x - state_(0), gps_y - state_(1));
   const double mag = innov.norm();
 
-  if (mag > reseed_innovation || (mag > max_innovation && consecutive_gps_rejects_ >= 4)) {
+  if (allow_reseed && (mag > reseed_innovation || (mag > max_innovation && consecutive_gps_rejects_ >= 4))) {
     state_(0) = gps_x;
     state_(1) = gps_y;
     P_(0, 0) = std::max(P_(0, 0), 25.0);
@@ -125,8 +117,10 @@ VehicleEKF::GpsPosResult VehicleEKF::updateGps(double gps_x, double gps_y, doubl
   H(0, 0) = 1.0;
   H(1, 1) = 1.0;
 
-  // Soften R when innovation is large but still accepted.
   Mat2 R = R_gps_;
+  if (R_pos > 0.0) {
+    R = Mat2::Identity() * R_pos;
+  }
   if (mag > 0.5 * max_innovation) {
     const double scale = (mag / max_innovation) * (mag / max_innovation);
     R *= std::max(1.0, 4.0 * scale);
@@ -156,16 +150,14 @@ bool VehicleEKF::updateGpsYaw(double yaw_enu, double R_yaw, bool force)
   if (!(R_yaw > 0.0) || !std::isfinite(yaw_enu))
     return false;
   const double innov = normalizeAngle(yaw_enu - state_(2));
-  // Gate wild course jumps (e.g. GPS bearing glitch), unless caller forces snap path.
   if (!force && std::abs(innov) > 1.2)
-    return false;  // ~70°
+    return false;
 
   const double S = P_(2, 2) + R_yaw;
   if (std::abs(S) < 1e-12)
     return false;
   const double K = P_(2, 2) / S;
   state_(2) = normalizeAngle(state_(2) + K * innov);
-  // Joseph-lite on yaw variance + cross-cov shrinkage.
   for (int i = 0; i < 5; ++i) {
     if (i == 2)
       continue;

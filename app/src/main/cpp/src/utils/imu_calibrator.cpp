@@ -10,7 +10,6 @@
 #endif
 
 namespace adas {
-
 ImuCalibrator::ImuCalibrator(double speed_threshold_mps, int min_samples, int max_buffer, bool invert_yaw_rate)
   : speed_threshold_mps_(speed_threshold_mps)
   , min_samples_(std::max(8, min_samples))
@@ -51,15 +50,13 @@ Mat3 ImuCalibrator::rotationFromMountRpy(double roll_deg, double pitch_deg, doub
 Mat3 ImuCalibrator::rotationFromGravityKeepingHeading(const Vec3& accel, const Mat3& heading_ref)
 {
   const Mat3 from_gravity = rotationFromGravity(accel);
-  // Both rotations agree about where down is; they differ by a rotation about it. Take that difference out
   // of `from_gravity` and put the reference's heading back in.
   const Vec3 down(0.0, 0.0, 1.0);
   const Vec3 fwd_ref = heading_ref.transpose() * Vec3(1.0, 0.0, 0.0);
-  // Project the reference forward axis into the plane gravity defines, expressed in the gravity frame.
   Vec3 fwd_in_gravity = from_gravity * fwd_ref;
   fwd_in_gravity -= fwd_in_gravity.dot(down) * down;
   if (fwd_in_gravity.norm() < 1e-6)
-    return from_gravity;  // reference forward is straight down: nothing to preserve
+    return from_gravity;
   fwd_in_gravity.normalize();
   const double heading = std::atan2(fwd_in_gravity.y(), fwd_in_gravity.x());
   Mat3 unspin = Mat3::Identity();
@@ -77,7 +74,6 @@ Mat3 ImuCalibrator::rotationFromGravity(const Vec3& accel)
   if (n < 1e-6)
     return Mat3::Identity();
 
-  // Rotate measured gravity direction onto vehicle +down (-Z).
   return Eigen::Quaterniond::FromTwoVectors(accel / n, Vec3(0.0, 0.0, -1.0)).toRotationMatrix();
 }
 
@@ -101,7 +97,6 @@ void ImuCalibrator::tryLockOrientation()
   for (const auto& a : accel_buf_)
     sum_a += a;
   const Vec3 mean_a = sum_a / static_cast<double>(accel_buf_.size());
-  // Keep the heading: gravity does not measure it, and overwriting it here used to discard the prior's.
   R_ = has_prior_ ? rotationFromGravityKeepingHeading(mean_a, R_) : rotationFromGravity(mean_a);
 
   Vec3 sum_g = Vec3::Zero();
@@ -154,8 +149,6 @@ std::optional<double> ImuCalibrator::push(const RawImuSample& raw)
 
   if (!has_prior_ && !orientation_locked_)
     return std::nullopt;
-  // Lateral specific force, for the road-roll estimator. Recorded on every accepted sample so it stays in
-  // step with the yaw rate returned below; meaningless without a heading, which `hasHeading` reports.
   last_lat_accel_ = (R_ * accel).y();
   return apply(gyro);
 }

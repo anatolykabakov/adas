@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ai.flow.adas;
+package adas.proto;
 
 // Panda device health status
 message PandaHealth {
@@ -63,4 +63,9 @@ message PandaHealth {
     // PandaService is the only place that knows both halves, so it publishes the answer instead of leaving
     // every consumer to re-derive it.
     bool lat_actuation_allowed = 27;
+
+    // Зажигание после «липкого» фильтра по напряжению, а не сырые ignition_line/ignition_can. Считает
+    // его только супервизор, который живёт рядом с драйвером, поэтому ответ публикуется, а не
+    // выводится каждым потребителем заново — вывести его из сырых полей нельзя.
+    bool ignition = 28;
 }

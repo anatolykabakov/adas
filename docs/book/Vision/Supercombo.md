@@ -1,7 +1,10 @@
 # Supercombo on Device
 
 We want the phone to turn a windshield camera frame into the `vision/lanes` contract from the [overview](./Overview.md).
-The network is a single ONNX model from the openpilot / flowpilot family (typically **v0.8.x**, output width 6472 in our build). Inference runs in **Java ONNX Runtime** — not thrneed / SNPE.
+The network is a single model from the openpilot / flowpilot family — **supercombo 0.9.7**, seven inputs, output
+width 6504 — and it ships twice: as `assets/supercombo.onnx` (fp32) and as `assets/supercombo.thneed`, the same
+network in fp16 for the GPU, generated from that same ONNX. Whichever runner is selected, the network is the
+same one, which is what makes the two paths comparable at all.
 
 ## Step 1: put the frame into the geometry the model expects
 
@@ -14,8 +17,10 @@ remount does to it, are the subject of
 Two consequences to carry into this chapter:
 
 * the model sees a *derived* image, so its output inherits every calibration error upstream;
-* the warp is not free. It costs 7 ms at the median and 35.7 ms at p95, and that tail is exactly where the
-  reference ages past 150 ms.
+* the warp is not free. It used to cost 7 ms at the median and 35.7 ms at p95 on the CPU, and that tail was
+  exactly where the reference aged past 150 ms. It now runs as an OpenCL kernel: **4.6 ms median, 10.8 ms at
+  p95**. The first frame after startup is computed both ways and compared bit-for-bit, because a wrong warp
+  does not fail — it hands the network a plausible picture of a different road.
 
 ### What happens to one frame
 
@@ -25,7 +30,7 @@ For each accepted camera frame:
 1. Bitmap + `capture_ts` (time of exposure / delivery).
 2. `ModelCalibWarp` → model input **$512\times 256$** (medmodel-compatible path).
 3. Temporal stack + RNN state (two-frame context).
-4. `OrtSession.run` → raw vector; record `infer_duration_ms`, `infer_ts`.
+4. the selected runner executes the network → raw vector; record `infer_duration_ms`, `infer_ts`.
 5. Parse heads → lane lines / edges, plan (MHP → best hypothesis), camera odometry, optional long.
 6. Publish `vision/lanes` (optionally stash full `model_out` in the bag).
 
@@ -35,55 +40,130 @@ When the pipeline is busy, **new frames are dropped**. Measured Hz falls.
 That is a vision / scheduling problem, not an invitation to raise MPC CTE weights.
 ```
 
-## Step 2: run it, and decide how precisely
+## Step 2: run it, on the GPU or on the CPU
 
-Inference is `OrtSession.run` on Android ONNX Runtime — not thneed or SNPE, which is why the `.thneed`
-artifacts shipped by flowpilot and dragonpilot are of no use to us: they are precompiled programs for a
-Snapdragon 845 GPU tied to their runtime.
+Two runners implement the same interface, and `vision.model_runner` picks one:
 
-The execution provider is chosen with a fallback chain: NNAPI in half precision if asked, then plain NNAPI,
-then CPU. Each attempt builds fresh session options, because options cannot be reused after a failed
-`createSession`.
+| runner | what it is | inference |
+|---|---|---:|
+| `SupercomboThneedRunner` | supercombo 0.9.7 in fp16, executed on the GPU through OpenCL | **17.6 ms** |
+| `SupercomboOnnxRunner` | the same network in fp32 through ONNX Runtime | 48.5 ms |
 
-Half precision is worth about 15–20 ms of the 45.6 ms, which is the single largest lever left in the
-pipeline. It is **off by default**, and the reason is a measurement rather than caution: converting the whole
-model to fp16 — a stricter test than NNAPI's per-node relaxation — moved the lane centre by 0.027 m and the
-plan offset by 0.037 m, while line probabilities went *up* and the σ tail shrank. Not a degradation. But
-per-frame disagreement was 0.05 m median and 0.20 m p95 on the lane centre, and there is another lateral
-change queued, so it waits its turn as a single-variable experiment.
+### What a `.thneed` actually is
+
+Not a model and not a weight format: **a recorded run of a network on the GPU**. The file is a JSON header
+followed by blobs, and the JSON lists the kernels in the order they were launched, their arguments, the
+buffers and images they touch, and either the kernels' OpenCL **source** or their compiled **binaries**.
+Replaying it means re-issuing that recorded sequence.
+
+Two beliefs about it are worth unlearning early, because both are stated in upstream READMEs and both are
+false here:
+
+* *"thneed is an SNPE accelerator / needs Qualcomm's licence."* It does not. The chain is
+  ONNX → tinygrad compiles it into OpenCL kernels → one run is recorded → the recording is the file.
+* *"thneed only works on Adreno."* Upstream openpilot replays at the level of Adreno's KGSL driver ioctls,
+  which is where that belief comes from. Our loader does not: that whole block is behind `#ifndef QCOM2` and
+  is not compiled, and there is not one `kgsl` string in `libthneedrunner.so`. What the fast path actually
+  needs is an OpenCL the app can reach, `cl_khr_fp16`, images over buffers, and a row pitch the driver
+  accepts. It has been run on Mali.
+
+### Where our file comes from
+
+`scripts/tools/thneed_from_onnx.py` builds it from `assets/supercombo.onnx`, and
+`scripts/tools/thneed_check.py` replays the result on the host's OpenCL and compares it against a reference
+the generator writes beside it. On the shipped file that deviation is **zero, to the last bit**.
+
+Building it yourself is four commands, and `docs/THNEED.md` has the details:
 
 ```bash
-# The offline check, on frames where both lane lines are visible. No drive needed.
-cd app/src/main/scripts
-python3 bag_fp16_ab.py ../../../../adas_logs/<session> --n 200 --t0 900 --t1 1100
+cd scripts
+python3 tools/thneed_from_onnx.py ../app/src/main/assets/supercombo.onnx --half -o out.thneed
+python3 tools/thneed_check.py out.thneed --ref out.thneed.ref.npy
+adb push out.thneed /sdcard/adas_models/supercombo.thneed
+python3 tools/model_device_probe.py --iters 50
 ```
+
+The generator started at 71 ms per frame and finished at 23.9. What bought the time, in order:
+
+| step | result | why |
+|---|---|---|
+| textures instead of buffers | 74 → 39.7 ms | `IMAGE=2` in tinygrad: convolutions read `image2d_t` through the texture cache |
+| folding the weight-prep kernels | 39.7 → 29.5 ms | 319 of 340 elementwise kernels re-shuffled **weights** on every single frame |
+| fp16 | ≈ −19 % | half the weight traffic over the bus |
+| the warp moved to the GPU | prep 12.1 → 3.6 ms | 1.5 million independent bilinear samples, which is what a GPU is for |
+
+### Precision, and why the ONNX asset is fp32 while the thneed is fp16
+
+Because **ONNX Runtime computes an fp16 model wrongly on ARM**, silently. Same file, same zero inputs:
+
+| where | mean | std |
+|---|---:|---:|
+| desktop ORT, CPU | −1.2455 | 3.2799 |
+| phone, CPU | −7.6056 | 133.88 |
+| phone, NNAPI | −7.6056 | 133.88 |
+
+No error, no warning: the session is created, it runs, and it returns plausible numbers. With fp32 the
+phone's CPU is correct (−1.2458 / 3.2807); NNAPI is wrong even then (−0.1234 / 7.79). So the fallback path
+carries fp32 — at the cost of a 103 MB asset — and the generator converts to fp16 itself for the GPU path.
+
+### Nothing is trusted because it loaded
+
+That last table is the reason for a rule that now runs everywhere in the vision path: **a component that
+computes the wrong thing does not fail, it lies fluently.** So each runner, and each execution provider ORT
+manages to build, is run once on zero inputs and its output signature is compared against a value measured
+offline:
+
+```
+XNNPACK: zero-input mean=-1.2458 std=3.2807 (expected -1.2455 / 3.2799) — accepted
+NNAPI:   zero-input mean=-0.1234 std=7.7858 (expected -1.2455 / 3.2799) — REJECTED, computes something else
+ThneedRunner: zero-input mean=-1.2505 std=3.2742 (expected -1.2498 / 3.2745) — accepted
+```
+
+NNAPI eliminated itself this way on all three phones tested, without a line of device-specific code. If the
+thneed check fails, the app falls back to ONNX rather than steering by a model computing who-knows-what.
 
 ### What healthy looks like
 
-Medians from a 28-minute night run at 30 fps, no traffic YOLO (`2026_08_06_00_36_42`):
+Medians from a 29-minute night run at 30 fps, no traffic YOLO (`2026_08_16_23_59_45`), OnePlus 7T:
 
-| quantity | median | p95 |
-|---|---:|---:|
-| frame prep (warp) | 7.0 ms | 35.7 |
-| ORT `infer` | **45.6 ms** | 53.8 |
-| e2e capture → model output | 54 ms | 81 |
-| capture → steering command | 79 ms | 111 |
-| publish rate | **13.24 Hz** | — |
+| quantity | median | p95 | was, on ONNX |
+|---|---:|---:|---:|
+| frame prep (warp, GPU) | 4.6 ms | 10.8 | 7.0 / 35.7 |
+| `infer` | **17.6 ms** | 18.9 | 45.6 / 53.8 |
+| e2e capture → model output | 22 ms | 29 | 54 / 81 |
+| capture → steering command | 52 ms | 69 | 79 / 111 |
+| publish rate | **30.01 Hz** | — | 13.24 Hz |
+| frames dropped | **0** in 52 690 | — | — |
 
-Two ways to read those. The medians say the pipeline is healthy. The p95 of the warp — five times its
-median — says the tail is where trouble lives, and it is the same frames on which the reference ages past
-150 ms.
+Read the last row first. At 13 Hz the pipeline was dropping frames whenever inference ran long, and the
+lateral metronome inherited the jitter; at 30 Hz the camera period is the only thing setting the rate.
 
 If you see inference at 300–500 ms and 2–3 Hz, that is **thermal or CPU contention**, not "the network is
 usually that slow". Enabling the traffic YOLO detector does the same thing on purpose: it competes for the
 same SoC, so turn it off before comparing controllers.
 
-```{admonition} Vision stalls are still an open item
+### The same network on three phones
+
+| | OnePlus 7T | Xiaomi 14 | HONOR CRT-LX1 |
+|---|---|---|---|
+| GPU | Adreno 640 | Adreno 750 | Mali-G52 MC2 |
+| whole frame, thneed | 23.9 ms | **12.4 ms** | 153.5 ms |
+| whole frame, ONNX | 53.9 ms | 41.5 ms | 183.7 ms |
+| rate | 41.9 Hz | 80.6 Hz | **6.5 Hz** |
+
+The Mali entry is the useful one. The fast path does run there — the output signature matches, so it is
+computing the right thing — and it is still four times too slow to drive on, because a Mali-G52 MC2 is two
+compute cores. "It runs" and "it is fast enough" are separate questions, and only a measurement answers
+either; `docs/NEW_PHONE.md` is the procedure.
+
+```{admonition} Vision stalls: not reproduced since, not explained either
 :class: warning
 On a daytime run the reference was older than 300 ms for 15.9 % of the time, with one **75-second** hole,
-while CAN held its 10 ms and the timers held theirs — so neither CPU nor scheduling explains it. The same
-route at night ran clean (`frame_dt` max 119 ms, zero stale frames). Heat is the leading explanation and not
-a proven one; the frame-arrival stamps added in 2026-08 exist to settle it.
+while CAN held its 10 ms and the timers held theirs — so neither CPU nor scheduling explained it. Heat was
+the leading candidate and never a proven one. The frame-arrival stamps added in 2026-08 exist to settle it
+the next time it happens: they separate a late-arriving frame from a slow inference, and on the runs since
+the model moved to the GPU both read 0 ms with zero frames dropped. That is absence of the symptom on a
+pipeline whose inference budget is a third of what it was — not a diagnosis of the original stall.
 ```
 
 ## Step 3: read the output vector
@@ -92,7 +172,8 @@ a proven one; the frame-arrival stamps added in 2026-08 exist to settle it.
 The model returns one flat float array. Nothing in it is labelled, and the layout is the single most
 misread thing in this project — so this section is a runnable map of it.
 
-For our build (`sc_v0.8.12`, width 6472; the 6409 build has the same prefix):
+For supercombo 0.9.7, width 6504 (the 0.8.x builds of width 6472 and 6409 share the whole prefix — only the
+tail moves):
 
 | slice | contents |
 |---|---|
@@ -100,7 +181,18 @@ For our build (`sc_v0.8.12`, width 6472; the 6409 build has the same prefix):
 | `[4955 : 5483)` | **LANES** — 4 lines: 264 floats of means, then 264 of log-sigmas |
 | `[5483 : 5491)` | lane probability logits, 8 of them |
 | `[5491 : 5755)` | **ROAD EDGES** — 2 edges: 132 means, then 132 log-sigmas |
-| `[5755 : …)` | lead, desire, meta, pose, GRU state |
+| `[5755 : 5948)` | lead, desire, meta |
+| `[5948 : …)` | **pose** — the model's own translation and rotation |
+| `[5990 : …)` | **desired curvature** — the head 0.9.x added |
+| `[5992 : 6504)` | 512 **features** — fed straight back in on the next frame |
+
+That tail is where a version mismatch bites. The offsets differ between generations, and reading 0.9.x pose
+at the 0.8.x offset returns numbers that are finite, smooth and wrong — which is exactly what happened here
+once, and is why both runners now carry the same network rather than one each.
+
+The last two entries are the recurrence, and they are the runner's job, not the model's: after each frame the
+512 features shift by one frame inside `features_buffer`, and `prev_desired_curv` shifts by one value. Get
+that wrong and the model still runs — it just remembers a past that never happened.
 
 Two traps live in there.
 
@@ -156,7 +248,7 @@ X_IDXS = np.array([0.0, 0.1875, 0.75, 1.6875, 3.0, 4.6875, 6.75, 9.1875, 12.0, 1
                    168.75, 180.1875, 192.0])
 
 # Synthetic output: a 3.5 m lane, sigma growing with range, so the indexing can be checked round-trip.
-out = np.zeros(6472)
+out = np.zeros(6504)
 for i, y_off in enumerate((-5.25, -1.75, 1.75, 5.25)):        # farLeft, left, right, farRight
     block = np.empty(66)
     block[0::2] = y_off                                        # y
@@ -230,10 +322,17 @@ print(f"chosen hypothesis {best}, y at 30 m = {np.interp(30.0, px, py):+.2f} m, 
 
 ```{admonition} Model output is shape, not metres
 :class: warning
-Camera odometry from this same network, compared against wheel speed, gives a scale of 0.888 — it reads
-distances about 11 % short. Its *planned speed* is worse: `plan_v0 / v_ego` measured 0.678, and the ratio
-moves with speed, so no single constant repairs it. That is why the longitudinal planner does not use the
-model's speed as a target at all.
+Camera odometry from this same network, compared against wheel speed, reads short. On the current network
+the factor is **0.686**, and the interesting part is how flat it is: across frame intervals from 28 to 50 ms
+it stays within 0.686–0.688, with a correlation against `dt` of +0.005.
+
+That flatness killed the obvious explanation. A pose expressed per-frame rather than per-second would scale
+with the frame interval, and 20/30 = 0.667 is temptingly close to the measured factor — but then the ratio
+would move with `dt`, and it does not. The cause is still unknown (task #37), the yaw sign is inverted on top
+of it, and this is why the longitudinal planner does not use the model's speed as a target at all.
+
+The lesson generalises past this bug: a constant that matches a plausible ratio is not evidence. The test
+that settles it is whether the constant *moves* when the thing it supposedly comes from moves.
 ```
 
 ## Step 4: the rate you actually get
@@ -244,21 +343,26 @@ $1000 / \text{work}$.
 The pipeline holds a one-slot buffer of the newest frame and picks it up the instant it is free, so it never
 idles by choice — but a cycle can only start when a frame has arrived. The rate is therefore quantised to
 whole camera periods, $f = 1 / (T \lceil W/T \rceil)$, and [Latency](../Latency/Overview.md) works through
-what that does to optimisation decisions. Measured: 44 ms period with 59 ms of work gives 11.29 Hz, exactly
-two camera frames per processed one.
+what that does to optimisation decisions.
+
+That formula is the reason the GPU work mattered as much as it did. With a 33 ms camera period, 59 ms of work
+gave 11.29 Hz — two camera frames per processed one — and shaving 10 ms off would have given exactly the same
+11.29 Hz. Only crossing *under* the period changes anything, and crossing it is worth a factor of two at
+once: 22 ms of work at a 33 ms period is 30.01 Hz measured, one frame in one frame out.
 
 ```{admonition} Drop policy
 :class: warning
 When the pipeline is busy, the pending frame is **overwritten**, not queued. Measured Hz falls. That is a
 vision and scheduling problem, not an invitation to raise MPC CTE weights. Since 2026-08-06 the bag records
 `frames_dropped`, `submit_ts_ms` and `pickup_ts_ms`, so a late frame and a slow inference are finally
-distinguishable.
+distinguishable — on the run above, both read 0 and nothing was dropped in 52 690 frames.
 ```
 
 ## Step 5: what control actually consumes
 
 
-After `TopicConvert`, `LaneKeepService` sees a polyline (+ chassis). It does **not** know whether the path came from Supercombo, a map, or a replay script. Therefore:
+After `proto_convert`, the `Planner` service sees a polyline (+ chassis), and `Control` after it sees only a
+curvature. Neither **knows** whether the path came from Supercombo, a map, or a replay script. Therefore:
 
 1. Validate lines and latency **first**.
 2. Only then tune `pp_*` / MPC / `fp` parameters.
@@ -275,12 +379,15 @@ Optional traffic YOLO shares the phone with ORT — enable it for demos, **disab
 ## Code to skim
 
 
-`SupercomboOnnxRunner`, `ModelCalibWarp`, parse helpers under `scripts/core/supercombo_*.py`, overlay in `LaneOverlayView`.
+`SupercomboThneedRunner` and `SupercomboOnnxRunner` (`app/src/main/java/adas/app/vision/`), `ModelCalibWarp`
+and the OpenCL warp kernel in `app/src/main/cpp/src/thneed/thneed_runner.cpp`, the generator
+`scripts/tools/thneed_from_onnx.py` and its checker `thneed_check.py`, parse helpers under
+`scripts/core/supercombo_*.py`, overlay in `LaneOverlayView`.
 
 ## Exercise
 
 
-1. On a bag, plot vision rate and `infer_ms` vs time (`latency.py` / PlotJuggler).
+1. On a bag, plot vision rate and `infer_ms` vs time (`tools/latency.py` / PlotJuggler).
 2. Mark windows with Hz $< 9$. Do **not** use them for controller Pareto sweeps.
 3. Optional: re-run offline parse on one JPEG with the shipped warp and compare lane $y$ at $x=10$ m to the logged polyline.
 

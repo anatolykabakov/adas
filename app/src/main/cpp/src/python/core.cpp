@@ -11,7 +11,7 @@
 #include "adas/mapmatch/search.h"
 #include "adas/mapmatch/track.h"
 #include "adas/mapmatch/window_search.h"
-#include "adas/lateral/visionpilot_mpc.hpp"
+#include "adas/lateral/visionpilot_mpc.h"
 #include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/values.h"
 
@@ -21,19 +21,6 @@ PYBIND11_MODULE(core, m)
 {
   m.doc() = "";
 
-  m.def("set_mpc_cost_weights", &visionpilot::set_cost_weights, py::arg("cte_weight_base"),
-        py::arg("cte_quartic_scale"));
-
-  m.def("set_mpc_warm_start_gains", &visionpilot::set_warm_start_gains, py::arg("epsi_gain"), py::arg("ff_scale"));
-
-  m.def("set_mpc_cte_gain_base", &visionpilot::set_cte_gain_base, py::arg("base"));
-  m.def("set_mpc_cte_gain_floor", &visionpilot::set_cte_gain_floor, py::arg("floor"));
-
-  // The MQB torque limiter, exposed because a replay has no panda in the loop and the command that reaches
-  // the rack is the limited one. Comparing our unlimited torque against upstream's `actuatorsOutput` is not
-  // a comparison — the rate limit alone turns a requested 300 into a median 187 applied. Exposed rather
-  // than reimplemented in the harness: a second copy of the asymmetric up/down logic would be a second
-  // thing to keep correct.
   m.def("apply_driver_steer_torque_limits", &volkswagen::applyDriverSteerTorqueLimits, py::arg("apply_torque"),
         py::arg("driver_torque"), py::arg("apply_steer_last"));
   m.attr("STEER_MAX") = volkswagen::CarControllerParams::STEER_MAX;
@@ -204,9 +191,6 @@ PYBIND11_MODULE(core, m)
           },
           py::arg("x"), py::arg("y"), py::arg("search_m") = 200.0);
 
-  // Route ahead and its curvature — the same code the on-device `map_data` service runs, exposed so a
-  // recorded run can be replayed through it offline (`app/src/main/scripts/bag_map_data.py`). Runs that were
-  // driven before the service existed have GPS in the bag, so they can be analysed too.
   py::class_<adas::mapmatch::RouteConfig>(mm, "RouteConfig")
       .def(py::init<>())
       .def_readwrite("horizon_m", &adas::mapmatch::RouteConfig::horizon_m)
@@ -384,7 +368,20 @@ PYBIND11_MODULE(core, m)
       .def_readonly("odom_x", &adas::LocalizationPose::odom_x)
       .def_readonly("odom_y", &adas::LocalizationPose::odom_y)
       .def_readonly("ekf_x", &adas::LocalizationPose::ekf_x)
-      .def_readonly("ekf_y", &adas::LocalizationPose::ekf_y);
+      .def_readonly("ekf_y", &adas::LocalizationPose::ekf_y)
+      // Road bank and the learned parameters. Without them a replay cannot show which numbers the
+      // controller drove with — and under `use_learned_params` it drives with these, not with the config
+      // constants.
+      .def_readonly("road_roll_deg", &adas::LocalizationPose::road_roll_deg)
+      .def_readonly("road_roll_std_deg", &adas::LocalizationPose::road_roll_std_deg)
+      .def_readonly("road_roll_valid", &adas::LocalizationPose::road_roll_valid)
+      .def_readonly("learned_stiffness_factor", &adas::LocalizationPose::learned_stiffness_factor)
+      .def_readonly("learned_steer_ratio", &adas::LocalizationPose::learned_steer_ratio)
+      .def_readonly("learned_angle_offset_deg", &adas::LocalizationPose::learned_angle_offset_deg)
+      .def_readonly("learned_stiffness_std", &adas::LocalizationPose::learned_stiffness_std)
+      .def_readonly("learned_steer_ratio_std", &adas::LocalizationPose::learned_steer_ratio_std)
+      .def_readonly("learned_params_valid", &adas::LocalizationPose::learned_params_valid)
+      .def_readonly("learned_sample_count", &adas::LocalizationPose::learned_sample_count);
 
   py::class_<adas::LaneKeepOutput>(m, "LaneKeepOutput")
       .def_readonly("timestamp_us", &adas::LaneKeepOutput::timestamp_us)
@@ -407,39 +404,37 @@ PYBIND11_MODULE(core, m)
       .def_readonly("status", &adas::LaneKeepOutput::status)
       .def_readonly("controller", &adas::LaneKeepOutput::controller);
 
-  // The actuation command: what CarController would have been handed. `torque_cnm` is signed cNm before the
-  // MQB rate/driver limiter, `enabled` is the app's own lateral gate.
-  py::class_<ai::flow::adas::SteerCommand>(m, "SteerCommand")
-      .def_property_readonly("torque_cnm", &ai::flow::adas::SteerCommand::torque_cnm)
-      .def_property_readonly("enabled", &ai::flow::adas::SteerCommand::enabled)
-      .def_property_readonly("capture_ts_ms", &ai::flow::adas::SteerCommand::capture_ts_ms)
-      .def_property_readonly("vision_ts_ms", &ai::flow::adas::SteerCommand::vision_ts_ms)
-      .def_property_readonly("chassis_ts_ms", &ai::flow::adas::SteerCommand::chassis_ts_ms)
-      .def_property_readonly("publish_ts_ms", &ai::flow::adas::SteerCommand::publish_ts_ms);
+  py::class_<adas::proto::SteerCommand>(m, "SteerCommand")
+      .def_property_readonly("torque_cnm", &adas::proto::SteerCommand::torque_cnm)
+      .def_property_readonly("enabled", &adas::proto::SteerCommand::enabled)
+      .def_property_readonly("capture_ts_ms", &adas::proto::SteerCommand::capture_ts_ms)
+      .def_property_readonly("vision_ts_ms", &adas::proto::SteerCommand::vision_ts_ms)
+      .def_property_readonly("chassis_ts_ms", &adas::proto::SteerCommand::chassis_ts_ms)
+      .def_property_readonly("publish_ts_ms", &adas::proto::SteerCommand::publish_ts_ms);
 
-  py::class_<ai::flow::adas::SafetyWarnState>(m, "SafetyWarnState")
-      .def_property_readonly("timestamp", &ai::flow::adas::SafetyWarnState::timestamp)
-      .def_property_readonly("accel_ms2", &ai::flow::adas::SafetyWarnState::accel_ms2)
-      .def_property_readonly("cte_m", &ai::flow::adas::SafetyWarnState::cte_m)
-      .def_property_readonly("cte_rate_ms", &ai::flow::adas::SafetyWarnState::cte_rate_ms)
-      .def_property_readonly("epsi_rad", &ai::flow::adas::SafetyWarnState::epsi_rad)
-      .def_property_readonly("kappa", &ai::flow::adas::SafetyWarnState::kappa)
-      .def_property_readonly("lateral_valid", &ai::flow::adas::SafetyWarnState::lateral_valid)
-      .def_property_readonly("v_ego", &ai::flow::adas::SafetyWarnState::v_ego)
-      .def_property_readonly("lead_d", &ai::flow::adas::SafetyWarnState::lead_d)
-      .def_property_readonly("lead_v", &ai::flow::adas::SafetyWarnState::lead_v)
-      .def_property_readonly("lead_prob", &ai::flow::adas::SafetyWarnState::lead_prob)
-      .def_property_readonly("has_lead", &ai::flow::adas::SafetyWarnState::has_lead)
-      .def_property_readonly("ttc_s", &ai::flow::adas::SafetyWarnState::ttc_s)
-      .def_property_readonly("a_req_ms2", &ai::flow::adas::SafetyWarnState::a_req_ms2)
-      .def_property_readonly("threat_valid", &ai::flow::adas::SafetyWarnState::threat_valid)
-      .def_property_readonly("driver_steering", &ai::flow::adas::SafetyWarnState::driver_steering)
-      .def_property_readonly("lane_anchored", &ai::flow::adas::SafetyWarnState::lane_anchored)
-      .def_property_readonly("fcw", &ai::flow::adas::SafetyWarnState::fcw)
-      .def_property_readonly("aeb", &ai::flow::adas::SafetyWarnState::aeb)
-      .def_property_readonly("lldw", &ai::flow::adas::SafetyWarnState::lldw)
-      .def_property_readonly("rldw", &ai::flow::adas::SafetyWarnState::rldw)
-      .def_property_readonly("status", &ai::flow::adas::SafetyWarnState::status);
+  py::class_<adas::proto::SafetyWarnState>(m, "SafetyWarnState")
+      .def_property_readonly("timestamp", &adas::proto::SafetyWarnState::timestamp)
+      .def_property_readonly("accel_ms2", &adas::proto::SafetyWarnState::accel_ms2)
+      .def_property_readonly("cte_m", &adas::proto::SafetyWarnState::cte_m)
+      .def_property_readonly("cte_rate_ms", &adas::proto::SafetyWarnState::cte_rate_ms)
+      .def_property_readonly("epsi_rad", &adas::proto::SafetyWarnState::epsi_rad)
+      .def_property_readonly("kappa", &adas::proto::SafetyWarnState::kappa)
+      .def_property_readonly("lateral_valid", &adas::proto::SafetyWarnState::lateral_valid)
+      .def_property_readonly("v_ego", &adas::proto::SafetyWarnState::v_ego)
+      .def_property_readonly("lead_d", &adas::proto::SafetyWarnState::lead_d)
+      .def_property_readonly("lead_v", &adas::proto::SafetyWarnState::lead_v)
+      .def_property_readonly("lead_prob", &adas::proto::SafetyWarnState::lead_prob)
+      .def_property_readonly("has_lead", &adas::proto::SafetyWarnState::has_lead)
+      .def_property_readonly("ttc_s", &adas::proto::SafetyWarnState::ttc_s)
+      .def_property_readonly("a_req_ms2", &adas::proto::SafetyWarnState::a_req_ms2)
+      .def_property_readonly("threat_valid", &adas::proto::SafetyWarnState::threat_valid)
+      .def_property_readonly("driver_steering", &adas::proto::SafetyWarnState::driver_steering)
+      .def_property_readonly("lane_anchored", &adas::proto::SafetyWarnState::lane_anchored)
+      .def_property_readonly("fcw", &adas::proto::SafetyWarnState::fcw)
+      .def_property_readonly("aeb", &adas::proto::SafetyWarnState::aeb)
+      .def_property_readonly("lldw", &adas::proto::SafetyWarnState::lldw)
+      .def_property_readonly("rldw", &adas::proto::SafetyWarnState::rldw)
+      .def_property_readonly("status", &adas::proto::SafetyWarnState::status);
 
   py::class_<adas::CameraCalibrationState>(m, "CameraCalibrationState")
       .def_readonly("timestamp_us", &adas::CameraCalibrationState::timestamp_us)
@@ -487,13 +482,13 @@ PYBIND11_MODULE(core, m)
       .def("set_lane_keep_mpc_ema_alphas", &AdasApp::setLaneKeepMpcEmaAlphas, py::arg("kappa_alpha"),
            py::arg("epsi_alpha"), py::arg("cte_alpha"))
       .def("set_lane_keep_steer_slew_limit_deg", &AdasApp::setLaneKeepSteerSlewLimitDeg, py::arg("deg"))
-      .def("set_lane_keep_vehicle_model", &AdasApp::setLaneKeepVehicleModel, py::arg("on"),
-           py::arg("tire_stiffness_factor") = 0.64)
+      .def("set_lane_keep_tire_stiffness", &AdasApp::setLaneKeepTireStiffness, py::arg("tire_stiffness_factor"))
+      .def("set_lane_keep_vehicle_model", &AdasApp::setLaneKeepVehicleModel, py::arg("use_vehicle_model"),
+           py::arg("tire_stiffness_factor"))
       .def("set_lane_keep_fp_steer_delay_s", &AdasApp::setLaneKeepFpSteerDelayS, py::arg("seconds"))
       .def("set_lane_keep_fp_steering_rate_weight", &AdasApp::setLaneKeepFpSteeringRateWeight, py::arg("weight"))
       .def("set_lane_keep_cam_y_left_m", &AdasApp::setLaneKeepCamYLeftM, py::arg("m"))
       .def("set_lane_keep_pid_gains", &AdasApp::setLaneKeepPidGains, py::arg("kp"), py::arg("ki"), py::arg("kf"))
-      .def("set_lane_keep_recompute_setpoint", &AdasApp::setLaneKeepRecomputeSetpoint, py::arg("on"))
       .def("set_param", static_cast<bool (AdasApp::*)(const std::string&, double)>(&AdasApp::setParam), py::arg("name"),
            py::arg("value"))
       .def("set_param_str", static_cast<bool (AdasApp::*)(const std::string&, const std::string&)>(&AdasApp::setParam),
@@ -502,9 +497,6 @@ PYBIND11_MODULE(core, m)
       .def("update_params", &AdasApp::updateParams, py::arg("params"))
       .def(
           "publish_chassis",
-          // `steering_angle_deg` and `steering_pressed` are not decoration: the angle PID closes its loop on
-          // the measured steering-wheel angle and hands over to the driver on `steering_pressed`. A replay
-          // that leaves them at zero exercises the planner and silently bypasses the controller.
           [](AdasApp& self, int64_t timestamp_us, double speed_mps, double steer_rad, double yaw_rate,
              double steering_angle_deg, bool steering_pressed) {
             adas::ChassisSample c;
@@ -543,7 +535,7 @@ PYBIND11_MODULE(core, m)
       .def(
           "publish_lane_lines",
           [](AdasApp& self, py::bytes serialized) {
-            ai::flow::adas::LaneLines ll;
+            adas::proto::LaneLines ll;
             const std::string data = serialized;
             if (!ll.ParseFromString(data))
               throw std::invalid_argument("publish_lane_lines: not a LaneLines message");
@@ -568,7 +560,7 @@ PYBIND11_MODULE(core, m)
       .def(
           "publish_gps",
           [](AdasApp& self, int64_t timestamp_us, double x, double y, double speed_mps, double bearing_deg,
-             double yaw_enu, double vx, double vy, bool course_valid, bool valid) {
+             double yaw_enu, double vx, double vy, bool course_valid, bool valid, double accuracy_m, int satellites) {
             adas::GpsSample g;
             g.timestamp_us = timestamp_us;
             g.x = x;
@@ -579,12 +571,17 @@ PYBIND11_MODULE(core, m)
             g.vx = vx;
             g.vy = vy;
             g.course_valid = course_valid;
+            // The reported accuracy decides whether the filter takes the position and with what noise.
+            // Without it a replay measured a different pipeline than the car runs: the receiver on drive
+            // 2026_08_13_23_01_56 reported 10 m.
+            g.accuracy_m = accuracy_m;
+            g.satellites = satellites;
             g.valid = valid;
             self.publishGps(g);
           },
           py::arg("timestamp_us"), py::arg("x"), py::arg("y"), py::arg("speed_mps") = 0.0, py::arg("bearing_deg") = 0.0,
           py::arg("yaw_enu") = 0.0, py::arg("vx") = 0.0, py::arg("vy") = 0.0, py::arg("course_valid") = false,
-          py::arg("valid") = true)
+          py::arg("valid") = true, py::arg("accuracy_m") = 0.0, py::arg("satellites") = 0)
       .def(
           "publish_imu",
           [](AdasApp& self, int64_t timestamp_us, double yaw_rate, bool valid) {
@@ -595,6 +592,31 @@ PYBIND11_MODULE(core, m)
             self.publishImu(imu);
           },
           py::arg("timestamp_us"), py::arg("yaw_rate"), py::arg("valid") = true)
+      .def(
+          // The receiver's fix as it comes: the localization service projects latitude and longitude
+          // itself. `publish_gps` puts already-projected metres on the same topic and nothing subscribes
+          // to those — an offline run was dead reckoning, never receiving GNSS at all.
+          "publish_gps_location",
+          [](AdasApp& self, py::bytes serialized) {
+            adas::proto::GPSLocation gps;
+            const std::string data = serialized;
+            if (!gps.ParseFromString(data))
+              throw std::invalid_argument("publish_gps_location: not a GPSLocation message");
+            self.publishGpsLocation(gps);
+          },
+          py::arg("gps_bytes"))
+      .def(
+          // Raw IMU: reaches `ImuCalibrator`, and therefore yields the road bank. `publish_imu` carries
+          // an already-calibrated yaw rate, from which the calibrator cannot fix an orientation.
+          "publish_imu_data",
+          [](AdasApp& self, py::bytes serialized) {
+            adas::proto::IMUData imu;
+            const std::string data = serialized;
+            if (!imu.ParseFromString(data))
+              throw std::invalid_argument("publish_imu_data: not an IMUData message");
+            self.publishImuData(imu);
+          },
+          py::arg("imu_bytes"))
       .def("pop_messages", [](AdasApp& self) {
         py::list out;
         for (auto& msg : self.popMessages()) {

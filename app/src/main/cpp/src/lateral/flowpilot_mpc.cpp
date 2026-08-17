@@ -1,13 +1,13 @@
-#include "adas/lateral/flowpilot_mpc.hpp"
+#include "adas/lateral/flowpilot_mpc.h"
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 #include <vector>
 
 namespace adas {
 namespace flowpilot {
 namespace {
-
 constexpr double kMinSpeed = 1.0;
 constexpr double kPsiMax = 90.0 * M_PI / 180.0;
 constexpr double kRateMax = 50.0 * M_PI / 180.0;
@@ -16,6 +16,29 @@ constexpr double kInvalidCost = 20000.0;
 
 inline double clampd(double v, double lo, double hi) { return std::max(lo, std::min(hi, v)); }
 inline double lerp(double a, double b, double t) { return a + (b - a) * t; }
+
+/**
+ * \brief Locate an arc length on a polyline: the segment it falls in, and how far along it sits.
+ *
+ * \details Every reference here is sampled the same way — walk the cumulative lengths, then blend the
+ * two endpoints. Only the quantity being blended differs, so the search lives in one place: two copies
+ * of it would let the epsilon or the clamp drift apart between the position reference and the yaw one.
+ *
+ * \param[in] s Cumulative arc length, non-decreasing, at least two entries.
+ * \param[in] dist Arc length to locate [m]; clamped to the polyline.
+ * \return Index of the segment end, and the fraction in [0, 1] from its start. A degenerate segment
+ *         gives fraction 0, which pins the result to the segment start instead of dividing by zero.
+ */
+std::pair<std::size_t, double> arcLengthAt(const std::vector<double>& s, double dist)
+{
+  const std::size_t n = s.size();
+  dist = clampd(dist, 0.0, s.back());
+  std::size_t i = 1;
+  while (i + 1 < n && s[i] < dist)
+    ++i;
+  const double s0 = s[i - 1], s1 = s[i];
+  return {i, (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0};
+}
 
 }  // namespace
 
@@ -65,12 +88,7 @@ void LateralMpc::buildRefs(const std::vector<Vec2>& poly_left, double v, std::ar
     return;
 
   auto sample = [&](double dist, double& y, double& psi) {
-    dist = clampd(dist, 0.0, s_end);
-    size_t i = 1;
-    while (i + 1 < n && s[i] < dist)
-      ++i;
-    const double s0 = s[i - 1], s1 = s[i];
-    const double a = (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0;
+    const auto [i, a] = arcLengthAt(s, dist);
     y = lerp(poly_left[i - 1].y(), poly_left[i].y(), a);
     psi = lerp(heading[i - 1], heading[i], a);
   };
@@ -105,7 +123,7 @@ void LateralMpc::buildRefsWithOrientation(const std::vector<Vec2>& poly_left, do
     buildRefs(y_src, v, y_ref, psi_unused, r_unused);
   }
 
-  if (plan_yaw_left.size() >= static_cast<size_t>(N + 1) && plan_yaw_rate_left.size() >= static_cast<size_t>(N + 1)) {
+  if (plan_yaw_left.size() >= static_cast<size_t>(N) + 1 && plan_yaw_rate_left.size() >= static_cast<size_t>(N) + 1) {
     for (int i = 0; i <= N; ++i) {
       psi_ref[i] = plan_yaw_left[static_cast<size_t>(i)];
       r_ref[i] = plan_yaw_rate_left[static_cast<size_t>(i)];
@@ -129,12 +147,7 @@ void LateralMpc::buildRefsWithOrientation(const std::vector<Vec2>& poly_left, do
     return;
 
   auto interp_at = [&](double dist, const std::vector<double>& vals) {
-    dist = clampd(dist, 0.0, s_end);
-    size_t i = 1;
-    while (i + 1 < n && s[i] < dist)
-      ++i;
-    const double s0 = s[i - 1], s1 = s[i];
-    const double a = (s1 > s0 + 1e-9) ? (dist - s0) / (s1 - s0) : 0.0;
+    const auto [i, a] = arcLengthAt(s, dist);
     return lerp(vals[i - 1], vals[i], a);
   };
 
@@ -223,6 +236,50 @@ double LateralMpc::lagAdjustedCurvature(double v, const std::array<double, N + 1
   (void)rate0;
   desired = clampd(desired, kappa0 - max_kappa_rate * dt_s, kappa0 + max_kappa_rate * dt_s);
   return desired;
+}
+
+bool LateralMpc::sampleRefs(const std::vector<Vec2>& polyline_ego, double v_in,
+                            const std::vector<Vec2>& plan_poly_device, const std::vector<double>& plan_yaw_device,
+                            const std::vector<double>& plan_yaw_rate_device, std::vector<double>& y_ref_out,
+                            std::vector<double>& psi_ref_out, std::vector<double>& r_ref_out)
+{
+  if (polyline_ego.size() < 4)
+    return false;
+  const double v = std::max(v_in, kMinSpeed);
+
+  std::vector<Vec2> poly_left;
+  poly_left.reserve(polyline_ego.size());
+  for (const auto& p : polyline_ego) {
+    if (p.x() < 0.3)
+      continue;
+    poly_left.emplace_back(p.x(), -p.y());
+  }
+  if (poly_left.size() < 2)
+    return false;
+
+  std::vector<Vec2> plan_left;
+  plan_left.reserve(plan_poly_device.size());
+  for (const auto& p : plan_poly_device)
+    plan_left.emplace_back(p.x(), -p.y());
+  std::vector<double> yaw_left(plan_yaw_device.size());
+  std::vector<double> rate_left(plan_yaw_rate_device.size());
+  for (size_t i = 0; i < plan_yaw_device.size(); ++i)
+    yaw_left[i] = -plan_yaw_device[i];
+  for (size_t i = 0; i < plan_yaw_rate_device.size(); ++i)
+    rate_left[i] = -plan_yaw_rate_device[i];
+
+  std::array<double, N + 1> y_ref{}, psi_ref{}, r_ref{};
+  const bool have_orientation =
+      plan_left.size() >= 2 && yaw_left.size() == plan_left.size() && rate_left.size() == yaw_left.size();
+  if (have_orientation)
+    buildRefsWithOrientation(poly_left, v, plan_left, yaw_left, rate_left, y_ref, psi_ref, r_ref);
+  else
+    buildRefs(poly_left, v, y_ref, psi_ref, r_ref);
+
+  y_ref_out.assign(y_ref.begin(), y_ref.end());
+  psi_ref_out.assign(psi_ref.begin(), psi_ref.end());
+  r_ref_out.assign(r_ref.begin(), r_ref.end());
+  return true;
 }
 
 LatMpcResult LateralMpc::update(double speed_mps, double yaw_rate, double Lf, const std::vector<Vec2>& polyline_ego,

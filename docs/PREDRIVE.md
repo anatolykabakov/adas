@@ -82,7 +82,7 @@ not only at low ones; that part of the diagnosis was a surprise and is the large
 
 ### What could not be verified before driving, and why
 
-`bag_feedforward_ab.py` replays the inner loop over the recorded drive, but **open loop**: the recorded
+`bag/bag_feedforward_ab.py` replays the inner loop over the recorded drive, but **open loop**: the recorded
 actual SWA is what the car did under the *old*, insufficient torque. With more torque it would have turned
 further and the error would have been smaller, so the replay **over-estimates** the new command. Its
 ceiling-occupancy numbers (49 → 72 % on 83–167 m) are an upper bound, not a prediction, and the harness
@@ -191,7 +191,7 @@ controller.
 
 ### What the last drive established, so this one does not re-ask it
 
-`lat_always_on` stays **true** — it is the baseline now, not a variable. On run `2026_08_07_19_04_05`:
+Always-on lateral (ALKA) is unconditional in the code — not a variable. On run `2026_08_07_19_04_05`:
 `alternative_experience = 17`, `tx_blocked` never incremented over 50.2 min, and `controls_allowed` was
 **0.0 %** for the whole drive, so every actuated frame came from bit 16. Assist presence went 2.6 → **79.1 %**
 at 5–8 m/s, 18.3 → **91.9 %** at 8–12, 65 → **99.9 %** at 12–16.
@@ -215,7 +215,6 @@ how often the plan is refreshed.
 |---|---|---|
 | camera AE (code, unconditional) | on | fixed fps range + metering region on the road |
 | `vision.nnapi_fp16` | **false → true** | inference in half precision |
-| `vehicle.lat_recompute_setpoint` | **false → true** | setpoint follows current speed between vision frames |
 
 **The camera fix and fp16 are one change with two halves, and testing either alone gives a null result.**
 Measured on run `2026_08_07_19_04_05`: pipeline work is 7.4 ms prep + 44.7 ms inference = **52 ms**, the camera
@@ -234,13 +233,7 @@ fp16 itself was verified offline before today (`bag_fp16_ab.py`, 200 frames): la
 offset 0.037 m, line probabilities *rose* and the σ tail shrank. Not free — frame-to-frame divergence is
 0.05 m median, 0.20 m p95 — but no degradation.
 
-**`lat_recompute_setpoint` rides along, and it is separable in the bag.** It changes `desired_swa_deg` between
-vision frames, which nothing else does: with it off the setpoint is constant between frames by construction.
-So the fraction of chassis ticks where the setpoint moved without a new frame attributes it exactly, and
-`interval_ms` / `infer_ms` attribute the other two. That is the real constraint the drive discipline should
-enforce — every change leaves an independent trace — and the test now says so
-(`ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime`), instead of the blanket count it had this morning,
-which counted the already-answered `lat_always_on` as a variable and would have blocked every future drive.
+**The lateral control law now runs in `Control` at a fixed 100 Hz** (upstream `Ratekeeper(100)`), so the setpoint follows current speed between vision frames by construction. The old `lat_recompute_setpoint` flag, which emulated this inside the planner, no longer exists.
 
 **What still cannot share a drive:** two changes to the command for the *same* reference. `use_learned_params`
 therefore stays off.
@@ -279,7 +272,7 @@ AE: exposure 8.3 ms, frame duration 33.3 ms (30.0 fps), iso 400     ← every 5 
 | fp16 | `infer_ms` | it does not drop below ~30 ms; then the NNAPI path silently fell back to CPU |
 | setpoint recompute | fraction of chassis ticks where `desired_swa_deg` moved with no new vision frame | that fraction stays ~0 — the flag did not reach the service |
 
-**`lat_require_assist` stays on**, so with `lat_always_on` also on the gate should almost never close. The
+**The assist gate is unconditional**, and with always-on lateral it should almost never close. The
 ten-second reverse-gear check below is still the only thing that exercises it end to end.
 
 ## Artefact verification (done, 2026-08-07 23:35)
@@ -287,11 +280,11 @@ ten-second reverse-gear check below is still the only thing that exercises it en
 | check | result |
 |---|---|
 | C++ tests | **188 passed**, 1 skipped (`ZMQIMUTest`, needs a running app) |
-| drive-discipline test | `ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime` passes — only `lat_recompute_setpoint` is on in that set |
+| drive-discipline test | `ShippedConfig.AtMostOneCommandChangeIsEnabledAtATime` passes — nothing in the command-changing set is on |
 | native lib | rebuilt **23:35**; the binding added for the offline harness was the only source newer than the previous lib, and functionally irrelevant to the app — rebuilt anyway, because "irrelevant, probably" is how a stale lib ships |
 | lib inside the APK | sha256 `b0a678ae6c0383b46a869635…`, byte-identical to disk |
 | camera change inside the APK | 3 marker strings in `classes*.dex` (`AE metering on road`, `AE fps ranges available`, `AE: exposure`) |
-| `config.json` inside the APK | `nnapi_fp16 **true**`, `lat_recompute_setpoint **true**`, `lat_always_on true`, `lat_require_assist true`, `use_learned_params false`, `learn_vehicle_params true`, `cruise_buttons false` |
+| `config.json` inside the APK | `nnapi_fp16 **true**`, `cruise_buttons false`. Always-on lateral, the assist gate, the parameter learner and the controller reading it are no longer switches: they are unconditional in the code as of 2026-08-13, and the config no longer carries them |
 | APK signature | signer SHA-256 `79836abfcbc278ce270d2a68…`, matches `~/.android/debug.keystore` |
 
 That signature row is not paranoia: a container build that created its own debug keystore once forced an
@@ -342,9 +335,9 @@ describes the asset, not what the phone will load.
 Delete the stale copy and let the app re-copy it:
 
 ```bash
-adb shell am force-stop ai.flow.adas
-adb shell run-as ai.flow.adas rm -f files/config.json
-adb shell run-as ai.flow.adas ls -l files/          # config.json must be gone
+adb shell am force-stop adas.app
+adb shell run-as adas.app rm -f files/config.json
+adb shell run-as adas.app ls -l files/          # config.json must be gone
 # start the app, then confirm it copied the new one:
 adb logcat -d | grep "Copied asset config.json"
 ```
@@ -355,7 +348,7 @@ This touches only `config.json` — the learned calibration lives elsewhere in `
 Then confirm the values actually loaded, which is the only check that means anything:
 
 ```bash
-adb logcat -d | grep -E "alt_exp=|LaneKeepService: controller=|learn_params="
+adb logcat -d | grep -E "alt_exp=|Planner: controller=|learn_params="
 ```
 
 `alt_exp=17` is the one that proves `lat_always_on` reached the native side.
@@ -404,8 +397,8 @@ GRADLE_USER_HOME=/path/to/writable/gradle_home \
    ```
    LaneKeep: torque reaching the rack again
    ```
-   That single pair exercises the whole chain — `PandaService` computing the gate, publishing
-   `lat_actuation_allowed` on `panda/health`, `LaneKeepService` receiving it, clearing the command and
+   That single pair exercises the whole chain — `Platform` computing the gate, publishing
+   `lat_actuation_allowed` on `panda/health`, `Control` receiving it, clearing the command and
    resetting the PID — which nothing else on this drive will, because with always-on lateral the gate is open
    almost all the time. If the lines never appear, the feedback is not reaching the lane-keep service and the
    `no_assist` status in the bag will be meaningless.
@@ -444,36 +437,36 @@ accepted samples, and a sample is accepted at v ≥ 5 m/s with |SWA| ≤ 45° in
 ## After the drive, in this order
 
 ```bash
-cd app/src/main/scripts
-NEW=../../../../adas_logs/<new_run>
-OLD=../../../../adas_logs/2026_08_06_18_27_12      # the baseline for assist presence
+cd scripts
+NEW=../adas_logs/<new_run>
+OLD=../adas_logs/2026_08_06_18_27_12      # the baseline for assist presence
 
 # 0. Did the pipeline stay healthy at all — frame rate, drops, stage latency.
-python3 bag_middleware_stats.py $NEW
-python3 latency.py $NEW
+python3 bag/bag_middleware_stats.py $NEW
+python3 tools/latency.py $NEW
 
 # 1. The gate question, and it comes first because everything else is conditional on it.
 #    tx_blocked must be flat at 0; alternative_experience must read 17; and the assist must be present in
 #    the 5-12 m/s bands where run 08-06 had 2.6 % and 18.3 %.
-python3 bag_topdown_video.py $NEW --list-assist
-python3 bag_override_episodes.py $NEW      # HCA_01.HCA_Active from the bus, independent of our own flags
+python3 bag/bag_topdown_video.py $NEW --list-assist
+python3 bag/bag_override_episodes.py $NEW      # HCA_01.HCA_Active from the bus, independent of our own flags
 
 # 2. Steering quality restricted to frames that were actually actuated — the comparison that was never
 #    honest before. Same script on both bags; on the old one it will cover far fewer frames, which is
 #    itself the result.
-python3 bag_controller_ab.py $NEW
-python3 bag_controller_ab.py $OLD
+python3 bag/bag_controller_ab.py $NEW
+python3 bag/bag_controller_ab.py $OLD
 
 # 3. Arc offset, at the shipped window. Read it as this drive's baseline rather than as a comparison:
 #    with the assist present in frames that used to be excluded, it is not measuring the same population.
-python3 bag_arc_offset.py $NEW --std-range 20 --blend 0.6 --std-good 0.3 --std-bad 1.5 \
+python3 bag/bag_arc_offset.py $NEW --std-range 20 --blend 0.6 --std-good 0.3 --std-bad 1.5 \
     --center-force 0.0 --weight-by-std --cache /tmp/new20.npz
 
 # 4. Perception σ — unaffected by actuation, so this one *is* comparable across drives.
-python3 bag_lane_sigma_ab.py $NEW $OLD
+python3 bag/bag_lane_sigma_ab.py $NEW $OLD
 
 # 5. The observer: what did it learn live, and does it agree with the offline replay?
-python3 bag_params_learner.py $NEW
+python3 bag/bag_params_learner.py $NEW
 ```
 
 Step 1 carries the weight, and it is the one step where a negative answer ends the analysis: if the panda was
@@ -484,12 +477,12 @@ actuated population, so a drive-to-drive delta mixes "steers better" with "steer
 comparison is within this bag: actuated frames at 5–12 m/s against actuated frames at 16–22 m/s, where the old
 drive already had 87 % presence and therefore a trustworthy number.
 
-`bag_arc_offset.py --std-range` matters here even though the window is not the variable this time: it used to
+`bag/bag_arc_offset.py --std-range` matters here even though the window is not the variable this time: it used to
 take the median σ over the *whole* lane line, which is a different number from the one the controller gates on,
 and an analysis that disagrees with the running code cannot be used to judge that code. Pass 20 to match what
 ships.
 
-Step 5 has two halves worth keeping apart. `bag_params_learner.py` replays the *Python mirror* of the filter;
+Step 5 has two halves worth keeping apart. `bag/bag_params_learner.py` replays the *Python mirror* of the filter;
 the bag also carries what the *C++* filter published live, in
 `localization/pose.learned_stiffness_factor`. They should agree closely — if they do not, one of the two
 transcriptions is wrong and that is a finding in itself.
@@ -509,7 +502,7 @@ Consequences for the criteria below:
 * the **perception** numbers — σ, σ p90, σ veto, blending weight — are unaffected. They are computed from
   `vision/lanes` and do not depend on actuation;
 * the **arc-offset / tracking** numbers are contaminated and must be recomputed restricted to frames where
-  `HCA_01.HCA_Active` is set on the bus. Until `bag_arc_offset.py` gates on that, treat its tracking columns
+  `HCA_01.HCA_Active` is set on the bus. Until `bag/bag_arc_offset.py` gates on that, treat its tracking columns
   as a lower bound on how well the controller actually steers;
 * so a drive that shows "worse arcs" may only be showing "less cruise engaged", which is a property of the
   route and the driver's right foot, not of any knob in this file.
@@ -552,7 +545,7 @@ Two things changed since:
   bag rather than reconstructed from `panda/health` timing;
 * with `lat_always_on` on, most frames should be actuated, so the mixture stops being the dominant term.
 
-`bag_arc_offset.py` still does not gate on actuation. Until it does, use `assist_allowed` from the debug topic
+`bag/bag_arc_offset.py` still does not gate on actuation. Until it does, use `assist_allowed` from the debug topic
 to filter before reading its tracking columns — and the analysis helper `vis.bag_io.lateral_actuation_on`
 exists for exactly this, taking `lat_actuation_allowed` when present and falling back to `controls_allowed`
 for older bags.

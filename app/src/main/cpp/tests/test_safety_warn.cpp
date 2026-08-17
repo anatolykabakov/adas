@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "adas/utils/safety_planner.hpp"
+#include "adas/utils/safety_planner.h"
 
 using adas::safety::computeSafetyPlan;
 using adas::safety::PlannerInput;
@@ -9,7 +9,6 @@ using adas::safety::Warning;
 using adas::safety::WarningLatch;
 
 namespace {
-
 bool has(const adas::safety::SafetyPlan& plan, Warning w)
 {
   for (const auto x : plan.warnings)
@@ -227,19 +226,15 @@ TEST(SafetyWarn, SignalledLaneChangeSuppressesOnlyThatSide)
   EXPECT_TRUE(has(computeSafetyPlan(cfg, in), Warning::RLDW));
 }
 
-// Both cases below are false positives measured on run 2026_08_04_21_00_18 (23.5 min, night,
 // no collisions and no unintended departures), so the correct behaviour is silence.
 
 TEST(SafetyWarn, StopAndGoCreepDoesNotWarn)
 {
-  // Worst real case from that run: 4.3 m/s, lead 9.5 m nearly stationary. Arithmetically TTC ≈ 1.9 s,
-  // which used to raise FCW; at that speed the gap is trivially recoverable.
   SafetyPlannerConfig cfg;
   PlannerInput in = cruising(4.3);
   in.cipo = {true, 0.3, 9.5, 0.0};
   EXPECT_FALSE(anyForward(computeSafetyPlan(cfg, in)));
 
-  // Fastest FCW frame of that run — still below the gate.
   PlannerInput in2 = cruising(8.2);
   in2.cipo = {true, 4.4, 12.7, 0.0};
   EXPECT_FALSE(anyForward(computeSafetyPlan(cfg, in2)));
@@ -247,7 +242,6 @@ TEST(SafetyWarn, StopAndGoCreepDoesNotWarn)
 
 TEST(SafetyWarn, RealThreatAboveTheSpeedGateStillWarns)
 {
-  // The gate must not silence the case it exists for: highway closing on a much slower lead.
   SafetyPlannerConfig cfg;
   PlannerInput in = cruising(25.0);
   in.cipo = {true, 5.0, 20.0, 0.0};
@@ -256,8 +250,6 @@ TEST(SafetyWarn, RealThreatAboveTheSpeedGateStillWarns)
 
 TEST(SafetyWarn, OurOwnSteeringSuppressesLaneDeparture)
 {
-  // The assistant held the car 0.54 m off centre while drifting at 0.15 m/s — that is its tracking
-  // error, not a departure, and LDW warned about it in 82 % of its frames on that run.
   SafetyPlannerConfig cfg;
   PlannerInput in = cruising(18.0);
   in.lateral.cte_m = -0.54;
@@ -269,8 +261,4 @@ TEST(SafetyWarn, OurOwnSteeringSuppressesLaneDeparture)
   in.lat_active = true;
   EXPECT_FALSE(has(computeSafetyPlan(cfg, in), Warning::LLDW));
   EXPECT_FALSE(has(computeSafetyPlan(cfg, in), Warning::RLDW));
-
-  // The suppression is a policy, not a hard rule: it can be switched off.
-  cfg.ldw_suppress_on_lat_active = false;
-  EXPECT_TRUE(has(computeSafetyPlan(cfg, in), Warning::LLDW));
 }

@@ -2,32 +2,21 @@
 
 #include <gtest/gtest.h>
 
+#include "adas/utils/online_localizer.h"
 #include "adas/utils/vehicle_ekf.h"
 
-// Heading in `localization/pose` used to come almost entirely from the bicycle model: `predict`
-// advanced it with `v·tan(δ)/L` and then overwrote the yaw-rate state with the same value, so the
-// gyro reached heading only through cross-covariance — weight `dt·(1 − K₄) ≈ 0.12·dt` on our
-// `Q₄₄ = 0.05²` and `R_imu = 0.02²`, i.e. heading = 0.88 · bicycle + 0.12 · measured.
-//
-// That is only safe if the bicycle model is right. Measured understeer on this car is
-// `κ_fact/κ_kin` = 0.54 at 22 m/s, so it over-turns by 1.85×. On the road GPS heading hides the
-// error; without GPS the heading runs away. These tests drive a steady arc where the gyro reports the
-// truth and the steering angle implies 1.85× of it, which is the real situation.
-
 namespace {
-
 constexpr double kDt = 0.01;
 constexpr double kSpeed = 22.0;
-constexpr double kUndersteer = 0.54;  // κ_fact / κ_kin measured at this speed
+constexpr double kUndersteer = 0.54;
 
 /** Run a steady arc for `seconds`, feeding a gyro that tells the truth and a steering angle that,
  *  through the kinematic model, claims 1/0.54 times as much. Returns final heading in rad. */
 double driveArc(bool yaw_rate_is_state, double seconds, double steer_rad, bool feed_gyro = true)
 {
-  adas::VehicleEKF ekf(/*wheelbase=*/2.636);
+  adas::VehicleEKF ekf(2.636);
   ekf.setYawRateIsAState(yaw_rate_is_state);
-  ekf.reset(0.0, 0.0, 0.0, kSpeed, 0.0, /*pos_unc=*/1.0, /*yaw_unc=*/0.05, /*v_unc=*/0.5,
-            /*yaw_rate_unc=*/0.05);
+  ekf.reset(0.0, 0.0, 0.0, kSpeed, 0.0, 1.0, 0.05, 0.5, 0.05);
 
   const double model_rate = kSpeed * std::tan(steer_rad) / 2.636;
   const double true_rate = kUndersteer * model_rate;
@@ -45,15 +34,13 @@ double driveArc(bool yaw_rate_is_state, double seconds, double steer_rad, bool f
 
 TEST(VehicleEkfHeading, GyroWinsOverTheBicycleModel)
 {
-  // 5 s, not 30: heading is normalised to [-pi, pi], so a longer arc wraps and the comparison stops
-  // meaning anything. At 0.18 rad/s of truth, 5 s gives 0.9 rad and the model's 1.67 — both unwrapped.
-  const double steer = 0.04;  // ~2.3 deg of road wheel
+  const double steer = 0.04;
   const double model_rate = kSpeed * std::tan(steer) / 2.636;
   const double truth = kUndersteer * model_rate * 5.0;
   const double model_heading = model_rate * 5.0;
 
-  const double with_state = driveArc(/*yaw_rate_is_state=*/true, 5.0, steer);
-  const double old_way = driveArc(/*yaw_rate_is_state=*/false, 5.0, steer);
+  const double with_state = driveArc(true, 5.0, steer);
+  const double old_way = driveArc(false, 5.0, steer);
 
   // The gyro is the only honest witness here, so the new filter should land on it.
   EXPECT_NEAR(with_state, truth, 0.1 * std::abs(truth));
@@ -64,13 +51,11 @@ TEST(VehicleEkfHeading, GyroWinsOverTheBicycleModel)
 
 TEST(VehicleEkfHeading, WithoutAGyroTheModelStillDrivesHeading)
 {
-  // The old overwrite handled the gyro-less case by accident. The replacement has to handle it on
-  // purpose, or a bad IMU would freeze the heading instead of degrading to the model.
   const double steer = 0.04;
   const double model_rate = kSpeed * std::tan(steer) / 2.636;
   const double model_heading = model_rate * 5.0;
 
-  const double y = driveArc(/*yaw_rate_is_state=*/true, 5.0, steer, /*feed_gyro=*/false);
+  const double y = driveArc(true, 5.0, steer, false);
   EXPECT_GT(std::abs(y), 0.5 * std::abs(model_heading)) << "heading must not stall without a gyro";
   EXPECT_NEAR(y, model_heading, 0.3 * std::abs(model_heading));
 }
@@ -91,10 +76,6 @@ TEST(VehicleEkfHeading, StraightLineHoldsHeadingEitherWay)
 
 TEST(VehicleEkfHeading, AMeasuredYawRateSurvivesTheNextPredict)
 {
-  // The whole point of the change. With the wheel straight the bicycle model says "not turning" while
-  // the gyro says 0.1 rad/s — a skid, a crowned road, a mis-zeroed steering sensor. Over 2 s the truth
-  // is 0.2 rad of heading. The old filter wiped the state at the top of every predict, so heading
-  // barely moved; only cross-covariance leaked anything through.
   auto run = [](bool as_state) {
     adas::VehicleEKF ekf;
     ekf.setYawRateIsAState(as_state);
@@ -130,7 +111,6 @@ TEST(VehicleEkfHeading, ModelMeasurementIsCountedApartFromTheGyro)
 
 TEST(VehicleEkfHeading, GpsCourseStillCorrectsHeading)
 {
-  // Whatever the yaw-rate handling, a GPS course fix must remain able to pull the heading back.
   adas::VehicleEKF ekf;
   ekf.setYawRateIsAState(true);
   ekf.reset(0.0, 0.0, 0.0, kSpeed, 0.0, 1.0, 0.5);
@@ -139,27 +119,18 @@ TEST(VehicleEkfHeading, GpsCourseStillCorrectsHeading)
   EXPECT_NEAR(ekf.yaw(), 0.4, 0.02);
 }
 
-// ── Speed as a state ──────────────────────────────────────────────────────────────────────────
-//
-// `predict` used to assign `state_(3) = v_measured` on every tick — about every 10 ms — while
-// `updateGpsVel` runs at most every 0.2 s and only when the GPS course is valid. So the velocity update
-// was overwritten roughly twenty times before the next GPS sample, and the fused speed inherited the
 // wheel-speed scale exactly: `localization/pose.v` measured 1.011 against GNSS Doppler, raw CAN 1.012.
 
 TEST(VehicleEkfSpeed, AGpsVelocityUpdateNowSurvivesOneTick)
 {
-  // The old mode was stranger than "the update does nothing": with nothing ever shrinking P(3,3), the
-  // GPS gain was almost 1, so the update moved the speed *fully* to the GPS value — and then the next
-  // `predict` assigned the wheel speed straight over it. Full correction, zero memory. What matters is
-  // therefore not the value in the tick GPS arrives, but the value one tick later.
   auto after_one_more_tick = [](bool as_state) {
     adas::VehicleEKF ekf;
     ekf.setSpeedIsAState(as_state);
     ekf.reset(0.0, 0.0, 0.0, 20.0, 0.0);
-    for (int i = 0; i < 200; ++i)  // settle
+    for (int i = 0; i < 200; ++i)
       ekf.predict(20.24, 0.0, kDt);
     ekf.updateGpsVel(20.0, 0.0, 0.1 * 0.1);
-    ekf.predict(20.24, 0.0, kDt);  // the tick that used to erase it
+    ekf.predict(20.24, 0.0, kDt);
     return ekf.v();
   };
 
@@ -169,12 +140,6 @@ TEST(VehicleEkfSpeed, AGpsVelocityUpdateNowSurvivesOneTick)
 
 TEST(VehicleEkfSpeed, ButTheWheelSpeedDragsItStraightBack)
 {
-  // And here is why making speed a state is *not* the fix for the 1.2 % scale, only the prerequisite for
-  // one. The wheel measurement arrives every 10 ms with 0.1 m/s of assumed noise; GPS velocity arrives
-  // every 0.2 s with the same. Twenty pulls against one, so between GPS samples the estimate returns to
-  // the biased sensor. Tuning the noise cannot fix this: the bias is a constant on the frequent
-  // measurement, and no pair of unbiased-noise assumptions separates a constant bias from the truth.
-  // That needs the scale itself as a state — which is what `paramsd` does for the vehicle parameters.
   adas::VehicleEKF ekf;
   ekf.setSpeedIsAState(true);
   ekf.reset(0.0, 0.0, 0.0, 20.0, 0.0);
@@ -193,9 +158,6 @@ TEST(VehicleEkfSpeed, ButTheWheelSpeedDragsItStraightBack)
 
 TEST(VehicleEkfSpeed, AtTheOldAssumedNoiseGpsVelocityWasDecorative)
 {
-  // The noise it used to be given, 1 m/s, made the update irrelevant even in the tick it arrived in.
-  // Measured Doppler is an order of magnitude better than that: the residual against scale-corrected
-  // wheel speed is 0.066-0.101 m/s on two runs, and that includes both sensors and the 1 Hz sampling.
   adas::VehicleEKF ekf;
   ekf.setSpeedIsAState(true);
   ekf.reset(0.0, 0.0, 0.0, 20.0, 0.0);
@@ -227,4 +189,118 @@ TEST(VehicleEkfSpeed, CountersSeparateWheelFromGps)
     ekf.predict(15.0, 0.0, kDt);
   EXPECT_EQ(ekf.wheel_speed_update_count, 100);
   EXPECT_EQ(ekf.gps_vel_update_count, 0);
+}
+
+namespace {
+/** A straight road with a constant yaw-rate bias and a GPS whose course is right while its position
+ *  is already far away.
+ *
+ *  This is what drive 2026_08_13_23_01_56 looked like: the heading snapped wrong while moving, the
+ *  position drifted outside the innovation gate, and there was no way back — the course correction
+ *  lived inside the accepted-position branch.
+ *  `bias_rad_s` is the gyro bias, `far_m` how far the GPS position disagrees with the state. */
+double headingErrorAfter(double seconds, double bias_rad_s, double far_m, double snap_hold_s)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.yaw_snap_hold_s = snap_hold_s;
+  loc.reset(0.0, 0.0, 0.0, 25.0, 0.0);
+
+  const double dt = 0.01;
+  double t = 0.0;
+  for (int i = 0; i < static_cast<int>(seconds / dt); ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    if (i % 100 == 0) {  // 1 Hz, as the phone reports
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;         // the car drives due east and the GPS knows it
+      g.x = 25.0 * t + far_m;  // a position deliberately outside the innovation gate
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;  // the accuracy passes the 25 m threshold
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, bias_rad_s, gps);
+  }
+  return std::abs(adas::normalizeAngle(loc.yaw()));
+}
+}  // namespace
+
+// The course is corrected from GPS even when the position is rejected: otherwise heading error pushes
+// the position outside the gate, the gate closes, and the cure stops arriving along with the disease.
+TEST(OnlineLocalizerYaw, GpsCourseCorrectsEvenWhenPositionIsRejected)
+{
+  const double bias = 0.0034;  // 0.19 deg/s — the value measured on that drive
+  const double err = headingErrorAfter(120.0, bias, /*far_m=*/500.0, /*snap_hold_s=*/3.0);
+  EXPECT_LT(err, 0.15) << "the heading drifted by " << err * 180.0 / M_PI << " deg while the GPS course was healthy";
+}
+
+// The snap must work while moving: "several agreeing fixes within 8 m" never holds at speed, and
+// without the time-based route a large error would stay forever.
+TEST(OnlineLocalizerYaw, LargeHeadingErrorSnapsWhileMoving)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.yaw_snap_hold_s = 3.0;
+  loc.reset(0.0, 0.0, 1.2, 25.0, 0.0);  // 69 deg off: that is how the drive started
+
+  const double dt = 0.01;
+  double t = 0.0;
+  for (int i = 0; i < 1000; ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    if (i % 100 == 0) {
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;
+      g.x = 25.0 * t + 500.0;
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, 0.0, gps);
+  }
+  EXPECT_LT(std::abs(adas::normalizeAngle(loc.yaw())), 0.1) << "the snap while moving did not fire";
+}
+
+// A runaway position must come back while moving. Reseeding used to require three agreeing fixes
+// within 8 m, i.e. a standstill: on 2026_08_13_23_01_56 the position waited 350 s for one, 2.8 km off.
+TEST(OnlineLocalizerPos, FarPositionReseedsWhileMoving)
+{
+  adas::OnlineLocalizer loc(2.636, 0.5, 0.2, true);
+  loc.pos_reseed_hold_s = 3.0;
+  loc.reset(0.0, 0.0, 0.0, 25.0, 0.0);
+
+  const double dt = 0.01;
+  double t = 0.0;
+  double err = 0.0;
+  for (int i = 0; i < 2000; ++i) {
+    t += dt;
+    std::optional<adas::GpsSample> gps;
+    double gx = 0.0;
+    if (i % 100 == 0) {
+      adas::GpsSample g;
+      g.valid = true;
+      g.course_valid = true;
+      g.timestamp_us = static_cast<int64_t>(t * 1e6);
+      g.yaw_enu = 0.0;
+      gx = 25.0 * t + 500.0;  // the state lags by 500 m, which is outside the innovation gate
+      g.x = gx;
+      g.y = 0.0;
+      g.vx = 25.0;
+      g.vy = 0.0;
+      g.accuracy_m = 10.0;
+      gps = g;
+    }
+    loc.step(dt, 25.0, 0.0, 0.0, gps);
+    if (i % 100 == 0)
+      err = std::abs(loc.x() - gx);
+  }
+  EXPECT_LT(err, 30.0) << "the position stayed " << err << " m from the GPS: reseeding while moving did not work";
 }

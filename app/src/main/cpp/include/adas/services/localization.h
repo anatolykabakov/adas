@@ -4,27 +4,40 @@
 #include <tuple>
 
 #include "adas/middleware/manager.hpp"
+#include "messages.pb.h"
 #include "adas/utils/adas_topics.h"
+#include "adas/utils/imu_calibrator.h"
+#include "adas/utils/gps_local_projector.h"
+#include "adas/utils/proto_convert.h"
 #include "adas/utils/math_utils.h"
 #include "adas/utils/online_localizer.h"
 #include "adas/utils/params_learner.h"
 #include "adas/utils/road_roll_estimator.h"
 
 namespace adas {
-
 namespace services {
-
+/**
+ * \brief Fuses wheel speed, yaw rate and GNSS into one pose.
+ *
+ * \details The estimate is an EKF in a local ENU plane anchored at the first fix. Wheel speed and yaw
+ * rate carry it between fixes; GNSS bounds the drift. Each measurement is a separate switch in
+ * `Config::Sources`, because a fused pose that looks healthy says nothing about which sensor is holding
+ * it up, and turning them off one at a time is the only cheap way to find out.
+ *
+ * The service also runs the road-bank estimator and the vehicle-parameter learner: both need exactly the
+ * inputs that arrive on the chassis tick, and both publish through the pose message.
+ */
 class Localization : public adas::middleware::Service {
 public:
   struct Config {
-    double wheelbase_m = 2.636;
-    double gps_noise_pos = 0.5;
+    double wheelbase_m = 2.636;  ///< Wheelbase [m], the bicycle model's only geometry.
+    double gps_noise_pos = 0.5;  ///< Assumed position noise [m] when the receiver reports no accuracy of its own.
+    /// Minimum interval between position updates [s]; fixes arriving faster are dropped.
     double gps_update_interval = 0.2;
-    /// Camera-odometry yaw rate is measured with the opposite sign to CAN on this car: correlation
-    /// -0.994 over 39k ticks of 2026_08_08_23_00_28. Until that is understood the source is off by
-    /// default (see localization.use_camera_odometry) — see docs/REVIEW_2026_08_09.md item 1.
-    bool invert_cam_yaw_rate = false;
+    /// A fix older than this is not used [us]: at 25 m/s, 2.5 s is 62 m of stale position.
     int64_t gps_max_age_us = 2'500'000;
+
+    double gps_max_accuracy_m = 25.0;  ///< Fixes reporting worse accuracy are not used at all [m]; 0 disables the gate.
 
     /** Which measurements the filter is allowed to use.
      *
@@ -39,44 +52,23 @@ public:
      *
      *  Defaults keep everything on, i.e. the behaviour before these flags existed. */
     struct Sources {
-      /** GPS position updates (`updateGps`). Off: the pose is dead reckoning in the ENU plane it was
-       *  seeded in, and position error grows without bound. */
-      bool gps_position = true;
-      /** GPS course → heading (`updateGpsYaw`). Off: heading comes from the yaw-rate chain alone.
-       *  This is the switch that reveals whether the yaw-rate handling is sound. */
-      bool gps_course = true;
-      /** GPS velocity (`updateGpsVel`). It is called, and with speed now a state the correction survives
-       *  the next tick — but the wheel speed arrives twenty times more often at the same assumed noise and
-       *  drags the estimate back, so the 1.2 % wheel scale is still not learnable. That needs the scale as
-       *  a state; see `docs/BACKLOG.md` §5a. */
-      bool gps_velocity = true;
-      /** Phone gyro yaw rate from `sensors/imu_yaw`. Off: the chassis yaw rate from CAN is used, and
-       *  if that is absent too, only the bicycle model remains. */
-      bool imu_yaw_rate = true;
-      /** Yaw rate from `vehicle/chassis` (the ESP sensor) as fallback when the phone gyro is absent.
-       *  Measured against the phone gyro at a ratio of 1.017, so it is a good sensor — this flag is
-       *  here to isolate it, not because it is suspect. */
-      bool chassis_yaw_rate = true;
-      /** Camera-odometry yaw rate from `model/camera_odometry`. Measured against the ESP sensor at
-       *  0.849, i.e. the outlier of the three, consistent with the model's metric scale. */
-      bool camera_odometry = true;
-      /** Bicycle model as a weak yaw-rate measurement. Off: with no gyro and no chassis rate the
-       *  heading stops moving, which is a legitimate thing to want to see. */
-      bool bicycle_model = true;
+      bool camera_odometry = true;  ///< Use the camera-odometry yaw rate as a measurement.
     } sources{};
 
-    /** Road bank from the lateral accelerometer — the input `paramsd` needs to tell a banked road from an
-     *  understeering car. See `utils/road_roll_estimator.h` for the measurement it is built on. */
-    RoadRollEstimator::Config road_roll{};
+    RoadRollEstimator::Config road_roll{};  ///< Road-bank estimator settings.
 
-    /** Learn the vehicle parameters from steering angle, speed and yaw rate — the ported part of `paramsd`.
-     *
-     *  Default off, and it stays off until a drive says otherwise. The learner is cheap and its output is
-     *  published either way, so the honest sequence is: enable it, drive, compare the learned stiffness
-     *  against the configured 0.64 in the bag, and only then let the controller read it. Enabling the
-     *  learner does not by itself change a single command — that needs `lane_keep.use_learned_params`. */
-    bool learn_vehicle_params = false;
-    ParamsLearner::Config params{};
+    ParamsLearner::Config params{};  ///< Vehicle-parameter learner settings.
+
+    /// Below this the IMU calibrator ignores samples [km/h]: gravity cannot resolve heading.
+    double imu_speed_threshold_kmh = 0.5;
+    int imu_min_samples = 50;          ///< Samples needed before the mount estimate counts as usable.
+    bool imu_invert_yaw_rate = true;   ///< The phone gyro's sign is the opposite of the car's on this mount.
+    double imu_mount_roll_deg = 0.0;   ///< Mount prior, roll [deg]; used only with `imu_has_mount_prior`.
+    double imu_mount_pitch_deg = 0.0;  ///< Mount prior, pitch [deg].
+    double imu_mount_yaw_deg = 0.0;    ///< Mount prior, yaw [deg].
+    bool imu_has_mount_prior = false;  ///< Trust the mount prior above instead of estimating from scratch.
+
+    double steer_ratio = 15.7;  ///< Steering ratio used to turn the wheel angle into a road-wheel angle.
   };
 
   Localization() : Localization(Config{}) {}
@@ -85,6 +77,7 @@ public:
   std::string_view getName() const override { return "localization"; }
 
   void configure() override;
+  void registerParameters();
   void reset() override;
 
   void resetPose(double x, double y, double yaw, double v = 0, double yaw_rate = 0);
@@ -103,8 +96,16 @@ public:
 
 private:
   void onChassis(const ChassisSample& msg);
+  /// Yaw rate to feed the filter: the phone gyro when it is valid, otherwise the ESP sensor from CAN.
+  std::optional<double> yawRateMeasurement(const ChassisSample& msg) const;
+  /// The last fix, if it is close enough in time to this chassis frame to describe the same instant.
+  std::optional<GpsSample> freshGps(int64_t chassis_ts_us) const;
+  /// Camera-odometry yaw rate, if the source is enabled and the model is confident in it.
+  std::optional<double> camYawRate() const;
+  void onGpsProto(const adas::proto::GPSLocation& gps);
+  void onCameraOdometryProto(const adas::proto::CameraOdometry& odom);
   void onGps(const GpsSample& msg);
-  void onImu(const ImuSample& msg);
+  void onRawImu(const adas::proto::IMUData& imu);
   void onCameraOdometry(const CameraOdometrySample& msg);
   void publishPose(int64_t timestamp_us);
 
@@ -112,6 +113,9 @@ private:
   OnlineLocalizer loc_;
   RoadRollEstimator road_roll_{};
   ParamsLearner params_{};
+  ImuCalibrator imu_calib_;
+  bool imu_lock_logged_ = false;
+  GpsLocalProjector gps_proj_{};
   int64_t last_imu_us_ = 0;
   ChassisSample chassis_;
   GpsSample gps_;

@@ -19,9 +19,12 @@ APPLY=false
 # читается. Разошлись — значит на дорогу поедет прошлый эксперимент под именем нового.
 SETS=(
   "vision.model_runner=thneed"
-  "vehicle.lat_pid_kf=0.00015"
-  "vehicle.lat_pid_ff_floor_mps=9.8"
   "localization.use_camera_odometry=false"
+  "vehicle.lat_pid_kf=6e-05"
+  "vehicle.lat_pid_ff_floor_mps=0.0"
+  "vehicle.fp_solver=acados"
+  "vehicle.tire_stiffness_factor=1.0"
+  "localization.params_stiffness_p0_std=0.05"
 )
 
 echo "=== проверка"
@@ -83,7 +86,7 @@ for s in "${SETS[@]}"; do args+=(--set "$s"); done
 
 echo
 echo "=== проверка на устройстве"
-adb shell run-as ai.flow.adas cat /data/data/ai.flow.adas/files/config.json | python3 -c '
+adb shell run-as adas.app cat /data/data/adas.app/files/config.json | python3 -c '
 import json, sys
 c = json.load(sys.stdin)
 cam, veh = c["calibration"]["camera"], c["vehicle"]
@@ -97,6 +100,14 @@ rows = [
     ("lane_max_age_s", veh.get("lane_max_age_s")),
     ("lka_suppress_on_blinker", veh.get("lka_suppress_on_blinker")),
     ("lane_keep_controller", veh.get("lane_keep_controller")),
+    ("-- пакет паритета с dp", ""),
+    ("lane_std good/bad", (veh.get("lane_std_good_m"), veh.get("lane_std_bad_m"))),
+    ("path_lane_blend_scale", veh.get("path_lane_blend_scale")),
+    ("lane_mode_hysteresis", veh.get("lane_mode_hysteresis")),
+    ("roll_compensation", veh.get("roll_compensation")),
+    ("use_learned_params", veh.get("use_learned_params")),
+    ("fp_solver", veh.get("fp_solver")),
+    ("dp_parity_pack", veh.get("dp_parity_pack")),
     ("record_camera_images", c.get("logging", {}).get("record_camera_images")),
 ]
 for k, v in rows:
@@ -123,7 +134,7 @@ cat <<'PLAN'
   статус `brake_needed` — это просьба к водителю, а не команда.
 
 === что проверять после
-  ./app/src/main/scripts/bag_arc_offset.py <бег> --blend <из лога> --shift 0.05 \
+  ./scripts/bag/bag_arc_offset.py <бег> --blend <из лога> --shift 0.05 \
       --std-good 0.3 --std-bad 1.5 --width-max 4.6 --weight-by-std
   * левая дуга: было +0.23 при tsf 0.50, ошибка слежения +0.21;
   * правые дуги: смотреть не итог, а колонку σ worst и d — при σ > 1.5 подмешивание отключается и

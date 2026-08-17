@@ -11,7 +11,6 @@
 namespace adas {
 namespace mapmatch {
 namespace {
-
 constexpr double kDeg = M_PI / 180.0;
 
 double trackHeadingAt(const Track& track, double s)
