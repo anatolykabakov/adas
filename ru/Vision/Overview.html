@@ -443,7 +443,7 @@
 <li><p>достаточно метаданных, чтобы понять, можно ли доверять разметке и плану (вероятности, возраст);</p></li>
 <li><p>метки времени (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>), чтобы задержку потом можно было измерить.</p></li>
 </ul>
-<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> сервисы на C++ видят полилинию). Источник — живая Supercombo, карта или реплей бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неразличим</strong>. Это сделано намеренно: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
+<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервисы на C++ видят полилинию). Источник — живая Supercombo, карта или реплей бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неразличим</strong>. Это сделано намеренно: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
 </section>
 <section id="id3">
 <h2>Четыре условия, которые должны выполниться, по порядку<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
@@ -490,13 +490,13 @@
 <h2>Шаг 1: метры в известной системе<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Both frames are used in this stack, and mixing them is condition 1 failing.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">iso_to_device_y</span><span class="p">(</span><span class="n">y_iso</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ISO vehicle frame has y left-positive; the model and our path have y right-positive.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""ISO vehicle frame has y left-positive; the model and our path have y right-positive."""</span>
     <span class="k">return</span> <span class="o">-</span><span class="n">y_iso</span>
 
-<span class="c1"># A lane line 1.75 m to the driver&#39;s left.</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ISO  y = </span><span class="si">{</span><span class="o">+</span><span class="mf">1.75</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m (left)  -&gt;  device y = </span><span class="si">{</span><span class="n">iso_to_device_y</span><span class="p">(</span><span class="o">+</span><span class="mf">1.75</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get this backwards and the cross-track error changes sign, so the controller&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;corrects away from the lane centre with full confidence.&quot;</span><span class="p">)</span>
+<span class="c1"># A lane line 1.75 m to the driver's left.</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ISO  y = </span><span class="si">{</span><span class="o">+</span><span class="mf">1.75</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m (left)  -&gt;  device y = </span><span class="si">{</span><span class="n">iso_to_device_y</span><span class="p">(</span><span class="o">+</span><span class="mf">1.75</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Get this backwards and the cross-track error changes sign, so the controller"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"corrects away from the lane centre with full confidence."</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Это всё условие 1, и оно стоит трёх строк, потому что это самый частый способ заставить работающий
@@ -510,7 +510,7 @@
 свежей, а путь, на котором она построена, мог быть минутной давности. В одном измеренном зависании
 <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> шёл со средним интервалом 9.9 мс, а плану было до <strong>75 секунд</strong>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">reference_age_ms</span><span class="p">(</span><span class="n">capture_ts_ms</span><span class="p">,</span> <span class="n">now_ms</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Age of the geometry the command is based on — not the age of the command.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Age of the geometry the command is based on — not the age of the command."""</span>
     <span class="k">return</span> <span class="n">now_ms</span> <span class="o">-</span> <span class="n">capture_ts_ms</span>
 
 <span class="n">LANE_MAX_AGE_MS</span> <span class="o">=</span> <span class="mi">300</span>           <span class="c1"># vehicle.lane_max_age_s</span>
@@ -518,8 +518,8 @@
 <span class="n">now</span> <span class="o">=</span> <span class="mi">100_000</span>
 <span class="k">for</span> <span class="n">capture</span> <span class="ow">in</span> <span class="p">(</span><span class="n">now</span> <span class="o">-</span> <span class="mi">60</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">250</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">900</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">75_000</span><span class="p">):</span>
     <span class="n">age</span> <span class="o">=</span> <span class="n">reference_age_ms</span><span class="p">(</span><span class="n">capture</span><span class="p">,</span> <span class="n">now</span><span class="p">)</span>
-    <span class="n">verdict</span> <span class="o">=</span> <span class="s2">&quot;ok&quot;</span> <span class="k">if</span> <span class="n">age</span> <span class="o">&lt;=</span> <span class="n">LANE_MAX_AGE_MS</span> <span class="k">else</span> <span class="s2">&quot;stale -&gt; command cleared, PID reset&quot;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;reference age </span><span class="si">{</span><span class="n">age</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> ms  </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">verdict</span> <span class="o">=</span> <span class="s2">"ok"</span> <span class="k">if</span> <span class="n">age</span> <span class="o">&lt;=</span> <span class="n">LANE_MAX_AGE_MS</span> <span class="k">else</span> <span class="s2">"stale -&gt; command cleared, PID reset"</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reference age </span><span class="si">{</span><span class="n">age</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> ms  </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Правка должна опираться на метку времени съёмки кадра — потому её и несёт каждое сообщение в этом конвейере.
@@ -579,7 +579,7 @@
 <h2>Главы этого модуля<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Системы координат</span></a> — device с <span class="math notranslate nohighlight">\(y\)</span> вправо против ISO с <span class="math notranslate nohighlight">\(y\)</span> влево; источник инвертированного руления номер один.</p></li>
-<li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo на устройстве</span></a> — warp → ORT → разбор → публикация; темп и нагрев.</p></li>
+<li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo на устройстве</span></a> — warp → GPU или ORT → разбор → публикация; темп и нагрев.</p></li>
 </ol>
 <p>Дальше вы переходите к <a class="reference internal" href="../Control/Overview.html"><span class="std std-doc">управлению</span></a>.</p>
 </section>
@@ -595,16 +595,19 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code></p></td>
 <td><p>warp в 512×256 с учётом экстринсиков</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
-<td><p>сессия ONNX Runtime</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code></p></td>
+<td><p>supercombo 0.9.7 в fp16 на GPU — путь по умолчанию</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneLines</span></code> и функции разбора</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
+<td><p>та же сеть в fp32 через ONNX Runtime — запасной путь</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneLines</span></code> и функции разбора</p></td>
 <td><p>головы модели → полилинии</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
 <td><p>политика отбрасывания, когда занято</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
 <td><p>только интерфейс, не контракт управления</p></td>
 </tr>
 </tbody>

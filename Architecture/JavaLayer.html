@@ -61,8 +61,6 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/JavaLayer';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/lang-switch.js?v=29098906"></script>
@@ -423,8 +421,37 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="java-layer-phone-shell">
 <h1>Java layer (phone shell)<a class="headerlink" href="#java-layer-phone-shell" title="Link to this heading">#</a></h1>
-<p>C++ owns algorithms. <strong>Java</strong> owns the Android world: camera, ONNX Runtime, bags, UI, and the ZMQ bridge into Middleware.</p>
-<p>Package root: <code class="docutils literal notranslate"><span class="pre">app/src/main/java/ai/flow/adas/</span></code>.</p>
+<p>C++ owns algorithms. <strong>Java</strong> owns the Android world: camera, the model runners, bags, UI, and the ZMQ bridge
+into the middleware.</p>
+<p>Package root: <code class="docutils literal notranslate"><span class="pre">app/src/main/java/adas/app/</span></code>, split by what a class talks to:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>package</p></th>
+<th class="head"><p>contents</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code> (JNI), <code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code>, <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code>, <code class="docutils literal notranslate"><span class="pre">Logger</span></code>, <code class="docutils literal notranslate"><span class="pre">TimeUtil</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.sensors</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CameraHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">IMUHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">GPSHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">PhoneStatsHandler</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.vision</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code>, both runners, <code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code>, <code class="docutils literal notranslate"><span class="pre">LaneLines</span></code>, <code class="docutils literal notranslate"><span class="pre">IntrinsicsCalibrator</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.bridge</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code>, <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.record</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BagLogger</span></code>, <code class="docutils literal notranslate"><span class="pre">AudioRecorder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.ui</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MainActivity</span></code>, <code class="docutils literal notranslate"><span class="pre">ParamSlider</span></code>, the two bench activities</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <section id="split-of-responsibility">
 <h2>Split of responsibility<a class="headerlink" href="#split-of-responsibility" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -435,13 +462,13 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Camera2 / IMU / GPS</p></td>
-<td><p>Lane-keep (<code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>)</p></td>
+<td><p>planning (<code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>) and the control law</p></td>
 </tr>
-<tr class="row-odd"><td><p>Supercombo + optional YOLO (ORT)</p></td>
-<td><p>SafetyWarn, LongPlan, TopicConvert</p></td>
+<tr class="row-odd"><td><p>Supercombo (thneed or ORT) + optional YOLO</p></td>
+<td><p>SafetyWarn, long plan, <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code> / <code class="docutils literal notranslate"><span class="pre">BagLogger</span></code> (session bags)</p></td>
-<td><p>Panda CAN TX/RX, HCA</p></td>
+<td><p>CAN TX/RX and HCA, behind <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p>Preview HUD (<code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code>)</p></td>
 <td><p>Middleware bus + timers</p></td>
@@ -462,8 +489,8 @@ If it needs <strong>Camera2, Activity, or ORT Android</strong>, it stays in Java
 <h2>Frame path (camera → native)<a class="headerlink" href="#frame-path-camera-native" title="Link to this heading">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>CameraHandler (YUV 1280×720, capture_ts)
     → VisionPipeline.submitYuv   (latest-frame drop if busy)
-        → ModelCalibWarp → 512×256
-        → SupercomboOnnxRunner.run (ORT)
+        → ModelCalibWarp.warpPair → 6×128×256 ×2   (OpenCL kernel, CPU fallback)
+        → SupercomboThneedRunner.run (GPU)  |  SupercomboOnnxRunner.run (ORT)
         → parse LaneLines / model_long / odometry
             → ProtoUtils.create…Message(...)
             → ZMQBridgeService.publishToNative(msg)   // :5555
@@ -482,7 +509,7 @@ If it needs <strong>Camera2, Activity, or ORT Android</strong>, it stays in Java
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Bag JPEG is usually the <strong>preview</strong> image, not the warped <span class="math notranslate nohighlight">\(512\times 256\)</span> ORT input.
+<p>Bag JPEG is usually the <strong>preview</strong> image, not the warped network input.
 Offline re-inference must rebuild the warp — see <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
 </div>
 </section>
@@ -508,32 +535,43 @@ Offline re-inference must rebuild the warp — see <a class="reference internal"
 </table>
 </div>
 <p>Config: <code class="docutils literal notranslate"><span class="pre">zmq.endpoint_in</span></code> / <code class="docutils literal notranslate"><span class="pre">zmq.endpoint_out</span></code> in <code class="docutils literal notranslate"><span class="pre">config.json</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student checklist when &quot;native never moves&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student checklist when "native never moves"</span>
 <span class="n">checks</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;nodes.zmq_bridge == true&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;VisionPipeline actually finishing ORT (infer_ms finite)&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;publishToNative called (logcat)&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C++ ZmqBridgeService polling IN&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;TopicConvert producing vision/path for LaneKeep&quot;</span><span class="p">,</span>
+    <span class="s2">"nodes.zmq_bridge == true"</span><span class="p">,</span>
+    <span class="s2">"the runner passed its zero-input check at load (logcat: 'accepted')"</span><span class="p">,</span>
+    <span class="s2">"VisionPipeline actually finishing inference (infer_ms finite)"</span><span class="p">,</span>
+    <span class="s2">"publishToNative called (logcat)"</span><span class="p">,</span>
+    <span class="s2">"C++ ZmqBridge polling IN"</span><span class="p">,</span>
+    <span class="s2">"Planner producing control/lat_plan for Control"</span><span class="p">,</span>
 <span class="p">]</span>
 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">checks</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 <section id="config-and-live-parameters">
 <h2>Config and live parameters<a class="headerlink" href="#config-and-live-parameters" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p><strong>Shipped JSON:</strong> <code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (copied to <code class="docutils literal notranslate"><span class="pre">filesDir</span></code> on first run — <strong>not</strong> overwritten on upgrade).</p></li>
+<ol class="arabic">
+<li><p><strong>Shipped JSON:</strong> <code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (copied to <code class="docutils literal notranslate"><span class="pre">filesDir</span></code> on first run — <strong>not</strong>
+overwritten on upgrade, which is a trap worth knowing: new keys added to the asset never reach an
+existing install. Clear it with the reset button, or
+<code class="docutils literal notranslate"><span class="pre">adb</span> <span class="pre">shell</span> <span class="pre">run-as</span> <span class="pre">adas.app</span> <span class="pre">rm</span> <span class="pre">-f</span> <span class="pre">files/config.json</span></code> — but see the warning below before you do).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>That file also holds the <strong>learned</strong> camera calibration. Deleting it throws away mounting angles the
+system spent a drive learning, and the app will re-learn them from whatever it sees next — including,
+once, a desk. Saving is now gated on <code class="docutils literal notranslate"><span class="pre">VisionPipeline.seesRoad()</span></code> for that reason.</p>
+</div>
+</li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code></strong> — which nodes are on (<code class="docutils literal notranslate"><span class="pre">nodes.lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">nodes.safety_warn</span></code>, …).</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code> + UI sliders</strong> — PP / calib-style knobs while driving.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">AdasAppHandler.applyLaneKeepParams</span></code></strong> → JNI → <code class="docutils literal notranslate"><span class="pre">Middleware::setParameter</span></code>.</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># What a slider change means on the bus</span>
 <span class="n">ui_value</span> <span class="o">=</span> <span class="mf">0.8</span>
-<span class="c1"># Java sends string &quot;0.8&quot; for name &quot;pp_k_dd&quot;</span>
-<span class="c1"># ParamBag on LaneKeep&#39;s thread parses → double pp_k_dd_</span>
-<span class="k">assert</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;0.8&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">ui_value</span>
+<span class="c1"># Java sends string "0.8" for name "pp_k_dd"</span>
+<span class="c1"># ParamBag on the Planner's thread parses → double pp_k_dd_</span>
+<span class="k">assert</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"0.8"</span><span class="p">)</span> <span class="o">==</span> <span class="n">ui_value</span>
 </pre></div>
 </div>
 <p>Push a new file to the phone without rebuilding APK: <code class="docutils literal notranslate"><span class="pre">./scripts/push_config.sh</span></code> (see repo scripts).</p>
@@ -542,8 +580,8 @@ Offline re-inference must rebuild the warp — see <a class="reference internal"
 <h2>Bags<a class="headerlink" href="#bags" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">Logger</span></code> creates a session directory under the app’s storage; each topic is a protobuf stream.
 Students pull with <code class="docutils literal notranslate"><span class="pre">./scripts/pull_bags.sh</span></code>, then:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
-python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
+python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
 python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggler<span class="w"> </span>/path/to/SESSION<span class="w"> </span>-o<span class="w"> </span>/tmp/out
 </pre></div>
 </div>
@@ -572,22 +610,31 @@ python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggl
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CameraHandler</span></code></p></td>
 <td><p>frames + timestamps</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> / <code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
-<td><p>ORT</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<td><p>runner selection, drop policy, <code class="docutils literal notranslate"><span class="pre">seesRoad()</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code> / <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> / <code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
+<td><p>the network, on GPU or through ORT</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code></p></td>
+<td><p>warp to model geometry, GPU-vs-CPU verification, focus metric</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IntrinsicsCalibrator</span></code></p></td>
+<td><p>chessboard intrinsics, when you shoot them</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code> / <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
 <td><p>into native</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code></p></td>
 <td><p>bags</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code> / <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code> / <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code></p></td>
 <td><p>knobs</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code></p></td>
 <td><p>JNI / start native</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
 <td><p>HUD</p></td>
 </tr>
 </tbody>
@@ -597,7 +644,7 @@ python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggl
 <section id="exercise">
 <h2>Exercise<a class="headerlink" href="#exercise" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
-<li><p>Trace one frame: which class drops it if ORT is busy?</p></li>
+<li><p>Trace one frame: which class drops it if the runner is busy?</p></li>
 <li><p>Flip <code class="docutils literal notranslate"><span class="pre">nodes.vision_supercombo</span></code> to <code class="docutils literal notranslate"><span class="pre">false</span></code> in a mental experiment — which topics disappear?</p></li>
 <li><p>From logcat or code, list three messages Java publishes on <code class="docutils literal notranslate"><span class="pre">:5555</span></code>.</p></li>
 </ol>

@@ -10,9 +10,16 @@ Pure Pursuit выбирает **один** $\delta$, попадающий в т�
 
 Приложение с разбором настоящих дуг: `docs/MPC_EXPLAINED.md`.
 
-* VisionPilot `mpc`: `lateral/lateral_planning.cpp` ($N{=}20$, шаг по пути $ds$).
-* flowpilot `fp`: `lateral/lateral_mpc.cpp` ($N{=}16$, сетка по времени → 2.5 с).
-* Слияние пути (разметка ↔ план): `laneLinesToPath` / `core/path_fusion.py`.
+Все три стоят за одним интерфейсом `IPlanner`, и сервис `Planner` держит ровно один из них:
+
+* pure pursuit `pp`: `lateral/pp_planner.cpp`.
+* VisionPilot `mpc`: `lateral/vp_planner.cpp` и `visionpilot_mpc.cpp` ($N{=}20$, шаг по пути $ds$).
+* flowpilot `fp`: `lateral/fp_planner.cpp` и `flowpilot_mpc.cpp` ($N{=}16$, сетка по времени → 2.5 с), со
+  сменным численным методом — `kappa_solver_grad` или `kappa_solver_acados`.
+* Слияние пути (разметка ↔ план): `laneLinesToPath` в `utils/lane_path.cpp` / `core/path_fusion.py`.
+
+Все три выдают **кривизну**, а не угол. Именно это позволяет менять их на ходу и сравнивать на одном беге:
+перевод в угол руля происходит один раз, ниже по течению, в `Control`.
 
 ## Обозначения состояния
 
@@ -256,7 +263,7 @@ delta_plan = sol[1] if len(sol) > 1 else sol[0]   # "look ahead" one sample
 d_prev = 0.0
 d_out, swa = apply_limits(delta_plan, d_prev, v=18.0)
 print(f"wheel {math.degrees(d_out):.2f}°  SWA {math.degrees(swa):.1f}°  "
-      f"(PID→torque happens in LaneKeepService / PandaService)")
+      f"(PID→torque happens in Control, CAN framing in Platform)")
 ```
 
 Насыщение на ±300 cNm означает, что **машина** не может исполнить, а не что стоимость хотела больше. Отладочный флаг и индикация в интерфейсе: предел руления.
@@ -298,7 +305,7 @@ for k_meas in (0.020, 0.013, 0.008):  # truth, ×0.66, worse
 
 И `fp`, и `mpc` / `pp` следят за **эталонной полилинией** на топике `vision/path`.
 Эта полилиния — **не** сырая разметка и **не** сырой план Supercombo, а слияние в
-`laneLinesToPath` (`topic_convert`, зеркало на Python `core/path_fusion.py`).
+`laneLinesToPath` (`utils/lane_path.cpp`, зеркало на Python `core/path_fusion.py`).
 
 ### Зачем сливать?
 
@@ -396,8 +403,8 @@ for scale in (0.0, 0.6, 1.0):
 
 ## Модель `fp` (MPC flowpilot в области времени)
 
-По умолчанию на дороге (`lane_keep_controller=fp`). Код: `lateral/lateral_mpc.cpp`,
-подключение в `LaneKeepService::stepFlowpilot`.
+По умолчанию на дороге (`lane_keep_controller=fp`). Код: `lateral/fp_planner.cpp` и
+`lateral/flowpilot_mpc.cpp`, метод выбирается в `Planner` через `makeKappaSolver`.
 
 Противоположность $\delta$-MPC VisionPilot в **области пути**:
 
@@ -619,8 +626,8 @@ first_second_32 = sum(1 for i in range(33) if 10.0 * (i / 32.0) ** 2 <= 1.0)
 print(f"N=32    : {first_second_32} of 33 nodes inside the first second, horizon "
       f"{10.0 * (32 / 32.0) ** 2:.2f} s")
 print("\nThe near zone is already as densely sampled as theirs. Doubling N adds far nodes, which at equal")
-print("weights dilutes the near zone that actually matters, and costs about 4x more to solve because we")
-print("use gradient descent rather than acados.")
+print("weights dilutes the near zone that actually matters, and costs about 4x more to solve under the")
+print("gradient solver.")
 ```
 
 ### 3. У плана, который оптимизируется, своё смещение
@@ -674,7 +681,7 @@ MPC минимизирует расстояние до эталона. Если 
 ## Честное сравнение
 
 Одно окно бега, темп зрения $\gtrsim 9$ Гц: |CTE| медиана/p95, |$\Delta$SWA|, прямая и дуга по отдельности.
-Инструмент: `bag_config_sweep.py --vision-latency ...` (умеет перебирать и `--blend`).
+Инструмент: `bag/bag_config_sweep.py --vision-latency ...` (умеет перебирать и `--blend`).
 
 ## Задания
 

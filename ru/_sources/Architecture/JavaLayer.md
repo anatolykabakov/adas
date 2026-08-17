@@ -2,14 +2,23 @@
 
 Алгоритмы принадлежат C++. **Java** принадлежит мир Android: камера, ONNX Runtime, беги, интерфейс и мост ZMQ в Middleware.
 
-Корень пакета: `app/src/main/java/ai/flow/adas/`.
+Корень пакета: `app/src/main/java/adas/app/`, разложенный по тому, с чем класс разговаривает:
+
+| пакет | содержимое |
+|---|---|
+| `adas.app` | `AdasAppHandler` (JNI), `AdasConfig`, `RuntimeParams`, `Logger`, `TimeUtil` |
+| `adas.app.sensors` | `CameraHandler`, `IMUHandler`, `GPSHandler`, `PhoneStatsHandler` |
+| `adas.app.vision` | `VisionPipeline`, оба раннера, `ModelCalibWarp`, `LaneLines`, `IntrinsicsCalibrator` |
+| `adas.app.bridge` | `ZMQBridgeService`, `ProtoUtils` |
+| `adas.app.record` | `BagLogger`, `AudioRecorder` |
+| `adas.app.ui` | `MainActivity`, `ParamSlider`, две стендовые активности |
 
 ## Разделение ответственности
 
 | Остаётся в **Java** | Живёт в **C++** |
 |---|---|
 | Camera2 / IMU / GPS | удержание полосы (`pp` / `mpc` / `fp`) |
-| Supercombo и опциональный YOLO (ORT) | SafetyWarn, LongPlan, TopicConvert |
+| Supercombo (thneed или ORT) и опциональный YOLO | SafetyWarn, продольный план, `proto_convert` |
 | `Logger` / `BagLogger` (беги сессии) | приём и передача CAN панды, HCA |
 | Превью и наложение (`LaneOverlayView`) | шина Middleware и таймеры |
 | Сокеты PUB/SUB в `ZMQBridgeService` | нативный сервис моста ZMQ |
@@ -25,8 +34,8 @@
 ```text
 CameraHandler (YUV 1280×720, capture_ts)
     → VisionPipeline.submitYuv   (latest-frame drop if busy)
-        → ModelCalibWarp → 512×256
-        → SupercomboOnnxRunner.run (ORT)
+        → ModelCalibWarp.warpPair → 6×128×256 ×2   (OpenCL kernel, CPU fallback)
+        → SupercomboThneedRunner.run (GPU)  |  SupercomboOnnxRunner.run (ORT)
         → parse LaneLines / model_long / odometry
             → ProtoUtils.create…Message(...)
             → ZMQBridgeService.publishToNative(msg)   // :5555
@@ -45,7 +54,7 @@ ZMQBridgeService.publishToNative(modelLong);
 ```
 
 ```{warning}
-JPEG в беге — это обычно **превью**, а не развёрнутый вход ORT $512\times 256$.
+JPEG в беге — это обычно **превью**, а не развёрнутый вход сети.
 Офлайн-переинференс должен пересобрать warp — см. [Supercombo](../Vision/Supercombo.md).
 ```
 
@@ -62,10 +71,11 @@ JPEG в беге — это обычно **превью**, а не развёр�
 # Student checklist when "native never moves"
 checks = [
     "nodes.zmq_bridge == true",
-    "VisionPipeline actually finishing ORT (infer_ms finite)",
+    "the runner passed its zero-input check at load (logcat: 'accepted')",
+    "VisionPipeline actually finishing inference (infer_ms finite)",
     "publishToNative called (logcat)",
-    "C++ ZmqBridgeService polling IN",
-    "TopicConvert producing vision/path for LaneKeep",
+    "C++ ZmqBridge polling IN",
+    "Planner producing control/lat_plan for Control",
 ]
 for c in checks:
     print("-", c)
@@ -73,7 +83,17 @@ for c in checks:
 
 ## Конфиг и живые параметры
 
-1. **Поставляемый JSON:** `app/src/main/assets/config.json` (копируется в `filesDir` при первом запуске и **не** перезаписывается при обновлении).
+1. **Поставляемый JSON:** `app/src/main/assets/config.json` (копируется в `filesDir` при первом запуске и
+   **не** перезаписывается при обновлении — ловушка, о которой стоит знать: новые ключи, добавленные в ассет,
+   до существующей установки не доходят. Сбрасывается кнопкой сброса параметров или
+   `adb shell run-as adas.app rm -f files/config.json` — но сперва прочтите предупреждение ниже).
+
+   ```{warning}
+   В этом же файле лежит **выученная** калибровка камеры. Удаляя его, вы выбрасываете углы крепления,
+   которые система набирала целый заезд, и она выучит их заново по тому, что увидит следующим, — однажды
+   это оказался письменный стол. Именно поэтому сохранение теперь разрешено только при
+   `VisionPipeline.seesRoad()`.
+   ```
 2. **`AdasConfig`** — какие узлы включены (`nodes.lane_keep`, `nodes.safety_warn`, …).
 3. **`RuntimeParams` и слайдеры интерфейса** — ручки в духе PP и калибровки прямо на ходу.
 4. **`AdasAppHandler.applyLaneKeepParams`** → JNI → `Middleware::setParameter`.
@@ -82,7 +102,7 @@ for c in checks:
 # What a slider change means on the bus
 ui_value = 0.8
 # Java sends string "0.8" for name "pp_k_dd"
-# ParamBag on LaneKeep's thread parses → double pp_k_dd_
+# ParamBag on the Planner's thread parses → double pp_k_dd_
 assert float("0.8") == ui_value
 ```
 
@@ -94,8 +114,8 @@ assert float("0.8") == ui_value
 Студенты забирают их через `./scripts/pull_bags.sh`, дальше:
 
 ```bash
-cd app/src/main/scripts
-python3 latency.py /path/to/adas_logs/SESSION
+cd scripts
+python3 tools/latency.py /path/to/adas_logs/SESSION
 python3 -m vis.export_to_plotjuggler /path/to/SESSION -o /tmp/out
 ```
 
@@ -117,7 +137,10 @@ laneOverlay.setSafetyWarn(fcw, aeb, lldw, rldw);
 |---|---|
 | `MainActivity` | жизненный цикл, связывание обработчиков |
 | `CameraHandler` | кадры и метки времени |
-| `VisionPipeline` / `SupercomboOnnxRunner` | ORT |
+| `VisionPipeline` | выбор раннера, политика отбрасывания, `seesRoad()` |
+| `SupercomboThneedRunner` / `SupercomboOnnxRunner` | сеть, на GPU или через ORT |
+| `ModelCalibWarp` | варп к геометрии модели, сверка GPU против CPU, метрика резкости |
+| `IntrinsicsCalibrator` | интринсики по шахматной доске, когда вы её снимаете |
 | `ZMQBridgeService` / `ProtoUtils` | в нативный код |
 | `Logger` | беги |
 | `AdasConfig` / `RuntimeParams` | ручки |
@@ -126,7 +149,7 @@ laneOverlay.setSafetyWarn(fcw, aeb, lldw, rldw);
 
 ## Задания
 
-1. Проследите один кадр: какой класс его отбросит, если ORT занят?
+1. Проследите один кадр: какой класс его отбросит, если раннер занят?
 2. Мысленно переключите `nodes.vision_supercombo` в `false` — какие топики исчезнут?
 3. По logcat или по коду перечислите три сообщения, которые Java публикует на `:5555`.
 

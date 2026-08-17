@@ -407,19 +407,24 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит с одним кадром</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Шаг 2: запустить и решить, с какой точностью</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как выглядит здоровое состояние</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gpu">Шаг 2: запустить — на GPU или на процессоре</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#thneed">Что такое <code class="docutils literal notranslate"><span class="pre">.thneed</span></code> на самом деле</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Откуда взялся наш файл</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#onnx-fp32-thneed-fp16">Точность: почему ассет ONNX в fp32, а thneed в fp16</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Ничему не верят на основании того, что оно загрузилось</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как выглядит здоровое состояние</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Та же сеть на трёх телефонах</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Выбор гипотезы плана</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Выбор гипотезы плана</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: какой темп получится на самом деле</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Шаг 5: что реально потребляет управление</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Границы учебной постановки</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Код, который стоит пробежать</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Шаг 4: какой темп получится на самом деле</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Шаг 5: что реально потребляет управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Границы учебной постановки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Код, который стоит пробежать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
 </ul>
             </nav>
         </div>
@@ -434,7 +439,10 @@
   <section class="tex2jax_ignore mathjax_ignore" id="supercombo">
 <h1>Supercombo на устройстве<a class="headerlink" href="#supercombo" title="Ссылка на этот заголовок">#</a></h1>
 <p>Мы хотим, чтобы телефон превращал кадр с камеры на лобовом стекле в контракт <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора</span></a>.
-Сеть — одна ONNX-модель из семейства openpilot / flowpilot (обычно <strong>v0.8.x</strong>, ширина выхода 6472 в нашей сборке). Инференс идёт в <strong>Java ONNX Runtime</strong>, не через thneed или SNPE.</p>
+Сеть — одна модель из семейства openpilot / flowpilot: <strong>supercombo 0.9.7</strong>, семь входов, ширина выхода
+6504. В приложении она едет дважды: как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.onnx</span></code> (fp32) и как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.thneed</span></code> —
+та же сеть в fp16 под GPU, собранная из этого же ONNX. Какой бы раннер ни был выбран, сеть одна и та же, и
+именно это делает два пути вообще сравнимыми.</p>
 <section id="id1">
 <h2>Шаг 1: привести кадр к геометрии, которую ждёт модель<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
 <p>Сеть обучалась на одной камере в одном положении крепления. У нас ни то, ни другое, поэтому перед инференсом
@@ -445,8 +453,10 @@
 <p>Два следствия, которые надо унести в эту главу:</p>
 <ul class="simple">
 <li><p>модель видит <em>производное</em> изображение, поэтому её выход наследует любую ошибку калибровки выше;</p></li>
-<li><p>warp не бесплатен. Он стоит 7 мс медианно и 35.7 мс на p95, и этот хвост — ровно те кадры, где эталон
-старше 150 мс.</p></li>
+<li><p>warp не бесплатен. На процессоре он стоил 7 мс медианно и 35.7 мс на p95, и этот хвост был ровно теми
+кадрами, где эталон старше 150 мс. Теперь он считается ядром OpenCL: <strong>4.6 мс медианно, 10.8 мс на p95</strong>.
+Первый кадр после запуска считается обоими способами и сверяется побитово — потому что неверный варп не
+падает, он отдаёт сети правдоподобную картинку другой дороги.</p></li>
 </ul>
 <section id="id2">
 <h3>Что происходит с одним кадром<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
@@ -455,7 +465,7 @@
 <li><p>Bitmap и <code class="docutils literal notranslate"><span class="pre">capture_ts</span></code> (время экспозиции или доставки).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> → вход модели <strong><span class="math notranslate nohighlight">\(512\times 256\)</span></strong> (совместимый с medmodel путь).</p></li>
 <li><p>Временной стек и состояние RNN (контекст в два кадра).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code> → сырой вектор; записываются <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>.</p></li>
+<li><p>выбранный раннер исполняет сеть → сырой вектор; записываются <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>.</p></li>
 <li><p>Разбор голов → линии разметки и края, план (MHP → лучшая гипотеза), камерная одометрия, опционально продольное.</p></li>
 <li><p>Публикация <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (при желании полный <code class="docutils literal notranslate"><span class="pre">model_out</span></code> кладётся в бег).</p></li>
 </ol>
@@ -466,79 +476,239 @@
 </div>
 </section>
 </section>
+<section id="gpu">
+<h2>Шаг 2: запустить — на GPU или на процессоре<a class="headerlink" href="#gpu" title="Ссылка на этот заголовок">#</a></h2>
+<p>Два раннера реализуют один интерфейс, а <code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code> выбирает один из них:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>раннер</p></th>
+<th class="head"><p>что это</p></th>
+<th class="head text-right"><p>инференс</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code></p></td>
+<td><p>supercombo 0.9.7 в fp16, исполняется на GPU через OpenCL</p></td>
+<td class="text-right"><p><strong>17.6 мс</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
+<td><p>та же сеть в fp32 через ONNX Runtime</p></td>
+<td class="text-right"><p>48.5 мс</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="thneed">
+<h3>Что такое <code class="docutils literal notranslate"><span class="pre">.thneed</span></code> на самом деле<a class="headerlink" href="#thneed" title="Ссылка на этот заголовок">#</a></h3>
+<p>Не модель и не формат весов, а <strong>запись прогона сети на GPU</strong>. Файл — это заголовок JSON и блобы за ним, а в
+JSON перечислены ядра в том порядке, в котором их запускали, их аргументы, буферы и образы, которых они
+касаются, и либо <strong>исходники</strong> ядер на OpenCL, либо их скомпилированные <strong>бинарники</strong>. Воспроизведение — это
+повторная выдача записанной последовательности.</p>
+<p>Два убеждения о нём стоит развидеть пораньше, потому что оба написаны в апстримных README и оба здесь неверны:</p>
+<ul class="simple">
+<li><p><em>«thneed — это ускоритель SNPE, нужна лицензия Qualcomm».</em> Нет. Цепочка такая: ONNX → tinygrad компилирует
+его в ядра OpenCL → один прогон записывается → запись и есть файл.</p></li>
+<li><p><em>«thneed работает только на Adreno».</em> Апстримный openpilot воспроизводит запись на уровне ioctl драйвера
+Adreno (KGSL) — оттуда это убеждение и берётся. Наш загрузчик так не делает: весь тот блок стоит под
+<code class="docutils literal notranslate"><span class="pre">#ifndef</span> <span class="pre">QCOM2</span></code> и не компилируется, а в <code class="docutils literal notranslate"><span class="pre">libthneedrunner.so</span></code> нет ни одной строки <code class="docutils literal notranslate"><span class="pre">kgsl</span></code>. Быстрому пути на
+самом деле нужны доступный приложению OpenCL, <code class="docutils literal notranslate"><span class="pre">cl_khr_fp16</span></code>, образы поверх буферов и шаг строки, который
+примет драйвер. На Mali он запускался.</p></li>
+</ul>
+</section>
 <section id="id3">
-<h2>Шаг 2: запустить и решить, с какой точностью<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Инференс — это <code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code> на Android ONNX Runtime, не thneed и не SNPE. Поэтому артефакты <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>,
-которые поставляют flowpilot и dragonpilot, нам бесполезны: это предкомпилированные программы под GPU
-Snapdragon 845, привязанные к их среде исполнения.</p>
-<p>Провайдер исполнения выбирается цепочкой с откатом: NNAPI в половинной точности, если попросили, затем
-обычный NNAPI, затем CPU. Каждая попытка строит свежие опции сессии, потому что после неудачного
-<code class="docutils literal notranslate"><span class="pre">createSession</span></code> опции переиспользовать нельзя.</p>
-<p>Половинная точность стоит около 15–20 мс из 45.6 — это самый крупный оставшийся рычаг в конвейере. Она
-<strong>выключена по умолчанию</strong>, и причина — измерение, а не осторожность: перевод всей модели в fp16 (проверка
-строже, чем ослабление точности по узлам в NNAPI) сдвинул центр полосы на 0.027 м и смещение плана на
-0.037 м, при этом вероятности линий выросли, а хвост σ укоротился. Деградации нет. Но расхождение по кадрам
-составило 0.05 м медианно и 0.20 м на p95 по центру полосы, а в очереди стоит другая правка поперечного
-тракта — поэтому она ждёт своей очереди как эксперимент с одной переменной.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Офлайн-проверка, на кадрах, где видны обе линии. Заезд не нужен.</span>
-<span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
-python3<span class="w"> </span>bag_fp16_ab.py<span class="w"> </span>../../../../adas_logs/&lt;session&gt;<span class="w"> </span>--n<span class="w"> </span><span class="m">200</span><span class="w"> </span>--t0<span class="w"> </span><span class="m">900</span><span class="w"> </span>--t1<span class="w"> </span><span class="m">1100</span>
+<h3>Откуда взялся наш файл<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_from_onnx.py</span></code> собирает его из <code class="docutils literal notranslate"><span class="pre">assets/supercombo.onnx</span></code>, а
+<code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_check.py</span></code> проигрывает собранное на OpenCL хоста и сверяет с эталоном, который генератор
+кладёт рядом. На поставляемом файле расхождение <strong>нулевое, до последнего бита</strong>.</p>
+<p>Собрать самому — четыре команды, подробности в <code class="docutils literal notranslate"><span class="pre">docs/THNEED.md</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
+python3<span class="w"> </span>tools/thneed_from_onnx.py<span class="w"> </span>../app/src/main/assets/supercombo.onnx<span class="w"> </span>--half<span class="w"> </span>-o<span class="w"> </span>out.thneed
+python3<span class="w"> </span>tools/thneed_check.py<span class="w"> </span>out.thneed<span class="w"> </span>--ref<span class="w"> </span>out.thneed.ref.npy
+adb<span class="w"> </span>push<span class="w"> </span>out.thneed<span class="w"> </span>/sdcard/adas_models/supercombo.thneed
+python3<span class="w"> </span>tools/model_device_probe.py<span class="w"> </span>--iters<span class="w"> </span><span class="m">50</span>
 </pre></div>
 </div>
+<p>Генератор начинал с 71 мс на кадр и закончил на 23.9. Что дало время, по порядку:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>шаг</p></th>
+<th class="head"><p>стало</p></th>
+<th class="head"><p>почему</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>текстуры вместо буферов</p></td>
+<td><p>74 → 39.7 мс</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">IMAGE=2</span></code> в tinygrad: свёртки читают <code class="docutils literal notranslate"><span class="pre">image2d_t</span></code> через текстурный кэш</p></td>
+</tr>
+<tr class="row-odd"><td><p>свёртка ядер подготовки весов</p></td>
+<td><p>39.7 → 29.5 мс</p></td>
+<td><p>319 из 340 поэлементных ядер перекладывали <strong>веса</strong> на каждом кадре</p></td>
+</tr>
+<tr class="row-even"><td><p>fp16</p></td>
+<td><p>≈ −19 %</p></td>
+<td><p>вдвое меньше весов по шине</p></td>
+</tr>
+<tr class="row-odd"><td><p>варп переехал на GPU</p></td>
+<td><p>подготовка 12.1 → 3.6 мс</p></td>
+<td><p>полтора миллиона независимых билинейных выборок — то, для чего GPU и сделан</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="onnx-fp32-thneed-fp16">
+<h3>Точность: почему ассет ONNX в fp32, а thneed в fp16<a class="headerlink" href="#onnx-fp32-thneed-fp16" title="Ссылка на этот заголовок">#</a></h3>
+<p>Потому что <strong>ONNX Runtime считает fp16-модель на ARM неверно</strong>, и молча. Тот же файл, те же нулевые входы:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>где</p></th>
+<th class="head text-right"><p>среднее</p></th>
+<th class="head text-right"><p>разброс</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>настольный ORT, CPU</p></td>
+<td class="text-right"><p>−1.2455</p></td>
+<td class="text-right"><p>3.2799</p></td>
+</tr>
+<tr class="row-odd"><td><p>телефон, CPU</p></td>
+<td class="text-right"><p>−7.6056</p></td>
+<td class="text-right"><p>133.88</p></td>
+</tr>
+<tr class="row-even"><td><p>телефон, NNAPI</p></td>
+<td class="text-right"><p>−7.6056</p></td>
+<td class="text-right"><p>133.88</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ни ошибки, ни предупреждения: сессия создаётся, считает и отдаёт правдоподобные числа. С fp32 процессор
+телефона считает верно (−1.2458 / 3.2807); NNAPI неверен и на fp32 (−0.1234 / 7.79). Поэтому запасной путь
+везёт fp32 — ценой ассета в 103 МБ, — а в fp16 модель переводит сам генератор, для пути через GPU.</p>
+</section>
 <section id="id4">
-<h3>Как выглядит здоровое состояние<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>Медианы с ночного заезда длиной 28 минут при камере 30 к/с, без YOLO для знаков (<code class="docutils literal notranslate"><span class="pre">2026_08_06_00_36_42</span></code>):</p>
+<h3>Ничему не верят на основании того, что оно загрузилось<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Эта таблица и есть причина правила, которое теперь действует во всём тракте зрения: <strong>компонент, который
+считает не то, не падает — он складно врёт.</strong> Поэтому каждый раннер и каждый провайдер исполнения, который
+удалось собрать ORT, один раз прогоняется на нулевых входах, и подпись его выхода сверяется с величиной,
+снятой офлайн:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>XNNPACK: на нулях mean=-1.2458 std=3.2807 (ждём -1.2455 / 3.2799) — принято
+NNAPI:   на нулях mean=-0.1234 std=7.7858 (ждём -1.2455 / 3.2799) — ОТБРОШЕНО, считает не то
+ThneedRunner: на нулях mean=-1.2505 std=3.2742 (ждём -1.2498 / 3.2745) — принято
+</pre></div>
+</div>
+<p>Так NNAPI отсеял себя сам на всех трёх проверенных телефонах, без единой строки под конкретное устройство.
+Если не сойдётся проверка thneed, приложение откатится на ONNX, а не поедет по разметке от модели, считающей
+неизвестно что.</p>
+</section>
+<section id="id5">
+<h3>Как выглядит здоровое состояние<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
+<p>Медианы с ночного заезда длиной 29 минут при камере 30 к/с, без YOLO для знаков (<code class="docutils literal notranslate"><span class="pre">2026_08_16_23_59_45</span></code>),
+OnePlus 7T:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>величина</p></th>
 <th class="head text-right"><p>медиана</p></th>
 <th class="head text-right"><p>p95</p></th>
+<th class="head text-right"><p>было на ONNX</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>подготовка кадра (warp)</p></td>
-<td class="text-right"><p>7.0 мс</p></td>
-<td class="text-right"><p>35.7</p></td>
+<tr class="row-even"><td><p>подготовка кадра (warp на GPU)</p></td>
+<td class="text-right"><p>4.6 мс</p></td>
+<td class="text-right"><p>10.8</p></td>
+<td class="text-right"><p>7.0 / 35.7</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">infer</span></code> в ORT</p></td>
-<td class="text-right"><p><strong>45.6 мс</strong></p></td>
-<td class="text-right"><p>53.8</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">infer</span></code></p></td>
+<td class="text-right"><p><strong>17.6 мс</strong></p></td>
+<td class="text-right"><p>18.9</p></td>
+<td class="text-right"><p>45.6 / 53.8</p></td>
 </tr>
 <tr class="row-even"><td><p>сквозное съёмка → выход модели</p></td>
-<td class="text-right"><p>54 мс</p></td>
-<td class="text-right"><p>81</p></td>
+<td class="text-right"><p>22 мс</p></td>
+<td class="text-right"><p>29</p></td>
+<td class="text-right"><p>54 / 81</p></td>
 </tr>
 <tr class="row-odd"><td><p>съёмка → команда на руль</p></td>
-<td class="text-right"><p>79 мс</p></td>
-<td class="text-right"><p>111</p></td>
+<td class="text-right"><p>52 мс</p></td>
+<td class="text-right"><p>69</p></td>
+<td class="text-right"><p>79 / 111</p></td>
 </tr>
 <tr class="row-even"><td><p>темп публикации</p></td>
-<td class="text-right"><p><strong>13.24 Гц</strong></p></td>
+<td class="text-right"><p><strong>30.01 Гц</strong></p></td>
+<td class="text-right"><p>—</p></td>
+<td class="text-right"><p>13.24 Гц</p></td>
+</tr>
+<tr class="row-odd"><td><p>потеряно кадров</p></td>
+<td class="text-right"><p><strong>0</strong> из 52 690</p></td>
+<td class="text-right"><p>—</p></td>
 <td class="text-right"><p>—</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Читать это можно двумя способами. Медианы говорят, что конвейер здоров. А p95 подготовки кадра — впятеро
-больше медианы — говорит, что беда живёт в хвосте, и это те же кадры, на которых эталон переваливает за
-150 мс.</p>
+<p>Читать надо с последней строки. На 13 Гц конвейер терял кадры всякий раз, когда инференс затягивался, и
+поперечный метроном наследовал это дрожание; на 30 Гц темп задаёт только период камеры.</p>
 <p>Если вы видите инференс по 300–500 мс и 2–3 Гц, это <strong>нагрев или борьба за процессор</strong>, а не «сеть обычно
 такая медленная». Включение детектора знаков YOLO делает то же самое намеренно: он конкурирует за тот же
 SoC, поэтому выключайте его перед сравнением контроллеров.</p>
+</section>
+<section id="id6">
+<h3>Та же сеть на трёх телефонах<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p></p></th>
+<th class="head"><p>OnePlus 7T</p></th>
+<th class="head"><p>Xiaomi 14</p></th>
+<th class="head"><p>HONOR CRT-LX1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>GPU</p></td>
+<td><p>Adreno 640</p></td>
+<td><p>Adreno 750</p></td>
+<td><p>Mali-G52 MC2</p></td>
+</tr>
+<tr class="row-odd"><td><p>кадр целиком, thneed</p></td>
+<td><p>23.9 мс</p></td>
+<td><p><strong>12.4 мс</strong></p></td>
+<td><p>153.5 мс</p></td>
+</tr>
+<tr class="row-even"><td><p>кадр целиком, ONNX</p></td>
+<td><p>53.9 мс</p></td>
+<td><p>41.5 мс</p></td>
+<td><p>183.7 мс</p></td>
+</tr>
+<tr class="row-odd"><td><p>темп</p></td>
+<td><p>41.9 Гц</p></td>
+<td><p>80.6 Гц</p></td>
+<td><p><strong>6.5 Гц</strong></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Полезная здесь — строка про Mali. Быстрый путь там работает — подпись выхода сходится, то есть считается
+именно то, что нужно, — и всё равно вчетверо медленнее, чем нужно, чтобы ехать, потому что Mali-G52 MC2 это
+два вычислительных ядра. «Оно запускается» и «оно успевает» — разные вопросы, и на оба отвечает только
+замер; порядок описан в <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>.</p>
 <div class="warning admonition">
-<p class="admonition-title">Зависания зрения — до сих пор открытый пункт</p>
+<p class="admonition-title">Зависания зрения: с тех пор не воспроизводились, но и не объяснены</p>
 <p>На дневном беге эталон был старше 300 мс 15.9 % времени, с одной дырой в <strong>75 секунд</strong>, при том что CAN
-держал свои 10 мс и таймеры держали свои — то есть ни процессор, ни планирование этого не объясняют. Тот же
-маршрут ночью прошёл чисто (<code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> максимум 119 мс, ни одного устаревшего кадра). Нагрев — ведущее
-объяснение, но не доказанное; метки прихода кадра, добавленные в августе 2026, существуют, чтобы это решить.</p>
+держал свои 10 мс и таймеры держали свои — то есть ни процессор, ни планирование этого не объясняли. Нагрев
+был ведущим кандидатом и так и не стал доказанным. Метки прихода кадра, добавленные в августе 2026,
+существуют, чтобы решить это в следующий раз: они отделяют поздно пришедший кадр от медленного инференса, и
+на всех бегах после переезда модели на GPU обе читаются как 0 мс при нуле потерянных кадров. Это отсутствие
+симптома на конвейере, чей бюджет инференса втрое меньше прежнего, — а не диагноз того зависания.</p>
 </div>
 </section>
 </section>
-<section id="id5">
-<h2>Шаг 3: прочитать выходной вектор<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id7">
+<h2>Шаг 3: прочитать выходной вектор<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <p>Модель возвращает один плоский массив float. Ничто в нём не подписано, а раскладка — самое неверно
 прочитанное место в этом проекте, поэтому этот раздел — её запускаемая карта.</p>
-<p>Для нашей сборки (<code class="docutils literal notranslate"><span class="pre">sc_v0.8.12</span></code>, ширина 6472; у сборки 6409 тот же префикс):</p>
+<p>Для supercombo 0.9.7, ширина 6504 (у сборок 0.8.x шириной 6472 и 6409 весь префикс тот же — двигается
+только хвост):</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>срез</p></th>
@@ -558,13 +728,28 @@ SoC, поэтому выключайте его перед сравнением 
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[5491</span> <span class="pre">:</span> <span class="pre">5755)</span></code></p></td>
 <td><p><strong>ROAD EDGES</strong> — 2 края: 132 средних, затем 132 логарифмов σ</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[5755</span> <span class="pre">:</span> <span class="pre">…)</span></code></p></td>
-<td><p>лидер, desire, meta, поза, состояние GRU</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[5755</span> <span class="pre">:</span> <span class="pre">5948)</span></code></p></td>
+<td><p>лидер, desire, meta</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[5948</span> <span class="pre">:</span> <span class="pre">…)</span></code></p></td>
+<td><p><strong>поза</strong> — собственные перемещение и поворот модели</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">[5990</span> <span class="pre">:</span> <span class="pre">…)</span></code></p></td>
+<td><p><strong>желаемая кривизна</strong> — голова, добавленная в 0.9.x</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">[5992</span> <span class="pre">:</span> <span class="pre">6504)</span></code></p></td>
+<td><p>512 <strong>признаков</strong> — подаются обратно на вход следующим кадром</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Внутри живут две ловушки.</p>
+<p>Именно в хвосте и кусается несовпадение версий. Смещения между поколениями разные, и чтение позы 0.9.x по
+смещению 0.8.x возвращает числа конечные, гладкие и неверные — ровно это здесь однажды и случилось, и ровно
+поэтому оба раннера теперь везут одну сеть, а не каждый свою.</p>
+<p>Последние две строки — это рекуррентность, и она забота раннера, а не модели: после каждого кадра 512
+признаков сдвигаются на кадр внутри <code class="docutils literal notranslate"><span class="pre">features_buffer</span></code>, а <code class="docutils literal notranslate"><span class="pre">prev_desired_curv</span></code> — на одно значение. Ошибётесь —
+модель всё равно посчитает, просто она будет помнить прошлое, которого не было.</p>
+<p>Внутри живут ещё две ловушки.</p>
 <p><strong>Ловушка первая: чередуются <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">z)</span></code>, а не <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code>.</strong> Внутри 66 float одной линии значения чередуют
 поперечное положение и высоту: индекс <code class="docutils literal notranslate"><span class="pre">i*2</span></code> — это <span class="math notranslate nohighlight">\(y\)</span>, <code class="docutils literal notranslate"><span class="pre">i*2+1</span></code> — это <span class="math notranslate nohighlight">\(z\)</span>. Широко скопированный демо-парсер
 читает их как <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code> и кажется работающим — потому что чётные индексы для <span class="math notranslate nohighlight">\(y\)</span> он берёт правильно, — а
@@ -587,23 +772,23 @@ SoC, поэтому выключайте его перед сравнением 
     <span class="k">return</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">v</span><span class="p">))</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_lines</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;4 lane lines and 2 road edges from the flat vector: y, z, sigma, probability.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""4 lane lines and 2 road edges from the flat vector: y, z, sigma, probability."""</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
     <span class="n">lanes</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
         <span class="n">block</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">PLAN_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">PLAN_END</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
         <span class="n">stds</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">LANE_STDS_START</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
         <span class="n">lanes</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-            <span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2   — lateral</span>
-            <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2+1 — height, NOT sigma</span>
-            <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]),</span>                          <span class="c1"># second half of the block, and a log</span>
-            <span class="s2">&quot;prob&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">LANES_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])),</span>   <span class="c1"># odd logit, per the official parser</span>
+            <span class="s2">"y"</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2   — lateral</span>
+            <span class="s2">"z"</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>                              <span class="c1"># index i*2+1 — height, NOT sigma</span>
+            <span class="s2">"sigma"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]),</span>                          <span class="c1"># second half of the block, and a log</span>
+            <span class="s2">"prob"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">sigmoid</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="n">LANES_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])),</span>   <span class="c1"># odd logit, per the official parser</span>
         <span class="p">})</span>
     <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
         <span class="n">block</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">LANE_PROB_END</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
         <span class="n">stds</span> <span class="o">=</span> <span class="n">out</span><span class="p">[</span><span class="n">EDGE_STDS_START</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">66</span> <span class="p">:</span> <span class="n">EDGE_STDS_START</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">66</span><span class="p">]</span>
-        <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">&quot;z&quot;</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">&quot;sigma&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])})</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"y"</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">"z"</span><span class="p">:</span> <span class="n">block</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">"sigma"</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">stds</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">])})</span>
     <span class="k">return</span> <span class="n">lanes</span><span class="p">,</span> <span class="n">edges</span>
 
 <span class="c1"># The 33 sample distances the model always uses — quadratic, so 11 of them are inside the first second</span>
@@ -614,7 +799,7 @@ SoC, поэтому выключайте его перед сравнением 
                    <span class="mf">168.75</span><span class="p">,</span> <span class="mf">180.1875</span><span class="p">,</span> <span class="mf">192.0</span><span class="p">])</span>
 
 <span class="c1"># Synthetic output: a 3.5 m lane, sigma growing with range, so the indexing can be checked round-trip.</span>
-<span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">6472</span><span class="p">)</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">6504</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">y_off</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">((</span><span class="o">-</span><span class="mf">5.25</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.75</span><span class="p">,</span> <span class="mf">1.75</span><span class="p">,</span> <span class="mf">5.25</span><span class="p">)):</span>        <span class="c1"># farLeft, left, right, farRight</span>
     <span class="n">block</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">66</span><span class="p">)</span>
     <span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">y_off</span>                                        <span class="c1"># y</span>
@@ -629,20 +814,20 @@ SoC, поэтому выключайте его перед сравнением 
 <span class="n">lanes</span><span class="p">,</span> <span class="n">edges</span> <span class="o">=</span> <span class="n">parse_lines</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 <span class="n">near</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&gt;=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">)</span>
 <span class="n">far</span> <span class="o">=</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&gt;=</span> <span class="mi">20</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">X_IDXS</span> <span class="o">&lt;=</span> <span class="mi">40</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;host lane width      : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;y&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;y&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;host line probability: left </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, right </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, &quot;</span>
-      <span class="sa">f</span><span class="s2">&quot;far </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;prob&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left line z          : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;z&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m  &lt;- height, not sigma&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left sigma 5-20 m    : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;sigma&#39;</span><span class="p">][</span><span class="n">near</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;left sigma 20-40 m   : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;sigma&#39;</span><span class="p">][</span><span class="n">far</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"host lane width      : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">'y'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'y'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"host line probability: left </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'prob'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, right </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s1">'prob'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, "</span>
+      <span class="sa">f</span><span class="s2">"far </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'prob'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"left line z          : </span><span class="si">{</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'z'</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m  &lt;- height, not sigma"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"left sigma 5-20 m    : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'sigma'</span><span class="p">][</span><span class="n">near</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"left sigma 20-40 m   : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'sigma'</span><span class="p">][</span><span class="n">far</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Последняя пара — не игрушечная деталь. Уверенность подмешивания в <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> сворачивает <span class="math notranslate nohighlight">\(\sigma\)</span> по
 дальности, и на настоящих данных σ примерно удваивается между этими двумя полосами, потому что на дуге
 внутренняя линия уходит из кадра и её дальние отсчёты — экстраполяция. Свернуть по слишком большой дальности
 — значит позволить «я так далеко не видел» забраковать линию, у которой ближняя половина в порядке.</p>
-<section id="id6">
-<h3>Выбор гипотезы плана<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
+<section id="id8">
+<h3>Выбор гипотезы плана<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
 <p>PLAN содержит пять гипотез по 991 float: 33 шага по времени × 15 столбцов средних, затем 33 × 15
 логарифмов σ, затем один логит выбора. Берите гипотезу с наибольшим логитом — <strong>не</strong> среднее по ним,
 которое усреднило бы два разных будущих в путь через бордюр.</p>
@@ -677,61 +862,73 @@ SoC, поэтому выключайте его перед сравнением 
         <span class="n">out</span><span class="p">[</span><span class="n">row</span> <span class="o">+</span> <span class="mi">11</span><span class="p">]</span> <span class="o">=</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">x</span>
 
 <span class="n">best</span><span class="p">,</span> <span class="n">px</span><span class="p">,</span> <span class="n">py</span><span class="p">,</span> <span class="n">pyaw</span> <span class="o">=</span> <span class="n">parse_plan</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chosen hypothesis </span><span class="si">{</span><span class="n">best</span><span class="si">}</span><span class="s2">, y at 30 m = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">py</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m, &quot;</span>
-      <span class="sa">f</span><span class="s2">&quot;yaw there = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">pyaw</span><span class="p">))</span><span class="si">:</span><span class="s2">+.1f</span><span class="si">}</span><span class="s2">°&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"chosen hypothesis </span><span class="si">{</span><span class="n">best</span><span class="si">}</span><span class="s2">, y at 30 m = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">py</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m, "</span>
+      <span class="sa">f</span><span class="s2">"yaw there = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="mf">30.0</span><span class="p">,</span><span class="w"> </span><span class="n">px</span><span class="p">,</span><span class="w"> </span><span class="n">pyaw</span><span class="p">))</span><span class="si">:</span><span class="s2">+.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="warning admonition">
 <p class="admonition-title">Выход модели — это форма, а не метры</p>
-<p>Камерная одометрия той же сети против скорости колёс даёт масштаб 0.888 — она занижает расстояния примерно
-на 11 %. Её <em>планируемая скорость</em> хуже: <code class="docutils literal notranslate"><span class="pre">plan_v0</span> <span class="pre">/</span> <span class="pre">v_ego</span></code> измерено 0.678, и отношение плывёт со скоростью,
-так что одной константой не лечится. Поэтому продольный планировщик вообще не использует скорость модели как
-цель.</p>
+<p>Камерная одометрия той же сети против скорости колёс занижает. На текущей сети множитель <strong>0.686</strong>, и
+интересна его плоскость: на интервалах между кадрами от 28 до 50 мс он держится в 0.686–0.688, корреляция с
+<code class="docutils literal notranslate"><span class="pre">dt</span></code> равна +0.005.</p>
+<p>Эта плоскость и убила очевидное объяснение. Поза, выраженная на кадр, а не на секунду, масштабировалась бы
+интервалом между кадрами, и 20/30 = 0.667 соблазнительно близко к измеренному множителю — но тогда отношение
+двигалось бы вместе с <code class="docutils literal notranslate"><span class="pre">dt</span></code>, а оно не двигается. Причина по-прежнему неизвестна (задача #37), сверх того
+перевёрнут знак рыскания, и поэтому продольный планировщик не берёт скорость модели за цель вовсе.</p>
+<p>Урок шире этой ошибки: константа, совпавшая с правдоподобным отношением, — это не доказательство. Решает
+проверка, <em>сдвинется</em> ли константа, когда сдвинется то, из чего она якобы берётся.</p>
 </div>
 </section>
 </section>
-<section id="id7">
-<h2>Шаг 4: какой темп получится на самом деле<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id9">
+<h2>Шаг 4: какой темп получится на самом деле<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
 <p>Разобранные головы становятся <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code>, и следующее важное число — как часто. Оно не равно
 <span class="math notranslate nohighlight">\(1000 / \text{работа}\)</span>.</p>
 <p>Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его в тот же момент, когда
 освобождается, — то есть по своей воле не простаивает никогда. Но цикл может начаться только когда кадр
 пришёл. Поэтому темп квантован целыми периодами камеры, <span class="math notranslate nohighlight">\(f = 1 / (T \lceil W/T \rceil)\)</span>, и глава
-<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> разбирает, что это делает с решениями об оптимизации. Измерено: период
-44 мс при 59 мс работы даёт 11.29 Гц, ровно два кадра камеры на один обработанный.</p>
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> разбирает, что это делает с решениями об оптимизации.</p>
+<p>Эта формула и есть причина, по которой работа с GPU дала столько, сколько дала. При периоде камеры 33 мс
+59 мс работы давали 11.29 Гц — два кадра камеры на один обработанный, — и сняв оттуда 10 мс, вы получили бы
+ровно те же 11.29 Гц. Меняет что-то только переход <em>под</em> период, и переход этот стоит сразу вдвое: 22 мс
+работы при периоде 33 мс дают измеренные 30.01 Гц, кадр вошёл — кадр вышел.</p>
 <div class="warning admonition">
 <p class="admonition-title">Политика отбрасывания</p>
 <p>Когда конвейер занят, ожидающий кадр <strong>перезаписывается</strong>, а не ставится в очередь. Измеренный темп падает.
 Это задача зрения и планирования, а не приглашение поднять веса CTE в MPC. С 6 августа 2026 бег пишет
 <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, поэтому поздний кадр и медленный инференс наконец
-различимы.</p>
+различимы — на беге выше оба читаются как 0, и ни один кадр из 52 690 не потерян.</p>
 </div>
 </section>
-<section id="id8">
-<h2>Шаг 5: что реально потребляет управление<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
-<p>После <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> видит полилинию (плюс шасси). Он <strong>не знает</strong>, пришёл путь из Supercombo, из карты или из скрипта реплея. Поэтому:</p>
+<section id="id10">
+<h2>Шаг 5: что реально потребляет управление<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
+<p>После <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервис <code class="docutils literal notranslate"><span class="pre">Planner</span></code> видит полилинию (плюс шасси), а стоящий за ним <code class="docutils literal notranslate"><span class="pre">Control</span></code> — только
+кривизну. Ни тот, ни другой <strong>не знает</strong>, пришёл путь из Supercombo, из карты или из скрипта реплея. Поэтому:</p>
 <ol class="arabic simple">
 <li><p>Сначала проверяйте линии и задержки.</p></li>
 <li><p>И только потом настраивайте параметры <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> / MPC / <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p></li>
 </ol>
 <p>Опциональный YOLO для знаков делит телефон с ORT — включайте его для демонстраций и <strong>выключайте</strong>, когда измеряете качество удержания полосы (<code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code>).</p>
 </section>
-<section id="id9">
-<h2>Границы учебной постановки<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id11">
+<h2>Границы учебной постановки<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>Одна камера телефона (без слияния с широкоугольной).</p></li>
 <li><p>Входы desire и манёвров у нас часто нули.</p></li>
 <li><p>Supercombo в этом курсе не переобучается.</p></li>
 </ul>
 </section>
-<section id="id10">
-<h2>Код, который стоит пробежать<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code>, <code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code>, функции разбора в <code class="docutils literal notranslate"><span class="pre">scripts/core/supercombo_*.py</span></code>, наложение в <code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code>.</p>
+<section id="id12">
+<h2>Код, который стоит пробежать<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> и <code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> (<code class="docutils literal notranslate"><span class="pre">app/src/main/java/adas/app/vision/</span></code>), <code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> и
+ядро варпа на OpenCL в <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/src/thneed/thneed_runner.cpp</span></code>, генератор
+<code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_from_onnx.py</span></code> и его проверка <code class="docutils literal notranslate"><span class="pre">thneed_check.py</span></code>, функции разбора в
+<code class="docutils literal notranslate"><span class="pre">scripts/core/supercombo_*.py</span></code>, наложение в <code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code>.</p>
 </section>
-<section id="id11">
-<h2>Задания<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id13">
+<h2>Задания<a class="headerlink" href="#id13" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>По бегу постройте темп зрения и <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> от времени (<code class="docutils literal notranslate"><span class="pre">latency.py</span></code> или PlotJuggler).</p></li>
+<li><p>По бегу постройте темп зрения и <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> от времени (<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> или PlotJuggler).</p></li>
 <li><p>Отметьте окна с темпом <span class="math notranslate nohighlight">\(&lt; 9\)</span> Гц. <strong>Не</strong> используйте их для парето-переборов контроллера.</p></li>
 <li><p>По желанию: прогоните офлайн-разбор одного JPEG с поставляемым warp и сравните <span class="math notranslate nohighlight">\(y\)</span> разметки на <span class="math notranslate nohighlight">\(x=10\)</span> м с записанной полилинией.</p></li>
 </ol>
@@ -812,19 +1009,24 @@ SoC, поэтому выключайте его перед сравнением 
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит с одним кадром</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Шаг 2: запустить и решить, с какой точностью</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как выглядит здоровое состояние</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#gpu">Шаг 2: запустить — на GPU или на процессоре</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#thneed">Что такое <code class="docutils literal notranslate"><span class="pre">.thneed</span></code> на самом деле</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Откуда взялся наш файл</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#onnx-fp32-thneed-fp16">Точность: почему ассет ONNX в fp32, а thneed в fp16</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Ничему не верят на основании того, что оно загрузилось</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как выглядит здоровое состояние</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Та же сеть на трёх телефонах</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Выбор гипотезы плана</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 3: прочитать выходной вектор</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Выбор гипотезы плана</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: какой темп получится на самом деле</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Шаг 5: что реально потребляет управление</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Границы учебной постановки</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Код, который стоит пробежать</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Шаг 4: какой темп получится на самом деле</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Шаг 5: что реально потребляет управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Границы учебной постановки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Код, который стоит пробежать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
 </ul>
   </nav></div>
 

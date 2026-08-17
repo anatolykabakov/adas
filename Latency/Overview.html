@@ -434,8 +434,8 @@ At <span class="math notranslate nohighlight">\(v = 22\)</span> m/s a delay of <
 </figure>
 <section id="metrics">
 <h2>Metrics<a class="headerlink" href="#metrics" title="Link to this heading">#</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
-python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/session
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
+python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/session
 </pre></div>
 </div>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -446,7 +446,7 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/sessio
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">infer_ms</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code> only</p></td>
+<td><p>the runner’s own execute — <code class="docutils literal notranslate"><span class="pre">Thneed::execute</span></code> or <code class="docutils literal notranslate"><span class="pre">OrtSession.run</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p>e2e vision</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">infer_ts</span> <span class="pre">−</span> <span class="pre">capture_ts</span></code></p></td>
@@ -462,7 +462,7 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/sessio
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Raw <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> contains chassis republishes with <strong>stale</strong> <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code>. For e2e use the filter in <code class="docutils literal notranslate"><span class="pre">latency.py</span></code> (same idea as PlotJuggler <code class="docutils literal notranslate"><span class="pre">latency/</span></code> columns).</p>
+<p>Raw <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> contains chassis republishes with <strong>stale</strong> <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code>. For e2e use the filter in <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> (same idea as PlotJuggler <code class="docutils literal notranslate"><span class="pre">latency/</span></code> columns).</p>
 </div>
 </section>
 <section id="session-comparison">
@@ -476,22 +476,27 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/sessio
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">01_14_22</span></code></p></td>
-<td><p>no YOLO</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">23_59_45</span></code></p></td>
+<td><p>no YOLO, <strong>thneed on the GPU</strong></p></td>
+<td class="text-right"><p><strong>30.0</strong></p></td>
+<td class="text-right"><p><strong>31 ms</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">01_14_22</span></code></p></td>
+<td><p>no YOLO, ONNX on the CPU</p></td>
 <td class="text-right"><p>11.4</p></td>
 <td class="text-right"><p>~69 ms</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">14_13_03</span></code></p></td>
-<td><p>no YOLO</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">14_13_03</span></code></p></td>
+<td><p>no YOLO, ONNX on the CPU</p></td>
 <td class="text-right"><p>9.8</p></td>
 <td class="text-right"><p>~81 ms</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">13_40_48</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">13_40_48</span></code></p></td>
 <td><p>no YOLO, throttle window</p></td>
 <td class="text-right"><p>8.5 / <strong>~3 in dip</strong></p></td>
 <td class="text-right"><p>87 ms, max ~0.8 s</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">11_49_49</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">11_49_49</span></code></p></td>
 <td><p>COCO YOLO</p></td>
 <td class="text-right"><p>7.2</p></td>
 <td class="text-right"><p>88 ms, heavy tails</p></td>
@@ -499,7 +504,10 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/sessio
 </tbody>
 </table>
 </div>
-<p>YOLO on the same SoC <strong>competes</strong> with Supercombo. Separately, multi-minute thermal throttle shows up as rising <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> and collapsing Hz.</p>
+<p>YOLO on the same SoC <strong>competes</strong> with Supercombo. Separately, multi-minute thermal throttle shows up as
+rising <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> and collapsing Hz. The first row is the same route and the same phone as the rest, with the
+network moved onto the GPU — the four ONNX rows are kept because the degradation modes they show are still
+the ones you will meet, and because the jump between the rows is the subject of the next section.</p>
 <figure class="align-default" id="id2">
 <a class="reference internal image-reference" href="../_images/60_run0801_straights.png"><img alt="../_images/60_run0801_straights.png" src="../_images/60_run0801_straights.png" style="width: 95%;" />
 </a>
@@ -524,15 +532,15 @@ crossing a multiple of <span class="math notranslate nohighlight">\(T\)</span> c
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">achieved_hz</span><span class="p">(</span><span class="n">work_ms</span><span class="p">,</span> <span class="n">camera_period_ms</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;One-slot latest-frame buffer, no idling: work is quantised up to whole camera periods.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""One-slot latest-frame buffer, no idling: work is quantised up to whole camera periods."""</span>
     <span class="n">periods</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">work_ms</span> <span class="o">/</span> <span class="n">camera_period_ms</span><span class="p">)</span>
     <span class="k">return</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">camera_period_ms</span> <span class="o">*</span> <span class="n">periods</span><span class="p">),</span> <span class="n">periods</span>
 
 <span class="c1"># Camera periods as measured, not as requested: asking for 20 fps produced 44 ms, asking for 30 gave 33.</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;period&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;work&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;periods&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;rate&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;wait&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'period'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'work'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'periods'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'rate'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'wait'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">T</span><span class="p">,</span> <span class="n">work</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">44.0</span><span class="p">,</span> <span class="mf">59.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">33.3</span><span class="p">,</span> <span class="mf">59.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">33.3</span><span class="p">,</span> <span class="mf">52.6</span><span class="p">),</span> <span class="p">(</span><span class="mf">33.3</span><span class="p">,</span> <span class="mf">40.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">33.3</span><span class="p">,</span> <span class="mf">32.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">16.7</span><span class="p">,</span> <span class="mf">40.0</span><span class="p">)):</span>
     <span class="n">hz</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">achieved_hz</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">T</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> ms </span><span class="si">{</span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> ms </span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hz</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> Hz </span><span class="si">{</span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;5.0f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">T</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> ms </span><span class="si">{</span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> ms </span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">hz</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> Hz </span><span class="si">{</span><span class="n">T</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;5.0f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Read the output against what we actually measured:</p>
@@ -552,23 +560,35 @@ crossing a multiple of <span class="math notranslate nohighlight">\(T\)</span> c
 <td><p>2 periods → 15.0 Hz</p></td>
 <td><p><strong>13.24 Hz</strong></p></td>
 </tr>
+<tr class="row-even"><td><p>period 33 ms, work 22.2 ms</p></td>
+<td><p>1 period → 30.0 Hz</p></td>
+<td><p><strong>30.01 Hz</strong>, 0 frames dropped in 52 690</p></td>
+</tr>
 </tbody>
 </table>
 </div>
 <p>The first row is the model working exactly. The second is 12 % short of prediction, and that gap is the
 honest kind of loose end: it means the work is sometimes crossing into a third period, which the tail of
 the frame-prep distribution (median 7 ms, mean 11.4, p95 35.7) will do.</p>
+<p>The third row is this section’s prediction being cashed in. The paragraph below used to say that saving
+19 ms would take the rate from 15 Hz to 30 and that saving 10 ms would buy nothing. The 19 ms were found —
+in the GPU, not in precision — and the rate went to exactly 30.01 Hz, one frame in, one frame out. A model
+that predicts a factor of two before you do the work is worth more than a model that explains it after.</p>
 <div class="tip admonition">
 <p class="admonition-title">Why this matters for optimisation decisions</p>
-<p>It tells you which cuts are worth making. With a 33 ms period and 52 ms of work, saving 19 ms drops you
-to one period and takes the rate from 15 Hz to 30 — while saving 10 ms buys nothing. That is why
-half-precision inference (worth ~15–20 ms of a 45.6 ms inference) is the one remaining lever, and why
-shaving 2.5 ms off a poll interval is not.</p>
+<p>It tells you which cuts are worth making. With a 33 ms period and 52 ms of work, saving 19 ms drops you to
+one period and takes the rate from 15 Hz to 30 — while saving 10 ms buys nothing at all, and shaving 2.5 ms
+off a poll interval is noise.</p>
+<p>Where those 19 ms came from is its own lesson. The obvious candidate was half precision, and it turned out
+to be a trap: ONNX Runtime computes an fp16 model <strong>wrongly</strong> on ARM, silently, both on the CPU and through
+NNAPI (<a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>). The 19 ms came instead from moving the network onto the GPU
+through a generated <code class="docutils literal notranslate"><span class="pre">.thneed</span></code> (45.6 → 17.6 ms) and the warp into an OpenCL kernel (7.0 → 4.6 ms). Both are
+fp16 — the precision was never the problem, the runtime was.</p>
 </div>
 </section>
 <section id="where-the-time-goes-and-what-is-left-to-cut">
 <h2>Where the time goes, and what is left to cut<a class="headerlink" href="#where-the-time-goes-and-what-is-left-to-cut" title="Link to this heading">#</a></h2>
-<p>Measured on a 28-minute night run at 13.24 Hz. Each figure below is a median from <code class="docutils literal notranslate"><span class="pre">latency.py</span></code>, and the
+<p>Measured on a 29-minute night run at 30.01 Hz. Each figure below is a median from <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>, and the
 cumulative column is what that tool actually reports — worth keeping straight, because the stage
 durations and the cumulative stamps are different measurements and they do not have to add up exactly.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -580,24 +600,24 @@ durations and the cumulative stamps are different measurements and they do not h
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>frame prep (warp)</p></td>
-<td><p>7 ms (mean 11.4, p95 35.7)</p></td>
+<tr class="row-even"><td><p>frame prep (warp, GPU)</p></td>
+<td><p>4.6 ms (p95 10.8)</p></td>
 <td><p></p></td>
-<td><p>jitter yes, magnitude no</p></td>
+<td><p>3.6 of it is buffer shuffling — task #33</p></td>
 </tr>
-<tr class="row-odd"><td><p>Supercombo inference</p></td>
-<td><p><strong>45.6 ms</strong> (p95 53.8)</p></td>
-<td><p><strong>54 ms</strong> to model output</p></td>
-<td><p>yes — half precision</p></td>
+<tr class="row-odd"><td><p>Supercombo inference (thneed)</p></td>
+<td><p><strong>17.6 ms</strong> (p95 18.9)</p></td>
+<td><p><strong>22 ms</strong> to model output</p></td>
+<td><p>not on this GPU</p></td>
 </tr>
 <tr class="row-even"><td><p>model output → steer command</p></td>
-<td><p>21 ms (p95 47)</p></td>
-<td><p><strong>79 ms</strong> to the command (p95 111)</p></td>
-<td><p>marginal</p></td>
+<td><p>28 ms (p95 45)</p></td>
+<td><p><strong>52 ms</strong> to the command (p95 69)</p></td>
+<td><p>now the largest single block</p></td>
 </tr>
 <tr class="row-odd"><td><p>panda CAN transmit</p></td>
 <td><p>~10 ms (own 10 ms timer, not stamped)</p></td>
-<td><p>~89 ms to the wire</p></td>
+<td><p>~62 ms to the wire</p></td>
 <td><p>no — HCA needs a strict 100 Hz cadence</p></td>
 </tr>
 <tr class="row-even"><td><p>wait for the next camera frame</p></td>
@@ -608,21 +628,25 @@ durations and the cumulative stamps are different measurements and they do not h
 </tbody>
 </table>
 </div>
-<p>Everything except inference and the frame wait adds to about 38 ms, and there is no slack in it.</p>
+<p>The previous edition of this table had inference at 45.6 ms and everything else at 38, and concluded that
+inference was the only thing worth attacking. That was right, and acting on it inverted the table: the model
+is now the smaller half, and the 28 ms between model output and steer command — ZMQ ingress poll, planner,
+control law — is the biggest block left. Note also what did <strong>not</strong> change: the panda’s 10 ms, which is a
+cadence requirement rather than an inefficiency.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># What the delay costs in metres, and what half precision would buy if it gives the usual 1.5-2x here.</span>
-<span class="n">TO_COMMAND_MS</span> <span class="o">=</span> <span class="mf">79.0</span>        <span class="c1"># measured capture -&gt; steer command</span>
-<span class="n">TO_WIRE_MS</span> <span class="o">=</span> <span class="mf">89.0</span>           <span class="c1"># plus the panda transmit timer</span>
+<span class="n">TO_COMMAND_MS</span> <span class="o">=</span> <span class="mf">52.0</span>        <span class="c1"># measured capture -&gt; steer command</span>
+<span class="n">TO_WIRE_MS</span> <span class="o">=</span> <span class="mf">62.0</span>           <span class="c1"># plus the panda transmit timer</span>
 
 <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">22.0</span><span class="p">):</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;at </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;4.0f</span><span class="si">}</span><span class="s2"> m/s the car travels </span><span class="si">{</span><span class="n">v</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">TO_WIRE_MS</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;4.2f</span><span class="si">}</span><span class="s2"> m before the command reaches CAN&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"at </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;4.0f</span><span class="si">}</span><span class="s2"> m/s the car travels </span><span class="si">{</span><span class="n">v</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">TO_WIRE_MS</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;4.2f</span><span class="si">}</span><span class="s2"> m before the command reaches CAN"</span><span class="p">)</span>
 
 <span class="nb">print</span><span class="p">()</span>
-<span class="k">for</span> <span class="n">infer</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">45.6</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
-    <span class="n">work</span> <span class="o">=</span> <span class="mf">7.0</span> <span class="o">+</span> <span class="n">infer</span>
+<span class="k">for</span> <span class="n">infer</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">45.6</span><span class="p">,</span> <span class="mf">17.6</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">):</span>
+    <span class="n">work</span> <span class="o">=</span> <span class="mf">4.6</span> <span class="o">+</span> <span class="n">infer</span>
     <span class="n">hz</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">achieved_hz</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="mf">33.3</span><span class="p">)</span>
-    <span class="n">to_wire</span> <span class="o">=</span> <span class="n">work</span> <span class="o">+</span> <span class="p">(</span><span class="n">TO_WIRE_MS</span> <span class="o">-</span> <span class="mf">52.6</span><span class="p">)</span>      <span class="c1"># everything after the model output is unchanged</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;inference </span><span class="si">{</span><span class="n">infer</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> ms -&gt; work </span><span class="si">{</span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> ms -&gt; </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> camera period(s) -&gt; </span><span class="si">{</span><span class="n">hz</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> Hz, &quot;</span>
-          <span class="sa">f</span><span class="s2">&quot;capture-&gt;wire </span><span class="si">{</span><span class="n">to_wire</span><span class="si">:</span><span class="s2">&gt;4.0f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+    <span class="n">to_wire</span> <span class="o">=</span> <span class="n">work</span> <span class="o">+</span> <span class="p">(</span><span class="n">TO_WIRE_MS</span> <span class="o">-</span> <span class="mf">22.2</span><span class="p">)</span>      <span class="c1"># everything after the model output is unchanged</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"inference </span><span class="si">{</span><span class="n">infer</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> ms -&gt; work </span><span class="si">{</span><span class="n">work</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> ms -&gt; </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> camera period(s) -&gt; </span><span class="si">{</span><span class="n">hz</span><span class="si">:</span><span class="s2">&gt;4.1f</span><span class="si">}</span><span class="s2"> Hz, "</span>
+          <span class="sa">f</span><span class="s2">"capture-&gt;wire </span><span class="si">{</span><span class="n">to_wire</span><span class="si">:</span><span class="s2">&gt;4.0f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -631,7 +655,7 @@ durations and the cumulative stamps are different measurements and they do not h
 <p>Until 2026-08-06 the earliest timestamp on a frame was <code class="docutils literal notranslate"><span class="pre">capture_ts_ms</span></code>, which meant two very different
 failures looked identical: a frame that arrived 40 ms after exposure, and a frame that waited 40 ms in
 the buffer because inference was still busy. <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> now also carries <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, and <code class="docutils literal notranslate"><span class="pre">latency.py</span></code> reports them.</p>
+<code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, and <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> reports them.</p>
 <p>The diagnosis is a two-by-two:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -654,6 +678,10 @@ the buffer because inference was still busy. <code class="docutils literal notra
 </div>
 <p>That distinction is what the daytime stalls need — reference older than 300 ms for 15.9 % of one run, with
 a single 75-second hole — and it could not be made before.</p>
+<p>On the current pipeline both readings are boring, which is the point: delivery 0 ms at the median, queue
+0 ms, and <strong>0 dropped frames in 52 690</strong>. That is the top-left cell of the table, and it is the first run
+where the claim “the camera is not the bottleneck and neither is inference” is a measurement rather than an
+assumption.</p>
 </section>
 <section id="phone-stats">
 <h2><code class="docutils literal notranslate"><span class="pre">phone/stats</span></code><a class="headerlink" href="#phone-stats" title="Link to this heading">#</a></h2>

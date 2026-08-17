@@ -472,7 +472,7 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
 <h2>B — offline control<a class="headerlink" href="#b-offline-control" title="Link to this heading">#</a></h2>
 <section id="b1-pure-pursuit-sweep">
 <h3>B1 Pure Pursuit sweep<a class="headerlink" href="#b1-pure-pursuit-sweep" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code> on <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Pareto |CTE| vs |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
+<p><code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code> on <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Pareto |CTE| vs |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
 <strong>Deliverable:</strong> knee point you would ship and why.</p>
 </section>
 <section id="b2-delay-sensitivity">
@@ -507,8 +507,8 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
 <section id="c4-fcw-aeb-ldw">
 <h3>C4 FCW / AEB / LDW<a class="headerlink" href="#c4-fcw-aeb-ldw" title="Link to this heading">#</a></h3>
 <p>Read <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Warnings</span></a>. Run unit tests touching <code class="docutils literal notranslate"><span class="pre">test_safety_warn</span></code>, then:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>app/src/main/scripts<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python3<span class="w"> </span>app/src/main/scripts/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>scripts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>scripts/bag/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
 </pre></div>
 </div>
 <p><strong>Deliverable:</strong> episode table + one false-positive that the gated rules correctly suppress (or explain why the bag cannot show FCW).</p>

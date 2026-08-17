@@ -61,8 +61,6 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Pipeline';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/lang-switch.js?v=29098906"></script>
@@ -409,7 +407,7 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#plan-and-command">5. Plan and command</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
 </ul>
 </li>
@@ -433,70 +431,82 @@
 <section id="follow-one-frame-with-a-clock">
 <h2>Follow one frame, with a clock<a class="headerlink" href="#follow-one-frame-with-a-clock" title="Link to this heading">#</a></h2>
 <p>The stages below are easier to hold onto if you watch a single frame move through them. Each number is a
-measured median from a 28-minute night run. Per-stage medians do not have to add up to cumulative medians —
-these are chosen to land on the two cumulative figures <code class="docutils literal notranslate"><span class="pre">latency.py</span></code> actually reports, 54 ms to the model
-output and <strong>79 ms to the command</strong>, so the arithmetic is checkable rather than decorative.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured medians, run 2026_08_06_00_36_42. &quot;own&quot; is the stage&#39;s own cost; the clock accumulates.</span>
+measured median from a 29-minute night run. Per-stage medians do not have to add up to cumulative medians —
+these are chosen to land on the two cumulative figures <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> actually reports, 22 ms to the model
+output and <strong>52 ms to the command</strong>, so the arithmetic is checkable rather than decorative.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured medians, run 2026_08_16_23_59_45, OnePlus 7T, thneed runner.</span>
+<span class="c1"># "own" is the stage's own cost; the clock accumulates.</span>
 <span class="n">STAGES</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="p">(</span><span class="s2">&quot;capture (Camera2 YUV, capture_ts stamped)&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;delivery to VisionPipeline&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>          <span class="c1"># instrumented from 2026-08; was invisible before</span>
-    <span class="p">(</span><span class="s2">&quot;geometric warp to 512x256&quot;</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;Supercombo inference (OrtSession.run)&quot;</span><span class="p">,</span> <span class="mf">45.6</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;parse heads -&gt; vision/lanes&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;Java -&gt; ZMQ -&gt; ZmqBridgeService&quot;</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>      <span class="c1"># of which ~5 is the 10 ms ingress poll</span>
-    <span class="p">(</span><span class="s2">&quot;TopicConvert -&gt; vision/path&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;LaneKeepService -&gt; controls/steer&quot;</span><span class="p">,</span> <span class="mf">19.4</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;PandaService -&gt; HCA_01 on the wire&quot;</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>  <span class="c1"># its own 10 ms TX timer</span>
+    <span class="p">(</span><span class="s2">"capture (Camera2 YUV, capture_ts stamped)"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"delivery to VisionPipeline"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>           <span class="c1"># median 0, p95 0 — instrumented since 2026-08</span>
+    <span class="p">(</span><span class="s2">"wait in the inference queue"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>          <span class="c1"># median 0, mean 1.0 — nothing is queueing up</span>
+    <span class="p">(</span><span class="s2">"geometric warp to 6x128x256 (OpenCL)"</span><span class="p">,</span> <span class="mf">4.6</span><span class="p">),</span> <span class="c1"># prep_ms; was 12.1 on the CPU</span>
+    <span class="p">(</span><span class="s2">"Supercombo inference (thneed, GPU)"</span><span class="p">,</span> <span class="mf">17.6</span><span class="p">),</span>  <span class="c1"># was 45.6 through ONNX Runtime</span>
+    <span class="p">(</span><span class="s2">"parse heads -&gt; vision/lanes"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"Java -&gt; ZMQ -&gt; ZmqBridge -&gt; proto_convert"</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"Planner -&gt; control/lat_plan, control/lane_keep"</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"Control -&gt; controls/steer"</span><span class="p">,</span> <span class="mf">21.0</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">"Platform -&gt; HCA_01 on the wire"</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>      <span class="c1"># its own 10 ms TX timer</span>
 <span class="p">)</span>
 
 <span class="n">clock</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;stage&#39;</span><span class="si">:</span><span class="s2">&gt;44</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;own&#39;</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;clock&#39;</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;car has moved&#39;</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'stage'</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'own'</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'clock'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'car has moved'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">own</span> <span class="ow">in</span> <span class="n">STAGES</span><span class="p">:</span>
     <span class="n">clock</span> <span class="o">+=</span> <span class="n">own</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;44</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">own</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">At 22 m/s the command that reaches the rack was computed for a road position </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m back.&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">own</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">At 22 m/s the command that reaches the rack was computed for a road position </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m back."</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Two of those lines deserve attention.</p>
-<p><strong>Delivery is 0.0 because it was invisible.</strong> Until 2026-08 <code class="docutils literal notranslate"><span class="pre">capture_ts_ms</span></code> was the earliest timestamp on a
-frame, so a frame that arrived 40 ms late and a frame that waited 40 ms for a busy inference thread looked
-identical. <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code> now separate them — see
-<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p>
+<p>Three of those lines deserve attention.</p>
+<p><strong>Inference is 17.6 ms because the model runs on the GPU.</strong> The same network through ONNX Runtime costs
+45.6 ms on this phone. Both paths carry supercombo 0.9.7 — the same file, converted — so the choice is a
+speed choice and nothing else; see <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
+<p><strong>Delivery and queueing are both 0.0, and that is the interesting part.</strong> They are separate measurements
+(<code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>), added in 2026-08 precisely because a frame that arrived
+40 ms late and a frame that waited 40 ms for a busy inference thread used to look identical. On this run the
+camera delivers on time and inference is never the thing being waited on: <strong>0 dropped frames in 52 690</strong>,
+100 % of cycles dropping nothing. When that stops being true, the two numbers tell you which half broke —
+many drops with short delivery means inference is too slow, few drops with long delivery means the camera is
+arriving late.</p>
 <p><strong>The ZMQ hop costs about half a poll interval.</strong> It is one of only two places in the whole chain that polls,
 and the other is the CAN egress. Everything between them is notified, not polled —
 <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> has the measurement.</p>
 </section>
 <section id="what-happens-between-frames">
 <h2>What happens between frames<a class="headerlink" href="#what-happens-between-frames" title="Link to this heading">#</a></h2>
-<p>Vision runs at 13.24 Hz. The actuator runs at 100 Hz, because HCA needs a strict cadence or the EPS drops the
-command. So for roughly seven ticks out of eight, the panda transmits a command derived from a <em>reference it
-has already used</em>.</p>
+<p>Vision runs at 30.0 Hz — one frame per camera period, nothing skipped. The actuator runs at 100 Hz, because
+HCA needs a strict cadence or the EPS drops the command. So for roughly two ticks out of three, the panda
+transmits a command derived from a <em>reference it has already used</em>.</p>
 <p>That is correct behaviour and it creates a trap for anyone reading logs:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">VISION_HZ</span> <span class="o">=</span> <span class="mf">13.24</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">VISION_HZ</span> <span class="o">=</span> <span class="mf">30.01</span>
 <span class="n">TX_HZ</span> <span class="o">=</span> <span class="mf">100.0</span>
-<span class="n">FRESH_WINDOW_MS</span> <span class="o">=</span> <span class="mf">50.0</span>        <span class="c1"># latency.py keeps commands within this of their vision timestamp</span>
+<span class="n">FRESH_WINDOW_MS</span> <span class="o">=</span> <span class="mf">50.0</span>        <span class="c1"># tools/latency.py keeps commands within this of their vision timestamp</span>
 
 <span class="n">vision_period_ms</span> <span class="o">=</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
 <span class="n">per_frame</span> <span class="o">=</span> <span class="n">TX_HZ</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;vision period </span><span class="si">{</span><span class="n">vision_period_ms</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms, </span><span class="si">{</span><span class="n">per_frame</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> actuator ticks per vision frame&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;only the first tick uses a brand-new reference; the rest reuse it&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"vision period </span><span class="si">{</span><span class="n">vision_period_ms</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms, </span><span class="si">{</span><span class="n">per_frame</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> actuator ticks per vision frame"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"only the first tick uses a brand-new reference; the rest reuse it"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">()</span>
-<span class="c1"># The freshness filter is a time window, not &quot;one tick per frame&quot; — so what it keeps is the fraction of</span>
+<span class="c1"># The freshness filter is a time window, not "one tick per frame" — so what it keeps is the fraction of</span>
 <span class="c1"># the vision period that falls inside the window.</span>
 <span class="n">kept_predicted</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">FRESH_WINDOW_MS</span> <span class="o">/</span> <span class="n">vision_period_ms</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;predicted share passing a </span><span class="si">{</span><span class="n">FRESH_WINDOW_MS</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ms freshness filter: </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">kept_predicted</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;measured on the run: 113 723 kept of 168 107 = </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">113723</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">168107</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"predicted share passing a </span><span class="si">{</span><span class="n">FRESH_WINDOW_MS</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ms freshness filter: </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">kept_predicted</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"measured on the run: 171 097 kept of 175 573 = </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">171097</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">175573</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Compute e2e latency over the raw stream instead and the republishes drag the number up, because&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;their vision_ts is older than the command that carries it.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Compute e2e latency over the raw stream instead and the republishes drag the number up, because"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"their vision_ts is older than the command that carries it."</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>At 13 Hz — the rate this chapter reported before the model moved to the GPU — a third of the commands failed
+that filter, and the freshness window itself was doing visible work. At 30 Hz the vision period is shorter
+than the window, so the filter now drops only the genuinely stale republishes: 4 476 of 175 573. The lesson
+survives the improvement: “the command is fresh” and “the picture is fresh” are different claims, and only
+the second one matters for safety. That is why the staleness gate is keyed on the frame’s capture timestamp
+rather than on the command’s age, and why a 250 ms HCA command timeout did not protect against a
+75-second-old plan.</p>
 <p>The fast loop is not idle work — it is the angle PID closing on the <em>measured</em> steering angle at 100 Hz,
-which is what makes the rack follow smoothly. But it means “the command is fresh” and “the picture is fresh”
-are different claims, and only the second one matters for safety. That distinction is why the staleness gate
-is keyed on the frame’s capture timestamp rather than on the command’s age, and why a 250 ms HCA command
-timeout did not protect against a 75-second-old plan.</p>
+which is what makes the rack follow smoothly.</p>
 </section>
 <section id="stage-by-stage">
 <h2>Stage by stage<a class="headerlink" href="#stage-by-stage" title="Link to this heading">#</a></h2>
@@ -506,43 +516,65 @@ timeout did not protect against a 75-second-old plan.</p>
 <ul class="simple">
 <li><p>YUV buffer, nominally <strong>1280×720</strong>;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">capture_ts</span> <span class="pre">=</span> <span class="pre">TimeUtil.nowMs()</span></code> (BOOTTIME);</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">acquireLatestImage()</span></code> — drops stale frames.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">acquireLatestImage()</span></code> — drops stale frames;</p></li>
+<li><p>the lens is pinned: autofocus off, <code class="docutils literal notranslate"><span class="pre">LENS_FOCUS_DISTANCE</span> <span class="pre">=</span> <span class="pre">0</span></code> (infinity). A drive lost to a defocused
+lens is in <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Calibration</span></a>.</p></li>
 </ul>
-<p>Frame branches: preview UI; VisionPipeline queue; when logging — JPEG preview in bag (<strong>not</strong> warped 512×256 network input).</p>
+<p>Frame branches: preview UI; VisionPipeline queue; when logging — JPEG preview in bag (<strong>not</strong> the warped
+network input).</p>
 </section>
 <section id="geometric-warp">
 <h3>2. Geometric warp<a class="headerlink" href="#geometric-warp" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> brings frame to medmodel <strong>512×256</strong> using intrinsic prior and calibration RPY. Pitch/yaw error shifts metric lane interpretation and causes systematic CTE.</p>
+<p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> brings the frame to the model’s input — two frames of six planes at 128×256 — using the
+intrinsics and the calibration RPY. Pitch/yaw error shifts metric lane interpretation and causes systematic
+CTE.</p>
+<p>The warp runs as an OpenCL kernel on the GPU (4.6 ms; 12.1 ms when it ran on the CPU) and falls back to the
+CPU where OpenCL is unavailable. The first frame after startup is computed <strong>both</strong> ways and compared
+bit-for-bit: a wrong warp does not crash, it hands the network a plausible picture of the wrong road.</p>
 </section>
 <section id="supercombo-inference">
 <h3>3. Supercombo inference<a class="headerlink" href="#supercombo-inference" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> / <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> on separate thread:</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> on a separate thread, with two interchangeable runners:</p>
 <ul class="simple">
-<li><p>temporal stack (2 frames) + RNN state;</p></li>
-<li><p>output → parse → topic <strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (+ odometry / model_long);</p></li>
-<li><p>stamps <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> — supercombo 0.9.7 in fp16 on the GPU, <strong>17.6 ms</strong>, the default;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> — the same network in fp32 through ONNX Runtime, 48.5 ms, the fallback.</p></li>
 </ul>
-<p><strong>13.24 Hz</strong> measured at 30 fps camera (dt ≈ 68 ms median, 75 mean). Under thermal throttle or with the
-traffic YOLO competing for the SoC it drops to single-digit Hz and the lateral metronome breaks. The rate is
-quantised by the camera period rather than set by the work — <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p>
+<p>Either way: temporal stack of two frames plus the recurrent state, output parsed into topic
+<strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (+ odometry / model_long), stamped with <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code> and <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p>
+<p><strong>30.0 Hz</strong> measured at a 30 fps camera (dt 33.0 ms median) — the rate is now quantised by the camera period
+and nothing else. Before the model moved to the GPU it was 13.24 Hz, and the lateral metronome broke under
+thermal throttle or when the traffic YOLO competed for the SoC. See <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p>
+<p>Both runners verify themselves at load: the network is run on zero inputs and the output signature is
+compared with a reference measured offline. A runner that computes something else refuses to start rather
+than reporting plausible numbers about the wrong road.</p>
 </section>
 <section id="java-native-bridge">
 <h3>4. Java → native bridge<a class="headerlink" href="#java-native-bridge" title="Link to this heading">#</a></h3>
-<p>Protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> PUB on <code class="docutils literal notranslate"><span class="pre">:5555</span></code>. <code class="docutils literal notranslate"><span class="pre">ZmqBridgeService</span></code> reads IN and publishes to internal Middleware. Split: Java — camera/ORT/log, C++ — control/calib/panda.</p>
+<p>Protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> PUB on <code class="docutils literal notranslate"><span class="pre">:5555</span></code>. <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> reads IN and publishes to the internal middleware;
+<code class="docutils literal notranslate"><span class="pre">utils/proto_convert.cpp</span></code> turns the wire messages into internal ones. Split: Java — camera / model / log,
+C++ — planning, control, calibration, panda.</p>
 </section>
-<section id="lane-keep">
-<h3>5. Lane-keep<a class="headerlink" href="#lane-keep" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> consumes path polyline and chassis (<span class="math notranslate nohighlight">\(v\)</span>, actual SWA). Controller from config:</p>
+<section id="plan-and-command">
+<h3>5. Plan and command<a class="headerlink" href="#plan-and-command" title="Link to this heading">#</a></h3>
+<p>Three services divide the lateral loop, and the split is the point: each one is testable without the other
+two.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> — Pure Pursuit + angle PID;</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mpc</span></code> — VisionPilot path MPC;</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">fp</span></code> — stock-like time-domain MPC (default on road).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Planner</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code>) consumes the path polyline and the chassis and produces a plan
+<strong>in curvature</strong>, never in steering angle. Which algorithm produces it is a config choice —
+<code class="docutils literal notranslate"><span class="pre">pp</span></code> (pure pursuit), <code class="docutils literal notranslate"><span class="pre">mpc</span></code> (VisionPilot path MPC), <code class="docutils literal notranslate"><span class="pre">fp</span></code> (stock-like time-domain MPC, the default on the
+road) — and the interface is identical whichever runs. Publishes <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>,
+<code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) is the control law and nothing else: curvature plus the chassis
+become a torque command, engagement, HUD pictograms, and the wish to press a cruise button. It knows no
+CAN address, no signal, no frame counter. Publishes <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Platform</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) carries that intent onto the bus, and it names no brand — which
+car is behind the CAN is decided once, by <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>, and reached through <code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code>.
+See <span class="xref myst">Porting</span>.</p></li>
 </ul>
-<p>Publications: <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p>
 </section>
 <section id="actuation">
 <h3>6. Actuation<a class="headerlink" href="#actuation" title="Link to this heading">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">PandaService</span></code> TX ~100 Hz, <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> frames. Gates: ignition, <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>, command age ≤ ~250 ms.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> transmits <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> at ~100 Hz. Gates: ignition, <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>, command age ≤ ~250 ms.</p>
 </section>
 </section>
 <section id="parallel-topics">
@@ -557,13 +589,16 @@ quantised by the camera period rather than set by the work — <a class="referen
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code></p></td>
 <td><p>live RPY → warp</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">phone/stats</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">camera/intrinsics</span></code></p></td>
+<td><p>focal length and principal point, in full-frame units</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">phone/stats</span></code></p></td>
 <td><p>CPU %, thermal</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code></p></td>
 <td><p>native timer lags</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision/traffic_dets</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision/traffic_dets</span></code></p></td>
 <td><p>YOLO (usually off for LK)</p></td>
 </tr>
 </tbody>
@@ -580,16 +615,16 @@ quantised by the camera period rather than set by the work — <a class="referen
 </thead>
 <tbody>
 <tr class="row-even"><td><p>camera</p></td>
-<td><p>30 fps requested, 33 ms period confirmed</p></td>
+<td><p>30 fps requested, 33.0 ms period confirmed</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
-<td><p><strong>13.24 Hz</strong> (was 11.29 at 20 fps)</p></td>
+<td><p><strong>30.01 Hz</strong>, 0 frames dropped in 52 690 (was 13.24 Hz through ONNX)</p></td>
 </tr>
-<tr class="row-even"><td><p>lane_keep publish</p></td>
-<td><p>≈ vision, 13.24 Hz</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code></p></td>
+<td><p>30.01 Hz, 31 ms after capture</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
-<td><p>~100 Hz; 68 % pass the 50 ms freshness filter, 32 % are republishes on an older reference</p></td>
+<td><p>~100 Hz; 97 % pass the 50 ms freshness filter (was 68 %)</p></td>
 </tr>
 <tr class="row-even"><td><p>panda TX</p></td>
 <td><p>100 Hz, its own timer</p></td>
@@ -680,7 +715,7 @@ controller you shipped.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#geometric-warp">2. Geometric warp</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#supercombo-inference">3. Supercombo inference</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#java-native-bridge">4. Java → native bridge</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lane-keep">5. Lane-keep</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#plan-and-command">5. Plan and command</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#actuation">6. Actuation</a></li>
 </ul>
 </li>

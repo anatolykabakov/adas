@@ -466,12 +466,12 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 <span class="n">y_left</span><span class="p">,</span> <span class="n">y_right</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.85</span><span class="p">,</span> <span class="mf">1.90</span>   <span class="c1"># meters at some x ahead</span>
 <span class="n">y_center</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_left</span> <span class="o">+</span> <span class="n">y_right</span><span class="p">)</span>
 <span class="n">cte</span> <span class="o">=</span> <span class="o">-</span><span class="n">y_center</span>   <span class="c1"># car at 0; positive CTE ⇒ path is left of car ⇒ steer left in right+ frame?</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;y_center=</span><span class="si">{</span><span class="n">y_center</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m, CTE=</span><span class="si">{</span><span class="n">cte</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"y_center=</span><span class="si">{</span><span class="n">y_center</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m, CTE=</span><span class="si">{</span><span class="n">cte</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 
 <span class="c1"># Bug demo: someone treated ISO left+ numbers as device</span>
 <span class="n">y_left_iso</span> <span class="o">=</span> <span class="o">+</span><span class="mf">1.85</span>
 <span class="n">y_center_wrong</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_left_iso</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.90</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;wrong center if signs mixed: </span><span class="si">{</span><span class="n">y_center_wrong</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"wrong center if signs mixed: </span><span class="si">{</span><span class="n">y_center_wrong</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -488,9 +488,9 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 <span class="k">def</span><span class="w"> </span><span class="nf">swa</span><span class="p">(</span><span class="n">delta_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">STEER_SIGN</span> <span class="o">*</span> <span class="n">delta_deg</span> <span class="o">*</span> <span class="n">STEER_RATIO</span>
 
-<span class="c1"># Model says &quot;steer +δ toward +y (right in device frame)&quot;</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;delta=+3° → SWA&quot;</span><span class="p">,</span> <span class="n">swa</span><span class="p">(</span><span class="mf">3.0</span><span class="p">),</span> <span class="s2">&quot;deg on CAN&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;If you forget steer_sign:&quot;</span><span class="p">,</span> <span class="o">+</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">STEER_RATIO</span><span class="p">,</span> <span class="s2">&quot;(WRONG sign on car)&quot;</span><span class="p">)</span>
+<span class="c1"># Model says "steer +δ toward +y (right in device frame)"</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"delta=+3° → SWA"</span><span class="p">,</span> <span class="n">swa</span><span class="p">(</span><span class="mf">3.0</span><span class="p">),</span> <span class="s2">"deg on CAN"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"If you forget steer_sign:"</span><span class="p">,</span> <span class="o">+</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">STEER_RATIO</span><span class="p">,</span> <span class="s2">"(WRONG sign on car)"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Перевернуть <strong>только</strong> <span class="math notranslate nohighlight">\(y\)</span> или <strong>только</strong> <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> — всё равно получить инвертированный HCA. Согласованы должны быть оба.</p>
@@ -522,7 +522,7 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 </table>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">left_line_ok</span><span class="p">(</span><span class="n">y_left_samples</span><span class="p">,</span> <span class="n">tol</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Most samples of left paint should be negative in device frame.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Most samples of left paint should be negative in device frame."""</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_left_samples</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nanmedian</span><span class="p">(</span><span class="n">y</span><span class="p">))</span> <span class="o">&lt;</span> <span class="o">-</span><span class="n">tol</span>

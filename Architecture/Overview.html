@@ -427,9 +427,11 @@ This chapter is the map of the repository before we dive into vision and control
 <p>The ADAS app:</p>
 <ol class="arabic simple">
 <li><p>captures the road with the camera (and supporting IMU / GPS);</p></li>
-<li><p>runs <strong>Supercombo</strong> inference (ONNX Runtime on device);</p></li>
-<li><p>computes a lateral lane-keep command in native <strong>C++</strong>;</p></li>
-<li><p>publishes <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> on VW MQB CAN via Panda;</p></li>
+<li><p>runs <strong>Supercombo</strong> inference on device — on the GPU through a generated <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>, with ONNX Runtime as
+the fallback;</p></li>
+<li><p>plans in curvature and computes a lateral command in native <strong>C++</strong>;</p></li>
+<li><p>publishes <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> on VW MQB CAN via Panda — through a platform interface, so the brand is one
+implementation rather than the architecture;</p></li>
 <li><p>writes a full <strong>bag</strong> for offline analysis.</p></li>
 </ol>
 <p>This is a research / teaching lane-keep stack — not a full ACC / “autopilot” product.</p>
@@ -453,10 +455,10 @@ This chapter is the map of the repository before we dive into vision and control
 <tbody>
 <tr class="row-even"><td><p><strong>Java</strong></p></td>
 <td><p>Camera / IMU / GPS, VisionPipeline, Logger, ZMQ</p></td>
-<td><p>sensors, ORT, UI, bag I/O</p></td>
+<td><p>sensors, inference, UI, bag I/O</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>C++</strong></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">AdasApp</span></code>, LaneKeep, Calib, Panda, …</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AdasApp</span></code>, <code class="docutils literal notranslate"><span class="pre">Planner</span></code>, <code class="docutils literal notranslate"><span class="pre">Control</span></code>, <code class="docutils literal notranslate"><span class="pre">Platform</span></code>, calibration, …</p></td>
 <td><p>algorithms and actuation</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Python</strong></p></td>
@@ -467,7 +469,13 @@ This chapter is the map of the repository before we dive into vision and control
 </table>
 </div>
 <p><strong>Design rule:</strong> lateral algorithms live in C++. Python either analyzes a bag or drives the <strong>same</strong> native code through <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> (<code class="docutils literal notranslate"><span class="pre">publish</span> <span class="pre">→</span> <span class="pre">step</span> <span class="pre">→</span> <span class="pre">pop_messages</span></code>). That keeps lab sweeps honest relative to the phone.</p>
-<p>Next in this part: <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> (native bus) → <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Java layer</span></a> (camera / ORT / ZMQ) → <a class="reference internal" href="Pipeline.html"><span class="std std-doc">Pipeline</span></a> (frame → HCA). Also <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a> for warnings without actuation.</p>
+<p>The C++ side splits the lateral loop three ways on purpose — <code class="docutils literal notranslate"><span class="pre">Planner</span></code> decides <em>what shape to drive</em>,
+<code class="docutils literal notranslate"><span class="pre">Control</span></code> decides <em>what command produces it</em>, <code class="docutils literal notranslate"><span class="pre">Platform</span></code> puts that command on the bus and is the only one
+that knows the car is a Volkswagen. Adding a second make (Toyota TSS2) changed no line of the first two;
+<code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code> is the procedure.</p>
+<p>Next in this part: <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> (native bus) → <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Java layer</span></a> (camera /
+inference / ZMQ) → <a class="reference internal" href="Pipeline.html"><span class="std std-doc">Pipeline</span></a> (frame → HCA). Also <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a> for
+warnings without actuation.</p>
 </section>
 <section id="how-this-was-built-in-the-order-it-was-built">
 <h2>How this was built, in the order it was built<a class="headerlink" href="#how-this-was-built-in-the-order-it-was-built" title="Link to this heading">#</a></h2>
@@ -524,7 +532,7 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The contract that makes stage 1 possible, and why it is worth building first: the controller cannot tell</span>
 <span class="c1"># where its path came from.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">lane_keep_step</span><span class="p">(</span><span class="n">path_xy</span><span class="p">,</span> <span class="n">speed_ms</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stand-in for the real service: it sees a polyline and a speed. Nothing else.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Stand-in for the real service: it sees a polyline and a speed. Nothing else."""</span>
     <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
     <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
     <span class="c1"># Curvature of a quadratic fit at the vehicle, the same quantity the real feedforward uses.</span>
@@ -536,16 +544,16 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">sxxxx</span><span class="p">,</span> <span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">n</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">sxxy</span><span class="p">,</span> <span class="n">sxy</span><span class="p">,</span> <span class="n">sy</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;cte_m&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">&quot;epsi_rad&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">),</span> <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">speed_ms</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"cte_m"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">"epsi_rad"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="s2">"kappa"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">),</span> <span class="s2">"speed"</span><span class="p">:</span> <span class="n">speed_ms</span><span class="p">}</span>
 
 <span class="n">live</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.20</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>     <span class="c1"># from the camera</span>
 <span class="n">replay</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                             <span class="c1"># from a bag</span>
 <span class="n">simulated</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                          <span class="c1"># from MetaDrive</span>
 
-<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;live&quot;</span><span class="p">,</span> <span class="n">live</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;bag replay&quot;</span><span class="p">,</span> <span class="n">replay</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;simulator&quot;</span><span class="p">,</span> <span class="n">simulated</span><span class="p">)):</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"live"</span><span class="p">,</span> <span class="n">live</span><span class="p">),</span> <span class="p">(</span><span class="s2">"bag replay"</span><span class="p">,</span> <span class="n">replay</span><span class="p">),</span> <span class="p">(</span><span class="s2">"simulator"</span><span class="p">,</span> <span class="n">simulated</span><span class="p">)):</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">lane_keep_step</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2">: cte </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;cte_m&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m, kappa </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;kappa&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Identical, by construction. That is what lets a lab sweep mean something.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2">: cte </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">'cte_m'</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m, kappa </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">'kappa'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Identical, by construction. That is what lets a lab sweep mean something."</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -553,10 +561,10 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
 <h2>Configuration you will touch<a class="headerlink" href="#configuration-you-will-touch" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (optional override in app <code class="docutils literal notranslate"><span class="pre">filesDir</span></code>).</p>
 <p>Vehicle knobs (<code class="docutils literal notranslate"><span class="pre">vehicle.*</span></code>):</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;lane_keep_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fp&quot;</span><span class="p">,</span>
-<span class="nt">&quot;lat_use_vehicle_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="nt">&quot;tire_stiffness_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span>
-<span class="nt">&quot;fp_steer_delay_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"lane_keep_controller"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fp"</span><span class="p">,</span>
+<span class="nt">"lat_use_vehicle_model"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="nt">"tire_stiffness_factor"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span>
+<span class="nt">"fp_steer_delay_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span>
 </pre></div>
 </div>
 <p>Feature flags (<code class="docutils literal notranslate"><span class="pre">nodes.*</span></code>), e.g. <code class="docutils literal notranslate"><span class="pre">&quot;vision_traffic&quot;:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;phone_stats&quot;:</span> <span class="pre">true</span></code>,
@@ -568,6 +576,12 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
 </tr>
 </thead>
 <tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">thneed</span></code> (GPU, default) | <code class="docutils literal notranslate"><span class="pre">onnx</span></code> (fallback)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code></p></td>
+<td><p>which <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code> is instantiated</p></td>
+</tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
 </tr>
@@ -591,9 +605,9 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
 <h2>Typical student workflow<a class="headerlink" href="#typical-student-workflow" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p>Record or download a session under <code class="docutils literal notranslate"><span class="pre">adas_logs/...</span></code>.</p></li>
-<li><p>Run <code class="docutils literal notranslate"><span class="pre">latency.py</span></code>, bag visualizer, PlotJuggler — establish Hz / e2e.</p></li>
-<li><p>Sweep parameters (<code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code>) at a <strong>fixed</strong> assumed vision latency.</p></li>
-<li><p>Only then open <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> / <code class="docutils literal notranslate"><span class="pre">PurePursuit</span></code> source with Control chapters in hand.</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>, bag visualizer, PlotJuggler — establish Hz / e2e.</p></li>
+<li><p>Sweep parameters (<code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code>) at a <strong>fixed</strong> assumed vision latency.</p></li>
+<li><p>Only then open <code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code> / <code class="docutils literal notranslate"><span class="pre">lateral/pp_planner.cpp</span></code> with the Control chapters in hand.</p></li>
 </ol>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>

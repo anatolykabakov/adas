@@ -68,7 +68,7 @@ Half the bugs in this area are not estimation bugs, they are frame bugs. Fix the
 
 ```{admonition} Same topic name, two payloads
 :class: warning
-Java publishes `sensors/gps/location` as a **lat/lon proto**. After `TopicConvert` the **same topic
+Java publishes `sensors/gps/location` as a **lat/lon proto**. After `proto_convert` the **same topic
 name** carries a typed `GpsSample` in ENU meters. Offline tools must know which side of the convert they
 are reading. This has cost real debugging time more than once.
 ```

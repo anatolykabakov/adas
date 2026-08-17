@@ -473,7 +473,7 @@
 <h2>B — офлайн-управление<a class="headerlink" href="#b" title="Ссылка на этот заголовок">#</a></h2>
 <section id="b1-pure-pursuit">
 <h3>B1 Перебор Pure Pursuit<a class="headerlink" href="#b1-pure-pursuit" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code> по <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
+<p><code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code> по <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
 <strong>Результат:</strong> точка изгиба, которую вы бы поставили, и почему.</p>
 </section>
 <section id="b2">
@@ -508,8 +508,8 @@
 <section id="c4-fcw-aeb-ldw">
 <h3>C4 FCW / AEB / LDW<a class="headerlink" href="#c4-fcw-aeb-ldw" title="Ссылка на этот заголовок">#</a></h3>
 <p>Прочитайте главу <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">про предупреждения</span></a>. Прогоните юнит-тесты, задевающие <code class="docutils literal notranslate"><span class="pre">test_safety_warn</span></code>, затем:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>app/src/main/scripts<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python3<span class="w"> </span>app/src/main/scripts/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>scripts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>scripts/bag/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
 </pre></div>
 </div>
 <p><strong>Результат:</strong> таблица эпизодов и одно ложное срабатывание, которое правила с гейтами корректно подавляют (или объяснение, почему по этому бегу FCW показать нельзя).</p>

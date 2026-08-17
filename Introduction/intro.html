@@ -450,9 +450,9 @@ Bicycle-model and Pure Pursuit chapters reuse AAD figures and derivations (CC BY
 </figure>
 <ol class="arabic simple">
 <li><p>Phone camera captures a frame.</p></li>
-<li><p>Supercombo (ONNX Runtime) publishes lane polylines / plan in meters.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) computes desired SWA / torque.</p></li>
-<li><p>Panda sends <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>; EPS applies torque (supervised use only).</p></li>
+<li><p>Supercombo (on the GPU, ONNX as fallback) publishes lane polylines / plan in meters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) produces a plan in curvature; <code class="docutils literal notranslate"><span class="pre">Control</span></code> turns it into SWA / torque.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> sends <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>; EPS applies torque (supervised use only).</p></li>
 </ol>
 </section>
 <section id="difference-from-aad">

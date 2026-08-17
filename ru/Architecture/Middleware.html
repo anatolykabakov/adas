@@ -426,9 +426,10 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="middleware-c">
 <h1>Middleware (шина на C++)<a class="headerlink" href="#middleware-c" title="Ссылка на этот заголовок">#</a></h1>
-<p>После зрения и до HCA почти всё в нативном коде разговаривает через один объект: <strong><code class="docutils literal notranslate"><span class="pre">adas::Middleware</span></code></strong>.
-Если вы понимаете Middleware, то сможете читать любой сервис (<code class="docutils literal notranslate"><span class="pre">LaneKeep</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, <code class="docutils literal notranslate"><span class="pre">Panda</span></code>, …), не утопая в Android.</p>
-<p>Источник истины: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/middleware/middleware.hpp</span></code>.
+<p>После зрения и до HCA почти всё в нативном коде разговаривает через один объект:
+<strong><code class="docutils literal notranslate"><span class="pre">adas::middleware::Manager</span></code></strong>. Если вы понимаете его, то сможете читать любой сервис (<code class="docutils literal notranslate"><span class="pre">Planner</span></code>, <code class="docutils literal notranslate"><span class="pre">Control</span></code>,
+<code class="docutils literal notranslate"><span class="pre">Platform</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, …), не утопая в Android.</p>
+<p>Источник истины: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/adas/middleware/manager.hpp</span></code>.
 Тесты, которые читаются как учебник: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/tests/test_middleware.cpp</span></code>.</p>
 <section id="id1">
 <h2>Мысленная модель<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
@@ -443,7 +444,7 @@
 </pre></div>
 </div>
 <ul class="simple">
-<li><p><strong>Service</strong> — одна единица параллельности: свой поток (<code class="docutils literal notranslate"><span class="pre">Realtime</span></code>) или общий <code class="docutils literal notranslate"><span class="pre">step()</span></code> (<code class="docutils literal notranslate"><span class="pre">Simulated</span></code>).</p></li>
+<li><p><strong>Service</strong> — одна единица параллельности: свой поток (<code class="docutils literal notranslate"><span class="pre">RealTime</span></code>) или общий <code class="docutils literal notranslate"><span class="pre">step()</span></code> (<code class="docutils literal notranslate"><span class="pre">Simulated</span></code>).</p></li>
 <li><p><strong>Топики</strong> — типизированные строковые имена (<code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>, …).</p></li>
 <li><p><strong>Публикация</strong> копирует сообщение в очередь каждого подписчика; колбэк выполняет <strong>владелец</strong> этой очереди.</p></li>
 <li><p><strong>Параметры</strong> можно задавать из любого потока (интерфейс, JNI); <strong>применяются</strong> они на потоке сервиса между колбэками.</p></li>
@@ -463,7 +464,7 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Realtime</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RealTime</span></code></p></td>
 <td><p>поток каждого сервиса и системное время</p></td>
 <td><p>телефон, APK</p></td>
 </tr>
@@ -479,8 +480,8 @@
 <span class="c1"># mw.register_services(...)</span>
 <span class="c1"># for t in bag_timestamps_us:</span>
 <span class="c1">#     mw.set_time(t)</span>
-<span class="c1">#     mw.publish(&quot;vehicle/chassis&quot;, chassis_sample)</span>
-<span class="c1">#     mw.publish(&quot;vision/path&quot;, path_msg)</span>
+<span class="c1">#     mw.publish("vehicle/chassis", chassis_sample)</span>
+<span class="c1">#     mw.publish("vision/path", path_msg)</span>
 <span class="c1">#     mw.step()</span>
 <span class="c1">#     msgs = mw.pop_messages()  # outbound for logging / asserts</span>
 </pre></div>
@@ -489,15 +490,15 @@
 <section id="id3">
 <h2>Как написать крошечный сервис<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <p>Настоящие имена API (упрощённое эхо):</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;middleware/middleware.hpp&quot;</span>
-<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;utils/adas_topics.h&quot;</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"adas/middleware/manager.hpp"</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">"adas/utils/adas_topics.h"</span>
 
-<span class="k">class</span><span class="w"> </span><span class="nc">EchoService</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">adas</span><span class="o">::</span><span class="n">Service</span><span class="w"> </span><span class="p">{</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EchoService</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">adas</span><span class="o">::</span><span class="n">middleware</span><span class="o">::</span><span class="n">Service</span><span class="w"> </span><span class="p">{</span>
 <span class="w"> </span><span class="k">public</span><span class="o">:</span>
-<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">getName</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">&quot;echo&quot;</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">  </span><span class="n">std</span><span class="o">::</span><span class="n">string_view</span><span class="w"> </span><span class="n">getName</span><span class="p">()</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="k">return</span><span class="w"> </span><span class="s">"echo"</span><span class="p">;</span><span class="w"> </span><span class="p">}</span>
 
 <span class="w">  </span><span class="kt">void</span><span class="w"> </span><span class="n">configure</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">registerParameter</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;gain&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">gain_</span><span class="p">);</span>
+<span class="w">    </span><span class="n">registerParameter</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"gain"</span><span class="p">,</span><span class="w"> </span><span class="n">gain_</span><span class="p">);</span>
 
 <span class="w">    </span><span class="n">subscribe</span><span class="o">&lt;</span><span class="n">adas</span><span class="o">::</span><span class="n">ChassisSample</span><span class="o">&gt;</span><span class="p">(</span>
 <span class="w">        </span><span class="n">adas</span><span class="o">::</span><span class="n">topics</span><span class="o">::</span><span class="n">kVehicleChassis</span><span class="p">,</span>
@@ -505,7 +506,7 @@
 <span class="w">          </span><span class="n">last_v_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="p">.</span><span class="n">speed_mps</span><span class="p">;</span><span class="w">  </span><span class="c1">// ChassisSample / VehicleState use speed_mps</span>
 <span class="w">        </span><span class="p">});</span>
 
-<span class="w">    </span><span class="n">scheduleTimer</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">tick</span><span class="p">();</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s">&quot;tick&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// 50 ms</span>
+<span class="w">    </span><span class="n">scheduleTimer</span><span class="p">(</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="k">this</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">tick</span><span class="p">();</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="s">"tick"</span><span class="p">);</span><span class="w">  </span><span class="c1">// 50 ms</span>
 <span class="w">  </span><span class="p">}</span>
 
 <span class="w"> </span><span class="k">private</span><span class="o">:</span>
@@ -521,9 +522,9 @@
 </pre></div>
 </div>
 <p>Зарегистрировать:</p>
-<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">adas</span><span class="o">::</span><span class="n">Middleware</span><span class="w"> </span><span class="nf">mw</span><span class="p">(</span><span class="n">adas</span><span class="o">::</span><span class="n">Middleware</span><span class="o">::</span><span class="n">Mode</span><span class="o">::</span><span class="n">Simulated</span><span class="p">);</span>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">adas</span><span class="o">::</span><span class="n">middleware</span><span class="o">::</span><span class="n">Manager</span><span class="w"> </span><span class="nf">mw</span><span class="p">(</span><span class="n">adas</span><span class="o">::</span><span class="n">middleware</span><span class="o">::</span><span class="n">Manager</span><span class="o">::</span><span class="n">Mode</span><span class="o">::</span><span class="n">Simulated</span><span class="p">);</span>
 <span class="n">mw</span><span class="p">.</span><span class="n">registerService</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">EchoService</span><span class="o">&gt;</span><span class="p">());</span>
-<span class="n">mw</span><span class="p">.</span><span class="n">setParameter</span><span class="p">(</span><span class="s">&quot;gain&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;2.5&quot;</span><span class="p">);</span><span class="w">  </span><span class="c1">// string in, parsed to double</span>
+<span class="n">mw</span><span class="p">.</span><span class="n">setParameter</span><span class="p">(</span><span class="s">"gain"</span><span class="p">,</span><span class="w"> </span><span class="s">"2.5"</span><span class="p">);</span><span class="w">  </span><span class="c1">// string in, parsed to double</span>
 <span class="n">mw</span><span class="p">.</span><span class="n">setTime</span><span class="p">(</span><span class="cm">/*us=*/</span><span class="mi">0</span><span class="p">);</span>
 <span class="n">mw</span><span class="p">.</span><span class="n">step</span><span class="p">();</span><span class="w">  </span><span class="c1">// flush params + drain queues + fire due timers</span>
 </pre></div>
@@ -568,10 +569,10 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
-<td><p>Java (ZMQ) → <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code></p></td>
+<td><p>Java (ZMQ) → <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> → <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vision/path</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> → <code class="docutils literal notranslate"><span class="pre">LaneKeep</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> → <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, бег</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision/model_long</span></code></p></td>
 <td><p>Java → <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, <code class="docutils literal notranslate"><span class="pre">LongPlan</span></code></p></td>
@@ -579,13 +580,22 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code></p></td>
 <td><p>декодер панды или Java → многие</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
-<td><p>LaneKeep → Panda, бег</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> → <code class="docutils literal notranslate"><span class="pre">Control</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">safety/warn</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> → бег, интерфейс</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Control</span></code> → <code class="docutils literal notranslate"><span class="pre">Platform</span></code>, бег</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">panda/health</span></code>, <code class="docutils literal notranslate"><span class="pre">can/rx</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> → надзор, бег</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">safety/warn</span></code></p></td>
 <td><p>SafetyWarn → ZMQ OUT → интерфейс, бег</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code></p></td>
 <td><p>сервис статистики → бег</p></td>
 </tr>
 </tbody>
@@ -601,16 +611,16 @@
 <li><p>Перед следующим колбэком или таймером <code class="docutils literal notranslate"><span class="pre">ParamBag::flush()</span></code> разбирает её и пишет в переменную C++.</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student intuition (not the real class, but the timing)</span>
-<span class="n">pending</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">:</span> <span class="s2">&quot;0.8&quot;</span><span class="p">}</span>
+<span class="n">pending</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"pp_k_dd"</span><span class="p">:</span> <span class="s2">"0.8"</span><span class="p">}</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">pending</span><span class="p">):</span>
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">pending</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
         <span class="n">params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>  <span class="c1"># or bool/int/...</span>
     <span class="n">pending</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 
-<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">}</span>
+<span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"pp_k_dd"</span><span class="p">:</span> <span class="mf">0.4</span><span class="p">}</span>
 <span class="n">flush</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">pending</span><span class="p">)</span>
-<span class="k">assert</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;pp_k_dd&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.8</span>
+<span class="k">assert</span> <span class="n">params</span><span class="p">[</span><span class="s2">"pp_k_dd"</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.8</span>
 </pre></div>
 </div>
 <p>Поддерживаемые типы: <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code>, <code class="docutils literal notranslate"><span class="pre">string</span></code>.
@@ -642,57 +652,61 @@ Android NDK требует, чтобы разбирающие вспомогат
     <span class="n">next_tick</span> <span class="o">=</span> <span class="n">POLL_MS</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">t_pub</span> <span class="o">/</span> <span class="n">POLL_MS</span><span class="p">)</span>
     <span class="n">polled</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_tick</span> <span class="o">-</span> <span class="n">t_pub</span><span class="p">)</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;polled  : mean </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">N</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;notified: mean </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"polled  : mean </span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">N</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">polled</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"notified: mean </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms, worst </span><span class="si">{</span><span class="mf">0.0</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> ms"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Half a poll interval on average and a full one at worst, per hop. With four hops between camera&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;and CAN that is around 20 ms of pure waiting — a quarter of the whole 79 ms budget, spent on&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Half a poll interval on average and a full one at worst, per hop. With four hops between camera"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"and CAN that is around 20 ms of pure waiting — well over a third of the whole 52 ms budget, spent"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"on nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies."</span><span class="p">)</span>
 </pre></div>
 </div>
 <p><strong>Таймеры срабатывают тогда, когда обещают.</strong> За 143 700 срабатываний на настоящем заезде средний интервал
 был <strong>10.00 мс</strong> против номинальных 10. Худшие случаи — 44.8 мс в сервисе панды (скорее всего затык USB, то
 есть внешний мир, а не планировщик) и 21.8 мс в мосте ZMQ.</p>
-<p>Итого измеренный вывод: <strong>middleware никогда не задерживает сообщение на таймере</strong>, и те 26 мс задержки
-конвейера, которые не инференс, — это не шина. Из примерно 7 мс между выходом модели и командой около 5 —
+<p>Итого измеренный вывод: <strong>middleware никогда не задерживает сообщение на таймере</strong>, и та задержка конвейера,
+которая не инференс, — это не шина. Из примерно 8 мс между выходом модели и опубликованным планом около 5 —
 опрос входа ZMQ; это настоящая цена и единственная, которую стоит называть.</p>
+<p>Доля эта выросла безо всякого замедления шины. Когда инференс занимал 45.6 мс, опрос был 6 % бюджета и не
+стоил упоминания; при 17.6 мс он уже 10 % куда меньшего бюджета. Постоянные издержки становятся сюжетом,
+когда переменную убрали, — это нормальный конец оптимизации, а не новая беда.</p>
 <div class="tip admonition">
 <p class="admonition-title">Что это даёт диагностически</p>
 <p>Когда бег показывает устаревший эталон, шина уже исключена. Это дороже, чем звучит: область поиска сужается
-до тракта камера → модель или до внешних границ, а <code class="docutils literal notranslate"><span class="pre">middleware.hpp</span></code> можно не читать.</p>
+до тракта камера → модель или до внешних границ, а <code class="docutils literal notranslate"><span class="pre">manager.hpp</span></code> можно не читать.</p>
 </div>
 </section>
 <section id="id6">
 <h2>Очереди и потери<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <p>Ёмкость очереди подписчика по умолчанию конечна (около 100). Если медленный сервис не вычитывает:</p>
 <ul class="simple">
-<li><p>новые сообщения могут <strong>отбрасываться</strong>;</p></li>
+<li><p>при переполнении отбрасываются <strong>старые</strong> сообщения (<code class="docutils literal notranslate"><span class="pre">pop_front</span></code>), в очереди остаются последние ~100;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> показывает отстающие таймеры и потери, и он есть в каждом беге.</p></li>
 </ul>
+<p>Так сделано намеренно: устаревшее измерение контуру не нужно, а издателя нельзя стопорить медленным
+подписчиком. Потери видны в статистике, а не прячутся в растущей задержке.</p>
 <div class="admonition warning">
 <p class="admonition-title">Предупреждение</p>
 <p>«Плохой контроллер» на беге, где <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> показывает огромное отставание таймеров, — это чаще
 история про <strong>планирование</strong>, а не про коэффициенты. Проверьте это прежде, чем трогать вес: нужен один график.</p>
 </div>
-<p>Обратите внимание на асимметрию с конвейером зрения: две подсистемы делают противоположный выбор, и обе
-правы. Шина держит до сотни сообщений и при переполнении отбрасывает <strong>новые</strong>; <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> держит ровно
-<strong>один</strong> слот и отбрасывает <strong>старое</strong>, перезаписывая ожидающий кадр. Контуру управления нужно свежайшее
-измерение, и запас несвежих кадров ему бесполезен, а логгеру или анализу нужно каждое сообщение, которое ему
-обещали. Слово одно — «отбрасывание» — политика противоположная.</p>
+<p>С конвейером зрения политика <strong>та же по направлению</strong> — оба отбрасывают старое, чтобы оставить свежее, —
+но разная по <strong>глубине</strong>. Шина держит до сотни сообщений (логгеру и разбору бега нужна серия); <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code>
+держит ровно <strong>один</strong> слот и перезаписывает ожидающий кадр. Контроллеру запас несвежих кадров бесполезен,
+поэтому зрение агрессивнее; шина мягче, потому что один и тот же топик могут слушать и контур, и запись.</p>
 </section>
 <section id="id7">
 <h2>Как это изучать в репозитории<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Пробежать <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">KnobService</span></code>).</p></li>
-<li><p>Открыть <code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code> → <code class="docutils literal notranslate"><span class="pre">configure()</span></code>: параметры и подписки.</p></li>
-<li><p>Открыть <code class="docutils literal notranslate"><span class="pre">zmq_bridge_service.cpp</span></code>: сообщения из Java входят в ту же шину.</p></li>
+<li><p>Пробежать <code class="docutils literal notranslate"><span class="pre">tests/test_middleware.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">PubService</span></code>, <code class="docutils literal notranslate"><span class="pre">SubService</span></code>, <code class="docutils literal notranslate"><span class="pre">TimerService</span></code>).</p></li>
+<li><p>Открыть <code class="docutils literal notranslate"><span class="pre">src/services/planner.cpp</span></code> → <code class="docutils literal notranslate"><span class="pre">configure()</span></code>: параметры и подписки.</p></li>
+<li><p>Открыть <code class="docutils literal notranslate"><span class="pre">src/services/zmq_bridge.cpp</span></code>: сообщения из Java входят в ту же шину.</p></li>
 <li><p>Прогнать тесты на хосте: <code class="docutils literal notranslate"><span class="pre">./scripts/docker.sh</span> <span class="pre">tests</span></code> (или <code class="docutils literal notranslate"><span class="pre">build_cpp.sh</span> <span class="pre">-t</span> <span class="pre">linux</span> <span class="pre">--test</span></code>).</p></li>
 </ol>
 </section>
 <section id="id8">
 <h2>Задания<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Нарисуйте путь одного <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> от панды (или бега) до <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code>.</p></li>
+<li><p>Нарисуйте путь одного <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> от <code class="docutils literal notranslate"><span class="pre">Platform</span></code> (или бега) до <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p></li>
 <li><p>Добавьте гипотетический параметр <code class="docutils literal notranslate"><span class="pre">echo.gain</span></code> — какой поток его пишет, какой читает?</p></li>
 <li><p>В режиме <code class="docutils literal notranslate"><span class="pre">Simulated</span></code> почему нужно вызвать <code class="docutils literal notranslate"><span class="pre">setTime</span></code> до <code class="docutils literal notranslate"><span class="pre">step</span></code>, чтобы таймеры сработали?</p></li>
 </ol>

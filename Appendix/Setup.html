@@ -422,8 +422,10 @@
 <h2>Repository<a class="headerlink" href="#repository" title="Link to this heading">#</a></h2>
 <p>Android ADAS root:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>&lt;repository<span class="w"> </span>root&gt;
+git<span class="w"> </span>lfs<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>lfs<span class="w"> </span>pull<span class="w">   </span><span class="c1"># the models and the map are LFS objects</span>
 </pre></div>
 </div>
+<p>Without that second line the network assets are 133-byte pointer files and the app starts without a model.</p>
 <p>See also <code class="docutils literal notranslate"><span class="pre">README.md</span></code> at the repository root: APK build, <code class="docutils literal notranslate"><span class="pre">run_bag_vis.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">run_sim.sh</span></code>, Java/C++/scripts layout.</p>
 </section>
 <section id="build-book-html">
@@ -443,11 +445,11 @@ script separately verifies that every page has a counterpart — otherwise the s
 </section>
 <section id="python-for-bag">
 <h2>Python for bag<a class="headerlink" href="#python-for-bag" title="Link to this heading">#</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
 <span class="c1"># protobuf stubs:</span>
 ./generate_proto_python.sh
 <span class="nb">export</span><span class="w"> </span><span class="nv">PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION</span><span class="o">=</span>python
-python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
+python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
 </pre></div>
 </div>
 </section>
@@ -461,7 +463,9 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/adas_l
 <h2>Phone<a class="headerlink" href="#phone" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Android arm64, USB OTG + Panda;</p></li>
-<li><p>model <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/supercombo.onnx</span></code> or assets;</p></li>
+<li><p>models come from the APK assets (<code class="docutils literal notranslate"><span class="pre">supercombo.onnx</span></code>, <code class="docutils literal notranslate"><span class="pre">supercombo.thneed</span></code>); <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/</span></code> overrides
+them when you want to test a different file without rebuilding;</p></li>
+<li><p>new phone: <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">tools/model_device_probe.py</span> <span class="pre">--iters</span> <span class="pre">50</span></code> before anything else — see <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>;</p></li>
 <li><p>logging → <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_logs/…</span></code>;</p></li>
 <li><p>for teaching measurements: <code class="docutils literal notranslate"><span class="pre">vision_traffic:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">phone_stats:</span> <span class="pre">true</span></code>.</p></li>
 </ul>

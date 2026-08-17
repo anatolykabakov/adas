@@ -449,16 +449,25 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></p></td>
 <td><p>MPC из VisionPilot</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
+<td><p>путь через GPU: что такое thneed, как наш собирается и проверяется</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
+<td><p>подъём на новом телефоне и что замерить до выезда</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
+<td><p>подключение машины за <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
 <td><p>обучение параметров / офлайн-привязка к карте</p></td>
 </tr>
-<tr class="row-even"><td><p>глава книги <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
+<tr class="row-odd"><td><p>глава книги <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
 <td><p>ENU из GPS, IMU телефона, живой EKF</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
 <td><p>смежное</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
 <td><p>оценка в MetaDrive</p></td>
 </tr>
 </tbody>
@@ -474,25 +483,34 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/middleware.hpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">include/adas/middleware/manager.hpp</span></code></p></td>
 <td><p>Service / ParamBag</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tests/test_middleware.cpp</span></code></p></td>
 <td><p>самые маленькие примеры</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline.java</span></code></p></td>
-<td><p>очередь инференса</p></td>
+<td><p>выбор раннера, очередь инференса</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code></p></td>
-<td><p>выбор контроллера</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/planner.cpp</span></code></p></td>
+<td><p>какая поперечная стратегия работает</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">safety_warn_service.cpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/control.cpp</span></code></p></td>
+<td><p>закон управления, ни одного упоминания CAN</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/platform.cpp</span></code> и <code class="docutils literal notranslate"><span class="pre">src/platform/</span></code></p></td>
+<td><p>шина и единственное место, где названа марка</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/safety_warn.cpp</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">online_localizer</span></code> / <code class="docutils literal notranslate"><span class="pre">imu_calibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">gps_local_projector</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_from_onnx.py</span></code></p></td>
+<td><p>ONNX → прогон на GPU и проверки вокруг него</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">online_localizer</span></code> / <code class="docutils literal notranslate"><span class="pre">imu_calibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">gps_local_projector</span></code></p></td>
 <td><p>поза в ENU / захват IMU / GPS</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code></p></td>
 <td><p>все рычаги</p></td>
 </tr>
 </tbody>

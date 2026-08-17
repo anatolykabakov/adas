@@ -461,8 +461,8 @@ Code: <code class="docutils literal notranslate"><span class="pre">safety_planne
 </section>
 <section id="data-path">
 <h2>Data path<a class="headerlink" href="#data-path" title="Link to this heading">#</a></h2>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>vision/lanes (Java) → TopicConvert → vision/path   ─┐
-vision/model_long (lead0, …)                       ─┼→ SafetyWarnService @ 50 ms
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>vision/lanes (Java) → proto_convert → vision/path  ─┐
+vision/model_long (lead0, …)                       ─┼→ SafetyWarn @ 50 ms
 vehicle/chassis (v, blinker, steering_pressed)     ─┘
         → safety/warn → ZMQ OUT → HUD / bag
 </pre></div>
@@ -483,7 +483,7 @@ no danger, and the sequence is worth following because the failures are more ins
 seemed reasonable: hard braking wanted means danger ahead.</p>
 <p>It is wrong because IDM acceleration includes terms that have nothing to do with a lead car.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">idm_accel</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">v_lim</span><span class="p">,</span> <span class="n">gap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v_lead</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">s0</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">expn</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Treiber IDM. The free-road term alone can demand hard braking with nothing in front.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Treiber IDM. The free-road term alone can demand hard braking with nothing in front."""</span>
     <span class="n">free</span> <span class="o">=</span> <span class="p">(</span><span class="n">v_ego</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">v_lim</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span> <span class="o">**</span> <span class="n">expn</span>
     <span class="n">inter</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="k">if</span> <span class="n">gap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">v_lead</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -493,14 +493,14 @@ seemed reasonable: hard braking wanted means danger ahead.</p>
     <span class="k">return</span> <span class="n">a_max</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">free</span> <span class="o">-</span> <span class="n">inter</span><span class="p">)</span>
 
 <span class="n">MU_G</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">9.81</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;situation&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">&#39;a_idm&#39;</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">  would fire?&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'situation'</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'a_idm'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">  would fire?"</span><span class="p">)</span>
 <span class="c1"># Empty road, over the assumed limit</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;empty road at 37 m/s, limit 27.8&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">37.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'empty road at 37 m/s, limit 27.8'</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">37.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW"</span><span class="p">)</span>
 <span class="c1"># Empty arc: the curvature speed limit becomes v_lim</span>
 <span class="n">v_lim_arc</span> <span class="o">=</span> <span class="p">(</span><span class="n">MU_G</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mf">50.0</span><span class="p">))</span> <span class="o">**</span> <span class="mf">0.5</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;empty R=50 m arc at 22 m/s&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">22.0</span><span class="p">,</span><span class="w"> </span><span class="n">v_lim_arc</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'empty R=50 m arc at 22 m/s'</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">22.0</span><span class="p">,</span><span class="w"> </span><span class="n">v_lim_arc</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW"</span><span class="p">)</span>
 <span class="c1"># An actual lead car, closing</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;lead 15 m ahead at 13 m/s, we do 20&#39;</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0</span><span class="p">,</span><span class="w"> </span><span class="mf">13.0</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'lead 15 m ahead at 13 m/s, we do 20'</span><span class="si">:</span><span class="s2">&gt;38</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">idm_accel</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span><span class="w"> </span><span class="mf">27.8</span><span class="p">,</span><span class="w"> </span><span class="mf">15.0</span><span class="p">,</span><span class="w"> </span><span class="mf">13.0</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">  FCW"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The first two lines have no car in them. An empty road above the assumed limit and an empty tight bend both
@@ -595,13 +595,13 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
                     <span class="n">fcw_a</span><span class="o">=</span><span class="mf">3.5</span><span class="p">,</span> <span class="n">aeb_a</span><span class="o">=</span><span class="mf">5.5</span><span class="p">):</span>
     <span class="n">dv</span> <span class="o">=</span> <span class="n">v_ego</span> <span class="o">-</span> <span class="n">v_lead</span>
     <span class="k">if</span> <span class="n">gap_m</span> <span class="o">&lt;=</span> <span class="mf">1.0</span> <span class="ow">or</span> <span class="n">dv</span> <span class="o">&lt;</span> <span class="n">min_close</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;nan&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"nan"</span><span class="p">)</span>
     <span class="n">ttc</span> <span class="o">=</span> <span class="n">gap_m</span> <span class="o">/</span> <span class="n">dv</span>
     <span class="n">a_req</span> <span class="o">=</span> <span class="p">(</span><span class="n">dv</span> <span class="o">*</span> <span class="n">dv</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">gap_m</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">ttc</span> <span class="o">&lt;=</span> <span class="n">aeb_ttc</span> <span class="ow">or</span> <span class="n">a_req</span> <span class="o">&gt;=</span> <span class="n">aeb_a</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;AEB&quot;</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
+        <span class="k">return</span> <span class="s2">"AEB"</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
     <span class="k">if</span> <span class="n">ttc</span> <span class="o">&lt;=</span> <span class="n">fcw_ttc</span> <span class="ow">or</span> <span class="n">a_req</span> <span class="o">&gt;=</span> <span class="n">fcw_a</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;FCW&quot;</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
+        <span class="k">return</span> <span class="s2">"FCW"</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
     <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">ttc</span><span class="p">,</span> <span class="n">a_req</span>
 
 <span class="c1"># Slow close from 30 m at 5 m/s relative</span>
@@ -620,7 +620,7 @@ Comparing to the <strong>axis</strong> false-triggers “adjacent lane”. Compa
     <span class="k">return</span> <span class="n">cte</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span>
 
 <span class="n">d</span><span class="p">,</span> <span class="n">y_lead</span> <span class="o">=</span> <span class="mf">25.0</span><span class="p">,</span> <span class="mf">0.8</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;in path?&quot;</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y_lead</span> <span class="o">-</span> <span class="n">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"in path?"</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y_lead</span> <span class="o">-</span> <span class="n">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="mf">2.0</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -655,9 +655,9 @@ assistant measuring its own tracking error on an arc.</p></li>
     <span class="c1"># simplify: |cte| with outward OR hard threshold</span>
     <span class="k">return</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.5</span> <span class="ow">and</span> <span class="n">outward</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.8</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hold offset in arc:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>   <span class="c1"># False (no outward rate)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;drifting out:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>         <span class="c1"># True</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hard offset:&quot;</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>           <span class="c1"># True</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"hold offset in arc:"</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>   <span class="c1"># False (no outward rate)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"drifting out:"</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>         <span class="c1"># True</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"hard offset:"</span><span class="p">,</span> <span class="n">ldw</span><span class="p">(</span><span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="kc">True</span><span class="p">))</span>           <span class="c1"># True</span>
 </pre></div>
 </div>
 <p>Old rule <code class="docutils literal notranslate"><span class="pre">|cte|&gt;0.5</span></code> alone caused <strong>hundreds</strong> of false episodes on city bags; gated LDW dropped them — see <code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code>.</p>
@@ -696,17 +696,17 @@ assistant measuring its own tracking error on an arc.</p></li>
 <section id="config-block">
 <h2>Config block<a class="headerlink" href="#config-block" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">config.json</span></code> → <code class="docutils literal notranslate"><span class="pre">safety_warn</span></code>:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;fcw_ttc_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span>
-<span class="nt">&quot;aeb_ttc_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1.4</span><span class="p">,</span>
-<span class="nt">&quot;fcw_decel_ms2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">3.5</span><span class="p">,</span>
-<span class="nt">&quot;aeb_decel_ms2&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5.5</span><span class="p">,</span>
-<span class="nt">&quot;warn_min_speed_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span>
-<span class="nt">&quot;cte_ldw_threshold_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
-<span class="nt">&quot;cte_ldw_hard_m&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="p">,</span>
-<span class="nt">&quot;ldw_min_speed_ms&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">12.5</span><span class="p">,</span>
-<span class="nt">&quot;ldw_suppress_on_lat_active&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="nt">&quot;warn_set_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="nt">&quot;warn_hold_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"fcw_ttc_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">2.5</span><span class="p">,</span>
+<span class="nt">"aeb_ttc_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.4</span><span class="p">,</span>
+<span class="nt">"fcw_decel_ms2"</span><span class="p">:</span><span class="w"> </span><span class="mf">3.5</span><span class="p">,</span>
+<span class="nt">"aeb_decel_ms2"</span><span class="p">:</span><span class="w"> </span><span class="mf">5.5</span><span class="p">,</span>
+<span class="nt">"warn_min_speed_ms"</span><span class="p">:</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span>
+<span class="nt">"cte_ldw_threshold_m"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="nt">"cte_ldw_hard_m"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.8</span><span class="p">,</span>
+<span class="nt">"ldw_min_speed_ms"</span><span class="p">:</span><span class="w"> </span><span class="mf">12.5</span><span class="p">,</span>
+<span class="nt">"ldw_suppress_on_lat_active"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="nt">"warn_set_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="nt">"warn_hold_frames"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
 </pre></div>
 </div>
 <p>Two of those values are the outcome of round 3 above, and both live in the shipped config rather than only in
@@ -722,8 +722,8 @@ stayed dead for two days.</p>
 </pre></div>
 </div>
 <p><strong>Bag episodes</strong> (real Java→convert→service chain via <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>):</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>app/src/main/scripts<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>python3<span class="w"> </span>app/src/main/scripts/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>scripts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>python3<span class="w"> </span>scripts/bag/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
 </pre></div>
 </div>
 <p>Report <strong>episodes</strong>, not raw frame counts.</p>
@@ -737,7 +737,7 @@ stayed dead for two days.</p>
 <ol class="arabic simple">
 <li><p>Run the <code class="docutils literal notranslate"><span class="pre">forward_warning</span></code> examples; find a <code class="docutils literal notranslate"><span class="pre">(gap,</span> <span class="pre">Δv)</span></code> that is FCW but not AEB.</p></li>
 <li><p>Explain in one sentence why IDM accel was a bad FCW trigger.</p></li>
-<li><p>On a bag, run <code class="docutils literal notranslate"><span class="pre">bag_safety_warn.py</span></code> and record LDW / FCW / AEB episode counts + vision Hz.</p></li>
+<li><p>On a bag, run <code class="docutils literal notranslate"><span class="pre">bag/bag_safety_warn.py</span></code> and record LDW / FCW / AEB episode counts + vision Hz.</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />

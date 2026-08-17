@@ -1,9 +1,10 @@
 # Middleware (шина на C++)
 
-После зрения и до HCA почти всё в нативном коде разговаривает через один объект: **`adas::Middleware`**.
-Если вы понимаете Middleware, то сможете читать любой сервис (`LaneKeep`, `SafetyWarn`, `Panda`, …), не утопая в Android.
+После зрения и до HCA почти всё в нативном коде разговаривает через один объект:
+**`adas::middleware::Manager`**. Если вы понимаете его, то сможете читать любой сервис (`Planner`, `Control`,
+`Platform`, `SafetyWarn`, …), не утопая в Android.
 
-Источник истины: `app/src/main/cpp/include/middleware/middleware.hpp`.
+Источник истины: `app/src/main/cpp/include/adas/middleware/manager.hpp`.
 Тесты, которые читаются как учебник: `app/src/main/cpp/tests/test_middleware.cpp`.
 
 ## Мысленная модель
@@ -19,7 +20,7 @@
                  │ Middleware::setParameter / publish
 ```
 
-* **Service** — одна единица параллельности: свой поток (`Realtime`) или общий `step()` (`Simulated`).
+* **Service** — одна единица параллельности: свой поток (`RealTime`) или общий `step()` (`Simulated`).
 * **Топики** — типизированные строковые имена (`vision/path`, `vehicle/chassis`, …).
 * **Публикация** копирует сообщение в очередь каждого подписчика; колбэк выполняет **владелец** этой очереди.
 * **Параметры** можно задавать из любого потока (интерфейс, JNI); **применяются** они на потоке сервиса между колбэками.
@@ -33,7 +34,7 @@ Java, реплей бега и MetaDrive нуждаются в одних и т�
 
 | режим | кто крутит ручку | когда студент с ним встретится |
 |---|---|---|
-| `Realtime` | поток каждого сервиса и системное время | телефон, APK |
+| `RealTime` | поток каждого сервиса и системное время | телефон, APK |
 | `Simulated` | `setTime(t_us)` и `step()` | юнит-тесты, `pyadas`, офлайн по бегу |
 
 ```python
@@ -53,10 +54,10 @@ Java, реплей бега и MetaDrive нуждаются в одних и т�
 Настоящие имена API (упрощённое эхо):
 
 ```cpp
-#include "middleware/middleware.hpp"
-#include "utils/adas_topics.h"
+#include "adas/middleware/manager.hpp"
+#include "adas/utils/adas_topics.h"
 
-class EchoService : public adas::Service {
+class EchoService : public adas::middleware::Service {
  public:
   std::string_view getName() const override { return "echo"; }
 
@@ -87,7 +88,7 @@ class EchoService : public adas::Service {
 Зарегистрировать:
 
 ```cpp
-adas::Middleware mw(adas::Middleware::Mode::Simulated);
+adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
 mw.registerService(std::make_shared<EchoService>());
 mw.setParameter("gain", "2.5");  // string in, parsed to double
 mw.setTime(/*us=*/0);
@@ -110,11 +111,14 @@ mw.step();  // flush params + drain queues + fire due timers
 
 | топик | типичный производитель → потребитель |
 |---|---|
-| `vision/lanes` | Java (ZMQ) → `TopicConvert` |
-| `vision/path` | `TopicConvert` → `LaneKeep`, `SafetyWarn` |
+| `vision/lanes` | Java (ZMQ) → `ZmqBridge` → `proto_convert` |
+| `vision/path` | `Planner` → `SafetyWarn`, бег |
 | `vision/model_long` | Java → `SafetyWarn`, `LongPlan` |
 | `vehicle/chassis` | декодер панды или Java → многие |
-| `control/lane_keep`, `controls/steer` | LaneKeep → Panda, бег |
+| `control/lat_plan`, `control/long_plan` | `Planner` → `Control` |
+| `control/lane_keep` | `Planner` → бег, интерфейс |
+| `controls/steer` | `Control` → `Platform`, бег |
+| `panda/health`, `can/rx` | `Platform` → надзор, бег |
 | `safety/warn` | SafetyWarn → ZMQ OUT → интерфейс, бег |
 | `middleware/stats` | сервис статистики → бег |
 
@@ -178,52 +182,58 @@ print(f"polled  : mean {sum(polled) / N:5.2f} ms, worst {max(polled):5.2f} ms")
 print(f"notified: mean {0.0:5.2f} ms, worst {0.0:5.2f} ms")
 print()
 print("Half a poll interval on average and a full one at worst, per hop. With four hops between camera")
-print("and CAN that is around 20 ms of pure waiting — a quarter of the whole 79 ms budget, spent on")
-print("nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.")
+print("and CAN that is around 20 ms of pure waiting — well over a third of the whole 52 ms budget, spent")
+print("on nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.")
 ```
 
 **Таймеры срабатывают тогда, когда обещают.** За 143 700 срабатываний на настоящем заезде средний интервал
 был **10.00 мс** против номинальных 10. Худшие случаи — 44.8 мс в сервисе панды (скорее всего затык USB, то
 есть внешний мир, а не планировщик) и 21.8 мс в мосте ZMQ.
 
-Итого измеренный вывод: **middleware никогда не задерживает сообщение на таймере**, и те 26 мс задержки
-конвейера, которые не инференс, — это не шина. Из примерно 7 мс между выходом модели и командой около 5 —
+Итого измеренный вывод: **middleware никогда не задерживает сообщение на таймере**, и та задержка конвейера,
+которая не инференс, — это не шина. Из примерно 8 мс между выходом модели и опубликованным планом около 5 —
 опрос входа ZMQ; это настоящая цена и единственная, которую стоит называть.
+
+Доля эта выросла безо всякого замедления шины. Когда инференс занимал 45.6 мс, опрос был 6 % бюджета и не
+стоил упоминания; при 17.6 мс он уже 10 % куда меньшего бюджета. Постоянные издержки становятся сюжетом,
+когда переменную убрали, — это нормальный конец оптимизации, а не новая беда.
 
 ```{admonition} Что это даёт диагностически
 :class: tip
 Когда бег показывает устаревший эталон, шина уже исключена. Это дороже, чем звучит: область поиска сужается
-до тракта камера → модель или до внешних границ, а `middleware.hpp` можно не читать.
+до тракта камера → модель или до внешних границ, а `manager.hpp` можно не читать.
 ```
 
 ## Очереди и потери
 
 Ёмкость очереди подписчика по умолчанию конечна (около 100). Если медленный сервис не вычитывает:
 
-* новые сообщения могут **отбрасываться**;
+* при переполнении отбрасываются **старые** сообщения (`pop_front`), в очереди остаются последние ~100;
 * `middleware/stats` показывает отстающие таймеры и потери, и он есть в каждом беге.
+
+Так сделано намеренно: устаревшее измерение контуру не нужно, а издателя нельзя стопорить медленным
+подписчиком. Потери видны в статистике, а не прячутся в растущей задержке.
 
 ```{warning}
 «Плохой контроллер» на беге, где `middleware/stats` показывает огромное отставание таймеров, — это чаще
 история про **планирование**, а не про коэффициенты. Проверьте это прежде, чем трогать вес: нужен один график.
 ```
 
-Обратите внимание на асимметрию с конвейером зрения: две подсистемы делают противоположный выбор, и обе
-правы. Шина держит до сотни сообщений и при переполнении отбрасывает **новые**; `VisionPipeline` держит ровно
-**один** слот и отбрасывает **старое**, перезаписывая ожидающий кадр. Контуру управления нужно свежайшее
-измерение, и запас несвежих кадров ему бесполезен, а логгеру или анализу нужно каждое сообщение, которое ему
-обещали. Слово одно — «отбрасывание» — политика противоположная.
+С конвейером зрения политика **та же по направлению** — оба отбрасывают старое, чтобы оставить свежее, —
+но разная по **глубине**. Шина держит до сотни сообщений (логгеру и разбору бега нужна серия); `VisionPipeline`
+держит ровно **один** слот и перезаписывает ожидающий кадр. Контроллеру запас несвежих кадров бесполезен,
+поэтому зрение агрессивнее; шина мягче, потому что один и тот же топик могут слушать и контур, и запись.
 
 ## Как это изучать в репозитории
 
-1. Пробежать `test_middleware.cpp` (`KnobService`).
-2. Открыть `lane_keep_service.cpp` → `configure()`: параметры и подписки.
-3. Открыть `zmq_bridge_service.cpp`: сообщения из Java входят в ту же шину.
+1. Пробежать `tests/test_middleware.cpp` (`PubService`, `SubService`, `TimerService`).
+2. Открыть `src/services/planner.cpp` → `configure()`: параметры и подписки.
+3. Открыть `src/services/zmq_bridge.cpp`: сообщения из Java входят в ту же шину.
 4. Прогнать тесты на хосте: `./scripts/docker.sh tests` (или `build_cpp.sh -t linux --test`).
 
 ## Задания
 
-1. Нарисуйте путь одного `ChassisSample` от панды (или бега) до `LaneKeepService`.
+1. Нарисуйте путь одного `ChassisSample` от `Platform` (или бега) до `Control`.
 2. Добавьте гипотетический параметр `echo.gain` — какой поток его пишет, какой читает?
 3. В режиме `Simulated` почему нужно вызвать `setTime` до `step`, чтобы таймеры сработали?
 

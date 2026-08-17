@@ -6,7 +6,10 @@
 
 ```bash
 cd <корень репозитория>
+git lfs install && git lfs pull   # модели и карта лежат в LFS
 ```
+
+Без второй строки ассеты сети — это файлы-указатели по 133 байта, и приложение стартует без модели.
 
 Смотрите также `README.md` в корне репозитория: сборка APK, `run_bag_vis.sh`, `run_sim.sh`, раскладка Java / C++ / скриптов.
 
@@ -29,11 +32,11 @@ pip install -r book/requirements.txt
 ## Python для бегов
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 # заглушки protobuf:
 ./generate_proto_python.sh
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-python3 latency.py /путь/к/adas_logs/СЕССИЯ
+python3 tools/latency.py /путь/к/adas_logs/СЕССИЯ
 ```
 
 ## AAD (по желанию)
@@ -47,7 +50,9 @@ python3 latency.py /путь/к/adas_logs/СЕССИЯ
 ## Телефон
 
 * Android arm64, USB OTG и Panda;
-* модель в `/sdcard/adas_models/supercombo.onnx` или в assets;
+* модели берутся из ассетов APK (`supercombo.onnx`, `supercombo.thneed`); `/sdcard/adas_models/` перекрывает
+  их, когда нужно проверить другой файл без пересборки;
+* новый телефон: сначала `python3 tools/model_device_probe.py --iters 50` — см. `docs/NEW_PHONE.md`;
 * логи → `/sdcard/adas_logs/…`;
 * для учебных измерений: `vision_traffic: false`, `phone_stats: true`.
 

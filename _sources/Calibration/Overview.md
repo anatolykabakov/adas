@@ -26,8 +26,12 @@ Example rig numbers (order of magnitude): ~0.1 m left of centerline, pitch $\app
 
 ## Online calibration
 
-`CameraCalibService` consumes `model/camera_odometry` (and optionally lane UV) and publishes `calibration/camera`.
-On success / sufficient confidence, Java updates the warp used by the next Supercombo inputs.
+`CameraCalib` (`services/camera_calib.cpp`) consumes `model/camera_odometry` (and optionally lane UV) and
+publishes `calibration/camera`. On success / sufficient confidence, Java updates the warp used by the next
+Supercombo inputs.
+
+It also refuses intrinsics it does not believe: the principal point has to sit near the middle of the frame
+the message declares. That check exists because of a lost drive — the story is at the end of this chapter.
 
 ```{admonition} Roll is weakly observable
 :class: warning
@@ -114,7 +118,7 @@ Before raising Pure Pursuit or MPC gains, compare **prior vs live RPY** in the b
 
 * Do not judge lane-keep quality in the first minutes after a cold calib start.
 * Persistent lateral bias on a straight **without** HCA engaged is a calib / offset candidate, not a `pp_k_dd` candidate.
-* Chessboard intrinsics (`camera_calib_chessboard.py`) refine $f_x,f_y$; extrinsics remain a separate story.
+* Chessboard intrinsics (`tools/camera_calib_chessboard.py`) refine $f_x,f_y$; extrinsics remain a separate story.
 
 ## What bags can and cannot measure
 
@@ -127,6 +131,57 @@ Verified on three 2026-08-01 runs (phone remounted between first and second).
 | **x (forward)** | not geometric | 1.5 | tape only; `fp` does not use it |
 | **height / scale** | 0.80–0.98 | 1.1 m | unstable; use wheel speed, not model `trans[0]` |
 | pitch / yaw | live calib | prior −1.8 / +0.5 | works after remount |
+
+## Three ways calibration killed one drive
+
+On 2026-08-16 three consecutive runs failed to steer. The forensics are worth more than the fix, because
+each cause was invisible on its own and the three together looked like "the controller got worse".
+
+**The lens was out of focus.** Input sharpness — mean squared gradient over the model input's luminance
+plane — read **9.9–14.9**, against 369–942 on the healthy runs three days earlier, from the very first frame
+of every run and with no degradation over time. The app was doing everything right: autofocus off, focus
+distance at infinity, both confirmed in the log. So the cause was physical — glass, lens or the focus
+actuator — and the consequences were everywhere: 82.6 % of frames with neither lane line, line probabilities
+0.11 and 0.20, model pose unrelated to the wheels, 60.4 % of ticks on the torque limit.
+
+The system now says so out loud, once every hundred frames:
+
+```
+DEFOCUS: input sharpness 12.3 against a threshold of 60 — there are no lane lines in a frame
+like this, check the lens and the glass
+```
+
+The threshold of 60 sits in the empty gap between 14.9 and 369. There are no intermediate values in the
+data, which is the good case for picking a threshold: pick it where nothing lives.
+
+**The intrinsics were off by a factor of two.** `camera/intrinsics` was published in the units of the
+*reduced bag frame* (640×360: fx 475.5, principal point 320/180) while the calibration service read it as
+the parameters of the *full* frame (1280×720). Everything downstream — `calibration/camera`, the model warp
+— then built its projection with half the focal length and the principal point in a corner. Comparing two
+bags shows it immediately: `fx=993.4 fy=995.2 cx=640 cy=360` on the good day, `fx=475.5 fy=475.5 cx=320
+cy=180` on the bad one.
+
+Fixed on the publishing side, and then guarded on the consuming side, because the next unit mistake will not
+be the same one. A message that says "this frame is 1280×720" and carries a principal point at (320, 180) is
+now rejected rather than believed.
+
+**The learned calibration was thrown away — by me, on the bench.** Yaw sat at +0.03° for the entire drive,
+range 0.00° over 1000 seconds, where three days earlier the system had converged to −1.40°. The learned
+calibration lives in `files/config.json`; that file was deleted during unrelated debugging, after which the
+app sat on a desk for fifteen minutes and **automatically saved a calibration learned from a room**. On the
+road it could not recover, because online calibration needs lane lines to work.
+
+That one is not a bug in an algorithm, it is a missing precondition: saving is now gated on
+`VisionPipeline.seesRoad()`. Deleting the config remains a legitimate thing to do — it just no longer
+overwrites a hard-won estimate with garbage learned from a wall.
+
+```{admonition} The pattern all three share
+:class: tip
+None of the three produced an error. A defocused frame is a valid frame, half-scale intrinsics are valid
+numbers, and a calibration learned from a desk is a valid calibration. Every one of them was found by
+comparing two measurements that should have agreed — this run against last week's, the publisher's units
+against the consumer's, the learned angle against the one from the drive before.
+```
 
 ## Exercise
 

@@ -442,7 +442,7 @@ If the polyline is wrong, delayed, or expressed in the wrong <span class="math n
 <li><p>enough metadata to know whether paint / plan is trustworthy (probabilities, age);</p></li>
 <li><p>timestamps (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>) so latency can be measured later.</p></li>
 </ul>
-<p>In Phone ADAS that contract lives on topic <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (after <code class="docutils literal notranslate"><span class="pre">TopicConvert</span></code> the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is <strong>indistinguishable</strong> to <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>. That is intentional: you can debug geometry offline before touching gains.</p>
+<p>In Phone ADAS that contract lives on topic <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (after <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is <strong>indistinguishable</strong> to <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>. That is intentional: you can debug geometry offline before touching gains.</p>
 </section>
 <section id="the-four-things-that-have-to-be-true-in-order">
 <h2>The four things that have to be true, in order<a class="headerlink" href="#the-four-things-that-have-to-be-true-in-order" title="Link to this heading">#</a></h2>
@@ -489,13 +489,13 @@ can follow anything, and they fail in this order of frequency:</p>
 <h2>Step 1: metres in a known frame<a class="headerlink" href="#step-1-metres-in-a-known-frame" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Both frames are used in this stack, and mixing them is condition 1 failing.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">iso_to_device_y</span><span class="p">(</span><span class="n">y_iso</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ISO vehicle frame has y left-positive; the model and our path have y right-positive.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""ISO vehicle frame has y left-positive; the model and our path have y right-positive."""</span>
     <span class="k">return</span> <span class="o">-</span><span class="n">y_iso</span>
 
-<span class="c1"># A lane line 1.75 m to the driver&#39;s left.</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ISO  y = </span><span class="si">{</span><span class="o">+</span><span class="mf">1.75</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m (left)  -&gt;  device y = </span><span class="si">{</span><span class="n">iso_to_device_y</span><span class="p">(</span><span class="o">+</span><span class="mf">1.75</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Get this backwards and the cross-track error changes sign, so the controller&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;corrects away from the lane centre with full confidence.&quot;</span><span class="p">)</span>
+<span class="c1"># A lane line 1.75 m to the driver's left.</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ISO  y = </span><span class="si">{</span><span class="o">+</span><span class="mf">1.75</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m (left)  -&gt;  device y = </span><span class="si">{</span><span class="n">iso_to_device_y</span><span class="p">(</span><span class="o">+</span><span class="mf">1.75</span><span class="p">)</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"Get this backwards and the cross-track error changes sign, so the controller"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"corrects away from the lane centre with full confidence."</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>That is the whole of condition 1, and it is worth the three lines because it is the single most common way
@@ -509,7 +509,7 @@ publishes at 100 Hz regardless of how old the <em>reference</em> is — so the c
 path it was based on could be a minute old. In one measured stall <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> ran at a mean interval
 of 9.9 ms while the plan was up to <strong>75 seconds</strong> stale.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">reference_age_ms</span><span class="p">(</span><span class="n">capture_ts_ms</span><span class="p">,</span> <span class="n">now_ms</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Age of the geometry the command is based on — not the age of the command.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Age of the geometry the command is based on — not the age of the command."""</span>
     <span class="k">return</span> <span class="n">now_ms</span> <span class="o">-</span> <span class="n">capture_ts_ms</span>
 
 <span class="n">LANE_MAX_AGE_MS</span> <span class="o">=</span> <span class="mi">300</span>           <span class="c1"># vehicle.lane_max_age_s</span>
@@ -517,8 +517,8 @@ of 9.9 ms while the plan was up to <strong>75 seconds</strong> stale.</p>
 <span class="n">now</span> <span class="o">=</span> <span class="mi">100_000</span>
 <span class="k">for</span> <span class="n">capture</span> <span class="ow">in</span> <span class="p">(</span><span class="n">now</span> <span class="o">-</span> <span class="mi">60</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">250</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">900</span><span class="p">,</span> <span class="n">now</span> <span class="o">-</span> <span class="mi">75_000</span><span class="p">):</span>
     <span class="n">age</span> <span class="o">=</span> <span class="n">reference_age_ms</span><span class="p">(</span><span class="n">capture</span><span class="p">,</span> <span class="n">now</span><span class="p">)</span>
-    <span class="n">verdict</span> <span class="o">=</span> <span class="s2">&quot;ok&quot;</span> <span class="k">if</span> <span class="n">age</span> <span class="o">&lt;=</span> <span class="n">LANE_MAX_AGE_MS</span> <span class="k">else</span> <span class="s2">&quot;stale -&gt; command cleared, PID reset&quot;</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;reference age </span><span class="si">{</span><span class="n">age</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> ms  </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">verdict</span> <span class="o">=</span> <span class="s2">"ok"</span> <span class="k">if</span> <span class="n">age</span> <span class="o">&lt;=</span> <span class="n">LANE_MAX_AGE_MS</span> <span class="k">else</span> <span class="s2">"stale -&gt; command cleared, PID reset"</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reference age </span><span class="si">{</span><span class="n">age</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> ms  </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>The fix has to be keyed on the capture timestamp of the frame, which is why every message in this pipeline
@@ -578,7 +578,7 @@ compares model distance against a wheel or GNSS distance does not.</p>
 <h2>Chapters in this module<a class="headerlink" href="#chapters-in-this-module" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
 <li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Coordinate systems</span></a> — device <span class="math notranslate nohighlight">\(y\)</span> right+ vs ISO <span class="math notranslate nohighlight">\(y\)</span> left+; the #1 source of inverted steering.</p></li>
-<li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo on device</span></a> — warp → ORT → parse → publish; Hz and thermal.</p></li>
+<li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo on device</span></a> — warp → GPU or ORT → parse → publish; Hz and thermal.</p></li>
 </ol>
 <p>Then you move to <a class="reference internal" href="../Control/Overview.html"><span class="std std-doc">Control</span></a>.</p>
 </section>
@@ -594,16 +594,19 @@ compares model distance against a wheel or GNSS distance does not.</p>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code></p></td>
 <td><p>extrinsics-aware warp to 512×256</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
-<td><p>ONNX Runtime session</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code></p></td>
+<td><p>supercombo 0.9.7 in fp16 on the GPU — the default</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneLines</span></code> / parse helpers</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
+<td><p>the same network in fp32 through ONNX Runtime — the fallback</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneLines</span></code> / parse helpers</p></td>
 <td><p>heads → polylines</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
 <td><p>drop policy when busy</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
 <td><p>HUD only — not the control contract</p></td>
 </tr>
 </tbody>

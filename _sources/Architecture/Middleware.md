@@ -1,9 +1,10 @@
 # Middleware (C++ bus)
 
-After vision and before HCA, almost everything in native code talks through one object: **`adas::Middleware`**.
-If you understand Middleware, you can read any service (`LaneKeep`, `SafetyWarn`, `Panda`, …) without drowning in Android.
+After vision and before HCA, almost everything in native code talks through one object:
+**`adas::middleware::Manager`**. If you understand it, you can read any service (`Planner`, `Control`,
+`Platform`, `SafetyWarn`, …) without drowning in Android.
 
-Source of truth: `app/src/main/cpp/include/middleware/middleware.hpp`.
+Source of truth: `app/src/main/cpp/include/adas/middleware/manager.hpp`.
 Tests that read like a tutorial: `app/src/main/cpp/tests/test_middleware.cpp`.
 
 ## Mental model
@@ -33,7 +34,7 @@ Java, bag replay, and MetaDrive all need the same algorithms. A bus + `Mode::Sim
 
 | mode | who turns the crank | when students meet it |
 |---|---|---|
-| `Realtime` | each service thread + OS time | phone / APK |
+| `RealTime` | each service thread + OS time | phone / APK |
 | `Simulated` | `setTime(t_us)` + `step()` | unit tests, `pyadas`, bag offline |
 
 ```python
@@ -53,10 +54,10 @@ Java, bag replay, and MetaDrive all need the same algorithms. A bus + `Mode::Sim
 Real API names (simplified Echo):
 
 ```cpp
-#include "middleware/middleware.hpp"
-#include "utils/adas_topics.h"
+#include "adas/middleware/manager.hpp"
+#include "adas/utils/adas_topics.h"
 
-class EchoService : public adas::Service {
+class EchoService : public adas::middleware::Service {
  public:
   std::string_view getName() const override { return "echo"; }
 
@@ -87,7 +88,7 @@ class EchoService : public adas::Service {
 Register it:
 
 ```cpp
-adas::Middleware mw(adas::Middleware::Mode::Simulated);
+adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
 mw.registerService(std::make_shared<EchoService>());
 mw.setParameter("gain", "2.5");  // string in, parsed to double
 mw.setTime(/*us=*/0);
@@ -106,17 +107,23 @@ mw.step();  // flush params + drain queues + fire due timers
 
 ## Topics students see often
 
-Defined in `utils/adas_topics.h`:
+Defined in `adas/utils/adas_topics.h`:
 
 | topic | typical producer → consumer |
 |---|---|
-| `vision/lanes` | Java (ZMQ) → `TopicConvert` |
-| `vision/path` | `TopicConvert` → `LaneKeep`, `SafetyWarn` |
-| `vision/model_long` | Java → `SafetyWarn`, `LongPlan` |
-| `vehicle/chassis` | Panda decode / Java → many |
-| `control/lane_keep`, `controls/steer` | LaneKeep → Panda / bag |
-| `safety/warn` | SafetyWarn → ZMQ OUT → UI / bag |
+| `vision/lanes` | Java (ZMQ) → `ZmqBridge` → `proto_convert` |
+| `vision/path` | `Planner` → `SafetyWarn`, bag |
+| `vision/model_long` | Java → `SafetyWarn`, long plan |
+| `vehicle/chassis`, `vehicle/state` | `Platform` (CAN decode) / Java → many |
+| `control/lat_plan`, `control/long_plan` | `Planner` → `Control` |
+| `control/lane_keep` | `Planner` → bag / UI |
+| `controls/steer` | `Control` → `Platform` / bag |
+| `panda/health`, `can/rx` | `Platform` → supervisor, bag |
+| `safety/warn` | `SafetyWarn` → ZMQ OUT → UI / bag |
 | `middleware/stats` | stats service → bag |
+
+Read that table as the shape of the lateral loop: the plan is published in curvature by `Planner`, turned
+into a command by `Control`, and only `Platform` ever touches CAN. Each arrow is a place a test can cut.
 
 ## ParamBag (live knobs)
 
@@ -178,53 +185,60 @@ print(f"polled  : mean {sum(polled) / N:5.2f} ms, worst {max(polled):5.2f} ms")
 print(f"notified: mean {0.0:5.2f} ms, worst {0.0:5.2f} ms")
 print()
 print("Half a poll interval on average and a full one at worst, per hop. With four hops between camera")
-print("and CAN that is around 20 ms of pure waiting — a quarter of the whole 79 ms budget, spent on")
-print("nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.")
+print("and CAN that is around 20 ms of pure waiting — well over a third of the whole 52 ms budget, spent")
+print("on nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies.")
 ```
 
 **Timers fire when they say they do.** Over 143 700 firings on a real drive, the mean interval was
 **10.00 ms** against a nominal 10. The worst cases were 44.8 ms in the panda service — most likely a USB
 stall, i.e. the outside world, not the scheduler — and 21.8 ms in the ZMQ bridge.
 
-So the measured conclusion is: **the middleware never delays a message on a timer**, and the 26 ms of
-non-inference latency in the pipeline is not the bus. Of the ~7 ms between model output and command, about 5
-is the ZMQ ingress poll — a real cost, and the only one worth naming.
+So the measured conclusion is: **the middleware never delays a message on a timer**, and the non-inference
+latency in the pipeline is not the bus. Of the ~8 ms between model output and the published plan, about 5 is
+the ZMQ ingress poll — a real cost, and the only one worth naming.
+
+That share grew without the bus getting any slower. When inference took 45.6 ms, the poll was 6 % of the
+budget and not worth a sentence; at 17.6 ms it is 10 % of a much smaller budget. Fixed costs become the
+story once you remove the variable one — which is the normal end state of optimisation, not a new problem.
 
 ```{admonition} What this buys you diagnostically
 :class: tip
 When a bag shows a stale reference, the bus is already ruled out. That is worth more than it sounds: it means
 the search space is the camera → model chain or the outside boundaries, and you can stop reading
-`middleware.hpp`.
+`manager.hpp`.
 ```
 
 ## Queues and drops
 
 Default subscriber capacity is finite (~100). If a slow service does not drain:
 
-* new messages can be **dropped**;
+* when full, the **oldest** messages are dropped (`pop_front`), so the queue keeps the newest ~100;
 * `middleware/stats` shows lagging timers and drops, and it is in every bag.
+
+That is deliberate: a stale measurement is useless to the loop, and a slow subscriber must not stall the
+publisher. The loss shows up in the stats instead of as a growing delay.
 
 ```{warning}
 A "bad controller" on a bag where `middleware/stats` shows huge timer lag is often a **scheduling** story, not
 a gain story. Check it before touching a weight — it takes one plot.
 ```
 
-Note the asymmetry with the vision pipeline, because the two make opposite choices for good reasons. The bus
-queues up to ~100 messages and drops the newest when full; `VisionPipeline` keeps exactly **one** slot and
-drops the *oldest*, overwriting the pending frame. A control loop wants the freshest measurement and has no
-use for a backlog of stale frames, while a logger or an analysis consumer wants every message it was promised.
-Same word — "drop" — opposite policy.
+With the vision pipeline the policy is the **same in direction** — both drop the oldest to keep the newest —
+but different in **depth**. The bus holds up to ~100 messages (a logger or bag analysis wants a series);
+`VisionPipeline` keeps exactly **one** slot and overwrites the pending frame. A control loop has no use for a
+backlog of stale frames, so vision is stricter; the bus is softer because the same topic may feed both the
+loop and the recorder.
 
 ## How to study this in the repo
 
-1. Skim `test_middleware.cpp` (`KnobService`).
-2. Open `lane_keep_service.cpp` → `configure()`: parameters + subscriptions.
-3. Open `zmq_bridge_service.cpp`: Java messages enter the same bus.
+1. Skim `tests/test_middleware.cpp` (`PubService`, `SubService`, `TimerService`).
+2. Open `src/services/planner.cpp` → `configure()`: parameters + subscriptions.
+3. Open `src/services/zmq_bridge.cpp`: Java messages enter the same bus.
 4. Run host tests: `./scripts/docker.sh tests` (or `build_cpp.sh -t linux --test`).
 
 ## Exercise
 
-1. Draw the path of one `ChassisSample` from Panda (or bag) to `LaneKeepService`.
+1. Draw the path of one `ChassisSample` from `Platform` (or a bag) to `Control`.
 2. Add a hypothetical parameter `echo.gain` — which thread writes it, which thread reads it?
 3. In Simulated mode, why must you call `setTime` before `step` for timers to fire?
 

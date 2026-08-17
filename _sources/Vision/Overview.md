@@ -18,7 +18,7 @@ At each vision frame the stack should publish something equivalent to:
 * enough metadata to know whether paint / plan is trustworthy (probabilities, age);
 * timestamps (`capture_ts`, `infer_ts`) so latency can be measured later.
 
-In Phone ADAS that contract lives on topic `vision/lanes` (after `TopicConvert` the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is **indistinguishable** to `pp` / `mpc` / `fp`. That is intentional: you can debug geometry offline before touching gains.
+In Phone ADAS that contract lives on topic `vision/lanes` (after `proto_convert` the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is **indistinguishable** to `pp` / `mpc` / `fp`. That is intentional: you can debug geometry offline before touching gains.
 
 ## The four things that have to be true, in order
 
@@ -112,7 +112,7 @@ Training Supercombo is **out of scope**. You treat the network as a black box wi
 ## Chapters in this module
 
 1. [Coordinate systems](./Coordinates.md) — device $y$ right+ vs ISO $y$ left+; the #1 source of inverted steering.
-2. [Supercombo on device](./Supercombo.md) — warp → ORT → parse → publish; Hz and thermal.
+2. [Supercombo on device](./Supercombo.md) — warp → GPU or ORT → parse → publish; Hz and thermal.
 
 Then you move to [Control](../Control/Overview.md).
 
@@ -121,7 +121,8 @@ Then you move to [Control](../Control/Overview.md).
 | piece | role |
 |---|---|
 | `ModelCalibWarp` | extrinsics-aware warp to 512×256 |
-| `SupercomboOnnxRunner` | ONNX Runtime session |
+| `SupercomboThneedRunner` | supercombo 0.9.7 in fp16 on the GPU — the default |
+| `SupercomboOnnxRunner` | the same network in fp32 through ONNX Runtime — the fallback |
 | `LaneLines` / parse helpers | heads → polylines |
 | `VisionPipeline` | drop policy when busy |
 | `LaneOverlayView` | HUD only — not the control contract |

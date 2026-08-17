@@ -18,10 +18,10 @@ adas_logs/<session>/
 cd <repository root>
 ./scripts/run_bag_vis.sh /path/to/session
 
-cd app/src/main/scripts
+cd scripts
 ./generate_proto_python.sh
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-python3 latency.py /path/to/session
+python3 tools/latency.py /path/to/session
 python3 vis/export_to_plotjuggler.py /path/to/session -o /tmp/out
 ```
 
@@ -39,10 +39,10 @@ python3 vis/export_to_plotjuggler.py /path/to/session -o /tmp/out
 ## Reading a bag yourself
 
 `load_topic_messages(session, topic)` returns a list of `(timestamp_ms, payload, envelope)`. That is the
-whole API. Everything in `app/src/main/scripts` is built on it, and so is every analysis in this course.
+whole API. Everything in `scripts` is built on it, and so is every analysis in this course.
 
 ```bash
-cd app/src/main/scripts
+cd scripts
 export PYTHONPATH=.
 ```
 

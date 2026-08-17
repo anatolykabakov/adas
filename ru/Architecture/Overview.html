@@ -428,9 +428,11 @@
 <p>Приложение ADAS:</p>
 <ol class="arabic simple">
 <li><p>снимает дорогу камерой (плюс вспомогательные IMU и GPS);</p></li>
-<li><p>запускает инференс <strong>Supercombo</strong> (ONNX Runtime на устройстве);</p></li>
-<li><p>считает команду поперечного удержания полосы в нативном <strong>C++</strong>;</p></li>
-<li><p>публикует <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> на CAN VW MQB через Panda;</p></li>
+<li><p>запускает инференс <strong>Supercombo</strong> на устройстве — на GPU через собранный <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>, с ONNX Runtime как
+запасным путём;</p></li>
+<li><p>планирует в кривизне и считает поперечную команду в нативном <strong>C++</strong>;</p></li>
+<li><p>публикует <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> на CAN VW MQB через Panda — через интерфейс платформы, так что марка это одна
+реализация, а не архитектура;</p></li>
 <li><p>пишет полный <strong>бег</strong> для офлайн-анализа.</p></li>
 </ol>
 <p>Это исследовательский и учебный стек удержания полосы — не готовый продукт с ACC и «автопилотом».</p>
@@ -454,10 +456,10 @@
 <tbody>
 <tr class="row-even"><td><p><strong>Java</strong></p></td>
 <td><p>камера / IMU / GPS, VisionPipeline, логгер, ZMQ</p></td>
-<td><p>датчики, ORT, интерфейс, запись бегов</p></td>
+<td><p>датчики, инференс, интерфейс, запись бегов</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>C++</strong></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">AdasApp</span></code>, LaneKeep, Calib, Panda, …</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AdasApp</span></code>, <code class="docutils literal notranslate"><span class="pre">Planner</span></code>, <code class="docutils literal notranslate"><span class="pre">Control</span></code>, <code class="docutils literal notranslate"><span class="pre">Platform</span></code>, калибровка, …</p></td>
 <td><p>алгоритмы и актуация</p></td>
 </tr>
 <tr class="row-even"><td><p><strong>Python</strong></p></td>
@@ -468,7 +470,13 @@
 </table>
 </div>
 <p><strong>Правило устройства:</strong> поперечные алгоритмы живут в C++. Python либо анализирует бег, либо гоняет <strong>тот же</strong> нативный код через <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> (<code class="docutils literal notranslate"><span class="pre">publish</span> <span class="pre">→</span> <span class="pre">step</span> <span class="pre">→</span> <span class="pre">pop_messages</span></code>). Это и делает лабораторные прогоны честными относительно телефона.</p>
-<p>Дальше в этой части: <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> (нативная шина) → <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Слой Java</span></a> (камера / ORT / ZMQ) → <a class="reference internal" href="Pipeline.html"><span class="std std-doc">Конвейер</span></a> (кадр → HCA). Ещё <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a> — предупреждения без актуации.</p>
+<p>Сторона C++ намеренно делит поперечный контур натрое: <code class="docutils literal notranslate"><span class="pre">Planner</span></code> решает, <em>какой формы траекторию ехать</em>,
+<code class="docutils literal notranslate"><span class="pre">Control</span></code> — <em>какая команда её даёт</em>, <code class="docutils literal notranslate"><span class="pre">Platform</span></code> выносит команду на шину и единственный знает, что машина —
+Volkswagen. Появление второй марки (Toyota TSS2) не изменило в первых двух ни строки; порядок описан в
+<code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code>.</p>
+<p>Дальше в этой части: <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a> (нативная шина) → <a class="reference internal" href="JavaLayer.html"><span class="std std-doc">Слой Java</span></a> (камера /
+инференс / ZMQ) → <a class="reference internal" href="Pipeline.html"><span class="std std-doc">Конвейер</span></a> (кадр → HCA). Ещё <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a> —
+предупреждения без актуации.</p>
 </section>
 <section id="id4">
 <h2>Как это собиралось, в том порядке, в котором собиралось<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
@@ -525,7 +533,7 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The contract that makes stage 1 possible, and why it is worth building first: the controller cannot tell</span>
 <span class="c1"># where its path came from.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">lane_keep_step</span><span class="p">(</span><span class="n">path_xy</span><span class="p">,</span> <span class="n">speed_ms</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stand-in for the real service: it sees a polyline and a speed. Nothing else.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""Stand-in for the real service: it sees a polyline and a speed. Nothing else."""</span>
     <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
     <span class="n">y</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">path_xy</span><span class="p">]</span>
     <span class="c1"># Curvature of a quadratic fit at the vehicle, the same quantity the real feedforward uses.</span>
@@ -537,16 +545,16 @@
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">sxxxx</span><span class="p">,</span> <span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxxx</span><span class="p">,</span> <span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">],</span> <span class="p">[</span><span class="n">sxx</span><span class="p">,</span> <span class="n">sx</span><span class="p">,</span> <span class="n">n</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">sxxy</span><span class="p">,</span> <span class="n">sxy</span><span class="p">,</span> <span class="n">sy</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;cte_m&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">&quot;epsi_rad&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="s2">&quot;kappa&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">),</span> <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">speed_ms</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"cte_m"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s2">"epsi_rad"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="s2">"kappa"</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">),</span> <span class="s2">"speed"</span><span class="p">:</span> <span class="n">speed_ms</span><span class="p">}</span>
 
 <span class="n">live</span> <span class="o">=</span> <span class="p">[(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mf">1.5</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.20</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>     <span class="c1"># from the camera</span>
 <span class="n">replay</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                             <span class="c1"># from a bag</span>
 <span class="n">simulated</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">live</span><span class="p">)</span>                                                          <span class="c1"># from MetaDrive</span>
 
-<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">&quot;live&quot;</span><span class="p">,</span> <span class="n">live</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;bag replay&quot;</span><span class="p">,</span> <span class="n">replay</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;simulator&quot;</span><span class="p">,</span> <span class="n">simulated</span><span class="p">)):</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"live"</span><span class="p">,</span> <span class="n">live</span><span class="p">),</span> <span class="p">(</span><span class="s2">"bag replay"</span><span class="p">,</span> <span class="n">replay</span><span class="p">),</span> <span class="p">(</span><span class="s2">"simulator"</span><span class="p">,</span> <span class="n">simulated</span><span class="p">)):</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">lane_keep_step</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2">: cte </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;cte_m&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m, kappa </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">&#39;kappa&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Identical, by construction. That is what lets a lab sweep mean something.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;11</span><span class="si">}</span><span class="s2">: cte </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">'cte_m'</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m, kappa </span><span class="si">{</span><span class="n">out</span><span class="p">[</span><span class="s1">'kappa'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Identical, by construction. That is what lets a lab sweep mean something."</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -554,10 +562,10 @@
 <h2>Конфигурация, которую вы будете трогать<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (можно переопределить в <code class="docutils literal notranslate"><span class="pre">filesDir</span></code> приложения).</p>
 <p>Ручки машины (<code class="docutils literal notranslate"><span class="pre">vehicle.*</span></code>):</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">&quot;lane_keep_controller&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fp&quot;</span><span class="p">,</span>
-<span class="nt">&quot;lat_use_vehicle_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="nt">&quot;tire_stiffness_factor&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span>
-<span class="nt">&quot;fp_steer_delay_s&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"lane_keep_controller"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fp"</span><span class="p">,</span>
+<span class="nt">"lat_use_vehicle_model"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="nt">"tire_stiffness_factor"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.64</span><span class="p">,</span>
+<span class="nt">"fp_steer_delay_s"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.35</span>
 </pre></div>
 </div>
 <p>Флаги узлов (<code class="docutils literal notranslate"><span class="pre">nodes.*</span></code>), например <code class="docutils literal notranslate"><span class="pre">&quot;vision_traffic&quot;:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;phone_stats&quot;:</span> <span class="pre">true</span></code>,
@@ -569,6 +577,12 @@
 </tr>
 </thead>
 <tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">thneed</span></code> (GPU, по умолчанию) | <code class="docutils literal notranslate"><span class="pre">onnx</span></code> (запасной)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code></p></td>
+<td><p>какой <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code> создаётся</p></td>
+</tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
 </tr>
@@ -592,9 +606,9 @@
 <h2>Типичный ход работы студента<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Записать или скачать сессию в <code class="docutils literal notranslate"><span class="pre">adas_logs/...</span></code>.</p></li>
-<li><p>Прогнать <code class="docutils literal notranslate"><span class="pre">latency.py</span></code>, визуализатор бега, PlotJuggler — установить темп и сквозную задержку.</p></li>
-<li><p>Перебрать параметры (<code class="docutils literal notranslate"><span class="pre">bag_config_sweep.py</span></code>) при <strong>фиксированной</strong> предполагаемой задержке зрения.</p></li>
-<li><p>И только потом открывать исходники <code class="docutils literal notranslate"><span class="pre">LaneKeepService</span></code> / <code class="docutils literal notranslate"><span class="pre">PurePursuit</span></code> с главами по управлению в руках.</p></li>
+<li><p>Прогнать <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>, визуализатор бега, PlotJuggler — установить темп и сквозную задержку.</p></li>
+<li><p>Перебрать параметры (<code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code>) при <strong>фиксированной</strong> предполагаемой задержке зрения.</p></li>
+<li><p>И только потом открывать <code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code> / <code class="docutils literal notranslate"><span class="pre">lateral/pp_planner.cpp</span></code> с главами по управлению в руках.</p></li>
 </ol>
 <div class="admonition tip">
 <p class="admonition-title">Совет</p>

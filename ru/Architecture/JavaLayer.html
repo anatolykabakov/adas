@@ -62,8 +62,6 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/JavaLayer';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/lang-switch.js?v=29098906"></script>
@@ -425,7 +423,35 @@
   <section class="tex2jax_ignore mathjax_ignore" id="java">
 <h1>Слой Java (обвязка телефона)<a class="headerlink" href="#java" title="Ссылка на этот заголовок">#</a></h1>
 <p>Алгоритмы принадлежат C++. <strong>Java</strong> принадлежит мир Android: камера, ONNX Runtime, беги, интерфейс и мост ZMQ в Middleware.</p>
-<p>Корень пакета: <code class="docutils literal notranslate"><span class="pre">app/src/main/java/ai/flow/adas/</span></code>.</p>
+<p>Корень пакета: <code class="docutils literal notranslate"><span class="pre">app/src/main/java/adas/app/</span></code>, разложенный по тому, с чем класс разговаривает:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>пакет</p></th>
+<th class="head"><p>содержимое</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code> (JNI), <code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code>, <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code>, <code class="docutils literal notranslate"><span class="pre">Logger</span></code>, <code class="docutils literal notranslate"><span class="pre">TimeUtil</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.sensors</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">CameraHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">IMUHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">GPSHandler</span></code>, <code class="docutils literal notranslate"><span class="pre">PhoneStatsHandler</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.vision</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code>, оба раннера, <code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code>, <code class="docutils literal notranslate"><span class="pre">LaneLines</span></code>, <code class="docutils literal notranslate"><span class="pre">IntrinsicsCalibrator</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.bridge</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code>, <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.record</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">BagLogger</span></code>, <code class="docutils literal notranslate"><span class="pre">AudioRecorder</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">adas.app.ui</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MainActivity</span></code>, <code class="docutils literal notranslate"><span class="pre">ParamSlider</span></code>, две стендовые активности</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <section id="id1">
 <h2>Разделение ответственности<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -438,8 +464,8 @@
 <tr class="row-even"><td><p>Camera2 / IMU / GPS</p></td>
 <td><p>удержание полосы (<code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>)</p></td>
 </tr>
-<tr class="row-odd"><td><p>Supercombo и опциональный YOLO (ORT)</p></td>
-<td><p>SafetyWarn, LongPlan, TopicConvert</p></td>
+<tr class="row-odd"><td><p>Supercombo (thneed или ORT) и опциональный YOLO</p></td>
+<td><p>SafetyWarn, продольный план, <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code> / <code class="docutils literal notranslate"><span class="pre">BagLogger</span></code> (беги сессии)</p></td>
 <td><p>приём и передача CAN панды, HCA</p></td>
@@ -463,8 +489,8 @@
 <h2>Путь кадра (камера → нативный код)<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>CameraHandler (YUV 1280×720, capture_ts)
     → VisionPipeline.submitYuv   (latest-frame drop if busy)
-        → ModelCalibWarp → 512×256
-        → SupercomboOnnxRunner.run (ORT)
+        → ModelCalibWarp.warpPair → 6×128×256 ×2   (OpenCL kernel, CPU fallback)
+        → SupercomboThneedRunner.run (GPU)  |  SupercomboOnnxRunner.run (ORT)
         → parse LaneLines / model_long / odometry
             → ProtoUtils.create…Message(...)
             → ZMQBridgeService.publishToNative(msg)   // :5555
@@ -483,7 +509,7 @@
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Предупреждение</p>
-<p>JPEG в беге — это обычно <strong>превью</strong>, а не развёрнутый вход ORT <span class="math notranslate nohighlight">\(512\times 256\)</span>.
+<p>JPEG в беге — это обычно <strong>превью</strong>, а не развёрнутый вход сети.
 Офлайн-переинференс должен пересобрать warp — см. <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
 </div>
 </section>
@@ -509,32 +535,44 @@
 </table>
 </div>
 <p>Конфиг: <code class="docutils literal notranslate"><span class="pre">zmq.endpoint_in</span></code> / <code class="docutils literal notranslate"><span class="pre">zmq.endpoint_out</span></code> в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student checklist when &quot;native never moves&quot;</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student checklist when "native never moves"</span>
 <span class="n">checks</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">&quot;nodes.zmq_bridge == true&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;VisionPipeline actually finishing ORT (infer_ms finite)&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;publishToNative called (logcat)&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;C++ ZmqBridgeService polling IN&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;TopicConvert producing vision/path for LaneKeep&quot;</span><span class="p">,</span>
+    <span class="s2">"nodes.zmq_bridge == true"</span><span class="p">,</span>
+    <span class="s2">"the runner passed its zero-input check at load (logcat: 'accepted')"</span><span class="p">,</span>
+    <span class="s2">"VisionPipeline actually finishing inference (infer_ms finite)"</span><span class="p">,</span>
+    <span class="s2">"publishToNative called (logcat)"</span><span class="p">,</span>
+    <span class="s2">"C++ ZmqBridge polling IN"</span><span class="p">,</span>
+    <span class="s2">"Planner producing control/lat_plan for Control"</span><span class="p">,</span>
 <span class="p">]</span>
 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">checks</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
 <section id="id3">
 <h2>Конфиг и живые параметры<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<ol class="arabic simple">
-<li><p><strong>Поставляемый JSON:</strong> <code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (копируется в <code class="docutils literal notranslate"><span class="pre">filesDir</span></code> при первом запуске и <strong>не</strong> перезаписывается при обновлении).</p></li>
+<ol class="arabic">
+<li><p><strong>Поставляемый JSON:</strong> <code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code> (копируется в <code class="docutils literal notranslate"><span class="pre">filesDir</span></code> при первом запуске и
+<strong>не</strong> перезаписывается при обновлении — ловушка, о которой стоит знать: новые ключи, добавленные в ассет,
+до существующей установки не доходят. Сбрасывается кнопкой сброса параметров или
+<code class="docutils literal notranslate"><span class="pre">adb</span> <span class="pre">shell</span> <span class="pre">run-as</span> <span class="pre">adas.app</span> <span class="pre">rm</span> <span class="pre">-f</span> <span class="pre">files/config.json</span></code> — но сперва прочтите предупреждение ниже).</p>
+<div class="admonition warning">
+<p class="admonition-title">Предупреждение</p>
+<p>В этом же файле лежит <strong>выученная</strong> калибровка камеры. Удаляя его, вы выбрасываете углы крепления,
+которые система набирала целый заезд, и она выучит их заново по тому, что увидит следующим, — однажды
+это оказался письменный стол. Именно поэтому сохранение теперь разрешено только при
+<code class="docutils literal notranslate"><span class="pre">VisionPipeline.seesRoad()</span></code>.</p>
+</div>
+</li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code></strong> — какие узлы включены (<code class="docutils literal notranslate"><span class="pre">nodes.lane_keep</span></code>, <code class="docutils literal notranslate"><span class="pre">nodes.safety_warn</span></code>, …).</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code> и слайдеры интерфейса</strong> — ручки в духе PP и калибровки прямо на ходу.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">AdasAppHandler.applyLaneKeepParams</span></code></strong> → JNI → <code class="docutils literal notranslate"><span class="pre">Middleware::setParameter</span></code>.</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># What a slider change means on the bus</span>
 <span class="n">ui_value</span> <span class="o">=</span> <span class="mf">0.8</span>
-<span class="c1"># Java sends string &quot;0.8&quot; for name &quot;pp_k_dd&quot;</span>
-<span class="c1"># ParamBag on LaneKeep&#39;s thread parses → double pp_k_dd_</span>
-<span class="k">assert</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;0.8&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">ui_value</span>
+<span class="c1"># Java sends string "0.8" for name "pp_k_dd"</span>
+<span class="c1"># ParamBag on the Planner's thread parses → double pp_k_dd_</span>
+<span class="k">assert</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"0.8"</span><span class="p">)</span> <span class="o">==</span> <span class="n">ui_value</span>
 </pre></div>
 </div>
 <p>Залить новый файл на телефон без пересборки APK: <code class="docutils literal notranslate"><span class="pre">./scripts/push_config.sh</span></code> (см. скрипты репозитория).</p>
@@ -543,8 +581,8 @@
 <h2>Беги<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">Logger</span></code> создаёт каталог сессии в хранилище приложения; каждый топик — поток protobuf.
 Студенты забирают их через <code class="docutils literal notranslate"><span class="pre">./scripts/pull_bags.sh</span></code>, дальше:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
-python3<span class="w"> </span>latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
+python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/adas_logs/SESSION
 python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggler<span class="w"> </span>/path/to/SESSION<span class="w"> </span>-o<span class="w"> </span>/tmp/out
 </pre></div>
 </div>
@@ -573,22 +611,31 @@ python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggl
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">CameraHandler</span></code></p></td>
 <td><p>кадры и метки времени</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> / <code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
-<td><p>ORT</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<td><p>выбор раннера, политика отбрасывания, <code class="docutils literal notranslate"><span class="pre">seesRoad()</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code> / <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> / <code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
+<td><p>сеть, на GPU или через ORT</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code></p></td>
+<td><p>варп к геометрии модели, сверка GPU против CPU, метрика резкости</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">IntrinsicsCalibrator</span></code></p></td>
+<td><p>интринсики по шахматной доске, когда вы её снимаете</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ZMQBridgeService</span></code> / <code class="docutils literal notranslate"><span class="pre">ProtoUtils</span></code></p></td>
 <td><p>в нативный код</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Logger</span></code></p></td>
 <td><p>беги</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code> / <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AdasConfig</span></code> / <code class="docutils literal notranslate"><span class="pre">RuntimeParams</span></code></p></td>
 <td><p>ручки</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AdasAppHandler</span></code></p></td>
 <td><p>JNI, запуск нативной части</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
 <td><p>наложение на экране</p></td>
 </tr>
 </tbody>
@@ -598,7 +645,7 @@ python3<span class="w"> </span>-m<span class="w"> </span>vis.export_to_plotjuggl
 <section id="id7">
 <h2>Задания<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Проследите один кадр: какой класс его отбросит, если ORT занят?</p></li>
+<li><p>Проследите один кадр: какой класс его отбросит, если раннер занят?</p></li>
 <li><p>Мысленно переключите <code class="docutils literal notranslate"><span class="pre">nodes.vision_supercombo</span></code> в <code class="docutils literal notranslate"><span class="pre">false</span></code> — какие топики исчезнут?</p></li>
 <li><p>По logcat или по коду перечислите три сообщения, которые Java публикует на <code class="docutils literal notranslate"><span class="pre">:5555</span></code>.</p></li>
 </ol>

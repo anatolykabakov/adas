@@ -423,8 +423,10 @@
 <h2>Репозиторий<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <p>Корень Android ADAS:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>&lt;корень<span class="w"> </span>репозитория&gt;
+git<span class="w"> </span>lfs<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>lfs<span class="w"> </span>pull<span class="w">   </span><span class="c1"># модели и карта лежат в LFS</span>
 </pre></div>
 </div>
+<p>Без второй строки ассеты сети — это файлы-указатели по 133 байта, и приложение стартует без модели.</p>
 <p>Смотрите также <code class="docutils literal notranslate"><span class="pre">README.md</span></code> в корне репозитория: сборка APK, <code class="docutils literal notranslate"><span class="pre">run_bag_vis.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">run_sim.sh</span></code>, раскладка Java / C++ / скриптов.</p>
 </section>
 <section id="html">
@@ -444,11 +446,11 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 </section>
 <section id="python">
 <h2>Python для бегов<a class="headerlink" href="#python" title="Ссылка на этот заголовок">#</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>app/src/main/scripts
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
 <span class="c1"># заглушки protobuf:</span>
 ./generate_proto_python.sh
 <span class="nb">export</span><span class="w"> </span><span class="nv">PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION</span><span class="o">=</span>python
-python3<span class="w"> </span>latency.py<span class="w"> </span>/путь/к/adas_logs/СЕССИЯ
+python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/путь/к/adas_logs/СЕССИЯ
 </pre></div>
 </div>
 </section>
@@ -462,7 +464,9 @@ python3<span class="w"> </span>latency.py<span class="w"> </span>/путь/к/ad
 <h2>Телефон<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>Android arm64, USB OTG и Panda;</p></li>
-<li><p>модель в <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/supercombo.onnx</span></code> или в assets;</p></li>
+<li><p>модели берутся из ассетов APK (<code class="docutils literal notranslate"><span class="pre">supercombo.onnx</span></code>, <code class="docutils literal notranslate"><span class="pre">supercombo.thneed</span></code>); <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/</span></code> перекрывает
+их, когда нужно проверить другой файл без пересборки;</p></li>
+<li><p>новый телефон: сначала <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">tools/model_device_probe.py</span> <span class="pre">--iters</span> <span class="pre">50</span></code> — см. <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>;</p></li>
 <li><p>логи → <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_logs/…</span></code>;</p></li>
 <li><p>для учебных измерений: <code class="docutils literal notranslate"><span class="pre">vision_traffic:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">phone_stats:</span> <span class="pre">true</span></code>.</p></li>
 </ul>

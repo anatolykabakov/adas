@@ -8,9 +8,11 @@ This chapter is the map of the repository before we dive into vision and control
 The ADAS app:
 
 1. captures the road with the camera (and supporting IMU / GPS);
-2. runs **Supercombo** inference (ONNX Runtime on device);
-3. computes a lateral lane-keep command in native **C++**;
-4. publishes `HCA_01` on VW MQB CAN via Panda;
+2. runs **Supercombo** inference on device — on the GPU through a generated `.thneed`, with ONNX Runtime as
+   the fallback;
+3. plans in curvature and computes a lateral command in native **C++**;
+4. publishes `HCA_01` on VW MQB CAN via Panda — through a platform interface, so the brand is one
+   implementation rather than the architecture;
 5. writes a full **bag** for offline analysis.
 
 This is a research / teaching lane-keep stack — not a full ACC / "autopilot" product.
@@ -26,13 +28,20 @@ End-to-end path you will learn to trace: sensors → model → path → control 
 
 | layer | components | role |
 |---|---|---|
-| **Java** | Camera / IMU / GPS, VisionPipeline, Logger, ZMQ | sensors, ORT, UI, bag I/O |
-| **C++** | `AdasApp`, LaneKeep, Calib, Panda, … | algorithms and actuation |
+| **Java** | Camera / IMU / GPS, VisionPipeline, Logger, ZMQ | sensors, inference, UI, bag I/O |
+| **C++** | `AdasApp`, `Planner`, `Control`, `Platform`, calibration, … | algorithms and actuation |
 | **Python** | vis, latency, sweeps, MetaDrive, `pyadas` | analysis and host-sim |
 
 **Design rule:** lateral algorithms live in C++. Python either analyzes a bag or drives the **same** native code through `pyadas` (`publish → step → pop_messages`). That keeps lab sweeps honest relative to the phone.
 
-Next in this part: [Middleware](./Middleware.md) (native bus) → [Java layer](./JavaLayer.md) (camera / ORT / ZMQ) → [Pipeline](./Pipeline.md) (frame → HCA). Also [FCW / AEB / LDW](../Safety/Warnings.md) for warnings without actuation.
+The C++ side splits the lateral loop three ways on purpose — `Planner` decides *what shape to drive*,
+`Control` decides *what command produces it*, `Platform` puts that command on the bus and is the only one
+that knows the car is a Volkswagen. Adding a second make (Toyota TSS2) changed no line of the first two;
+`docs/PORTING.md` is the procedure.
+
+Next in this part: [Middleware](./Middleware.md) (native bus) → [Java layer](./JavaLayer.md) (camera /
+inference / ZMQ) → [Pipeline](./Pipeline.md) (frame → HCA). Also [FCW / AEB / LDW](../Safety/Warnings.md) for
+warnings without actuation.
 
 ## How this was built, in the order it was built
 
@@ -108,6 +117,8 @@ Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`
 
 | key | purpose |
 |---|---|
+| `vision.model_runner` | `thneed` (GPU, default) \| `onnx` (fallback) |
+| `vehicle.name` | which `CarPlatform` is instantiated |
 | `vehicle.lane_keep_controller` | `pp` \| `mpc` \| `fp` |
 | `vehicle.lat_use_vehicle_model` | $\kappa\to$ SWA via understeer model |
 | `vehicle.fp_steer_delay_s` | state lookahead for pipeline delay |
@@ -117,9 +128,9 @@ Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`
 ## Typical student workflow
 
 1. Record or download a session under `adas_logs/...`.
-2. Run `latency.py`, bag visualizer, PlotJuggler — establish Hz / e2e.
-3. Sweep parameters (`bag_config_sweep.py`) at a **fixed** assumed vision latency.
-4. Only then open `LaneKeepService` / `PurePursuit` source with Control chapters in hand.
+2. Run `tools/latency.py`, bag visualizer, PlotJuggler — establish Hz / e2e.
+3. Sweep parameters (`bag/bag_config_sweep.py`) at a **fixed** assumed vision latency.
+4. Only then open `services/planner.cpp` / `lateral/pp_planner.cpp` with the Control chapters in hand.
 
 ```{tip}
 If CTE looks terrible, ask three questions in order: Is vision ≥ ~9 Hz? Is $y$ / `steer_sign` consistent? Is calib sane? Gains come fourth.

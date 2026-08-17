@@ -448,16 +448,25 @@
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></p></td>
 <td><p>VisionPilot MPC</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
+<td><p>the GPU path: what a thneed is, how ours is generated and checked</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
+<td><p>bringing up a new phone, and what to measure before driving</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
+<td><p>adding a car behind <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
 <td><p>params learning / offline map match</p></td>
 </tr>
-<tr class="row-even"><td><p>book <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
+<tr class="row-odd"><td><p>book <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
 <td><p>GPS ENU, phone IMU, live EKF</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
 <td><p>adjacent</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
 <td><p>MetaDrive eval</p></td>
 </tr>
 </tbody>
@@ -473,25 +482,34 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">middleware/middleware.hpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">include/adas/middleware/manager.hpp</span></code></p></td>
 <td><p>Service / ParamBag</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">tests/test_middleware.cpp</span></code></p></td>
 <td><p>smallest examples</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline.java</span></code></p></td>
-<td><p>inference queue</p></td>
+<td><p>runner selection, inference queue</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lane_keep_service.cpp</span></code></p></td>
-<td><p>controller selection</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/planner.cpp</span></code></p></td>
+<td><p>which lateral strategy runs</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">safety_warn_service.cpp</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/control.cpp</span></code></p></td>
+<td><p>the control law, no CAN in sight</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/platform.cpp</span></code> + <code class="docutils literal notranslate"><span class="pre">src/platform/</span></code></p></td>
+<td><p>the bus, and the only place a brand is named</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/safety_warn.cpp</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">online_localizer</span></code> / <code class="docutils literal notranslate"><span class="pre">imu_calibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">gps_local_projector</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_from_onnx.py</span></code></p></td>
+<td><p>ONNX → GPU run, and the checks around it</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">online_localizer</span></code> / <code class="docutils literal notranslate"><span class="pre">imu_calibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">gps_local_projector</span></code></p></td>
 <td><p>ENU pose / IMU lock / GPS</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code></p></td>
 <td><p>all levers</p></td>
 </tr>
 </tbody>
