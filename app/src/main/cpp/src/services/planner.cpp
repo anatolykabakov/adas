@@ -40,7 +40,8 @@ void Planner::configure()
     onChassis(carStateToChassis(payload, veh_.steerRatio()));
   });
   subscribe<adas::proto::LaneLines>(topics::kVisionLanes, [this](const adas::proto::LaneLines& payload) {
-    const LanePathMsg path = laneLinesToPath(payload, config_.lane_path, &lane_fusion_);
+    const double v_ego = have_chassis_ ? chassis_.speed_mps : 0.0;
+    const LanePathMsg path = laneLinesToPath(payload, config_.lane_path, &lane_fusion_, v_ego);
     publish(topics::kVisionPath, createLanePath(path));
     onLanes(path);
   });

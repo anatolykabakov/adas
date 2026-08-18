@@ -195,7 +195,7 @@ prior — записано в нём самом (`intrinsics_prior.device`), и 
 ## 8. Вес репозитория
 
 `cf43581` переводит большие ассеты на LFS: `supercombo.onnx` (103 МБ), `supercombo.thneed` (52 МБ),
-`traffic_yolo.onnx`, `Moscow.osm.pbf`, `Moscow.osm.admap`. Без этого набор добавил бы в историю
+`traffic_yolo.onnx` (позже убран из ассетов, AGPL-3.0), `Moscow.osm.pbf`, `Moscow.osm.admap`. Без этого набор добавил бы в историю
 около 155 МБ. **Клонирующему нужен `git lfs install`.**
 
 ## 9. Что остаётся открытым

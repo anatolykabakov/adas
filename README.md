@@ -61,6 +61,11 @@ On the host:
 pip install -r scripts/sim/requirements.txt   # + MetaDrive
 ```
 
+Models and the map can be kept out of the repository instead of pulled from LFS:
+`./scripts/fetch_models.sh` brings them into `models/` and `maps/` (both gitignored) from the places
+entitled to distribute them, checking sha256 against `scripts/models.manifest`; gradle packages from there.
+Why that matters beyond repo size — [`THIRD_PARTY.md`](THIRD_PARTY.md), [`LICENSE.md`](LICENSE.md).
+
 APK: `app/build/outputs/apk/debug/app-debug.apk`, native lib: `app/libs/arm64-v8a/`.
 C++ builds land in `app/src/main/cpp/build/<target>/<BuildType>` — one root, split by target.
 

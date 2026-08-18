@@ -22,9 +22,9 @@ namespace {
 // 4 MB one. It holds "Test Highway" — 2.6 km starting at the loader's default frame anchor and pointing
 // north: 1.2 km straight, a 600 m right-hand arc of radius 400 m, then 800 m straight — plus eight parallel
 // service roads either side, which is what gives the local-map slice a realistic number of edges.
-constexpr double kFixtureLat = 55.75569634;   // 200 m along the road, 2400 m of it still ahead
+constexpr double kFixtureLat = 55.75569634;  // 200 m along the road, 2400 m of it still ahead
 constexpr double kFixtureLon = 37.62080000;
-constexpr double kFixtureYaw = 1.5708;        // ENU, from east — the road heads north here
+constexpr double kFixtureYaw = 1.5708;  // ENU, from east — the road heads north here
 constexpr char kFixtureRoadName[] = "Test Highway";
 
 /** \brief The fixture is committed next to the tests, so its absence is a broken checkout, not a reason to

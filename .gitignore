@@ -86,3 +86,6 @@ out.png
 
 app/src/main/cpp/third_party/*
 app/src/main/cpp/clang_errors.txt
+
+# Generated at build time from the root NOTICE (app/build.gradle: syncNotice)
+app/src/main/assets/NOTICE.txt

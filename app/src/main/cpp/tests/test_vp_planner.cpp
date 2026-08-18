@@ -75,7 +75,7 @@ TEST(VpPlannerWiring, ServiceRunsThePlannerItAdvertises)
     mw.publish(adas::topics::kVisionLanes, ll);
     mw.step();
 
-    const auto path = adas::laneLinesToPath(ll, c.lane_path, &fusion);
+    const auto path = adas::laneLinesToPath(ll, c.lane_path, &fusion, speed);
     const auto in = adas::lateral::inputFromMessages(path, speed, yaw_rate, true, c.vision_nominal_dt_s, c.cam_y_left_m,
                                                      adas::lateral::VehicleParams{});
     const auto out = planner.update(in);

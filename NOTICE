@@ -1,0 +1,101 @@
+This product includes software and trained models developed by third parties. Their copyright notices and
+permission notices are reproduced below, as those licenses require. The full inventory of third-party
+components, with versions and what each license obliges us to do, is in THIRD_PARTY.md.
+
+================================================================================
+Comma.ai, Inc. — MIT License
+================================================================================
+
+Applies to:
+
+  app/src/main/assets/supercombo.onnx
+      supercombo 0.9.7, the driving model. Taken from the openpilot v0.9.7 tag:
+      https://github.com/commaai/openpilot/raw/v0.9.7/selfdrive/modeld/models/supercombo.onnx
+      That file is fp16, sha256 b31b504bc0b440d3bc72967507a00eb4f112285626fbfb3135011500325ee6d6.
+      We widen it to fp32 (scripts/tools/onnx_widen_fp32.py) because onnxruntime computes the fp16 graph
+      incorrectly on ARM; the result is sha256
+      d2d83a46abff21faa56e576d8d04489130f3e0bca41acc37fb3513638e2ac687 and is reproducible byte for byte.
+
+  app/src/main/assets/supercombo.thneed
+      The same network compiled for the phone GPU by scripts/tools/thneed_from_onnx.py. Derived from the
+      weights above and therefore covered by the same notice.
+
+  app/src/main/assets/vw_mqb_2010.dbc
+  app/src/main/assets/toyota_nodsu_pt_generated.dbc
+      CAN databases from opendbc.
+
+  app/src/main/cpp/include/adas/thneed/{thneed,thneedmodel,runmodel,clutil,util,timing}.h
+  parts of app/src/main/cpp/src/thneed/thneed_runner.cpp
+      GPU runner ported from openpilot 0.8.16.
+
+  app/src/main/cpp/src/lateral/flowpilot_mpc.cpp
+  app/src/main/cpp/src/lateral/fp_planner.cpp
+      Lateral MPC formulation ported from openpilot.
+
+Notice:
+
+  Copyright (c) 2018, Comma.ai, Inc.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+  associated documentation files (the "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+  following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial
+  portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+  LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+  EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Not a statement by Comma.ai: openpilot describes itself as "ALPHA QUALITY SOFTWARE FOR RESEARCH PURPOSES
+ONLY. THIS IS NOT A PRODUCT." We reproduce that here because it is part of how the software was offered.
+
+================================================================================
+Dropbox, Inc. — MIT License
+================================================================================
+
+Applies to: app/src/main/cpp/src/thneed/json11.{cpp,hpp}
+
+  Copyright (c) 2013 Dropbox, Inc.
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+  associated documentation files (the "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+  following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial
+  portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+  LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+  EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+  THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+================================================================================
+OpenStreetMap contributors — ODbL
+================================================================================
+
+Applies to: app/src/main/assets/Moscow.osm.admap
+
+  © OpenStreetMap contributors. Data available under the Open Database License,
+  https://www.openstreetmap.org/copyright
+
+  The .admap file is a derived database produced by scripts/mapmatch/osm_graph.py from an OSM extract.
+  The extract itself (Moscow.osm.pbf, 84 MB) is no longer shipped: the app never reads it, and it lives
+  outside the repository under maps/, fetched by scripts/mapmatch/fetch_map.py.
+
+================================================================================
+Other dependencies
+================================================================================
+
+Libraries linked or bundled at build time — acados, hpipm, blasfeo, protobuf, pybind11, Eigen, cppzmq,
+libzmq, jsoncpp, libusb, onnxruntime, OpenCV, jeromq, slf4j, androidx — keep their own licenses
+(BSD-2-Clause, BSD-3-Clause, MIT, MPL-2.0, Apache-2.0, LGPL-2.1). See THIRD_PARTY.md for the per-component
+list and the two obligations that are not just attribution: libusb is linked statically (LGPL-2.1 §6), and
+Apache-2.0 components require their NOTICE files to be carried along.

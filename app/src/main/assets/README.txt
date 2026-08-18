@@ -2,6 +2,12 @@ ADAS assets (app/src/main/assets)
 
   config.json         — node feature flags + vehicle + camera calib priors
   supercombo.onnx     — vision model, supercombo 0.9.7 (7 inputs, output 6504, fp32)
+                        source: openpilot v0.9.7, selfdrive/modeld/models/supercombo.onnx
+                        https://github.com/commaai/openpilot/raw/v0.9.7/selfdrive/modeld/models/supercombo.onnx
+                        that file is fp16, sha256 b31b504bc0b440d3bc72967507a00eb4f112285626fbfb3135011500325ee6d6;
+                        widened to fp32 by scripts/tools/onnx_widen_fp32.py, giving byte-for-byte
+                        sha256 d2d83a46abff21faa56e576d8d04489130f3e0bca41acc37fb3513638e2ac687.
+                        © Comma.ai, Inc., MIT — see THIRD_PARTY.md
   supercombo.thneed   — the same model compiled for the phone GPU, in fp16; built from
                         supercombo.onnx by scripts/tools/thneed_from_onnx.py --half,
                         byte-for-byte reproducible. See docs/THNEED.md

@@ -316,7 +316,7 @@ straights.
 |---|---|
 | `config.json` | none — it is the one guaranteed way to get the new config, stronger than the `run-as rm` below |
 | the `.dbc` | none, re-copied |
-| extracted `supercombo.onnx` / `traffic_yolo.onnx` | ~250 MB unpacked again, so the first launch is slow |
+| extracted `supercombo.onnx` | ~150 MB unpacked again, so the first launch is slow (traffic_yolo is no longer packaged — THIRD_PARTY.md) |
 | granted permissions (camera, storage, USB) | **must be re-granted by hand** |
 
 Bags are **not** affected: they are written to `Environment.getExternalStorageDirectory()/adas_logs`, outside

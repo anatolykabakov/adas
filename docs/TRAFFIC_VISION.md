@@ -4,6 +4,21 @@ Low-frequency YOLO (~3 Hz) on a dedicated Java thread → `vision/traffic_dets` 
 
 Does **not** share SupercomboInfer. Supercombo has no TFL/sign heads.
 
+## The model is not in the repository
+
+`assets/traffic_yolo.onnx` was removed on 2026-08-18: it is derived from Ultralytics YOLOv8, which ships
+under **AGPL-3.0**, and shipping it inside the APK is distribution — see `THIRD_PARTY.md`. The detector code
+is untouched; only the weights are gone.
+
+Two ways to run it, neither of which puts the file back into the repository:
+
+* `adb push <your>.onnx /sdcard/adas_models/traffic_yolo.onnx` — no rebuild, `TrafficYoloRunner` looks there
+  first;
+* drop it into `models/` and rebuild — `syncTrafficYoloModel` packages whatever is there.
+
+With no model and `nodes.vision_traffic` off (the default) nothing tries to load it. With the node on and no
+model, `MainActivity` logs where to put one and carries on.
+
 ## Model download (you fetch)
 
 ### Quick start — COCO (traffic lights only)
