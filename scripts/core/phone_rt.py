@@ -54,8 +54,16 @@ class PhoneRtGeometry:
         x_min: float = 1.5,
         path_lift: bool = False,
         margin: float = 80.0,
+        keep_gaps: bool = False,
     ) -> List[Tuple[int, int]]:
-        """Device frame: X fwd, Y right+, Z up → image pixels."""
+        """Device frame: X fwd, Y right+, Z **down** (openpilot FRD) → image pixels.
+
+        ``keep_gaps`` marks an out-of-frame point as ``None`` instead of dropping it, so a drawer can
+        break the polyline there rather than joining the two surviving neighbours across the image.
+        The body already relied on it; without it in the signature every call through
+        ``project_overlay_xyz`` raised ``TypeError``, and a direct call raised ``NameError`` the moment
+        a point left the frame.
+        """
         xs = np.asarray(xs, dtype=np.float64)
         ys = np.asarray(ys, dtype=np.float64)
         zs = np.asarray(zs, dtype=np.float64)

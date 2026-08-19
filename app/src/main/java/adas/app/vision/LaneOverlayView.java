@@ -16,11 +16,8 @@ public class LaneOverlayView extends View {
 
     private final Paint lanePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint edgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint pathPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint ppArcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint ppLdPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint ppTargetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint ppRayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint centerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint centerCasingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint hudPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint hudFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -41,14 +38,10 @@ public class LaneOverlayView extends View {
     private float cameraHeight = 1.22f;
     private float frameW = 1280f;
     private float frameH = 720f;
-    private float waypointShift = 1.40f;
     private float steerRatio = 15.7f;
     private float rollDeg = 0f;
     private float pitchDeg = 0f;
     private float yawDeg = 0f;
-
-    /** flowpilot OnRoadScreen path lift (m) on remapped camera-up axis. */
-    private static final float PATH_LIFT_M = 1.28f;
 
     /**
      * Camera-frame Rt = V · R(rpy) · V⁻¹ with the same R as {@link ModelCalibWarp}
@@ -58,6 +51,23 @@ public class LaneOverlayView extends View {
     private float r10 = 0, r11 = 1, r12 = 0;
     private float r20 = 0, r21 = 0, r22 = 1;
 
+
+    /**
+     * The reference line the lateral loop actually drives on: `vision/path`, built in C++ by the
+     * Planner out of the model plan and the lane lines, and forwarded here over ZMQ. This is the one
+     * line on screen that is a decision rather than an observation — everything else drawn here is
+     * what the network saw.
+     */
+    private volatile float[] centerX;
+    private volatile float[] centerY;
+    private volatile boolean centerAnchored;
+    /** Time base is elapsedRealtime, not the message clock: this only answers "is C++ still sending". */
+    private volatile long centerAtMs;
+    /** Two vision periods. A line older than that is about a road position the car has left. */
+    private static final long CENTER_MAX_AGE_MS = 400;
+    /** Green while the lane lines hold the line down; amber when only the model plan carries it. */
+    private static final int CENTER_ANCHORED_RGB = Color.rgb(0, 230, 118);
+    private static final int CENTER_PLAN_ONLY_RGB = Color.rgb(255, 176, 32);
 
     private volatile boolean ppValid = false;
     private volatile boolean ppHasTarget = false;
@@ -124,21 +134,18 @@ public class LaneOverlayView extends View {
         edgePaint.setStyle(Paint.Style.STROKE);
         edgePaint.setStrokeWidth(4f);
         edgePaint.setColor(Color.RED);
-        pathPaint.setStyle(Paint.Style.STROKE);
-        pathPaint.setStrokeWidth(8f);
-        pathPaint.setColor(Color.GREEN);
-
-        ppArcPaint.setStyle(Paint.Style.STROKE);
-        ppArcPaint.setStrokeWidth(7f);
-        ppArcPaint.setColor(Color.MAGENTA);
-        ppLdPaint.setStyle(Paint.Style.STROKE);
-        ppLdPaint.setStrokeWidth(2.5f);
-        ppLdPaint.setColor(Color.rgb(255, 128, 0));
-        ppTargetPaint.setStyle(Paint.Style.FILL);
-        ppTargetPaint.setColor(Color.CYAN);
-        ppRayPaint.setStyle(Paint.Style.STROKE);
-        ppRayPaint.setStrokeWidth(3f);
-        ppRayPaint.setColor(Color.CYAN);
+        // The casing goes under the line so it stays readable on bright asphalt, where a thin green
+        // stroke disappears.
+        centerCasingPaint.setStyle(Paint.Style.STROKE);
+        centerCasingPaint.setStrokeWidth(14f);
+        centerCasingPaint.setStrokeCap(Paint.Cap.ROUND);
+        centerCasingPaint.setStrokeJoin(Paint.Join.ROUND);
+        centerCasingPaint.setColor(Color.argb(150, 0, 0, 0));
+        centerPaint.setStyle(Paint.Style.STROKE);
+        centerPaint.setStrokeWidth(8f);
+        centerPaint.setStrokeCap(Paint.Cap.ROUND);
+        centerPaint.setStrokeJoin(Paint.Join.ROUND);
+        centerPaint.setColor(CENTER_ANCHORED_RGB);
 
         hudPaint.setStyle(Paint.Style.STROKE);
         hudPaint.setStrokeWidth(3f);
@@ -325,12 +332,6 @@ public class LaneOverlayView extends View {
         postInvalidateOnAnimation();
     }
 
-
-    public void setWaypointShift(float meters) {
-        this.waypointShift = meters;
-        postInvalidateOnAnimation();
-    }
-
     public void setSteerRatio(float ratio) {
         this.steerRatio = ratio > 1f ? ratio : 15.7f;
         postInvalidateOnAnimation();
@@ -360,6 +361,32 @@ public class LaneOverlayView extends View {
         postInvalidateOnAnimation();
     }
 
+
+    /**
+     * The reference line from `vision/path` (C++ Planner), in the device frame: x forward, y right.
+     *
+     * <p>`anchored` is the message's `lane_anchored` — whether the lane lines took part in building
+     * it, or the line is the model plan alone. That difference decides the colour, because it is the
+     * difference between following a road and following a guess about one.
+     */
+    public void setCenterline(float[] xs, float[] ys, boolean anchored) {
+        if (xs == null || ys == null || xs.length < 2 || ys.length < 2) {
+            clearCenterline();
+            return;
+        }
+        this.centerX = xs;
+        this.centerY = ys;
+        this.centerAnchored = anchored;
+        this.centerAtMs = android.os.SystemClock.elapsedRealtime();
+        postInvalidateOnAnimation();
+    }
+
+    public void clearCenterline() {
+        this.centerX = null;
+        this.centerY = null;
+        this.centerAtMs = 0;
+        postInvalidateOnAnimation();
+    }
 
     public void setSteerCommand(int torqueCnm, boolean enabled) {
         this.torqueCnm = torqueCnm;
@@ -498,7 +525,7 @@ public class LaneOverlayView extends View {
         if (ll != null) {
             for (int i = 0; i < 2; i++) {
                 drawPolylineXYZ(canvas, LaneLines.X_IDXS, ll.edgesY[i], ll.edgesZ[i],
-                        edgePaint, 1.5f, false);
+                        edgePaint, 1.5f);
             }
             for (int i = 0; i < 4; i++) {
                 if (ll.laneProbs[i] < MIN_LANE_PROB) {
@@ -506,24 +533,20 @@ public class LaneOverlayView extends View {
                 }
                 lanePaint.setAlpha((int) (80 + 175 * Math.max(0f, Math.min(1f, ll.laneProbs[i]))));
                 drawPolylineXYZ(canvas, LaneLines.X_IDXS, ll.lanesY[i], ll.lanesZ[i],
-                        lanePaint, 1.5f, false);
-            }
-            if (ll.hasPlan) {
-                drawPolylineXYZ(canvas, ll.planX, ll.planY, ll.planZ, pathPaint, 0.5f, true);
+                        lanePaint, 1.5f);
             }
             drawLead(canvas);
             drawLatencyHud(canvas, ll);
         }
 
-        if (ppValid) {
-            drawPurePursuit(canvas);
-        }
+        drawCenterline(canvas);
         if (alertActive) {
             drawSafetyAlert(canvas);
         }
-        // Removed on request: the PP debug lines and panda status, plus traffic-light overlays and
+        // Removed on request: the model plan and the pure-pursuit geometry (lookahead circle, curvature
+        // arc, target ray), then the PP debug lines and panda status, traffic-light overlays and
         // sign-detector timings. All of it goes into the bag and is parsed offline, while on screen it
-        // covered the road. The methods stay — bringing them back means bringing back one call.
+        // covered the road and showed an intermediate rather than the line the car is driving.
     }
 
     private void drawTrafficLatencyHud(Canvas canvas) {
@@ -718,20 +741,32 @@ public class LaneOverlayView extends View {
         canvas.drawText(line2, x, y + 28f, textPaint);
     }
 
-    private void drawPurePursuit(Canvas canvas) {
-        final float raX = -waypointShift;
-        final float raY = 0f;
-        final float ld = Math.max(0.5f, ppLookaheadM);
-
-
+    /**
+     * The line the car is driving on, drawn on the road plane.
+     *
+     * <p>Points come in the device frame with no height of their own — the reference line is a road
+     * curve, so it is projected at the camera height below the camera, the same plane the pure-pursuit
+     * arc used to be drawn on.
+     *
+     * <p>It is drawn last of the road overlays, over the lane lines: when the two disagree, the
+     * disagreement is the thing worth seeing.
+     */
+    private void drawCenterline(Canvas canvas) {
+        final float[] xs = this.centerX;
+        final float[] ys = this.centerY;
+        if (xs == null || ys == null) {
+            return;
+        }
+        // A line that stopped arriving must stop being drawn: a frozen path on screen is
+        // indistinguishable from a live one, and reads as "the system still knows where to go".
+        if (android.os.SystemClock.elapsedRealtime() - centerAtMs > CENTER_MAX_AGE_MS) {
+            return;
+        }
         path.reset();
         boolean started = false;
-        final int nCirc = 64;
-        for (int i = 0; i <= nCirc; i++) {
-            double th = 2.0 * Math.PI * i / nCirc;
-            float x = raX + ld * (float) Math.cos(th);
-            float y = raY + ld * (float) Math.sin(th);
-            if (!projectEgo(x, y, 0.3f)) {
+        final int n = Math.min(xs.length, ys.length);
+        for (int i = 0; i < n; i++) {
+            if (!projectEgo(xs[i], ys[i], 1.0f)) {
                 started = false;
                 continue;
             }
@@ -742,66 +777,12 @@ public class LaneOverlayView extends View {
                 path.lineTo(mapPt[0], mapPt[1]);
             }
         }
-        if (started) {
-            canvas.drawPath(path, ppLdPaint);
+        if (!started) {
+            return;
         }
-
-
-        float kappa = ppCurvature;
-        float arcLen = Math.min(Math.max(ld * 1.5f, 15f), 50f);
-        path.reset();
-        started = false;
-        final int nArc = 48;
-        for (int i = 0; i < nArc; i++) {
-            float s = arcLen * i / (nArc - 1);
-            float ax;
-            float ay;
-            if (Math.abs(kappa) < 1e-6f) {
-                ax = raX + s;
-                ay = raY;
-            } else {
-                ax = raX + (float) (Math.sin(kappa * s) / kappa);
-                ay = raY + (float) ((1.0 - Math.cos(kappa * s)) / kappa);
-            }
-            if (!projectEgo(ax, ay, 0.3f)) {
-                started = false;
-                continue;
-            }
-            if (!started) {
-                path.moveTo(mapPt[0], mapPt[1]);
-                started = true;
-            } else {
-                path.lineTo(mapPt[0], mapPt[1]);
-            }
-        }
-        if (started) {
-            canvas.drawPath(path, ppArcPaint);
-        }
-
-
-        if (projectEgo(raX, raY, -5f)) {
-            float px = mapPt[0];
-            float py = mapPt[1];
-            float r = 10f;
-            canvas.drawLine(px - r, py - r, px + r, py + r, ppLdPaint);
-            canvas.drawLine(px - r, py + r, px + r, py - r, ppLdPaint);
-        }
-
-
-        if (ppHasTarget && projectEgo(ppTargetX, ppTargetY, 0.3f)) {
-            float tx = mapPt[0];
-            float ty = mapPt[1];
-            if (projectEgo(raX, raY, -5f)) {
-                canvas.drawLine(mapPt[0], mapPt[1], tx, ty, ppRayPaint);
-            }
-            canvas.drawCircle(tx, ty, 10f, ppTargetPaint);
-            ppTargetPaint.setStyle(Paint.Style.STROKE);
-            ppTargetPaint.setStrokeWidth(2f);
-            ppTargetPaint.setColor(Color.WHITE);
-            canvas.drawCircle(tx, ty, 12f, ppTargetPaint);
-            ppTargetPaint.setStyle(Paint.Style.FILL);
-            ppTargetPaint.setColor(Color.CYAN);
-        }
+        centerPaint.setColor(centerAnchored ? CENTER_ANCHORED_RGB : CENTER_PLAN_ONLY_RGB);
+        canvas.drawPath(path, centerCasingPaint);
+        canvas.drawPath(path, centerPaint);
     }
 
     private void drawSteeringHud(Canvas canvas) {
@@ -882,35 +863,6 @@ public class LaneOverlayView extends View {
         return new float[]{(float) (c * px + s * py), (float) (-s * px + c * py)};
     }
 
-    private void drawPpStatus(Canvas canvas) {
-        float kappa = ppCurvature;
-        String curv;
-        if (Math.abs(kappa) < 1e-6f) {
-            curv = "κ=0  R=∞";
-        } else {
-            curv = String.format("κ=%.4f/m  R=%.1fm", kappa, 1.0 / Math.abs(kappa));
-        }
-        String line1 = String.format(
-                "PP Ld=%.1fm  δ=%+.1f°  %s  %s",
-                ppLookaheadM,
-                Math.toDegrees(ppSteerRad),
-                curv,
-                ppHasTarget ? "" : "(no target)");
-        String line2 = ppStatus.isEmpty() ? "magenta=arc  orange=Ld  cyan=target" : ("status=" + ppStatus);
-
-        textPaint.setTextSize(26f);
-        textPaint.setColor(Color.rgb(255, 165, 0));
-        float pad = 8f;
-        float x = 12f;
-        float y = 40f;
-        float w = Math.max(textPaint.measureText(line1), textPaint.measureText(line2)) + pad * 2;
-        canvas.drawRect(x - pad, y - 28f, x + w, y + 36f, textBgPaint);
-        canvas.drawText(line1, x, y, textPaint);
-        textPaint.setTextSize(22f);
-        textPaint.setColor(Color.rgb(200, 150, 200));
-        canvas.drawText(line2, x, y + 28f, textPaint);
-    }
-
     private void drawHcaStatus(Canvas canvas) {
         textPaint.setTextSize(24f);
         boolean ok = hcaStatus.startsWith("HCA ok");
@@ -925,7 +877,7 @@ public class LaneOverlayView extends View {
 
 
     private void drawPolylineXYZ(Canvas canvas, float[] xs, float[] ys, float[] zs,
-                                 Paint paint, float xMin, boolean pathLift) {
+                                 Paint paint, float xMin) {
         path.reset();
         boolean started = false;
         int n = Math.min(xs.length, ys.length);
@@ -939,7 +891,7 @@ public class LaneOverlayView extends View {
                 started = false;
                 continue;
             }
-            if (!projectDevice(X, ys[i], Z, xMin, pathLift)) {
+            if (!projectDevice(X, ys[i], Z, xMin)) {
                 started = false;
                 continue;
             }
@@ -958,15 +910,15 @@ public class LaneOverlayView extends View {
     }
 
     /**
-     * Remap device (X,Y,Z)→(Y,Z,X) then apply Rt. Device: X fwd, Y right+, Z up.
+     * Remap device (X,Y,Z)→(Y,Z,X) then apply Rt. Device: X fwd, Y right+, Z down.
      * Rt matches warp: V·R(rpy)·V⁻¹ with R from {@link ModelCalibWarp#rotFromEuler}.
      */
-    private boolean projectDevice(float X, float Y, float Z, float xMin, boolean pathLift) {
+    private boolean projectDevice(float X, float Y, float Z, float xMin) {
         if (X < xMin || !Float.isFinite(X) || !Float.isFinite(Y) || !Float.isFinite(Z)) {
             return false;
         }
         float camX = Y;
-        float camY = Z + (pathLift ? PATH_LIFT_M : 0f);
+        float camY = Z;
         float camZ = X;
         float x = r00 * camX + r01 * camY + r02 * camZ;
         float y = r10 * camX + r11 * camY + r12 * camZ;
@@ -986,7 +938,7 @@ public class LaneOverlayView extends View {
 
     /** PP / HUD points at ~camera height in device-Z (like Draw lead at 1.32). */
     private boolean projectEgo(float X, float Y, float xMin) {
-        return projectDevice(X, Y, cameraHeight, xMin, false);
+        return projectDevice(X, Y, cameraHeight, xMin);
     }
 
     /**

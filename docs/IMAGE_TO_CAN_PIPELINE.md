@@ -352,7 +352,8 @@ Without Panda USB / without `controls_allowed` chain through stage 7 is alive (v
 
 | Message | UI |
 |-----------|-----|
-| `control/lane_keep` | PP target / arc / status |
+| `vision/path` | the reference line, drawn on the road plane — green when lane-anchored, amber when the model plan carries it alone |
+| `control/lane_keep` | steering-limit alert on sustained torque saturation |
 | `controls/steer` | torque bar, enabled |
 | `panda/health` | HCA line (ignition / controls_allowed / ok) |
 | `calibration/camera` | on success or `cal_percent≥50` → params RPY/K → warp + overlay |

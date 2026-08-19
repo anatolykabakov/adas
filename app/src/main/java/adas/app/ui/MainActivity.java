@@ -12,6 +12,7 @@ import adas.app.sensors.IMUHandler;
 import adas.app.sensors.PhoneStatsHandler;
 import adas.proto.CameraCalibOuter;
 import adas.proto.LaneKeepOuter;
+import adas.proto.LanePathOuterClass;
 import adas.proto.Panda;
 import adas.proto.SafetyWarnOuter;
 import adas.proto.SteerOuter;
@@ -441,7 +442,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         laneOverlay.setCameraHeight(params.heightM);
-        laneOverlay.setWaypointShift(params.ppShift);
         laneOverlay.setSteerRatio(params.steerRatio);
         laneOverlay.setCalibRpyDeg(params.rollDeg, params.pitchDeg, params.yawDeg);
         int w = cameraHandler != null ? cameraHandler.W : params.calibWidth;
@@ -538,6 +538,23 @@ public class MainActivity extends AppCompatActivity {
                     (float) lk.getSteerRad(),
                     lk.getStatus());
             laneOverlay.setTorqueSaturated(lk.getTorqueSaturated());
+        }
+        // vision/path: the reference line the lateral loop drives on, built in C++ by the Planner.
+        // Drawn instead of the model plan, which was one input to it rather than the result.
+        if (message.hasLanePath()) {
+            LanePathOuterClass.LanePath lp = message.getLanePath();
+            final int n = lp.getPolylineCount();
+            if (n >= 2) {
+                float[] xs = new float[n];
+                float[] ys = new float[n];
+                for (int i = 0; i < n; i++) {
+                    xs[i] = (float) lp.getPolyline(i).getX();
+                    ys[i] = (float) lp.getPolyline(i).getY();
+                }
+                laneOverlay.setCenterline(xs, ys, lp.getLaneAnchored());
+            } else {
+                laneOverlay.clearCenterline();
+            }
         }
         if (message.hasSteerCommand()) {
             SteerOuter.SteerCommand cmd = message.getSteerCommand();

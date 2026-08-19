@@ -86,14 +86,28 @@ def make_overlay_geometry(
     cam_x: float = 0.0,
     cam_y_left: float = 0.0,
 ) -> CameraGeometry:
-    """Build AAD CameraGeometry for projecting model ego XYZ into the image."""
+    """Build an AAD CameraGeometry from **our** calibration angles.
+
+    Every caller passes the RPY that `calibration/camera` publishes — the same numbers
+    ``ModelCalibWarp`` / ``warp_matrix_deg`` use to build the model input. AAD's ``CameraGeometry``
+    runs **pitch and yaw the other way** (its own docstring: ``pitch_deg < 0`` = looking down), while
+    roll agrees. Handing it the calibration unconverted does not tilt the overlay a little — it tilts
+    it by *twice* the angle, in the wrong direction, and that was drawing bag overlays off the road:
+    at pitch −1.21° / yaw −1.66° the lines landed 24 px high and 28 px right on a 640×360 preview,
+    which is ~2.9 m of lateral miss at 50 m, and far points crossed the horizon instead of lying on
+    the tarmac.
+
+    Verified against ``PhoneRtGeometry`` (the inverse of the warp, and what the phone screen draws):
+    with pitch/yaw negated and roll kept, the two projectors agree to **0 px** over roll ±5°,
+    pitch ±3°, yaw ±2.5°; unconverted they differ by up to 53 px.
+    """
     if fy <= 1.0 or (fx > 1.0 and abs(fx / max(fy, 1e-6) - 1.0) > 0.15):
         fy = fx
     K = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
     return CameraGeometry(
         height=camera_height,
-        pitch_deg=pitch_deg,
-        yaw_deg=yaw_deg,
+        pitch_deg=-float(pitch_deg),
+        yaw_deg=-float(yaw_deg),
         roll_deg=roll_deg,
         cam_x=cam_x,
         cam_y_left=cam_y_left,
