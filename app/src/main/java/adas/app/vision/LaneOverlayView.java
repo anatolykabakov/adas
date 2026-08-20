@@ -10,23 +10,62 @@ import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 
+import adas.app.vision.overlay.AlertTones;
+import adas.app.vision.overlay.CalibrationPainter;
+import adas.app.vision.overlay.GroundProjector;
+import adas.app.vision.overlay.LeadPainter;
+import adas.app.vision.overlay.StatusFramePainter;
+import adas.app.vision.overlay.TrafficHudPainter;
+
+/**
+ * The windshield view: holds the state the messages deliver, owns the world→screen projection, and decides what is shown.
+ */
 public class LaneOverlayView extends View {
     private static final float MIN_LANE_PROB = 0.3f;
-    private static final float MAX_TORQUE_CNM = 300f;
+
+    /** Every size is written for a 1280-wide view and scaled by {@link #ui}. */
+    private static final float REF_WIDTH = 1280f;
+
+    /**
+     * Status colours, taken from flowpilot's `statusColors` so a driver moving between the two apps
+     * reads the same thing.
+     */
+    private static final int STATUS_DISENGAGED_RGB = Color.rgb(23, 51, 73);
+    private static final int STATUS_ENGAGED_RGB = Color.rgb(43, 143, 40);
+    private static final int STATUS_CRITICAL_RGB = Color.rgb(222, 15, 15);
+    /** Nothing has arrived from the native side for a while — neither engaged nor safe. */
+    private static final int STATUS_STALE_RGB = Color.rgb(120, 120, 120);
+
+    /** Beyond this with no `control/lane_keep`, the lateral loop is not running. */
+    private static final long CONTROL_MAX_AGE_MS = 700;
 
     private final Paint lanePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint edgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint centerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint centerCasingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint hudPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint hudFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint leadPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint leadTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint speedPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint speedUnitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final Matrix drawMatrix = new Matrix();
     private final float[] mapPt = new float[2];
+
+    private final StatusFramePainter statusFrame = new StatusFramePainter();
+    private final LeadPainter leadPainter = new LeadPainter();
+    private final TrafficHudPainter trafficHud = new TrafficHudPainter();
+    private final CalibrationPainter calibrationPainter = new CalibrationPainter();
+    private final AlertTones tones = new AlertTones();
+
+    /** The painters draw on the road through this; the projection itself never leaves the view. */
+    private final GroundProjector projector = (x, y, z, xMin, out) -> {
+        if (!projectDevice(x, y, z, xMin)) {
+            return false;
+        }
+        out[0] = mapPt[0];
+        out[1] = mapPt[1];
+        return true;
+    };
 
     private volatile LaneLines lanes;
     private volatile ModelLongParse.Out modelLong;
@@ -38,7 +77,6 @@ public class LaneOverlayView extends View {
     private float cameraHeight = 1.22f;
     private float frameW = 1280f;
     private float frameH = 720f;
-    private float steerRatio = 15.7f;
     private float rollDeg = 0f;
     private float pitchDeg = 0f;
     private float yawDeg = 0f;
@@ -51,12 +89,8 @@ public class LaneOverlayView extends View {
     private float r10 = 0, r11 = 1, r12 = 0;
     private float r20 = 0, r21 = 0, r22 = 1;
 
-
     /**
-     * The reference line the lateral loop actually drives on: `vision/path`, built in C++ by the
-     * Planner out of the model plan and the lane lines, and forwarded here over ZMQ. This is the one
-     * line on screen that is a decision rather than an observation — everything else drawn here is
-     * what the network saw.
+     * The reference line the lateral loop actually drives on: `vision/path`, built in C++ by the Planner out of the model plan and the lane lines, and forwarded here over ZMQ.
      */
     private volatile float[] centerX;
     private volatile float[] centerY;
@@ -69,53 +103,43 @@ public class LaneOverlayView extends View {
     private static final int CENTER_ANCHORED_RGB = Color.rgb(0, 230, 118);
     private static final int CENTER_PLAN_ONLY_RGB = Color.rgb(255, 176, 32);
 
-    private volatile boolean ppValid = false;
-    private volatile boolean ppHasTarget = false;
-    private volatile float ppTargetX;
-    private volatile float ppTargetY;
-    private volatile float ppLookaheadM;
-    private volatile float ppCurvature;
-    private volatile float ppSteerRad;
-    private volatile String ppStatus = "";
+    /** View width / 1280. Recomputed on resize; all drawing multiplies by it. */
+    private float ui = 1f;
 
+    /** Camera frame interval, for scaling model velocities. 0 = unknown, no correction applied. */
+    private volatile float lastFrameDtMs;
+
+    /** Own speed for the readout, as CAN reports it. */
+    private volatile float egoSpeedMps;
+    private volatile boolean egoSpeedValid;
+
+    /** elapsedRealtime of the last `control/lane_keep`; 0 = never. */
+    private volatile long controlAtMs;
 
     private volatile boolean steerValid = false;
-    private volatile String hcaStatus = "";
-    private volatile boolean hcaValid = false;
     private volatile int torqueCnm;
     private volatile boolean steerEnabled;
 
-    /** flowpilot-style on-road alert (FCW / AEB / LDW). */
+    /** flowpilot-style on-road alert (FCW / AEB / LDW / torque / overspeed). */
     private volatile boolean alertActive = false;
     private static final String TORQUE_ALERT = "STEERING LIMIT";
-    /** control/lane_keep arrives once per vision frame (~11 Hz), so 5 frames ≈ 0.45 s. */
-    private static final int TORQUE_SAT_FRAMES = 5;
-    private int torqueSatFrames = 0;
+    /** How long the assist torque must stay at the ceiling before it is worth saying so. */
+    private static final long TORQUE_SAT_HOLD_MS = 1000;
+    /** When the current run of saturated ticks began; 0 = not saturated. */
+    private long torqueSatSinceMs;
     private volatile String alertText1 = "";
     private volatile String alertText2 = "";
     private volatile int alertBorderRgb = 0; // packed 0xRRGGBB
-    private final Paint alertBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint alertText1Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint alertText2Paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    /** Traffic YOLO dets + fused HUD (limit / TFL / overspeed). */
-    private volatile java.util.List<TrafficYoloRunner.Det> trafficDets =
-            java.util.Collections.emptyList();
-    private volatile int speedLimitKmh = 0;
-    private volatile float vEgoKmh = 0f;
-    private volatile boolean overspeed = false;
-    private volatile float overspeedKmh = 0f;
-    private volatile int tflColor = 0; // TrafficLightColor number
-    private volatile float tflConf = 0f;
-    private volatile int trafficPrepMs;
-    private volatile int trafficOrtMs;
-    private volatile int trafficDecodeMs;
-    private volatile int trafficOcrMs;
-    private volatile int trafficTotalMs;
-    private volatile int trafficE2eMs;
-    private final Paint tflPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint limitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint detBoxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /** Set from the params switch; nothing traffic-related is drawn while it is false. */
+    private volatile boolean trafficHudEnabled;
+
+    private volatile float[] calibCorners;
+    private volatile boolean calibAccepted;
+    private volatile boolean calibActive;
+    private volatile int calibKept;
+    private volatile int calibTarget = 30;
+    private volatile String calibMessage = "";
 
     public LaneOverlayView(Context context) {
         super(context);
@@ -147,64 +171,26 @@ public class LaneOverlayView extends View {
         centerPaint.setStrokeJoin(Paint.Join.ROUND);
         centerPaint.setColor(CENTER_ANCHORED_RGB);
 
-        hudPaint.setStyle(Paint.Style.STROKE);
-        hudPaint.setStrokeWidth(3f);
-        hudPaint.setColor(Color.rgb(220, 220, 220));
-        hudFillPaint.setStyle(Paint.Style.FILL);
-        hudFillPaint.setColor(Color.argb(140, 30, 30, 30));
-
         textPaint.setColor(Color.rgb(255, 200, 0));
         textPaint.setTextSize(28f);
         textPaint.setTypeface(Typeface.MONOSPACE);
-
-        alertBorderPaint.setStyle(Paint.Style.STROKE);
-        alertBorderPaint.setStrokeWidth(28f);
-        alertText1Paint.setColor(Color.WHITE);
-        alertText1Paint.setTextSize(52f);
-        alertText1Paint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        alertText1Paint.setTextAlign(Paint.Align.CENTER);
-        alertText1Paint.setShadowLayer(6f, 0f, 2f, Color.argb(180, 0, 0, 0));
-        alertText2Paint.setColor(Color.WHITE);
-        alertText2Paint.setTextSize(28f);
-        alertText2Paint.setTypeface(Typeface.DEFAULT);
-        alertText2Paint.setTextAlign(Paint.Align.CENTER);
-        alertText2Paint.setShadowLayer(4f, 0f, 1f, Color.argb(160, 0, 0, 0));
-
-        detBoxPaint.setStyle(Paint.Style.STROKE);
-        detBoxPaint.setStrokeWidth(3f);
-        detBoxPaint.setColor(Color.rgb(255, 200, 40));
-        tflPaint.setStyle(Paint.Style.FILL);
-        limitPaint.setStyle(Paint.Style.FILL);
-        limitPaint.setColor(Color.WHITE);
-        limitPaint.setTextAlign(Paint.Align.CENTER);
-        limitPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        limitPaint.setTextSize(36f);
         textBgPaint.setColor(Color.argb(120, 0, 0, 0));
         textBgPaint.setStyle(Paint.Style.FILL);
 
-        leadPaint.setStyle(Paint.Style.STROKE);
-        leadPaint.setStrokeWidth(5f);
-        leadPaint.setColor(Color.rgb(0, 200, 255));
-        leadTextPaint.setColor(Color.rgb(0, 220, 255));
-        leadTextPaint.setTextSize(26f);
-        leadTextPaint.setTypeface(Typeface.MONOSPACE);
+        // Speed readout, flowpilot's placement and colour: top centre, pale green, unit underneath.
+        speedPaint.setColor(Color.rgb(128, 255, 128));
+        speedPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        speedPaint.setTextAlign(Paint.Align.CENTER);
+        speedPaint.setShadowLayer(8f, 0f, 2f, Color.argb(200, 0, 0, 0));
+        speedUnitPaint.setColor(Color.rgb(128, 255, 128));
+        speedUnitPaint.setTextAlign(Paint.Align.CENTER);
+        speedUnitPaint.setShadowLayer(6f, 0f, 2f, Color.argb(200, 0, 0, 0));
 
         setWillNotDraw(false);
     }
 
-    private volatile float[] calibCorners;
-    private volatile boolean calibAccepted;
-    private volatile boolean calibActive;
-    private volatile int calibKept;
-    private volatile int calibTarget = 30;
-    private volatile String calibMessage = "";
-    private final Paint calibPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint calibTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint calibPanelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
     /**
      * Corners found by the lens calibration, for the driver to see what the detector sees.
-     *
      * \param pts Flat x,y pairs in frame pixels; null when the board was not found this frame.
      * \param accepted True when the view was kept — green — rather than rejected as a near-duplicate.
      */
@@ -227,11 +213,6 @@ public class LaneOverlayView extends View {
 
     /**
      * How far the collection has got, and what to tell the driver.
-     *
-     * <p>On screen rather than in a toast: a toast queues, lags behind the camera and is gone before it
-     * is read, which is exactly wrong for something the driver is meant to react to while holding a
-     * board in front of the lens.
-     *
      * \param kept Views collected so far.
      * \param target Views needed.
      * \param message One line of instruction or result; may be empty.
@@ -243,60 +224,8 @@ public class LaneOverlayView extends View {
         postInvalidate();
     }
 
-    private void drawCalibrationPanel(Canvas canvas) {
-        final float pad = 24f;
-        final float barH = 18f;
-        final float panelH = 132f;
-        final float w = getWidth();
-
-        calibPanelPaint.setColor(Color.argb(190, 0, 0, 0));
-        canvas.drawRect(0f, 0f, w, panelH, calibPanelPaint);
-
-        calibTextPaint.setColor(Color.WHITE);
-        calibTextPaint.setTextSize(40f);
-        calibTextPaint.setFakeBoldText(true);
-        canvas.drawText(calibKept + " / " + calibTarget, pad, 50f, calibTextPaint);
-
-        calibTextPaint.setTextSize(26f);
-        calibTextPaint.setFakeBoldText(false);
-        final String msg = calibMessage;
-        if (!msg.isEmpty()) {
-            canvas.drawText(msg, pad + 160f, 46f, calibTextPaint);
-        }
-
-        // Progress bar: how many views have been accepted out of the number required.
-        final float barY = panelH - pad - barH;
-        calibPanelPaint.setColor(Color.argb(120, 255, 255, 255));
-        canvas.drawRect(pad, barY, w - pad, barY + barH, calibPanelPaint);
-        calibPanelPaint.setColor(calibKept >= calibTarget ? Color.GREEN : Color.rgb(0, 170, 255));
-        final float frac = Math.min(1f, calibKept / (float) calibTarget);
-        canvas.drawRect(pad, barY, pad + (w - 2 * pad) * frac, barY + barH, calibPanelPaint);
-    }
-
-    private void drawCalibration(Canvas canvas) {
-        drawCalibrationPanel(canvas);
-        final float[] pts = calibCorners;
-        if (pts == null || pts.length < 2) {
-            return;
-        }
-        final float sx = getWidth() / frameW;
-        final float sy = getHeight() / frameH;
-        calibPaint.setColor(calibAccepted ? Color.GREEN : Color.rgb(255, 176, 0));
-        calibPaint.setStyle(Paint.Style.STROKE);
-        calibPaint.setStrokeWidth(3f);
-        for (int i = 0; i + 3 < pts.length; i += 2) {
-            canvas.drawLine(pts[i] * sx, pts[i + 1] * sy, pts[i + 2] * sx, pts[i + 3] * sy, calibPaint);
-        }
-        calibPaint.setStyle(Paint.Style.FILL);
-        for (int i = 0; i + 1 < pts.length; i += 2) {
-            canvas.drawCircle(pts[i] * sx, pts[i + 1] * sy, 7f, calibPaint);
-        }
-    }
-
     public void setIntrinsics(float fx, float fy, float cx, float cy, float frameW, float frameH) {
         this.fx = fx;
-
-
         if (fy <= 1f || Math.abs(fx / fy - 1f) > 0.15f) {
             this.fy = fx;
         } else {
@@ -319,7 +248,6 @@ public class LaneOverlayView extends View {
         postInvalidateOnAnimation();
     }
 
-
     public void setPreviewTransform(Matrix transform, int bufferW, int bufferH, int viewWidth, int viewHeight) {
         this.frameW = bufferW;
         this.frameH = bufferH;
@@ -329,11 +257,6 @@ public class LaneOverlayView extends View {
 
     public void setCameraHeight(float meters) {
         this.cameraHeight = meters;
-        postInvalidateOnAnimation();
-    }
-
-    public void setSteerRatio(float ratio) {
-        this.steerRatio = ratio > 1f ? ratio : 15.7f;
         postInvalidateOnAnimation();
     }
 
@@ -347,28 +270,23 @@ public class LaneOverlayView extends View {
         postInvalidateOnAnimation();
     }
 
+    /** Camera period, needed to read the model's velocities. */
+    public void setFrameDtMs(float dtMs) {
+        this.lastFrameDtMs = dtMs;
+    }
 
+    /**
+     * A `control/lane_keep` arrived. Only its arrival time is kept — it feeds the stale colour of the
+     * status frame. The geometry it carries used to drive a pure-pursuit debug HUD that was removed
+     * from the screen; it lives in the bag.
+     */
     public void setLaneKeep(boolean hasTarget, float targetX, float targetY,
                             float lookaheadM, float curvature, float steerRad, String status) {
-        this.ppHasTarget = hasTarget;
-        this.ppTargetX = targetX;
-        this.ppTargetY = targetY;
-        this.ppLookaheadM = lookaheadM;
-        this.ppCurvature = curvature;
-        this.ppSteerRad = steerRad;
-        this.ppStatus = status == null ? "" : status;
-        this.ppValid = true;
+        this.controlAtMs = android.os.SystemClock.elapsedRealtime();
         postInvalidateOnAnimation();
     }
 
-
-    /**
-     * The reference line from `vision/path` (C++ Planner), in the device frame: x forward, y right.
-     *
-     * <p>`anchored` is the message's `lane_anchored` — whether the lane lines took part in building
-     * it, or the line is the model plan alone. That difference decides the colour, because it is the
-     * difference between following a road and following a guess about one.
-     */
+    /** The reference line from `vision/path` (C++ Planner), in the device frame: x forward, y right. */
     public void setCenterline(float[] xs, float[] ys, boolean anchored) {
         if (xs == null || ys == null || xs.length < 2 || ys.length < 2) {
             clearCenterline();
@@ -388,16 +306,17 @@ public class LaneOverlayView extends View {
         postInvalidateOnAnimation();
     }
 
+    /** Own speed from `vehicle/state`, m/s. Displayed in km/h, top centre. */
+    public void setEgoSpeed(float mps) {
+        this.egoSpeedMps = mps;
+        this.egoSpeedValid = true;
+        postInvalidateOnAnimation();
+    }
+
     public void setSteerCommand(int torqueCnm, boolean enabled) {
         this.torqueCnm = torqueCnm;
         this.steerEnabled = enabled;
         this.steerValid = true;
-        postInvalidateOnAnimation();
-    }
-
-    public void setHcaStatus(String status) {
-        this.hcaStatus = status == null ? "" : status;
-        this.hcaValid = true;
         postInvalidateOnAnimation();
     }
 
@@ -406,6 +325,8 @@ public class LaneOverlayView extends View {
      * Priority: AEB &gt; FCW &gt; LDW. Cleared when all flags false.
      */
     public void setSafetyWarn(boolean fcw, boolean aeb, boolean lldw, boolean rldw) {
+        final String was = alertText1;
+        final boolean wasActive = alertActive;
         if (aeb) {
             alertActive = true;
             alertText1 = "BRAKE!";
@@ -426,77 +347,79 @@ public class LaneOverlayView extends View {
             alertText1 = "";
             alertText2 = "";
         }
+        if (alertActive != wasActive || !alertText1.equals(was)) {
+            updateAlertSound(aeb || fcw);
+        }
         postInvalidateOnAnimation();
     }
 
     /** Assist torque at the MQB ceiling: the controller wants more than the power steering gives,
      *  so the car is about to run wide. Lower priority than a collision or a departure warning —
-     *  it only speaks when nothing more urgent is on screen, and only after ~0.5 s of saturation
+     *  it only speaks when nothing more urgent is on screen, and only after sustained saturation
      *  so a single clipped frame does not flash the border. */
     public void setTorqueSaturated(boolean saturated) {
-        torqueSatFrames = saturated ? torqueSatFrames + 1 : 0;
-        final boolean show = torqueSatFrames >= TORQUE_SAT_FRAMES;
+        final long now = android.os.SystemClock.elapsedRealtime();
+        if (!saturated) {
+            torqueSatSinceMs = 0;
+        } else if (torqueSatSinceMs == 0) {
+            torqueSatSinceMs = now;
+        }
+        final boolean show = torqueSatSinceMs != 0 && now - torqueSatSinceMs >= TORQUE_SAT_HOLD_MS;
         if (show && (!alertActive || TORQUE_ALERT.equals(alertText1))) {
+            final boolean isNew = !TORQUE_ALERT.equals(alertText1);
             alertActive = true;
             alertText1 = TORQUE_ALERT;
             alertText2 = "Assist at max torque";
             alertBorderRgb = 0xDA6F25; // STATUS_WARNING
+            if (isNew) {
+                updateAlertSound(false);
+            }
             postInvalidateOnAnimation();
         } else if (!show && TORQUE_ALERT.equals(alertText1)) {
             alertActive = false;
             alertText1 = "";
             alertText2 = "";
+            stopSounds();
             postInvalidateOnAnimation();
         }
     }
 
-    public void setTrafficDets(java.util.List<TrafficYoloRunner.Det> dets) {
-        this.trafficDets = dets != null ? dets : java.util.Collections.emptyList();
-        postInvalidateOnAnimation();
-    }
-
-    /** YOLO latency for HUD (also logged in vision/traffic_dets bag). */
-    public void setTrafficLatency(int prepMs, int ortMs, int decodeMs, int ocrMs, int totalMs, int e2eMs) {
-        this.trafficPrepMs = prepMs;
-        this.trafficOrtMs = ortMs;
-        this.trafficDecodeMs = decodeMs;
-        this.trafficOcrMs = ocrMs;
-        this.trafficTotalMs = totalMs;
-        this.trafficE2eMs = e2eMs;
-        postInvalidateOnAnimation();
-    }
-
-    public void setTrafficVision(int speedLimitKmh, float vEgoKmh, boolean overspeed, float overspeedKmh,
-                                 int tflColor, float tflConf, String status) {
-        this.speedLimitKmh = speedLimitKmh;
-        this.vEgoKmh = vEgoKmh;
-        this.overspeed = overspeed;
-        this.overspeedKmh = overspeedKmh;
-        this.tflColor = tflColor;
-        this.tflConf = tflConf;
-        if (overspeed) {
-            alertActive = true;
-            alertText1 = "SPEED!";
-            alertText2 = String.format(java.util.Locale.US, "%.0f > %d km/h", vEgoKmh, speedLimitKmh);
-            alertBorderRgb = 0xDE0F0F;
-        } else if ("SPEED!".equals(alertText1)) {
-            alertActive = false;
-            alertText1 = "";
-            alertText2 = "";
+    /** Whether detected signs and lights are drawn. */
+    public void setTrafficHudEnabled(boolean on) {
+        this.trafficHudEnabled = on;
+        if (!on) {
+            trafficHud.setDets(null);
         }
         postInvalidateOnAnimation();
     }
 
-    public void clearLaneKeep() {
-        ppValid = false;
-        steerValid = false;
+    public void setTrafficDets(java.util.List<TrafficYoloRunner.Det> dets) {
+        trafficHud.setDets(dets);
+        postInvalidateOnAnimation();
+    }
+
+    public void setTrafficVision(int tflColor, float tflConf) {
+        trafficHud.setVision(tflColor, tflConf);
         postInvalidateOnAnimation();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        applyUiScale(w);
         updateDrawMatrix();
+    }
+
+    /** Text and stroke sizes for this screen. Called on resize, so nothing is fixed in raw pixels. */
+    private void applyUiScale(int width) {
+        ui = width > 0 ? width / REF_WIDTH : 1f;
+        lanePaint.setStrokeWidth(6f * ui);
+        edgePaint.setStrokeWidth(4f * ui);
+        centerPaint.setStrokeWidth(8f * ui);
+        centerCasingPaint.setStrokeWidth(14f * ui);
+        speedPaint.setTextSize(100f * ui);
+        speedUnitPaint.setTextSize(26f * ui);
+        statusFrame.onUiScale(ui);
     }
 
     private void updateDrawMatrix() {
@@ -518,7 +441,8 @@ public class LaneOverlayView extends View {
         // are in the middle of measuring, so showing it here would be showing the answer to the
         // question being asked.
         if (calibCorners != null || calibActive) {
-            drawCalibration(canvas);
+            calibrationPainter.draw(canvas, getWidth(), getHeight(), frameW, frameH,
+                    calibCorners, calibAccepted, calibKept, calibTarget, calibMessage);
             return;
         }
         LaneLines ll = this.lanes;
@@ -535,13 +459,24 @@ public class LaneOverlayView extends View {
                 drawPolylineXYZ(canvas, LaneLines.X_IDXS, ll.lanesY[i], ll.lanesZ[i],
                         lanePaint, 1.5f);
             }
-            drawLead(canvas);
+            leadPainter.draw(canvas, modelLong, lastFrameDtMs, egoSpeedValid, egoSpeedMps,
+                    cameraHeight, ui, getWidth(), getHeight(), projector);
             drawLatencyHud(canvas, ll);
         }
 
         drawCenterline(canvas);
-        if (alertActive) {
-            drawSafetyAlert(canvas);
+        // The status frame is drawn on every frame, alert or not: it is the one thing on screen that
+        // answers "is this system running and is it steering", and a colour is only noticed as a
+        // change if it was already there.
+        statusFrame.draw(canvas, getWidth(), getHeight(), ui, statusRgb(),
+                alertActive ? alertText1 : "", alertActive ? alertText2 : "");
+        if (egoSpeedValid) {
+            drawSpeed(canvas);
+        }
+        // Signs and lights come back on screen only with their switch; the timing block next to them
+        // stays off — it belongs in the bag, not on the windshield.
+        if (trafficHudEnabled) {
+            trafficHud.draw(canvas, getWidth(), getHeight(), ui);
         }
         // Removed on request: the model plan and the pure-pursuit geometry (lookahead circle, curvature
         // arc, target ray), then the PP debug lines and panda status, traffic-light overlays and
@@ -549,208 +484,53 @@ public class LaneOverlayView extends View {
         // covered the road and showed an intermediate rather than the line the car is driving.
     }
 
-    private void drawTrafficLatencyHud(Canvas canvas) {
-        if (trafficTotalMs <= 0 && trafficOrtMs <= 0) {
-            return;
-        }
-        String line1 = String.format(java.util.Locale.US,
-                "yolo p%3d o%3d d%3d ocr%2d",
-                trafficPrepMs, trafficOrtMs, trafficDecodeMs, trafficOcrMs);
-        String line2 = String.format(java.util.Locale.US,
-                "yolo tot%3d e2e%3d", trafficTotalMs, trafficE2eMs);
-        float pad = 10f;
-        textPaint.setTextSize(22f);
-        textPaint.setTypeface(Typeface.MONOSPACE);
-        float tw = Math.max(textPaint.measureText(line1), textPaint.measureText(line2));
-        float x = getWidth() - tw - pad - 12f;
-        // Under supercombo latency block (which starts ~y=40, height ~58)
-        float y = 112f;
-        float h = 54f;
-        canvas.drawRoundRect(x - pad, y - 24f, x + tw + pad, y - 24f + h, 8f, 8f, textBgPaint);
-        textPaint.setColor(Color.rgb(180, 255, 160));
-        canvas.drawText(line1, x, y, textPaint);
-        textPaint.setColor(Color.rgb(255, 180, 100));
-        canvas.drawText(line2, x, y + 24f, textPaint);
-    }
-
-    private void drawTrafficHud(Canvas canvas) {
-        int w = getWidth();
-        int h = getHeight();
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        // Detection boxes (normalized → view)
-        java.util.List<TrafficYoloRunner.Det> dets = this.trafficDets;
-        if (dets != null) {
-            for (TrafficYoloRunner.Det d : dets) {
-                float l = d.x1 * w;
-                float t = d.y1 * h;
-                float r = d.x2 * w;
-                float b = d.y2 * h;
-                String lab = d.label != null ? d.label.toLowerCase(java.util.Locale.US) : "";
-                int col;
-                if (d.tflColor == 1) {
-                    col = Color.RED;
-                } else if (d.tflColor == 2) {
-                    col = Color.YELLOW;
-                } else if (d.tflColor == 3) {
-                    col = Color.GREEN;
-                } else if (lab.contains("переход")) {
-                    col = Color.rgb(255, 220, 60); // crosswalk
-                } else if (lab.equals("person") || lab.contains("пешеход") && !lab.contains("переход")
-                        || lab.contains("pedestrian")) {
-                    col = Color.rgb(80, 200, 255); // people
-                } else if (lab.equals("bicycle") || lab.equals("motorcycle") || lab.contains("велосипед")) {
-                    col = Color.rgb(180, 120, 255);
-                } else if (lab.contains("stop") || lab.contains("sign") || lab.contains("ограничен")
-                        || lab.contains("запрещ") || lab.contains("знак") || d.speedLimitKmh > 0
-                        || lab.contains("уступи") || lab.contains("главн") || lab.contains("дети")) {
-                    col = Color.rgb(255, 90, 90); // signs
-                } else {
-                    col = Color.rgb(255, 200, 40);
-                }
-                detBoxPaint.setColor(col);
-                canvas.drawRect(l, t, r, b, detBoxPaint);
-                textPaint.setTextSize(22f);
-                textPaint.setColor(col);
-                String tag = d.label;
-                if (d.speedLimitKmh > 0) {
-                    tag = tag + " " + d.speedLimitKmh + (d.speedFromOcr ? " OCR" : "");
-                }
-                canvas.drawText(tag + String.format(java.util.Locale.US, " %.2f", d.conf),
-                        l + 4f, Math.max(24f, t - 6f), textPaint);
-            }
-        }
-
-        // Speed-limit disc (top-right)
-        if (speedLimitKmh > 0) {
-            float cx = w - 72f;
-            float cy = 78f;
-            float rad = 48f;
-            Paint ring = tflPaint;
-            ring.setColor(overspeed ? Color.rgb(220, 40, 40) : Color.rgb(220, 220, 220));
-            canvas.drawCircle(cx, cy, rad, ring);
-            ring.setColor(Color.WHITE);
-            canvas.drawCircle(cx, cy, rad - 8f, ring);
-            limitPaint.setColor(Color.BLACK);
-            limitPaint.setTextSize(40f);
-            canvas.drawText(String.valueOf(speedLimitKmh), cx, cy + 14f, limitPaint);
-            if (overspeed) {
-                textPaint.setTextSize(22f);
-                textPaint.setColor(Color.rgb(255, 80, 80));
-                canvas.drawText(String.format(java.util.Locale.US, "+%.0f", overspeedKmh),
-                        cx - 20f, cy + rad + 22f, textPaint);
-            }
-        }
-
-        // Current traffic light (top-left under HCA)
-        float lx = 36f;
-        float ly = ppValid ? 160f : 90f;
-        int[] cols = {Color.rgb(60, 60, 60), Color.RED, Color.YELLOW, Color.GREEN, Color.rgb(40, 40, 40)};
-        int active = Math.max(0, Math.min(4, tflColor));
-        // housing
-        tflPaint.setColor(Color.rgb(20, 20, 20));
-        canvas.drawRoundRect(lx - 18f, ly - 18f, lx + 18f, ly + 70f, 8f, 8f, tflPaint);
-        for (int i = 1; i <= 3; i++) {
-            float yy = ly + (i - 1) * 28f;
-            boolean on = (active == i);
-            tflPaint.setColor(on ? cols[i] : Color.rgb(50, 50, 50));
-            canvas.drawCircle(lx, yy, on ? 11f : 9f, tflPaint);
-        }
-        if (tflConf > 0.01f) {
-            textPaint.setTextSize(18f);
-            textPaint.setColor(Color.WHITE);
-            canvas.drawText(String.format(java.util.Locale.US, "%.0f%%", tflConf * 100f),
-                    lx + 24f, ly + 8f, textPaint);
-        }
-    }
-
-    /** Mirror flowpilot OnRoadScreen.drawAlert: full-bleed tinted border + bottom labels. */
-    private void drawSafetyAlert(Canvas canvas) {
-        int w = getWidth();
-        int h = getHeight();
-        if (w <= 0 || h <= 0) {
-            return;
-        }
-        int r = (alertBorderRgb >> 16) & 0xFF;
-        int g = (alertBorderRgb >> 8) & 0xFF;
-        int b = alertBorderRgb & 0xFF;
-        alertBorderPaint.setColor(Color.argb(180, r, g, b));
-        float half = alertBorderPaint.getStrokeWidth() * 0.5f;
-        canvas.drawRect(half, half, w - half, h - half, alertBorderPaint);
-
-        float cx = w * 0.5f;
-        float y1 = h - 88f;
-        float y2 = h - 48f;
-        if (!alertText1.isEmpty()) {
-            canvas.drawText(alertText1, cx, y1, alertText1Paint);
-        }
-        if (!alertText2.isEmpty()) {
-            canvas.drawText(alertText2, cx, y2, alertText2Paint);
-        }
-    }
-
-    /** Lead marker at model height ~1.32 m (flowpilot onroad lead). */
-    private void drawLead(Canvas canvas) {
-        ModelLongParse.Out ml = this.modelLong;
-        if (ml == null || !ml.ok) {
-            return;
-        }
-        ModelLongParse.Lead lead = ml.lead0.prob >= ml.lead1.prob ? ml.lead0 : ml.lead1;
-        if (ml.lead2 != null && ml.lead2.prob > lead.prob) {
-            lead = ml.lead2;
-        }
-        // Always draw candidate when d looks like a car; dim if !valid (prob head may be dead).
-        if (lead.x[0] < 2f || lead.x[0] > 120f) {
-            return;
-        }
-        if (!projectEgo(lead.x[0], lead.y[0], 1.32f)) {
-            return;
-        }
-        float s = Math.max(18f, 900f / Math.max(lead.x[0], 4f));
-        int alpha = lead.prob >= 0.4f ? 255 : 120;
-        leadPaint.setAlpha(alpha);
-        canvas.drawCircle(mapPt[0], mapPt[1], s, leadPaint);
-        String hud = String.format(java.util.Locale.US, "LEAD %.0fm  v=%.1f  p=%.2g%s",
-                lead.x[0], lead.v[0], lead.prob, lead.prob >= 0.4f ? "" : " (raw)");
-        canvas.drawText(hud, 16f, getHeight() - 24f, leadTextPaint);
-    }
-
-    /** ONNX session.run + prep + e2e (capture → infer done). Top-right. */
-    private void drawLatencyHud(Canvas canvas, LaneLines ll) {
-        float inferMs = ll.inferDurationMs;
-        float prepMs = ll.prepDurationMs;
-        float e2eMs = 0f;
-        if (ll.captureTimestampMs > 0 && ll.inferTimestampMs > ll.captureTimestampMs) {
-            e2eMs = (float) (ll.inferTimestampMs - ll.captureTimestampMs);
-        }
-        String line1 = String.format(java.util.Locale.US, "infer %4.0f  prep %4.0f", inferMs, prepMs);
-        String line2 = String.format(java.util.Locale.US, "e2e   %4.0f ms", e2eMs);
-
-        float pad = 10f;
-        textPaint.setTextSize(24f);
-        textPaint.setTypeface(Typeface.MONOSPACE);
-        float tw = Math.max(textPaint.measureText(line1), textPaint.measureText(line2));
-        float x = getWidth() - tw - pad - 12f;
-        float y = 40f;
-        float h = 58f;
-        canvas.drawRoundRect(x - pad, y - 28f, x + tw + pad, y - 28f + h, 8f, 8f, textBgPaint);
-        textPaint.setColor(Color.rgb(120, 220, 255));
-        canvas.drawText(line1, x, y, textPaint);
-        textPaint.setColor(Color.rgb(255, 200, 80));
-        canvas.drawText(line2, x, y + 28f, textPaint);
-    }
-
     /**
-     * The line the car is driving on, drawn on the road plane.
-     *
-     * <p>Points come in the device frame with no height of their own — the reference line is a road
-     * curve, so it is projected at the camera height below the camera, the same plane the pure-pursuit
-     * arc used to be drawn on.
-     *
-     * <p>It is drawn last of the road overlays, over the lane lines: when the two disagree, the
-     * disagreement is the thing worth seeing.
+     * What the frame colour means. An alert outranks the engagement state, and a silent native side
+     * outranks both — "nothing on screen" used to be indistinguishable from "everything is fine".
      */
+    private int statusRgb() {
+        if (alertActive) {
+            return alertBorderRgb == 0 ? STATUS_CRITICAL_RGB
+                    : Color.rgb((alertBorderRgb >> 16) & 0xFF, (alertBorderRgb >> 8) & 0xFF,
+                                alertBorderRgb & 0xFF);
+        }
+        final long age = android.os.SystemClock.elapsedRealtime() - controlAtMs;
+        if (controlAtMs == 0 || age > CONTROL_MAX_AGE_MS) {
+            return STATUS_STALE_RGB;
+        }
+        return steerValid && steerEnabled ? STATUS_ENGAGED_RGB : STATUS_DISENGAGED_RGB;
+    }
+
+    /** Own speed, big, top centre — the number a driver checks without looking away for long. */
+    private void drawSpeed(Canvas canvas) {
+        final float kmh = egoSpeedMps * 3.6f;
+        final float cx = getWidth() * 0.5f;
+        final float y = 96f * ui;
+        canvas.drawText(String.valueOf(Math.round(kmh)), cx, y, speedPaint);
+        canvas.drawText("km/h", cx, y + 30f * ui, speedUnitPaint);
+    }
+
+    /** Capture → model output, the only latency worth a place on the windshield. */
+    private void drawLatencyHud(Canvas canvas, LaneLines ll) {
+        if (ll.captureTimestampMs <= 0 || ll.inferTimestampMs <= ll.captureTimestampMs) {
+            return;
+        }
+        final float e2eMs = (float) (ll.inferTimestampMs - ll.captureTimestampMs);
+        final String line = String.format(java.util.Locale.US, "e2e %4.0f ms", e2eMs);
+
+        final float pad = 10f * ui;
+        textPaint.setTextSize(24f * ui);
+        textPaint.setTypeface(Typeface.MONOSPACE);
+        final float tw = textPaint.measureText(line);
+        final float x = getWidth() - tw - pad - 12f * ui;
+        final float y = 40f * ui;
+        canvas.drawRoundRect(x - pad, y - 28f * ui, x + tw + pad, y + 8f * ui, 8f * ui, 8f * ui,
+                textBgPaint);
+        textPaint.setColor(Color.rgb(255, 200, 80));
+        canvas.drawText(line, x, y, textPaint);
+    }
+
+    /** The line the car is driving on, drawn on the road plane. */
     private void drawCenterline(Canvas canvas) {
         final float[] xs = this.centerX;
         final float[] ys = this.centerY;
@@ -766,7 +546,7 @@ public class LaneOverlayView extends View {
         boolean started = false;
         final int n = Math.min(xs.length, ys.length);
         for (int i = 0; i < n; i++) {
-            if (!projectEgo(xs[i], ys[i], 1.0f)) {
+            if (!projectDevice(xs[i], ys[i], cameraHeight, 1.0f)) {
                 started = false;
                 continue;
             }
@@ -784,97 +564,6 @@ public class LaneOverlayView extends View {
         canvas.drawPath(path, centerCasingPaint);
         canvas.drawPath(path, centerPaint);
     }
-
-    private void drawSteeringHud(Canvas canvas) {
-        float radius = Math.min(56f, getWidth() * 0.07f);
-        float cxHud = getWidth() - radius - 24f;
-        float cyHud = getHeight() - radius - 72f;
-
-        canvas.drawCircle(cxHud, cyHud, radius + 8f, hudFillPaint);
-        canvas.drawCircle(cxHud, cyHud, radius, hudPaint);
-        canvas.drawCircle(cxHud, cyHud, radius * 0.35f, hudPaint);
-
-
-        float wheelDeg = (float) Math.toDegrees(ppSteerRad) * steerRatio;
-        wheelDeg = Math.max(-120f, Math.min(120f, wheelDeg));
-        double ang = Math.toRadians(wheelDeg);
-
-        for (float a0 : new float[]{90f, 210f, 330f}) {
-            double a = Math.toRadians(a0);
-            float px = radius * 0.92f * (float) Math.cos(a);
-            float py = -radius * 0.92f * (float) Math.sin(a);
-            float[] p1 = rotateHud(px, py, ang);
-            canvas.drawLine(cxHud, cyHud, cxHud + p1[0], cyHud + p1[1], hudPaint);
-        }
-
-        float[] top = rotateHud(0f, -radius * 0.85f, ang);
-        Paint hub = new Paint(Paint.ANTI_ALIAS_FLAG);
-        hub.setColor(Color.rgb(255, 200, 0));
-        hub.setStyle(Paint.Style.FILL);
-        canvas.drawCircle(cxHud, cyHud, 6f, hub);
-        hub.setColor(Color.RED);
-        canvas.drawCircle(cxHud + top[0], cyHud + top[1], 6f, hub);
-
-        textPaint.setTextSize(26f);
-        textPaint.setColor(Color.rgb(255, 200, 0));
-        String road = String.format("%+.1f° road", Math.toDegrees(ppSteerRad));
-        String sw = String.format("SW %+.0f°", wheelDeg);
-        canvas.drawText(road, cxHud - radius, cyHud + radius + 28f, textPaint);
-        textPaint.setColor(Color.LTGRAY);
-        canvas.drawText(sw, cxHud - radius, cyHud + radius + 54f, textPaint);
-
-
-        if (steerValid) {
-            float barW = 14f;
-            float barH = radius * 2f;
-            float barX = cxHud - radius - 28f;
-            float barY = cyHud - radius;
-            Paint barBg = new Paint(Paint.ANTI_ALIAS_FLAG);
-            barBg.setColor(Color.argb(160, 40, 40, 40));
-            canvas.drawRect(barX, barY, barX + barW, barY + barH, barBg);
-            float mid = barY + barH * 0.5f;
-            float frac = Math.max(-1f, Math.min(1f, torqueCnm / MAX_TORQUE_CNM));
-            Paint barFg = new Paint(Paint.ANTI_ALIAS_FLAG);
-            barFg.setColor(steerEnabled ? Color.rgb(0, 220, 120) : Color.rgb(180, 180, 80));
-            if (frac >= 0) {
-                canvas.drawRect(barX, mid - frac * barH * 0.5f, barX + barW, mid, barFg);
-            } else {
-                canvas.drawRect(barX, mid, barX + barW, mid - frac * barH * 0.5f, barFg);
-            }
-            Paint midLine = new Paint(Paint.ANTI_ALIAS_FLAG);
-            midLine.setColor(Color.WHITE);
-            midLine.setStrokeWidth(2f);
-            canvas.drawLine(barX - 2f, mid, barX + barW + 2f, mid, midLine);
-
-            textPaint.setTextSize(22f);
-            textPaint.setColor(steerEnabled ? Color.rgb(0, 220, 120) : Color.LTGRAY);
-            canvas.drawText(
-                    String.format("%s %d cNm", steerEnabled ? "TQ" : "off", torqueCnm),
-                    barX - 8f,
-                    barY - 8f,
-                    textPaint);
-        }
-    }
-
-    private static float[] rotateHud(float px, float py, double ang) {
-        double c = Math.cos(ang);
-        double s = Math.sin(ang);
-
-        return new float[]{(float) (c * px + s * py), (float) (-s * px + c * py)};
-    }
-
-    private void drawHcaStatus(Canvas canvas) {
-        textPaint.setTextSize(24f);
-        boolean ok = hcaStatus.startsWith("HCA ok");
-        textPaint.setColor(ok ? Color.rgb(0, 220, 120) : Color.rgb(255, 120, 80));
-        float pad = 8f;
-        float x = 12f;
-        float y = ppValid ? 108f : 40f;
-        float w = textPaint.measureText(hcaStatus) + pad * 2;
-        canvas.drawRect(x - pad, y - 26f, x + w, y + 10f, textBgPaint);
-        canvas.drawText(hcaStatus, x, y, textPaint);
-    }
-
 
     private void drawPolylineXYZ(Canvas canvas, float[] xs, float[] ys, float[] zs,
                                  Paint paint, float xMin) {
@@ -936,9 +625,26 @@ public class LaneOverlayView extends View {
         return !(px < -80 || px > getWidth() + 80 || py < -80 || py > getHeight() + 80);
     }
 
-    /** PP / HUD points at ~camera height in device-Z (like Draw lead at 1.32). */
-    private boolean projectEgo(float X, float Y, float xMin) {
-        return projectDevice(X, Y, cameraHeight, xMin);
+    @Override
+    protected void onDetachedFromWindow() {
+        // The view can go away mid-alert (screen off, activity destroyed). A looping tone that
+        // outlives the view is worse than no tone at all.
+        tones.release();
+        super.onDetachedFromWindow();
+    }
+
+    /** Silence everything — for leaving the road, stopping the pipeline, or losing the view. */
+    public void stopSounds() {
+        tones.stop();
+    }
+
+    /** Start, change or stop the alert sound to match what is on screen. */
+    private void updateAlertSound(boolean critical) {
+        if (!alertActive) {
+            tones.stop();
+            return;
+        }
+        tones.play(critical);
     }
 
     /**

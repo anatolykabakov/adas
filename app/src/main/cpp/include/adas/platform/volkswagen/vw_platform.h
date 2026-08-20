@@ -11,17 +11,7 @@
 namespace adas {
 namespace platform {
 namespace volkswagen {
-/**
- * \brief Volkswagen MQB behind the brand-neutral interface.
- *
- * \details An adapter, deliberately: `CarIface`, `CarController` and the safety supervisor stay exactly
- * as they are, and the conversion between their types and the neutral ones happens here. That keeps the
- * translation in one readable place instead of spreading brand types through the service, and it means
- * adding a second car does not touch a line of working MQB code.
- *
- * The GRA button handshake lives here too. It is not a general idea about cruise control — it is this
- * bus's rule that a press is held until the stock counter advances — so it belongs to the brand.
- */
+/** Volkswagen MQB behind the brand-neutral interface. */
 class VolkswagenMqb : public CarPlatform {
 public:
   /**
@@ -48,6 +38,7 @@ public:
   SteerLimits steerLimits() const override;
 
   void configureSafety() override;
+  void resetPandaState() override { safety_.resetBoardState(); }
   std::optional<health_t> safetyTick(::Panda& panda, health_t health, int64_t now_ms) override;
   bool ignition() const override { return safety_.lastIgnition(); }
   bool safetyModelOk() const override { return ci_.safetyModelOk(safety_.lastSafetyMode()); }

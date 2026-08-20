@@ -81,13 +81,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
     private final float[] traffic = new float[2];
     private final float[] latParams = new float[2];
 
-    /**
-     * Features of past frames that the model feeds back to itself.
-     *
-     * <p>The recurrence is not hidden inside the network but exposed: every frame the history shifts
-     * by one and the output's features are appended to the tail. Skipping that shift means feeding the
-     * model the same past over and over, and it will drive on lane lines that are no longer there.
-     */
+    /** Features of past frames that the model feeds back to itself. */
     private final float[] featuresBuffer = new float[HISTORY_LEN * FEATURE_LEN];
     /** Desired-curvature history — the second feedback path, shifted one value at a time. */
     private final float[] prevDesiredCurv = new float[PREV_CURV_LEN];
@@ -154,14 +148,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
                 + " outputs=" + session.getOutputNames());
     }
 
-    /**
-     * Prefer Android NNAPI (GPU/DSP/NPU). On OnePlus 7T ~35 ms vs ~107 ms CPU.
-     *
-     * <p>Tries half precision first when asked ({@code vision.nnapi_fp16}, see
-     * {@link AdasConfig#nnapiFp16} for the offline evidence and why it is off by default), then plain
-     * NNAPI, then CPU. Each attempt builds its own {@code SessionOptions}: options cannot be reused
-     * after a failed {@code createSession}, which is why {@code TrafficYoloRunner} does the same.
-     */
+    /** Prefer Android NNAPI (GPU/DSP/NPU). */
     /**
      * Output signature on zero inputs, taken offline: same file, same zeros, `onnxruntime` from
      * Python on the CPU. Serves as acceptance: a session that answers differently computes the wrong
@@ -176,17 +163,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
     /** A loose tolerance: we catch garbage, not half-precision rounding. */
     private static final float ZERO_INPUT_TOLERANCE = 0.5f;
 
-    /**
-     * Build a session and make sure it computes **the right thing**.
-     *
-     * <p>"The session was created" is not enough. NNAPI on this SoC takes the fp16 graph and returns
-     * mean −7.6 with spread 134 on zero inputs instead of −1.25 and 3.3 — it does not crash, does not
-     * complain, and silently computes something else. A road frame cannot tell: numbers look like
-     * numbers.
-     *
-     * <p>So every built session first goes through a zero-input run, and if the signature disagrees
-     * the accelerator is dropped and the next one is tried. Slow but right beats fast and wrong.
-     */
+    /** Build a session and make sure it computes **the right thing**. */
     private OrtSession createValidatedSession(String modelPath, boolean fp16) throws Exception {
         // Ordered from fastest to most dependable. Every candidate goes through the zero-input
         // acceptance, so the list can grow without risk: whatever computes wrongly drops out itself.
@@ -220,21 +197,8 @@ public class SupercomboOnnxRunner implements ModelRunner {
                 "the model computes wrongly on every accelerator — see the zero-input signatures in the log");
     }
 
-    /**
-     * XNNPACK: the same CPU kernels, rewritten for ARM.
-     *
-     * <p>The provider is present on this phone and had never been tried — and it is exactly about what
-     * is missing here: single-precision convolutions on NEON. It needs no accelerator, so it should
-     * not break the output signature either, but it is checked like everything else.
-     */
-    /**
-     * Return the session if its zero-input run matched the reference, otherwise close it and return
-     * null.
-     *
-     * <p>"The session was created" and "the session computes the same thing" are different, and the
-     * second is invisible in the log: on both phones checked, NNAPI runs without a single complaint
-     * and returns foreign numbers.
-     */
+    /** XNNPACK: the same CPU kernels, rewritten for ARM. */
+    /** Return the session if its zero-input run matched the reference, otherwise close it and return null. */
     private OrtSession acceptIfSane(OrtSession candidate, String what) {
         if (candidate == null) {
             return null;
@@ -339,26 +303,13 @@ public class SupercomboOnnxRunner implements ModelRunner {
         }
     }
 
-    /**
-     * How many threads to give the compute.
-     *
-     * <p>The SM8150 has eight cores, but four of them are fast: one at 2.96 GHz and three at 2.42,
-     * the rest at 1.79. MEASURED: eight threads give 63.5 ms against 50.5 on four — the little cores
-     * do not add, they slow things down, because a convolution waits for its slowest thread.
-     */
+    /** How many threads to give the compute. */
     private static final int WORKER_THREADS = 4;
 
     private static OrtSession.SessionOptions newSessionOptions(int intraOpThreads) throws Exception {
         OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
         opts.setIntraOpNumThreads(Math.max(1, intraOpThreads));
-        // The full optimisation set. This used to be the basic level — a workaround for extended
-        // optimisations fusing Gemm with its activation into `com.microsoft.FusedGemm`, which has no
-        // half-precision kernel, so the session fails at creation. The asset is fp32 now, the
-        // workaround is unnecessary, and it cost noticeably: fusions are exactly what removes extra
-        // passes over memory.
-        //
-        // Should the model turn out to be fp16 after all, `createValidatedSession` catches the refusal
-        // and rebuilds the session at the basic level.
+        // The full optimisation set.
         opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
         try {
             opts.setSessionLogLevel(OrtLoggingLevel.ORT_LOGGING_LEVEL_WARNING);
@@ -403,15 +354,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
         setCalib(rollDeg, pitchDeg, yawDeg, fx, fy, cx, cy, calibW, calibH);
     }
 
-    /**
-     * Output signature on zero inputs — the one compared against the offline reference.
-     *
-     * <p>The point is that this exact run is easy to repeat on a workstation: same zeros, same file,
-     * `onnxruntime` from Python. There the model gives mean −1.2455 with spread 3.28. Anything else
-     * here means the fault lies neither in the model nor in the frame but in the plumbing — half
-     * precision, byte order or tensor shape. Without such an anchor these are indistinguishable: the
-     * runner returns plausible numbers under any of those mistakes.
-     */
+    /** Output signature on zero inputs — the one compared against the offline reference. */
     private float[] zeroInputSignature(OrtSession target) throws Exception {
         {
             final boolean half = isHalfPrecision(target);
@@ -449,16 +392,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
         }
     }
 
-    /**
-     * Refuse to load a model of the previous generation.
-     *
-     * <p>The runner expects supercombo 0.9.x: two frames, feature feedback, output 6504. A 0.8.x model
-     * takes four inputs and returns 6472 — a different output layout, so the pose and the lane lines
-     * would be read at the wrong offsets. Nothing announces it: the numbers stay plausible.
-     *
-     * <p>Not a hypothetical: a file can be dropped in via {@code /sdcard/adas_models/}, and an old
-     * model from earlier runs may well be sitting there.
-     */
+    /** Refuse to load a model of the previous generation. */
     private static void requireGeneration09x(java.util.Set<String> inputNames) {
         for (String required : new String[]{"input_imgs", "big_input_imgs", "features_buffer"}) {
             if (!inputNames.contains(required)) {
@@ -620,10 +554,11 @@ public class SupercomboOnnxRunner implements ModelRunner {
                 // the same for the same reason.
                 lanes.modelOut = flat.clone();
                 CameraOdometry pose = CameraOdometry.parse(flat, POSE_IDX_09X);
-                // The longitudinal part sits at different offsets in the 0.9.x layout and has no
-                // parser yet — exactly as on the thneed path. Better to return nothing than a lead
-                // read from the wrong place.
-                ModelLongParse.Out modelLong = null;
+                // The lead block does **not** move between 0.8.x and 0.9.7 — the model's own
+                // `output_slices` metadata puts it at 5755..5857 in both, and it decodes correctly
+                // (verified on bag 2026_08_16_23_59_45: p≈1.0 with a car 19.7 m ahead, p<0.06 on an
+                // empty simulator road). It was switched off here on the opposite assumption.
+                ModelLongParse.Out modelLong = ModelLongParse.parse(flat);
                 if (modelLong != null && modelLong.ok) {
                     ModelLongParse.Lead best =
                             modelLong.lead0.prob >= modelLong.lead1.prob ? modelLong.lead0 : modelLong.lead1;
@@ -643,13 +578,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
         }
     }
 
-    /**
-     * A tensor in whatever precision the model expects.
-     *
-     * <p>Precision is a property of the file, not of the code: supercombo 0.9.7 exists both in fp16
-     * and converted to fp32. Feeding the wrong one is impossible — the session refuses — so we ask the
-     * session itself.
-     */
+    /** A tensor in whatever precision the model expects. */
     private OnnxTensor tensor(boolean half, float[] values, long[] shape) throws Exception {
         if (!half) {
             return OnnxTensor.createTensor(env, FloatBuffer.wrap(values), shape);
@@ -693,13 +622,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
         return flattenOutput(value.getValue());
     }
 
-    /**
-     * Shift both histories and append the fresh frame to them.
-     *
-     * <p>This model's recurrence is exposed rather than internal: the network emits features in the
-     * output tail and expects them back on the next frame's input. The native thneed runner does the
-     * same — if these two places drift apart, so do the predictions, and silently at that.
-     */
+    /** Shift both histories and append the fresh frame to them. */
     private void advanceRecurrence(float[] flat) {
         if (flat.length < NET_OUTPUT_SIZE) {
             return;
@@ -724,19 +647,7 @@ public class SupercomboOnnxRunner implements ModelRunner {
         throw new IllegalStateException("Unexpected ONNX output type: " + value.getClass());
     }
 
-    /**
-     * Parses the supercombo output.
-     *
-     * <p>Package-private rather than private because {@link SupercomboThneedRunner} parses the 0.9.x
-     * output with the same code: the plan and lane sections of the two generations match bitwise.
-     * Checked against their `driving.h` — plan element 5 x XYZ = 15 floats (our PLAN_COLS), prediction
-     * 15*33*2 + 1 = 991 (PLAN_GROUP), plans 991*5 = 4955 (PLAN_END), then the same four lines of 33 YZ
-     * pairs.
-     *
-     * <p>The generations diverge after road_edges, where 0.9.x adds wide_from_device_euler,
-     * temporal_pose, road_transform and action, so only what precedes that boundary is shared and the
-     * 0.9.x pose is read at its own offset.
-     */
+    /** Parses the supercombo output. */
     static LaneLines parseLanes(float[] out) {
         LaneLines ll = new LaneLines();
         if (out.length < ROAD_END) {

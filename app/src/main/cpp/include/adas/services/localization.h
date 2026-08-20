@@ -16,17 +16,7 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief Fuses wheel speed, yaw rate and GNSS into one pose.
- *
- * \details The estimate is an EKF in a local ENU plane anchored at the first fix. Wheel speed and yaw
- * rate carry it between fixes; GNSS bounds the drift. Each measurement is a separate switch in
- * `Config::Sources`, because a fused pose that looks healthy says nothing about which sensor is holding
- * it up, and turning them off one at a time is the only cheap way to find out.
- *
- * The service also runs the road-bank estimator and the vehicle-parameter learner: both need exactly the
- * inputs that arrive on the chassis tick, and both publish through the pose message.
- */
+/** Fuses wheel speed, yaw rate and GNSS into one pose. */
 class Localization : public adas::middleware::Service {
 public:
   struct Config {
@@ -39,18 +29,7 @@ public:
 
     double gps_max_accuracy_m = 25.0;  ///< Fixes reporting worse accuracy are not used at all [m]; 0 disables the gate.
 
-    /** Which measurements the filter is allowed to use.
-     *
-     *  Each source is a separate switch on purpose. A fused estimate that looks healthy tells you
-     *  nothing about which sensor is carrying it — and when several sources agree, a broken one hides
-     *  behind the others. Turning them off one at a time is the only cheap way to find out what the
-     *  filter would do without each, and it is how the yaw-rate defect was finally quantified: the
-     *  heading error was invisible with GPS on, and 38° in five seconds with it off.
-     *
-     *  This is also the knob a student needs. "Disable GPS and watch the heading drift" is an
-     *  experiment, not a thought experiment, once it is a line of config.
-     *
-     *  Defaults keep everything on, i.e. the behaviour before these flags existed. */
+    /** Which measurements the filter is allowed to use. */
     struct Sources {
       bool camera_odometry = true;  ///< Use the camera-odometry yaw rate as a measurement.
     } sources{};
@@ -71,17 +50,28 @@ public:
     double steer_ratio = 15.7;  ///< Steering ratio used to turn the wheel angle into a road-wheel angle.
   };
 
+  /// Constructs with the default config.
   Localization() : Localization(Config{}) {}
+  /// \param[in] config Filter noises and GNSS gating.
   explicit Localization(Config config);
 
   std::string_view getName() const override { return "localization"; }
 
   void configure() override;
+  /// Expose the filter knobs on the parameter registry.
   void registerParameters();
   void reset() override;
 
+  /// Reseed the pose: east/north [m], ENU yaw [rad], speed [m/s], yaw rate [rad/s].
   void resetPose(double x, double y, double yaw, double v = 0, double yaw_rate = 0);
 
+  /**
+   * \brief One filter step, for offline use; on the bus the subscriptions drive it.
+   * \param[in] dt Time since the previous step [s].
+   * \param[in] speed_mps Wheel speed [m/s]; \p steer_rad measured wheel angle [rad].
+   * \param[in] yaw_rate / gps_x / gps_y Optional measurements for this step.
+   * \return (x, y, yaw) after the step.
+   */
   std::tuple<double, double, double> step(double dt, double speed_mps, double steer_rad,
                                           std::optional<double> yaw_rate = std::nullopt,
                                           std::optional<double> gps_x = std::nullopt,
@@ -89,9 +79,13 @@ public:
                                           std::optional<double> ref_x = std::nullopt,
                                           std::optional<double> ref_y = std::nullopt);
 
+  /// \return The filter itself, for tests and offline tools.
   OnlineLocalizer& localizer() { return loc_; }
+  /// Const overload.
   const OnlineLocalizer& localizer() const { return loc_; }
+  /// \return The pose last published.
   const LocalizationPose& lastPose() const { return last_pose_; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
 
 private:

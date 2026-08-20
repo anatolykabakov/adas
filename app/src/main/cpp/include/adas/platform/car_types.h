@@ -57,14 +57,7 @@ struct CarStateView {
   bool brakePressed = false;
 };
 
-/**
- * \brief What a car is, as facts about the vehicle rather than settings.
- *
- * \details These belong to the make and model, not to the driver: nobody tunes the wheelbase of their
- * Golf. Upstream keeps them in `selfdrive/car/<brand>/interface.py` for exactly that reason, and we
- * follow — the platform supplies them, `config.json` may override one when a particular car differs
- * (a trim with a different rack, say), and an untouched config means the car's own numbers are used.
- */
+/** What a car is, as facts about the vehicle rather than settings. */
 struct VehicleDefaults {
   double wheelbase_m = 2.636;          ///< Wheelbase [m].
   double steer_ratio = 15.7;           ///< Steering-wheel to road-wheel ratio.

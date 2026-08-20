@@ -91,7 +91,7 @@ app/src/main/
 │   └── src/
 │       ├── services/       planner, control, platform, localization, camera_calib, map_data, …
 │       ├── lateral/        the three lateral strategies behind IPlanner: fp, vp, pp, plus the solvers
-│       ├── platform/       the car behind CarPlatform: volkswagen/ and toyota/
+│       ├── platform/       the car behind CarPlatform: volkswagen/
 │       ├── mapmatch/       OSM road graph: localization, curvature ahead
 │       ├── panda/          USB driver and CAN framing
 │       ├── python/         pybind11 module: the same C++ the phone runs, importable as pyadas
@@ -139,7 +139,7 @@ because they are routinely conflated: capture → model output **22 ms**, captur
 (`control/lane_keep`) **31 ms**, capture → steering command (`controls/steer`) **52 ms**, plus the
 panda's 10 ms transmit timer to the wire. The vision rate matters because it sets the size of a
 setpoint step: halving the interval roughly halved it on arcs, and tracking error fell with it. How
-that was established — [`docs/VISION_RATE.md`](docs/VISION_RATE.md).
+that was established — `VISION_RATE.md` (удалён, история в git).
 
 The model runs the same network on either path — `assets/supercombo.onnx` is the source, and
 `assets/supercombo.thneed` is generated from it. Both runners check themselves against a zero-input
@@ -151,7 +151,6 @@ phone that is not this one — [`docs/THNEED.md`](docs/THNEED.md), [`docs/NEW_PH
 | key | description | status |
 |---|---|---|
 | `fp` | flowpilot lateral MPC port, N=16, + κ→angle via vehicle model; `fp_solver` picks the numerical method: `grad` (Eigen) or `acados` | **default** |
-| `mpc` | spatial MPC from VisionPilot | alternative |
 | `pp` | Pure Pursuit + angle-PID | legacy, for debugging |
 
 Switch in `config.json` (`vehicle.lane_keep_controller`) or in the in-app parameter panel.
@@ -219,7 +218,7 @@ work — [`docs/BAG_ANALYSIS.md`](docs/BAG_ANALYSIS.md).
 
 ```bash
 ./scripts/run_bag_vis.sh adas_logs/<session>              # interactive bag viewer
-python3 bag/bag_controller_ab.py <bag> --controllers fp,mpc  # controllers against the driver's steering
+python3 bag/bag_report.py <bag>                              # the whole drive in one cached report
 python3 bag/bag_safety_warn.py <bag>                         # replay the warning chain, count triggers
 ```
 
@@ -241,7 +240,7 @@ compiles.
 Static analysis is clang-tidy, run either over everything or over the lines a change touched; the
 report sorts files by how much the findings can actually hurt. How to run it and what the priorities
 mean — [`scripts/cpp/README.md`](scripts/cpp/README.md), last pass —
-[`docs/CLANG_TIDY_2026_08_15.md`](docs/CLANG_TIDY_2026_08_15.md).
+`CLANG_TIDY_2026_08_15.md` (удалён, история в git).
 
 ## Documentation
 

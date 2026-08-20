@@ -12,6 +12,7 @@ public:
 
   void reset() override { mpc_.reset(); }
 
+  /// See KappaSolver::solve().
   bool solve(const Input& in, const std::vector<Vec2>& poly, double yaw, double Lf, double& kappa,
              double& kappa_rate) override;
 

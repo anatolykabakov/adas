@@ -1,10 +1,6 @@
 package adas.app.vision;
 
-/** Parse lead + PLAN velocity from supercombo flat output (6409).
- *
- *  Layout after ROAD_END=5755 matches flowpilot F2 lead block:
- *    LEAD (105) + short meta gap + POSE (12) + TEMPORAL (512).
- */
+/** Parse lead + PLAN velocity from the supercombo flat output. */
 public final class ModelLongParse {
     public static final int ROAD_END = 5755;
     public static final int LEAD_IDX = ROAD_END;
@@ -39,7 +35,18 @@ public final class ModelLongParse {
         public boolean ok;
     }
 
+    /** What the model was trained at (comma `common.realtime.DT_MDL`), in ms. */
+    public static final float DT_MDL_MS = 50.f;
+
     private ModelLongParse() {}
+
+    /** Correction for a model velocity read at a frame spacing other than the training one. */
+    public static float velocityScale(float frameDtMs) {
+        if (!(frameDtMs > 5.f) || frameDtMs > 200.f) {
+            return 1.f;
+        }
+        return DT_MDL_MS / frameDtMs;
+    }
 
     private static float sigmoid(float x) {
         if (x >= 0) {

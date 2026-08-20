@@ -5,15 +5,7 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Rate limit on the command between vision frames.
- *
- * It sits after the planner rather than inside one: the planner decides where to go, and this cuts
- * the jump a driver would feel on the wheel, whichever strategy produced it.
- *
- * The ceiling is the smaller of two: the configured limit in degrees and the lateral-jerk limit.
- * The second depends on speed, because at speed the same angle gives far more lateral acceleration.
- */
+/** Rate limit on the command between vision frames. */
 class SlewGuard {
 public:
   struct Config {
@@ -25,10 +17,13 @@ public:
   };
 
   SlewGuard() = default;
+  /// \param[in] cfg Rate limits and the jerk bound.
   explicit SlewGuard(Config cfg) : cfg_(cfg) {}
 
+  /// Replace the config.
   void setConfig(const Config& cfg) { cfg_ = cfg; }
 
+  /// Forget the previous command, so the next one is not rate-limited against it.
   void reset()
   {
     have_prev_ = false;

@@ -8,19 +8,14 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Speed-dependent ceiling on the steering angle.
- *
- * \details The limit is generous at walking pace and tight at speed, because the same angle is a parking
- * manoeuvre at 5 km/h and a loss of control at 100. `low_speed_steer_deg` plus `steer_deg_per_mps` define
- * the ramp; `mpc_max_steer_deg` caps it.
- */
+/** Speed-dependent ceiling on the steering angle. */
 struct SteerLimits {
   double mpc_max_steer_deg = 25.0;   ///< Absolute ceiling on the angle [deg].
   double low_speed_steer_deg = 8.0;  ///< Angle allowed at a standstill [deg]; the limit ramps up from here.
   double steer_deg_per_mps = 0.5;    ///< Slope of that ramp [deg per m/s].
 };
 
+/// \return Slip factor, or 0 when the vehicle model is disabled.
 inline double slipFactorOrZero(const VehicleParams& v)
 {
   if (!v.use_vehicle_model)
@@ -33,6 +28,7 @@ inline double slipFactorOrZero(const VehicleParams& v)
   return slipFactor(p);
 }
 
+/// \return \p kappa corrected for the road bank at \p speed_mps.
 inline double curvatureWithRoll(double kappa, double speed_mps, const VehicleParams& v)
 {
   if (!v.road_roll_valid)
@@ -53,13 +49,12 @@ inline double maxSteerRad(double speed_mps, const SteerLimits& lim)
 
 /**
  * \brief Clamp an angle to the speed-dependent ceiling.
- *
  * \param[in] steer_rad Requested road-wheel angle [rad].
  * \param[in] speed_mps Ego speed [m/s].
  * \param[in] lim Ramp that defines the ceiling.
  * \param[out] ceiling_out The ceiling that was applied; ignored when null.
- * \return The angle, clamped. A non-positive ceiling is treated as "no limit configured" and lets the
- *         angle through rather than silently forcing it to zero.
+ * \return The angle, clamped. A non-positive ceiling is treated as "no limit configured" and lets the angle through
+ * rather than silently forcing it to zero.
  */
 inline double clampToSteerLimit(double steer_rad, double speed_mps, const SteerLimits& lim,
                                 double* ceiling_out = nullptr)
@@ -72,12 +67,6 @@ inline double clampToSteerLimit(double steer_rad, double speed_mps, const SteerL
 
 /**
  * \brief Apply the speed-dependent steering ceiling and record what it was.
- *
- * \details Both planners produce a raw angle and then face the same ceiling, so the clamp lives here
- * rather than being written out twice: a limit relaxed in one copy and not the other is a safety
- * ceiling that silently differs by controller. The debug fields are filled alongside because they are
- * what an offline run uses to tell "the planner asked for less" from "the limit took it away".
- *
  * \param[in,out] out Output whose `steer_rad` is clamped; `max_steer_rad` and the two debug fields are set.
  * \param[in] speed_mps Ego speed [m/s].
  * \param[in] lim Ramp that defines the ceiling.

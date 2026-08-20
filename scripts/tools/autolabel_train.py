@@ -56,9 +56,10 @@ import _path  # noqa: F401  (scripts/ on sys.path)
 
 import cv2
 
-from core.model_calib_warp import warp_matrix_deg, warp_to_model
+from core.model_calib_warp import warp_to_model
 from core.phone_rt import project_overlay_xyz
-from core.supercombo_compare import make_overlay_geometry, parse_image_yuv
+from core.supercombo_097 import Supercombo097
+from core.supercombo_compare import make_overlay_geometry
 from core.supercombo_parse import X_IDXS, parse_supercombo
 from vis.bag_io import load_topic_messages, nearest
 
@@ -71,16 +72,6 @@ N_CLASSES = len(CLASS_NAMES)
 # nothing about where the lane is on the road — the same 4 m the overlay uses.
 LANE_X_MIN_M = 4.0
 LANE_X_MAX_M = 30.0  # where σ is summarised for the gate
-
-# Labeller (supercombo 0.9.x) input shapes.
-TEACHER_DESIRE = (1, 100, 8)
-TEACHER_TRAFFIC = (1, 2)
-TEACHER_LAT_PARAMS = (1, 2)
-TEACHER_PREV_CURV = (1, 100, 1)
-TEACHER_FEATURES = (1, 99, 512)
-FEATURE_LEN = 512
-PARSED_OUTPUT = 5992
-DESIRED_CURV_IDX = 5990
 
 DEFAULT_OUT = Path(__file__).resolve().parents[2] / "build" / "autolabel"
 
@@ -202,71 +193,62 @@ def frame_intrinsics(cam_msg) -> Optional[Tuple[float, float, float, float]]:
 
 
 class Labeller:
-    """supercombo through onnxruntime, with the recurrence the model needs.
+    """The labelling network: :class:`core.supercombo_097.Supercombo097` with this tool's ergonomics.
 
-    Offline there is no 33 ms budget, so this runs fp32 on the CPU and keeps the history the way the
-    runtime does: features shift by one frame, `prev_desired_curv` by one value. Getting that wrong does
-    not fail — the model simply remembers a past that never happened.
+    This used to hold its own copy of the runner, and the copy had drifted from the phone: it fed the
+    *narrow* warp to the wide input, so the model saw the same picture twice where the runtime gives it
+    two different fields of view. Labels are the one product where that is unrecoverable — a wrong
+    label trains a wrong student, quietly. Hence one runtime, checked against the phone's own
+    zero-input signature before the first frame.
     """
 
     def __init__(self, path: Path, threads: int = 0):
-        import onnxruntime as ort
-
-        opts = ort.SessionOptions()
-        if threads > 0:
-            opts.intra_op_num_threads = threads
-        self.sess = ort.InferenceSession(
-            str(path), opts, providers=["CPUExecutionProvider"]
-        )
-        self.names = {i.name for i in self.sess.get_inputs()}
-        for required in ("input_imgs", "big_input_imgs", "features_buffer"):
-            if required not in self.names:
-                raise SystemExit(
-                    f"{path}: not a supercombo 0.9.x graph (no '{required}' input); "
-                    f"inputs are {sorted(self.names)}"
-                )
-        self.out_name = self.sess.get_outputs()[0].name
+        try:
+            self.net = Supercombo097(path, threads=threads)
+        except ValueError as e:
+            raise SystemExit(str(e))
+        ok, measured, expected = self.net.check_zero_input()
+        if expected is None:
+            print("zero-input check skipped: no reference in the shipped config")
+        elif not ok:
+            raise SystemExit(
+                f"{path}: zero-input signature {measured[0]:.4f}/{measured[1]:.4f} "
+                f"≠ expected {expected[0]:.4f}/{expected[1]:.4f} — this is not the network "
+                f"the phone runs"
+            )
+        else:
+            print(
+                f"labeller ok: zero-input {measured[0]:.4f}/{measured[1]:.4f} "
+                f"matches the shipped reference"
+            )
         self.reset()
 
     def reset(self) -> None:
-        self.features = np.zeros(TEACHER_FEATURES, dtype=np.float32)
-        self.prev_curv = np.zeros(TEACHER_PREV_CURV, dtype=np.float32)
-        self.prev_yuv: Optional[np.ndarray] = None
+        self.net.reset()
 
-    def run(self, yuv6: np.ndarray, v_ego: float) -> Optional[np.ndarray]:
-        """One frame in, the flat output vector out. None until the two-frame stack is filled."""
-        if self.prev_yuv is None:
-            self.prev_yuv = yuv6
-            return None
-        imgs = np.concatenate([self.prev_yuv, yuv6], axis=0)[None].astype(np.float32)
-        self.prev_yuv = yuv6
+    def drop_history(self) -> None:
+        """Forget the pair and the recurrence — for a frame that must not become anyone's past."""
+        self.net.reset()
 
-        feeds: Dict[str, np.ndarray] = {
-            "input_imgs": imgs,
-            "big_input_imgs": imgs,
-            "features_buffer": self.features,
-            "prev_desired_curv": self.prev_curv,
-        }
-        if "desire" in self.names:
-            feeds["desire"] = np.zeros(TEACHER_DESIRE, dtype=np.float32)
-        if "traffic_convention" in self.names:
-            feeds["traffic_convention"] = np.zeros(TEACHER_TRAFFIC, dtype=np.float32)
-        if "lateral_control_params" in self.names:
-            lat = np.zeros(TEACHER_LAT_PARAMS, dtype=np.float32)
-            lat[0, 0] = v_ego
-            feeds["lateral_control_params"] = lat
+    def set_calib(
+        self,
+        roll: float,
+        pitch: float,
+        yaw: float,
+        fx: float,
+        fy: float,
+        cx: float,
+        cy: float,
+    ) -> None:
+        self.net.set_calib(roll, pitch, yaw, fx, fy, cx, cy)
 
-        out = self.sess.run([self.out_name], feeds)[0].reshape(-1).astype(np.float64)
+    @property
+    def warp_narrow(self) -> np.ndarray:
+        return self.net.warp_narrow
 
-        if out.size >= PARSED_OUTPUT + FEATURE_LEN:
-            self.features[0, :-1] = self.features[0, 1:]
-            self.features[0, -1] = out[
-                PARSED_OUTPUT : PARSED_OUTPUT + FEATURE_LEN
-            ].astype(np.float32)
-        if out.size > DESIRED_CURV_IDX:
-            self.prev_curv[0, :-1] = self.prev_curv[0, 1:]
-            self.prev_curv[0, -1, 0] = float(out[DESIRED_CURV_IDX])
-        return out
+    def run(self, bgr: np.ndarray, v_ego: float) -> Optional[np.ndarray]:
+        """One camera frame in, the flat output out; None until the two-frame stack is filled."""
+        return self.net.run_bgr(bgr, v_ego)
 
 
 def lines_from_labeller(
@@ -427,14 +409,15 @@ def label_bag(
         pitch = float(getattr(cal, "pitch_deg", 0.0))
         yaw = float(getattr(cal, "yaw_deg", 0.0))
 
-        # The labeller wants its own geometry — that is its business, and none of it reaches the student.
-        warped = warp_to_model(bgr, warp_matrix_deg(roll, pitch, yaw, fx, fy, cx, cy))
+        # The labeller wants its own geometry — that is its business, and none of it reaches the
+        # student. It builds both warps (narrow and wide); the narrow one is also what the focus
+        # score should look at, since that is the picture the model actually reads.
+        labeller.set_calib(roll, pitch, yaw, fx, fy, cx, cy)
+        warped = warp_to_model(bgr, labeller.warp_narrow)
         sharp = focus_score(warped)
         if sharp < gate.min_focus:
             stats.defocused += 1
-            labeller.prev_yuv = (
-                None  # a blind frame must not become the stack's history either
-            )
+            labeller.drop_history()  # a blind frame must not become the stack's history either
             continue
 
         v_ego = 0.0
@@ -442,9 +425,7 @@ def label_bag(
         if ch_hit is not None:
             v_ego = float(getattr(ch_hit[1], "speed_mps", 0.0) or 0.0)
 
-        out = labeller.run(
-            parse_image_yuv(cv2.cvtColor(warped, cv2.COLOR_BGR2YUV_I420)), v_ego
-        )
+        out = labeller.run(bgr, v_ego)
         if out is None:
             continue
 

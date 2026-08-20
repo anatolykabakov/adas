@@ -307,7 +307,7 @@ setting), and copying their σ thresholds before #23 says the two σ are the sam
 
 Everything below is implemented in code and covered by tests, but **not verified on the road**. One run
 with logging enabled closes most of the list: topics `safety/warn`, `vision/model_long`, and
-`control/lane_keep_debug` are written to the bag; analysis uses `bag/bag_safety_warn.py` and `bag/bag_controller_ab.py`.
+`control/lane_keep_debug` are written to the bag; analysis uses `bag/bag_safety_warn.py`.
 
 | item | verify |
 |---|---|
@@ -677,7 +677,7 @@ average — `A = [[1, dt], [0, 1]]`, `C = [1, 0]`, `K = [0.174, 1.659]` at 100 H
 `aEgo` come out of it. The localizer is used for orientation and for `paramsd`, not for `vEgo`.
 
 We measured why that choice is defensible, and where it leaves a real gap
-(`bag/bag_speed_sources.py`, GNSS Doppler as the reference, two runs):
+(`bag_speed_sources.py` (стенд удалён 2026-08-20, восстанавливается из git), GNSS Doppler as the reference, two runs):
 
 | quantity | run 08-06 | run 08-04 |
 |---|---|---|
@@ -731,7 +731,7 @@ recorded data p5/p95 ±0.6, extremes −4.0 and +3.1, RMS step **0.062**, and sp
 * **give the planners a choice of speed source** and A/B it. Right now `LaneKeepService` and
   `LongPlanService` both read `chassis_.speed_mps`. The filtered CAN speed is probably right for
   control — it is what upstream uses, and it has no GNSS latency — but that should be measured, not
-  assumed, and the harness for it is `bag/bag_speed_sources.py` plus a replay;
+  assumed, and the harness for it is `bag_speed_sources.py` (стенд удалён 2026-08-20, восстанавливается из git) plus a replay;
 * ~~road roll has no source at all~~ — **built 2026-08-06**, see below. What remains open is grade
   (longitudinal), which needs the same treatment with `f_x` and is not yet done.
 
@@ -1154,4 +1154,4 @@ Details and the two-answers-for-unknown design in §0.
 
 История завершённых задач жила здесь и занимала 343 строки — треть файла, который читают, чтобы
 понять, что делать дальше. Она переехала туда, где ей место: релизные итоги в `../CHANGELOG.md`,
-подробности каждой правки в истории git, разбор ветки в `REVIEW_2026_08_09.md`.
+подробности каждой правки в истории git, разбор ветки в `archive/REVIEW_2026_08_09.md`.

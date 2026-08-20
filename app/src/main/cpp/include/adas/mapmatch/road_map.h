@@ -18,38 +18,36 @@ struct RoadEdge {
   bool oneway = false;
 };
 
-/**
- * \brief The compact road graph: edges with polylines, names, and a spatial index.
- *
- * \details Loaded from a prebuilt `.admap` file rather than parsed from OSM XML on the device — the
- * parse costs minutes and megabytes, the load costs milliseconds. Answers the two questions map matching
- * needs: which edges fall inside a bounding box, and which edge is nearest to a point.
- */
+/** The compact road graph: edges with polylines, names, and a spatial index. */
 class RoadMap {
 public:
   /**
    * \brief Load a prebuilt `.admap`.
-   *
    * \param[in] path File path.
    * \return False when the file is missing or its format is not the one this build expects.
    */
   bool load(const std::string& path);
 
+  /// \return True before a successful load().
   bool empty() const { return edges_.empty(); }
+  /// \return Number of graph nodes.
   std::size_t nodeCount() const { return node_x_.size(); }
+  /// \return Number of edges.
   std::size_t edgeCount() const { return edges_.size(); }
   /// The projection this map's metres are in. Not the same anchor a drive's own local frame uses.
   const LocalFrame& frame() const { return frame_; }
 
+  /// \return Node east coordinate [m].
   double nodeX(std::uint32_t i) const { return node_x_[i]; }
+  /// \return Node north coordinate [m].
   double nodeY(std::uint32_t i) const { return node_y_[i]; }
+  /// \return Edge record by index.
   const RoadEdge& edge(std::uint32_t i) const { return edges_[i]; }
   /// Street name, or empty for an unnamed way.
   std::string edgeName(std::uint32_t i) const;
 
   /**
    * \brief Centreline of an edge, in map metres.
-   *
    * \param[in] i Edge index.
    * \param[out] xs East coordinates; cleared and refilled.
    * \param[out] ys North coordinates.
@@ -58,7 +56,6 @@ public:
 
   /**
    * \brief Edges intersecting an axis-aligned box.
-   *
    * \param[in] x0,y0 One corner in map metres; \param[in] x1,y1 the opposite one. Order does not matter.
    * \return Edge indices, unordered.
    */
@@ -66,18 +63,15 @@ public:
 
   /**
    * \brief Edge nearest to a point.
-   *
    * \param[in] x,y Query point in map metres.
    * \param[out] dist_m Distance to it [m]; may be null.
    * \param[in] search_m Radius to search within [m].
    * \return Edge index, or `0xFFFFFFFF` when nothing was found — an unsigned value, so a `>= 0` check
-   * on it always passes.
    */
   std::uint32_t nearestEdge(double x, double y, double* dist_m = nullptr, double search_m = 200.0) const;
 
   /**
    * \brief Nearest point on the road graph, not just the nearest edge.
-   *
    * \param[in] x,y Query point in map metres.
    * \param[out] nx,ny The projected point.
    * \param[out] dist_m Distance to it [m].
@@ -89,7 +83,6 @@ public:
 
   /**
    * \brief Edges leaving a node, for route expansion.
-   *
    * \param[in] node Node index.
    * \param[out] count How many edges the returned pointer covers.
    * \return Pointer into the map's own storage; valid as long as the map is.
@@ -98,6 +91,7 @@ public:
 
   /// Heading of an edge at its ends [rad], for matching direction of travel.
   double headingAtStart(std::uint32_t edge) const;
+  /// \return Heading [rad] at the edge's far end.
   double headingAtEnd(std::uint32_t edge) const;
 
   /// Turn between two connected edges [rad]; how a route penalises implausible turns.

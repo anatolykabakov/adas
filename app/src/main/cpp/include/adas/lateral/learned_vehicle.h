@@ -5,16 +5,7 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Vehicle parameters with an online estimate: steering ratio, tyre stiffness, angle zero.
- *
- * \details Both services need these, for different reasons: the planner so its solver knows what
- * curvature turns into, the controller so it can compute a setpoint and a command. The class is shared
- * precisely so that "learned overrides configured" is written once — two copies, once drifted apart,
- * would give the planner and the controller different ideas about the same car.
- *
- * \note No control law lives here.
- */
+/** Vehicle parameters with an online estimate: steering ratio, tyre stiffness, angle zero. */
 class LearnedVehicle {
 public:
   struct Config {
@@ -25,6 +16,7 @@ public:
   };
 
   LearnedVehicle() = default;
+  /// \param[in] cfg Config values used until a learned estimate is valid.
   explicit LearnedVehicle(Config cfg)
     : cfg_(cfg)
     , steer_ratio_(std::max(cfg.steer_ratio, 1e-3))
@@ -48,13 +40,16 @@ public:
   }
 
   /// True while the learner's estimate is in force rather than the configured constants.
+  /// \return True when a valid learned estimate is in force.
   bool usingLearnedParams() const { return learned_valid_; }
+  /// \return Stiffness factor in force: learned when valid, config otherwise.
   double effectiveStiffnessFactor() const
   {
     return usingLearnedParams() ? learned_stiffness_ : cfg_.tire_stiffness_factor;
   }
   /// Ratio actually used this tick: learned when valid, configured otherwise.
   double effectiveSteerRatio() const { return usingLearnedParams() ? learned_steer_ratio_ : steer_ratio_; }
+  /// \return Steering-zero offset [deg] in force; 0 until the learner is valid.
   double effectiveAngleOffsetDeg() const { return usingLearnedParams() ? learned_angle_offset_deg_ : 0.0; }
 
   /// The configured ratio, ignoring the learned one: this is what converts a measured steering-wheel

@@ -78,7 +78,7 @@ typedef struct _cl_mem_android_native_buffer_host_ptr {
 
 } cl_mem_android_native_buffer_host_ptr;
 
-#endif  //#ifndef CL_MEM_ANDROID_NATIVE_BUFFER_HOST_PTR_QCOM
+#endif  // #ifndef CL_MEM_ANDROID_NATIVE_BUFFER_HOST_PTR_QCOM
 
 /***********************************
  * cl_img_egl_image extension *

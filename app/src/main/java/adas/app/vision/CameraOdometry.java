@@ -22,12 +22,7 @@ public final class CameraOdometry {
         return out == null ? new CameraOdometry() : parse(out, poseIdx(out.length));
     }
 
-    /**
-     * Pose at an explicit offset. The {@link #poseIdx} heuristic only holds for our layout, where the
-     * pose is last before the features; 0.9.x has more fields after it and the same formula gives 5980
-     * instead of 5948. The pose struct itself is identical across generations — velocity_mean,
-     * rotation_mean, velocity_std, rotation_std — only its address differs.
-     */
+    /** Pose at an explicit offset. */
     public static CameraOdometry parse(float[] out, int poseIdx) {
         CameraOdometry o = new CameraOdometry();
         if (out == null) {

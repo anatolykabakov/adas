@@ -14,25 +14,15 @@
 #include "adas/platform/volkswagen/values.h"
 
 namespace volkswagen {
-/**
- * \brief The car interface: the only place that knows the brand and the CAN layout.
- *
- * \details This is upstream's `CarInterfaceBase`, and it is a field rather than a process there too:
- * `Controls.__init__` holds `self.CI`, which owns `self.CS` (the decoder) and `self.CC` (the frame
- * packer), and `controlsd` calls `CI.update(can_strs)` and `CI.apply(CC)`. We have three services
- * around it: planner, controller, platform.
- *
- * The control law is not part of this: it receives a chassis frame and a plan, while addresses,
- * signals and frame counters are known only here. Neither is the hardware — frames arrive and leave
- * by value, so the interface is testable against a recording without a panda.
- */
+/** The car interface: the only place that knows the brand and the CAN layout. */
 class CarIface {
 public:
   struct Config {
-    std::string dbc_path;
+    std::string dbc_path;                      ///< CAN database the decoder parses.
     adas::SpeedFilter::Config speed_filter{};  ///< Wheel-speed filter settings.
   };
 
+  /// \param[in] config DBC path and filter settings.
   explicit CarIface(Config config);
 
   /// Load the DBC. Without it chassis decoding is off, while sending frames keeps working.
@@ -44,7 +34,9 @@ public:
   /// `CI.apply`: a controller command into frames for the platform.
   std::vector<can_frame> apply(const CarControl& cc, const CarStateView& cs) { return car_controller_.update(cc, cs); }
 
+  /// \return Decoded state.
   const adas::proto::CarState& carState() const { return decoder_.state(); }
+  /// \return Brand-neutral view.
   CarStateView carStateView() const { return decoder_.toCarStateView(); }
 
   /// This car's torque ceiling [cNm]: the controller computes a normalised command, the limit lives here.
@@ -57,8 +49,11 @@ public:
     return lateralActuationAllowed(controls_allowed, /*lat_always_on=*/true, carStateView());
   }
 
+  /// \return Last cruise status.
   int lastTskStatus() const { return decoder_.lastTskStatus(); }
+  /// \return EPS HCA status byte.
   uint8_t epsHcaStatus() const { return decoder_.epsHcaStatus(); }
+  /// \return Torque last put on the bus [unit].
   int applySteerLast() const { return car_controller_.applySteerLast(); }
 
 private:

@@ -53,11 +53,9 @@ public:
 
   /**
    * \brief One PID step.
-   *
    * \param[in] error Setpoint minus measurement, in the units the gains were tuned for.
    * \param[in] speed_mps Ego speed [m/s]; the feedforward scales with it.
    * \param[in] override Driver is holding the wheel: the integrator is frozen rather than wound up
-   * against a hand.
    * \param[in] feedforward Feedforward term before the gain.
    * \return The clamped control output.
    */
@@ -88,7 +86,9 @@ public:
 
   /// The proportional, integral and feedforward parts of the last output, for the record.
   double p() const { return p_; }
+  /// \return Integral term, for the debug record.
   double i() const { return i_; }
+  /// \return Feedforward term, for the debug record.
   double f() const { return f_; }
   /// The last output, after clamping.
   double control() const { return control_; }
@@ -107,13 +107,7 @@ private:
 
 inline constexpr double kFeedforwardFloorMps = 9.8;
 
-/**
- * \brief The steering-angle PID: desired angle in, normalised torque out.
- *
- * \details Closes the loop on the measured steering-wheel angle, not on a model of it, and hands control
- * back to the driver when the wheel is touched. The feedforward term carries most of the command on a
- * steady curve; the integrator only cleans up what the feedforward misses.
- */
+/** The steering-angle PID: desired angle in, normalised torque out. */
 class LatControlPid {
 public:
   /// Gains as in \ref PidController, plus the speed floor used by the feedforward.
@@ -123,18 +117,20 @@ public:
   {
   }
 
+  /// Zero the integrator.
   void reset() { pid_.reset(); }
 
+  /// Replace the gains.
   void setGains(double k_p, double k_i, double k_f) { pid_.setGains(k_p, k_i, k_f); }
 
   /**
-   * \param[in] v_mps Speed floor for the feedforward [m/s].
-   *
-   * The term is `swa * (v^2 + v0^2)`, so the floor keeps it from vanishing at low speed, where the wheel is
+   * \brief The term is `swa * (v^2 + v0^2)`, so the floor keeps it from vanishing at low speed, where the wheel is
    * heaviest and the loop would otherwise build the whole command out of the integrator.
+   * \param[in] v_mps Speed floor for the feedforward [m/s].
    */
   void setFeedforwardFloor(double v_mps) { v_ff_floor_mps_ = std::max(0.0, v_mps); }
 
+  /// Set the tick rate the integral is scaled by [Hz].
   void setRate(double rate_hz) { pid_.setRate(rate_hz); }
 
   struct Result {
@@ -148,7 +144,6 @@ public:
 
   /**
    * \brief One step of the steering-angle loop.
-   *
    * \param[in] active False releases the loop: output zero and the integrator reset.
    * \param[in] desired_swa_deg Requested steering-wheel angle [deg], including the learned zero.
    * \param[in] actual_swa_deg Measured steering-wheel angle [deg], from CAN.

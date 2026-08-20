@@ -7,12 +7,7 @@
 
 namespace adas {
 namespace flowpilot {
-/**
- * \brief Wrapper over the acados-generated lateral MPC solver.
- *
- * \details Owns the generated capsule and its workspace, so the rest of the code neither includes the
- * generated headers nor manages their lifetime. Present only when the build has acados.
- */
+/** Wrapper over the acados-generated lateral MPC solver. */
 class AcadosLatMpc {
 public:
   struct Result {
@@ -33,19 +28,31 @@ public:
     double steering_rate = 400.0;
   };
 
+  /// Creates the acados solver instance; check available() before use.
   AcadosLatMpc();
   ~AcadosLatMpc();
   AcadosLatMpc(const AcadosLatMpc&) = delete;
   AcadosLatMpc& operator=(const AcadosLatMpc&) = delete;
 
+  /// \return False when the acados capsule failed to build.
   bool available() const;
 
+  /// \return Number of horizon nodes the generated solver was built with.
   static int horizonNodes();
+  /// \return Time of node \p i along the horizon [s].
   static double nodeTime(int i);
 
+  /// Replace the cost weights.
   void setWeights(const Weights& w);
+  /// Drop the warm start.
   void reset();
 
+  /**
+   * \brief Solve one horizon.
+   * \param[in] v_ego Speed [m/s]; \p rotation_radius lever arm [m]; \p yaw_rate measured [rad/s].
+   * \param[in] y_ref Lateral reference at the horizon nodes [m].
+   * \return Curvature sequence and solver status.
+   */
   Result solve(double v_ego, double rotation_radius, double yaw_rate, const std::vector<double>& y_ref,
                const std::vector<double>& psi_ref, const std::vector<double>& r_ref, double steer_delay_s);
 

@@ -204,7 +204,7 @@ typedef double cl_double;
 #define CL_INT_MIN (-2147483647 - 1)
 #define CL_UINT_MAX 0xffffffffU
 #define CL_LONG_MAX ((cl_long)0x7FFFFFFFFFFFFFFFLL)
-#define CL_LONG_MIN ((cl_long)-0x7FFFFFFFFFFFFFFFLL - 1LL)
+#define CL_LONG_MIN ((cl_long) - 0x7FFFFFFFFFFFFFFFLL - 1LL)
 #define CL_ULONG_MAX ((cl_ulong)0xFFFFFFFFFFFFFFFFULL)
 
 #define CL_FLT_DIG 6
@@ -296,7 +296,7 @@ typedef double cl_double __attribute__((aligned(8)));
 #define CL_INT_MIN (-2147483647 - 1)
 #define CL_UINT_MAX 0xffffffffU
 #define CL_LONG_MAX ((cl_long)0x7FFFFFFFFFFFFFFFLL)
-#define CL_LONG_MIN ((cl_long)-0x7FFFFFFFFFFFFFFFLL - 1LL)
+#define CL_LONG_MIN ((cl_long) - 0x7FFFFFFFFFFFFFFFLL - 1LL)
 #define CL_ULONG_MAX ((cl_ulong)0xFFFFFFFFFFFFFFFFULL)
 
 #define CL_FLT_DIG 6

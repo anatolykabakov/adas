@@ -7,6 +7,7 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
+/// \return Largest curvature [1/m] on the path between \p from_m and \p to_m ahead.
 inline double maxCurvatureAhead(const std::vector<Vec2>& polyline, double from_m, double to_m, double window_m = 25.0,
                                 double percentile = 0.8)
 {
@@ -61,6 +62,7 @@ inline double maxCurvatureAhead(const std::vector<Vec2>& polyline, double from_m
   return kappas[idx];
 }
 
+/// \return Speed [m/s] keeping lateral acceleration under \p a_lat_max on curvature \p kappa.
 inline double curvatureSpeedLimit(double kappa, double a_lat_max, double v_max)
 {
   const double k = std::abs(kappa);

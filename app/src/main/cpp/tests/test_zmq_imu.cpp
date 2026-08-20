@@ -18,7 +18,7 @@ TEST(ZMQIMUTest, StartAdasAppAndConnect)
 
   GTEST_SKIP() << "Test requires USB Panda device, skipping on Linux";
 
-  AdasApp app(-1);
+  AdasApp app(-1, "", AdasApp::Config{});
   bool started = app.start();
   EXPECT_TRUE(started) << "AdasApp should start successfully";
   LOGI("AdasApp started successfully");

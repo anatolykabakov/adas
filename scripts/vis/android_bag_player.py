@@ -117,30 +117,11 @@ class AndroidBagPlayer:
                 break
             yield ts, payload
 
-    def single_type_generator(
-        self,
-        topic_name: str,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
-    ) -> Generator[Any, None, None]:
-        for _, message in self.single_type_generator_with_ts(
-            topic_name, start_time, end_time
-        ):
-            yield message
-
     def add_callback(
         self, topic_name: str, callback: Callable[[str, Any, int], None]
     ) -> None:
         self._callbacks[topic_name] = callback
         self._enabled_topics.add(topic_name)
-
-    def remove_callback(self, topic_name: str) -> None:
-        self._callbacks.pop(topic_name, None)
-        self._enabled_topics.discard(topic_name)
-
-    def clear_callbacks(self) -> None:
-        self._callbacks.clear()
-        self._enabled_topics.clear()
 
     def play(
         self,

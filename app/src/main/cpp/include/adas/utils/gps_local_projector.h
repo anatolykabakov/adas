@@ -10,21 +10,17 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-/**
- * \brief Projects latitude and longitude into a local ENU plane anchored at the first fix.
- *
- * \details Everything downstream works in metres. The anchor is the run's first fix, which is why a pose
- * recorded by the device and a pose replayed offline differ by a rigid translation unless the same anchor
- * is used.
- */
+/** Projects latitude and longitude into a local ENU plane anchored at the first fix. */
 class GpsLocalProjector {
 public:
+  /// Forget the origin; the next fix sets a new one.
   void reset()
   {
     have_origin_ = false;
     lat0_deg_ = lon0_deg_ = 0;
   }
 
+  /// Project a fix into the local plane anchored at the first one. \return Sample in metres.
   GpsSample project(int64_t timestamp_us, double lat_deg, double lon_deg, bool valid_fix = true, double speed_mps = 0.0,
                     double bearing_deg = 0.0)
   {
@@ -60,8 +56,11 @@ public:
     return s;
   }
 
+  /// \return True once the origin is set.
   bool haveOrigin() const { return have_origin_; }
+  /// \return Origin latitude [deg].
   double lat0() const { return lat0_deg_; }
+  /// \return Origin longitude [deg].
   double lon0() const { return lon0_deg_; }
 
 private:

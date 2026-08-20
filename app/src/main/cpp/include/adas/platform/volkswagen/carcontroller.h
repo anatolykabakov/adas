@@ -15,6 +15,7 @@ struct Actuators {
   std::optional<int> steerTorqueCNm;
 };
 
+/// panda's driver-torque limit. \return The torque after clamping against the driver's input.
 int applyDriverSteerTorqueLimits(int apply_torque, float driver_torque, int apply_steer_last);
 
 struct CarControl {
@@ -41,13 +42,7 @@ struct CarStateView {
   bool brakePressed = false;
 };
 
-/** Whether lateral torque may go to the rack this frame.
- *
- *  Pure on purpose: this is the decision that puts torque on the wheel, and as a service method it needed a
- *  USB handle to reach, so nothing tested it directly. Upstream's other two conditions — standstill
- *  (`|vEgo| < 0.3`, their `MIN_LATERAL_CONTROL_SPEED`) and the EPS fault check — are enforced inside
- *  `CarController::update` on every frame and deliberately not repeated here; duplicating them would create
- *  two places to keep in step. */
+/** Whether lateral torque may go to the rack this frame. */
 inline bool lateralActuationAllowed(bool controls_allowed, bool always_on, const CarStateView& cs)
 {
   if (controls_allowed)
@@ -57,19 +52,17 @@ inline bool lateralActuationAllowed(bool controls_allowed, bool always_on, const
   return cs.cruiseAvailable && cs.gearKnown && !cs.gearReverse;
 }
 
-/**
- * \brief Turns an actuation request into MQB CAN frames.
- *
- * \details Owns the rate limits, the frame counters and the checksums that the car and the panda both
- * check: a frame with a stale counter is silently dropped by the EPS, and the caller has no way to notice.
- */
+/** Turns an actuation request into MQB CAN frames. */
 class CarController {
 public:
   CarController() = default;
 
+  /// One 100 Hz tick. \return HCA (and HUD/button) frames to send this tick.
   std::vector<can_frame> update(const CarControl& CC, const CarStateView& CS);
 
+  /// \return Torque last commanded [unit].
   int applySteerLast() const { return apply_steer_last_; }
+  /// \return Tick counter, drives the 2-frame HCA step.
   int frame() const { return frame_; }
 
 private:

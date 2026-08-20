@@ -18,12 +18,7 @@ import adas.proto.Messages;
 import adas.app.bridge.ProtoUtils;
 import adas.app.bridge.ZMQBridgeService;
 
-/**
- * Vision infer is single-flight on {@code SupercomboInfer}, but camera keeps a
- * one-slot <b>latest</b> frame. While busy, new frames overwrite the slot; when
- * infer finishes, the latest pending frame starts immediately (no wait for the
- * next ImageReader tick).
- */
+/** Vision infer is single-flight on {@code SupercomboInfer}, but camera keeps a one-slot <b>latest</b> frame. */
 public class VisionPipeline {
     private static final String TAG = "VisionPipeline";
 
@@ -83,13 +78,7 @@ public class VisionPipeline {
         });
     }
 
-    /**
-     * Whether vision sees the road — that is, whether what it produces can be trusted.
-     *
-     * <p>For now this is only input sharpness: out of focus there are no lane lines, yet the numbers
-     * come out plausible. The metric is shared by both runners — it is computed where the frame is
-     * prepared. Line probabilities belong here too in time: the same question from the other side.
-     */
+    /** Whether vision sees the road — that is, whether what it produces can be trusted. */
     public boolean seesRoad() {
         final float score = ModelCalibWarp.lastFocusScore();
         // Zero means "not measured yet" — nothing to forbid on the first frames.
@@ -237,6 +226,11 @@ public class VisionPipeline {
         }
     }
 
+    /** Capture stamp of the previous processed frame, for the model's velocity scale. */
+    private long prevCaptureTsMs;
+    /** Smoothed completion rate; a single late frame must not throttle the detector. */
+    private float visionHzEma;
+
     private void publishControl(SupercomboOnnxRunner.Result res, int id) {
         if (res == null || res.lanes == null) {
             return;
@@ -244,8 +238,21 @@ public class VisionPipeline {
         LaneLines lanes = res.lanes;
         overlay.setLanes(lanes);
         if (res.modelLong != null) {
+            // The interval between the two frames the model just looked at. Its velocity outputs are
+            // per its own 50 ms training step, so the overlay needs this to read them (ModelLongParse).
+            if (prevCaptureTsMs > 0 && lanes.captureTimestampMs > prevCaptureTsMs) {
+                overlay.setFrameDtMs((float) (lanes.captureTimestampMs - prevCaptureTsMs));
+            }
             overlay.setModelLong(res.modelLong);
         }
+        // The detector throttles itself on this. Reported from here because this is the one place that
+        // knows how fast frames are actually completing, rather than how fast they arrive.
+        if (prevCaptureTsMs > 0 && lanes.captureTimestampMs > prevCaptureTsMs) {
+            final float dt = lanes.captureTimestampMs - prevCaptureTsMs;
+            visionHzEma = visionHzEma <= 0f ? 1000f / dt : 0.9f * visionHzEma + 0.1f * (1000f / dt);
+            TrafficVisionPipeline.reportVisionHz(visionHzEma);
+        }
+        prevCaptureTsMs = lanes.captureTimestampMs;
         Messages.ZMQMessage ctrlMsg = ProtoUtils.createLaneLinesMessage(lanes, false);
         if (ctrlMsg != null) {
             ZMQBridgeService.publishToNative(ctrlMsg);

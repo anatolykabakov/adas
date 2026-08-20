@@ -45,14 +45,7 @@ void CameraCalib::configure()
        topics::kCameraIntrinsics, topics::kCameraCalib, topics::kCameraCalibDebug);
 }
 
-/**
- * \brief Adopt the intrinsics the device reports, once they look usable.
- *
- * \details The config value is a prior, not a measurement: it is right for the phone it was written
- * for and silently wrong for any other. A report is taken only when it carries a plausible focal
- * length — a zero or a near-zero means the device has the field but never filled it, which is common
- * enough that Camera2 documents it.
- */
+/** Adopt the intrinsics the device reports, once they look usable. */
 void CameraCalib::onIntrinsics(const adas::proto::CameraIntrinsics& msg)
 {
   if (msg.intrinsic_calibration_size() < 4)
@@ -64,15 +57,7 @@ void CameraCalib::onIntrinsics(const adas::proto::CameraIntrinsics& msg)
   if (!(fx > 1.0) || !(fy > 1.0))
     return;
 
-  // Units. The numbers must belong to the same frame the rest of the system works in, and this is
-  // not a formality: on 2026-08-16 the intrinsics of the downscaled bag frame arrived here (fx
-  // 475.5, principal point 320x180), were taken as parameters of the 1280x720 frame, and the model
-  // warp built a projection at half the focal length with the centre in a corner. There are no lane
-  // lines in such a frame, and the drive merely looks unsuccessful.
-  //
-  // The check uses what the message says about itself: the principal point must sit near the middle
-  // of the declared frame. The tolerance is generous — a real principal point drifts off centre, but
-  // not by half a frame.
+  // Units.
   const double w = msg.capture_width();
   const double h = msg.capture_height();
   if (w > 1.0 && h > 1.0) {

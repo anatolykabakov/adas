@@ -1,9 +1,5 @@
 package adas.app.vision;
 
-import adas.app.AdasConfig;
-import adas.app.TimeUtil;
-import adas.app.bridge.ProtoUtils;
-import adas.app.bridge.ZMQBridgeService;
 import android.content.Context;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -11,20 +7,21 @@ import android.os.Process;
 import android.util.Log;
 
 import adas.app.Logger;
-import adas.proto.Messages;
 import adas.app.bridge.ProtoUtils;
 import adas.app.bridge.ZMQBridgeService;
+import adas.proto.Messages;
 
-/**
- * Low-frequency traffic YOLO on a dedicated {@code TrafficYoloInfer} thread.
- * Never shares {@code SupercomboInfer}. Camera path should call
- * {@link #wantsFrame()} before {@link YuvFrame#duplicate()} so the control
- * camera callback is not charged for YOLO copies at full FPS.
- */
+/** Traffic-light detection on its own background thread, throttled to protect the driving loop. */
 public final class TrafficVisionPipeline {
     private static final String TAG = "TrafficVision";
-    /** Min gap between infer starts (ms). ~3 Hz. */
+    /** Detector period [ms]; ~3 Hz is the measured safe duty next to supercombo. */
     public static final long PERIOD_MS = 333;
+
+    /** Back off when the vision loop falls below this share of its target rate. */
+    private static final float VISION_HEALTH_FRAC = 0.75f;
+    private static final int UNHEALTHY_TO_BACKOFF = 3;
+    private static final int HEALTHY_TO_RESTORE = 20;
+    private static final long MAX_BACKOFF = 4;
 
     private final HandlerThread thread;
     private final Handler handler;
@@ -38,49 +35,48 @@ public final class TrafficVisionPipeline {
     private long lastStartMs;
     private int frameId;
 
+    /** Period multiplier while the vision loop is unhealthy; 1 = normal. */
+    private volatile long backoff = 1;
+    private int unhealthy;
+    private int healthy;
+
+    /** Vision rate, reported by {@link VisionPipeline}; the baseline is the camera's target rate. */
+    private static volatile float visionHz;
+
+    /** \brief Called from the vision path once per processed frame. Cheap and lock-free. */
+    public static void reportVisionHz(float hz) {
+        if (!(hz > 1f) || hz > 200f) {
+            return;
+        }
+        visionHz = hz;
+    }
+
     public TrafficVisionPipeline(Context context, LaneOverlayView overlay) throws Exception {
         this.overlay = overlay;
-        boolean signs = adas.app.AdasConfig.visionTrafficSignsEnabled(context);
-        boolean lights = adas.app.AdasConfig.visionTrafficLightsEnabled(context);
-        this.runner = new TrafficYoloRunner(context.getApplicationContext(), "auto", signs, lights);
+        runner = new TrafficYoloRunner(context.getApplicationContext(), "auto");
         thread = new HandlerThread("TrafficYoloInfer", Process.THREAD_PRIORITY_BACKGROUND);
         thread.start();
         handler = new Handler(thread.getLooper());
-        Log.i(TAG, "ready period=" + PERIOD_MS
-                + "ms thread=TrafficYoloInfer signs=" + signs + " lights=" + lights
-                + " (isolated from SupercomboInfer)");
+        Log.i(TAG, "ready lights@" + (1000 / PERIOD_MS) + "Hz (one background thread, one net in flight)");
     }
 
-    /**
-     * True when the next camera frame should be copied and submitted.
-     * Cheap; call on the camera callback before {@link YuvFrame#duplicate()}.
-     */
+    /** \brief True when the next camera frame should be copied and submitted. */
     public boolean wantsFrame() {
         synchronized (lock) {
-            if (busy) {
-                return false;
-            }
-            return adas.app.TimeUtil.nowMs() - lastStartMs >= PERIOD_MS;
+            return !busy && adas.app.TimeUtil.nowMs() - lastStartMs >= PERIOD_MS * backoff;
         }
     }
 
-    /**
-     * Takes ownership of {@code frame}. Prefer calling only after {@link #wantsFrame()}
-     * (or when this is the sole YUV consumer).
-     */
+    /** \brief Takes ownership of {@code frame}; call only after {@link #wantsFrame()}. */
     public void submitYuv(YuvFrame frame, long captureTsMs) {
         if (frame == null) {
             return;
         }
-        final long ts = captureTsMs > 0 ? captureTsMs : adas.app.TimeUtil.nowMs();
         synchronized (lock) {
             pending = frame;
-            pendingTs = ts;
-            if (busy) {
-                return;
-            }
-            long now = adas.app.TimeUtil.nowMs();
-            if (now - lastStartMs < PERIOD_MS) {
+            pendingTs = captureTsMs > 0 ? captureTsMs : adas.app.TimeUtil.nowMs();
+            final long now = adas.app.TimeUtil.nowMs();
+            if (busy || now - lastStartMs < PERIOD_MS * backoff) {
                 return;
             }
             busy = true;
@@ -105,19 +101,41 @@ public final class TrafficVisionPipeline {
         }
         try {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+            updateBackoff();
             TrafficYoloRunner.Result res = runner.run(frame);
             publish(res, id, ts);
             Log.i(TAG, String.format(java.util.Locale.US,
-                    "infer total=%dms prep=%d ort=%d decode=%d ocr=%d dets=%d ep=%s",
-                    res.inferMs, res.prepMs, res.ortMs, res.decodeMs, res.ocrMs,
-                    res.dets != null ? res.dets.size() : 0, res.ep));
+                    "lights total=%dms prep=%d ort=%d decode=%d dets=%d ep=%s vision=%.1fHz x%d",
+                    res.inferMs, res.prepMs, res.ortMs, res.decodeMs,
+                    res.dets != null ? res.dets.size() : 0, res.ep, visionHz, backoff));
         } catch (Exception e) {
             Log.e(TAG, "infer failed", e);
         } finally {
             synchronized (lock) {
                 busy = false;
-                // Next sample comes from camera after PERIOD_MS via wantsFrame().
             }
+        }
+    }
+
+    /** Widen or restore the period; runs on the worker, so the counters need no lock. */
+    private void updateBackoff() {
+        final float hz = visionHz;
+        final boolean ok = hz <= 0f || hz >= VISION_HEALTH_FRAC * adas.app.sensors.CameraHandler.getTargetFps();
+        if (ok) {
+            unhealthy = 0;
+            if (backoff > 1 && ++healthy >= HEALTHY_TO_RESTORE) {
+                healthy = 0;
+                backoff = Math.max(1, backoff / 2);
+                Log.i(TAG, "vision recovered — detector back to x" + backoff);
+            }
+            return;
+        }
+        healthy = 0;
+        if (++unhealthy >= UNHEALTHY_TO_BACKOFF && backoff < MAX_BACKOFF) {
+            unhealthy = 0;
+            backoff = Math.min(MAX_BACKOFF, backoff * 2);
+            Log.w(TAG, "vision at " + String.format(java.util.Locale.US, "%.1f", hz)
+                    + " Hz — detector period x" + backoff);
         }
     }
 
@@ -125,13 +143,8 @@ public final class TrafficVisionPipeline {
         if (res == null) {
             return;
         }
-        long e2e = 0;
-        if (captureTsMs > 0) {
-            e2e = Math.max(0, adas.app.TimeUtil.nowMs() - captureTsMs);
-        }
         if (overlay != null) {
             overlay.setTrafficDets(res.dets);
-            overlay.setTrafficLatency(res.prepMs, res.ortMs, res.decodeMs, res.ocrMs, res.inferMs, (int) e2e);
         }
         Messages.ZMQMessage msg = ProtoUtils.createTrafficDetectionsMessage(res, id, captureTsMs);
         ZMQBridgeService.publishToNative(msg);

@@ -25,11 +25,11 @@ EARTH_R_M = 6371000.0
 
 _ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MAP = _ROOT / "maps" / "Moscow.osm.admap"
-ASSET_MAP = _ROOT / "app" / "src" / "main" / "assets" / "Moscow.osm.admap"
+# The APK no longer carries the map; the underlay reads maps/ only.
 
 
 def default_map() -> Path:
-    return DEFAULT_MAP if DEFAULT_MAP.is_file() else ASSET_MAP
+    return DEFAULT_MAP
 
 
 class OsmLayer:

@@ -16,13 +16,7 @@ using HostOutMsg = std::variant<LaneKeepOutput, LocalizationPose, CameraCalibrat
                                 adas::proto::SteerCommand>;
 
 namespace services {
-/**
- * \brief Collects internal-bus messages for the host application.
- *
- * \details The bus is C++ and the UI is Java or Python; this service is the single place where messages
- * cross that line. It subscribes to what a host has to display or record and queues the payloads for
- * `AdasApp::popMessages`, so the host polls one queue instead of registering callbacks per topic.
- */
+/** Collects internal-bus messages for the host application. */
 class InternalSubscriber : public adas::middleware::Service {
 public:
   void configure() override;
@@ -31,11 +25,7 @@ public:
 
   /**
    * \brief Drains everything queued since the previous call.
-   *
    * \return Payloads in arrival order; empty when nothing arrived.
-   *
-   * \note The queue is bounded: a host that stops polling loses the oldest messages rather than growing
-   * memory without limit, since the alternative is an out-of-memory kill on the car.
    */
   std::vector<HostOutMsg> popMessages();
 

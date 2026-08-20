@@ -35,6 +35,7 @@ enum class EpsHcaStatus : uint8_t {
   Active = 5,
 };
 
+/// \return EPS HCA status as text for logs.
 inline const char* epsHcaStatusName(uint8_t s)
 {
   switch (s) {
@@ -55,6 +56,7 @@ inline const char* epsHcaStatusName(uint8_t s)
   }
 }
 
+/// \return True when the EPS reports a state that accepts torque.
 inline bool epsHcaAllowsSteer(uint8_t s)
 {
   return s == static_cast<uint8_t>(EpsHcaStatus::Ready) || s == static_cast<uint8_t>(EpsHcaStatus::Active);

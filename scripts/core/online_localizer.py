@@ -48,17 +48,6 @@ class OnlineImuProcessor:
         self.rotation_matrix: Optional[np.ndarray] = None
         self.orientation_info: Optional[dict] = None
 
-    def set_speed(self, speed_mps: float) -> None:
-        self._speed_mps = float(speed_mps)
-
-    def reset_calibration(self) -> None:
-        self._orient_buf.clear()
-        self._bias_buf.clear()
-        self.ready = False
-        self.bias = None
-        self.rotation_matrix = None
-        self.orientation_info = None
-
     def _try_finalize(self) -> None:
         if self.ready:
             return
@@ -114,45 +103,6 @@ class OnlineImuProcessor:
         if self.invert_yaw_rate:
             gz_v = -float(gz_v)
         return float(gz_v)
-
-    def process_batch(
-        self,
-        imu_data: np.ndarray,
-        speeds_mps: np.ndarray,
-    ) -> dict:
-        self.reset_calibration()
-        n = len(imu_data)
-        yaw = np.full(n, np.nan, dtype=np.float64)
-        for i in range(n):
-            self.set_speed(float(speeds_mps[i]) if i < len(speeds_mps) else 0.0)
-            row = imu_data[i]
-            yr = self.push(
-                float(row[1]),
-                float(row[2]),
-                float(row[3]),
-                float(row[4]),
-                float(row[5]),
-                float(row[6]),
-                float(row[7]) if row.shape[0] > 7 else 0.0,
-                float(row[8]) if row.shape[0] > 8 else 0.0,
-                float(row[9]) if row.shape[0] > 9 else 0.0,
-            )
-            if yr is not None:
-                yaw[i] = yr
-        valid = np.isfinite(yaw)
-        if np.any(valid):
-            first = float(yaw[np.argmax(valid)])
-            yaw = np.where(valid, yaw, first)
-        else:
-            yaw = np.zeros(n, dtype=np.float64)
-        return {
-            "yaw_rate": yaw,
-            "imu_calibrated": imu_data,
-            "bias": self.bias,
-            "rotation_matrix": self.rotation_matrix,
-            "orientation_info": self.orientation_info,
-            "ready": self.ready,
-        }
 
 
 @dataclass
@@ -304,99 +254,3 @@ class OnlineVehicleEkf:
             float(pose.ekf_x),
             float(pose.ekf_y),
         )
-
-    def position_errors(self) -> Tuple[float, float]:
-        b = self.buffers
-        if len(b.ref_x) < 2:
-            return float("nan"), float("nan")
-        ref = np.stack([b.ref_x, b.ref_y], axis=1)
-        ekf = np.stack([b.ekf_x, b.ekf_y], axis=1)
-        odom = np.stack([b.odom_x, b.odom_y], axis=1)
-        e_ekf = float(np.sqrt(np.mean(np.sum((ekf - ref) ** 2, axis=1))))
-        e_odom = float(np.sqrt(np.mean(np.sum((odom - ref) ** 2, axis=1))))
-        return e_ekf, e_odom
-
-
-def draw_trajectory_panel(
-    buffers: TrajectoryBuffers,
-    *,
-    size: int = 480,
-    margin: int = 40,
-    title: str = "Trajectory  ref / Odom / EKF",
-    ref_label: str = "GT",
-) -> np.ndarray:
-    """Top-down world plot (bag / sim HUD)."""
-    canvas = np.full((size, size, 3), 30, dtype=np.uint8)
-    cv2.putText(
-        canvas,
-        title,
-        (8, 18),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.45,
-        (220, 220, 220),
-        1,
-        cv2.LINE_AA,
-    )
-
-    series: List[Tuple[str, Sequence[float], Sequence[float], Tuple[int, int, int]]] = [
-        (ref_label, buffers.ref_x, buffers.ref_y, (255, 120, 50)),
-        ("Odom", buffers.odom_x, buffers.odom_y, (80, 200, 80)),
-        ("EKF", buffers.ekf_x, buffers.ekf_y, (0, 140, 255)),
-    ]
-
-    xs_all: List[float] = []
-    ys_all: List[float] = []
-    for _, xs, ys, _ in series:
-        if len(xs) >= 1:
-            xs_all.extend(xs)
-            ys_all.extend(ys)
-    if len(xs_all) < 1:
-        return canvas
-
-    xmin, xmax = float(min(xs_all)), float(max(xs_all))
-    ymin, ymax = float(min(ys_all)), float(max(ys_all))
-    span = max(xmax - xmin, ymax - ymin, 5.0)
-    cx = 0.5 * (xmin + xmax)
-    cy = 0.5 * (ymin + ymax)
-    scale = (size - 2 * margin) / span
-
-    def to_px(x: float, y: float) -> Tuple[int, int]:
-        u = int(round((x - cx) * scale + size * 0.5))
-        v = int(round(size * 0.5 - (y - cy) * scale))
-        return u, v
-
-    o = to_px(0.0, 0.0)
-    cv2.line(canvas, (0, o[1]), (size, o[1]), (50, 50, 50), 1)
-    cv2.line(canvas, (o[0], 0), (o[0], size), (50, 50, 50), 1)
-
-    legend_y = 36
-    for name, xs, ys, color in series:
-        if len(xs) < 2:
-            continue
-        pts = np.array(
-            [to_px(float(x), float(y)) for x, y in zip(xs, ys)], dtype=np.int32
-        )
-        cv2.polylines(canvas, [pts], False, color, 2, cv2.LINE_AA)
-        cv2.circle(canvas, tuple(pts[-1]), 5, color, -1, cv2.LINE_AA)
-        cv2.putText(
-            canvas,
-            name,
-            (8, legend_y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.4,
-            color,
-            1,
-            cv2.LINE_AA,
-        )
-        legend_y += 16
-
-    if buffers.ref_x:
-        cv2.circle(
-            canvas,
-            to_px(buffers.ref_x[0], buffers.ref_y[0]),
-            6,
-            (200, 200, 200),
-            1,
-            cv2.LINE_AA,
-        )
-    return canvas

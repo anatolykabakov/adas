@@ -13,9 +13,9 @@
 /// Transport to a panda, so the driver does not depend on it being USB.
 class PandaCommsHandle {
 public:
-  PandaCommsHandle(std::string serial){};
-  PandaCommsHandle(int fd){};
-  virtual ~PandaCommsHandle(){};
+  PandaCommsHandle(std::string serial) {};
+  PandaCommsHandle(int fd) {};
+  virtual ~PandaCommsHandle() {};
   virtual void cleanup() = 0;
 
   std::string hw_serial;

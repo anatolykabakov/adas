@@ -48,6 +48,31 @@ TEST(PandaSafety, IgnitionStickyHysteresisAndDebounce)
   EXPECT_TRUE(s.updateIgnitionSticky(true, 10000, 6000));
 }
 
+/**
+ * A re-seated panda is a board we have never configured, and the supervisor must treat it as one — while
+ * keeping what belongs to the car. Both halves matter: forgetting too little leaves the board without the
+ * ALKA bit, forgetting too much re-arms the ignition debounce and costs three seconds of actuation.
+ */
+TEST(PandaSafety, ReseatForgetsTheBoardAndKeepsTheCar)
+{
+  using C = volkswagen::MqbSafetyConstants;
+  PandaSafetySupervisor s;
+  s.setAlternativeExperience(C::kAltExpDisableDisengageOnGas | C::kAltExpAlka);
+  ASSERT_TRUE(s.updateIgnitionSticky(true, 12000, 0)) << "the car is on before the phone slept";
+
+  s.resetBoardState();
+
+  // Board state: forgotten, so the next tick re-inits and nothing may actuate until it has.
+  EXPECT_EQ(s.lastSafetyMode(), C::kNoOutput);
+  EXPECT_FALSE(s.lastControlsAllowed());
+  EXPECT_FALSE(s.safetyConfigured());
+  // Our own intent is not board state — it is what we are about to write to the new board.
+  EXPECT_EQ(s.alternativeExperience(), C::kAltExpDisableDisengageOnGas | C::kAltExpAlka);
+  // Ignition belongs to the car: the debounce is not re-armed, so a low reading right after the reseat
+  // starts the timer rather than declaring the car off.
+  EXPECT_TRUE(s.updateIgnitionSticky(false, 10000, 100));
+}
+
 TEST(PandaSafety, ConstantsMatchContract)
 {
   using C = volkswagen::MqbSafetyConstants;
@@ -234,6 +259,22 @@ TEST(CarPlatformFactory, KnownNameBuildsAndUnknownRefuses)
   EXPECT_EQ(adas::platform::makeCarPlatform("", opts), nullptr);
   EXPECT_EQ(adas::platform::makeCarPlatform("honda_civic", opts), nullptr);
   EXPECT_EQ(adas::platform::makeCarPlatform("vw_golf_7", opts), nullptr) << "a near miss is still a miss";
+}
+
+/**
+ * Whatever the brand, a freshly seated descriptor must leave the car unable to actuate: the safety model
+ * lives on the board, and a board we have not configured has not got it.
+ */
+TEST(CarPlatformFactory, ReseatingLeavesEveryCarUnableToActuate)
+{
+  for (const std::string& name : adas::platform::knownCarPlatforms()) {
+    auto car = adas::platform::makeCarPlatform(name, {});
+    ASSERT_NE(car, nullptr) << name;
+    car->configureSafety();
+    car->resetPandaState();
+    EXPECT_FALSE(car->safetyModelOk()) << name << " thinks an unconfigured board is in the right mode";
+    EXPECT_FALSE(car->lateralActuationAllowed()) << name << " would steer through an unconfigured board";
+  }
 }
 
 /** The steering envelope reaches the controller through the neutral interface, not through the brand. */

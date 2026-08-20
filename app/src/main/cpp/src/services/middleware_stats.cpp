@@ -8,8 +8,7 @@ namespace adas {
 namespace services {
 void MiddlewareStats::configure()
 {
-  scheduleTimer(
-      1000, [this] { tick(); }, "tick");
+  scheduleTimer(1000, [this] { tick(); }, "tick");
 }
 
 void MiddlewareStats::tick()

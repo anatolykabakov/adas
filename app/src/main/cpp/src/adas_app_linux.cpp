@@ -23,7 +23,8 @@ int main()
   signal(SIGTERM, signalHandler);
 
   try {
-    g_adas_app = std::make_unique<AdasApp>();
+    // A bench app: no panda (fd -1), no CAN database, stock config. Same as the phone without hardware.
+    g_adas_app = std::make_unique<AdasApp>(-1, "", AdasApp::Config{});
     bool result = g_adas_app->start();
 
     if (result) {

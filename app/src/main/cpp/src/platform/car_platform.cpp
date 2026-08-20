@@ -1,13 +1,12 @@
 #include "adas/platform/car_platform.h"
 
-#include "adas/platform/toyota/toyota_platform.h"
 #include "adas/platform/volkswagen/vw_platform.h"
 #include "adas/utils/logger.h"
 
 namespace adas {
 namespace platform {
 
-std::vector<std::string> knownCarPlatforms() { return {"vw_golf_7_mqb", "volkswagen", "toyota_tss2"}; }
+std::vector<std::string> knownCarPlatforms() { return {"vw_golf_7_mqb", "volkswagen"}; }
 
 std::unique_ptr<CarPlatform> makeCarPlatform(const std::string& name, const CarPlatformOptions& opts)
 {
@@ -16,9 +15,6 @@ std::unique_ptr<CarPlatform> makeCarPlatform(const std::string& name, const CarP
   if (name == "vw_golf_7_mqb" || name == "volkswagen") {
     return std::make_unique<volkswagen::VolkswagenMqb>(opts.dbc_path, opts.speed_filter, opts.cruise_buttons_enabled,
                                                        opts.cruise_tip_cooldown_ms);
-  }
-  if (name == "toyota_tss2" || name == "toyota") {
-    return std::make_unique<toyota::ToyotaTss2>(opts.dbc_path, opts.speed_filter);
   }
   LOGE("makeCarPlatform: unknown vehicle name '%s'", name.c_str());
   return nullptr;

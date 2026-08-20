@@ -16,7 +16,7 @@ the three places a command dies silently: [`LATERAL_CHAIN_RU.md`](LATERAL_CHAIN_
 topology map — where the messages go; that one explains why each step is shaped the way it is.
 
 Related overviews: root [`README.md`](../README.md),
-[`vision/README.md`](..app/src/main/java/adas/app/vision/README.md),
+[`vision/README.md`](../app/src/main/java/adas/app/vision/README.md),
 [`cpp/README.md`](../app/src/main/cpp/README.md), applicability limits —
 [`CONTROLLER_LIMITS.md`](CONTROLLER_LIMITS.md).
 
@@ -85,7 +85,19 @@ Parallel branches (not on the critical torque path, but affect RPY / overlay / b
 | API | Camera2 |
 | Buffer format | `ImageFormat.YUV_420_888` |
 | Resolution | `W×H = 1280×720` |
+| Capture rate | **20 fps by default**, switchable to 30 in the params panel (`vision.camera_fps`) |
 | Session outputs | `ImageReader` + `TextureView` preview |
+
+The rate is not only the vision tempo — it is the spacing of the two frames supercombo reads, and the
+network derives every velocity it reports from the motion between them. It was trained at comma's
+`DT_MDL` = 50 ms. Measured by feeding the same bag frames at different spacings: at 33 ms the lead's
+speed comes out 0.59× the truth and the pose translation 0.64×, at 66 ms 1.22× and 1.27× — linear in
+the spacing (ratio 2.06 for a 2× change). So a 30 fps camera under-reports the model's velocities by
+about a third, which is the whole of task #37. Hence the default of 20 fps: 50 ms is what the network
+expects. The cost is the quantum on a miss — a cycle overrunning the period drops to every second
+frame, 10 Hz instead of 15 — and with 17.6 ms of GPU inference there is room inside 50 ms. Switching
+rebuilds the capture session (the AE target range belongs to it), so it drops a few frames and is a
+settings action rather than something the code does mid-drive.
 
 On each `onImageAvailable`:
 
@@ -261,7 +273,6 @@ Controller choice — `vehicle.lane_keep_controller` in `config.json`:
 | key | planner | κ → wheel angle |
 |---|---|---|
 | `fp` (default) | flowpilot LatMpc port (N=16) + `get_lag_adjusted_curvature` | vehicle model with curvature shortfall (`vehicle_model.h`) |
-| `mpc` | VisionPilot spatial MPC | kinematics |
 | `pp` | Pure Pursuit (below) | pure pursuit geometry |
 
 Common to all: below `min_control_speed_mps` command zeroed, then angle limited by
@@ -353,12 +364,22 @@ Without Panda USB / without `controls_allowed` chain through stage 7 is alive (v
 | Message | UI |
 |-----------|-----|
 | `vision/path` | the reference line, drawn on the road plane — green when lane-anchored, amber when the model plan carries it alone |
-| `control/lane_keep` | steering-limit alert on sustained torque saturation |
-| `controls/steer` | torque bar, enabled |
+| `control/lane_keep` | steering-limit alert on sustained torque saturation; its arrival also drives the status frame's liveness |
+| `controls/steer` | torque bar, enabled; `enabled` picks the status frame colour (green engaged / dark blue disengaged) |
+| `vehicle/state` | speed readout, top centre, from CAN |
+| `vision/lanes` (Java, in-process) | lead chevron with distance and speed |
 | `panda/health` | HCA line (ignition / controls_allowed / ok) |
 | `calibration/camera` | on success or `cal_percent≥50` → params RPY/K → warp + overlay |
 
 CAN online LED: `panda/health` freshness ≤ 500 ms.
+
+**Alerts, 2026-08-19.** The old thin red frame is gone: the frame is now drawn on every tick in the
+status colour (dark blue disengaged, green engaged, amber warning, red critical, grey when nothing has
+arrived for 700 ms), and an alert grows a translucent band across the bottom third with the text
+inside it. On the 7T that moves the alert from 7.5 % of the screen to about 40 %, which is why
+flowpilot's alerts read at a glance and ours did not. Critical alerts also sound, repeating until they
+clear (`ToneGenerator`, silenced with the camera). Every size scales with view width — they were fixed
+pixels, so the same alert was physically smaller on a denser screen.
 
 ---
 

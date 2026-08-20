@@ -9,7 +9,9 @@ public:
   /// `max_age_s <= 0` disables the rule.
   bool update(int64_t now_us, int64_t capture_ts_us, double max_age_s, double& age_s_out);
 
+  /// \return True on the tick the verdict flipped.
   bool justChanged() const { return just_changed_; }
+  /// \return True when the report aged out.
   bool stale() const { return stale_; }
 
 private:
@@ -17,13 +19,7 @@ private:
   bool just_changed_ = false;
 };
 
-/**
- * \brief Turn signal on: the wheel goes back to the driver.
- *
- * There is no lane-change planner, so holding the lane while the driver crosses the marking means
- * fighting them. Control does not come back the moment the signal goes off: the car is still
- * crossing the line then.
- */
+/** Turn signal on: the wheel goes back to the driver. */
 class BlinkerGate {
 public:
   struct Result {
@@ -33,8 +29,10 @@ public:
     bool left = false;
   };
 
+  /// Blinker gate tick. \return Whether steering is suppressed, with the resume delay applied.
   Result update(int64_t now_us, bool left, bool right, double resume_delay_s);
 
+  /// \return Current suppression state.
   bool suppressed() const { return suppressed_; }
 
 private:
@@ -43,17 +41,10 @@ private:
   bool suppressed_ = false;
 };
 
-/**
- * \brief Whether torque is reaching the rack, according to the panda.
- *
- * The two answers when we do not know are deliberately different. Never having heard from a panda
- * means there is none in the loop — a replay, the bindings, a bench — and closing the gate would
- * silence the command in every offline harness we measure with. Having heard from one and then
- * losing it means we are on the car and the device went quiet, in which case it is not passing
- * torque either. So: never heard, open; heard and lost, closed.
- */
+/** Whether torque is reaching the rack, according to the panda. */
 class AssistGate {
 public:
+  /// Record the panda's actuation verdict at \p now_us.
   void onReport(bool allowed, int64_t now_us);
 
   struct Result {
@@ -62,8 +53,10 @@ public:
     bool changed = false;
   };
 
+  /// Assist gate tick. \return Allowed/known given the report age.
   Result update(int64_t now_us, double max_age_s);
 
+  /// \return The last verdict received.
   bool lastReportAllowed() const { return allowed_; }
 
 private:

@@ -18,33 +18,7 @@ import adas.app.vision.SupercomboOnnxRunner;
 import adas.app.vision.SupercomboThneedRunner;
 import adas.app.vision.YuvFrame;
 
-/**
- * Which vision runners this phone can actually use, how fast, and whether they agree.
- *
- * <p>thneed is a recorded GPU run of the network — kernel sources, launch order, buffers — and the
- * driver of this phone compiles those sources at load. So the question for a new phone is not
- * "compile it" but "does it load here, how fast does it run, and does it give the same numbers".
- * That is what this measures. The OpenCL capabilities it also reports are there to explain a
- * failure, not to predict one: this device declares a 64-pixel row-pitch alignment yet happily
- * accepts images with a 128-byte pitch.
- *
- * <p>Two things are reported and both matter. Latency decides whether the phone is usable at all —
- * vision rate sets the setpoint step (see {@code docs/VISION_RATE.md}). The output signature decides
- * whether the fast path may be trusted: a replay that runs but produces different numbers is worse
- * than one that fails, because nothing announces it.
- *
- * <p>Both runners now carry the same network, so their signatures are directly comparable — and on
- * this device they agree to fp16 rounding. That comparison was impossible while the two paths ran
- * different model generations.
- *
- * <pre>
- * adb shell am start -n adas.app/adas.app.ui.SupercomboBenchActivity --ei iters 50 --ei warmup 5
- * adb shell cat /sdcard/adas_models/supercombo_bench.json
- * </pre>
- *
- * Driven by {@code scripts/tools/model_device_probe.py}, which reads the JSON and decides what to put
- * in {@code vision.model_runner}.
- */
+/** Which vision runners this phone can actually use, how fast, and whether they agree. */
 public final class SupercomboBenchActivity extends Activity {
     private static final String TAG = "SupercomboBench";
     private static final String OUT = "/sdcard/adas_models/supercombo_bench.json";
@@ -180,12 +154,7 @@ public final class SupercomboBenchActivity extends Activity {
         return json.toString();
     }
 
-    /**
-     * A compact fingerprint of one model output: enough to tell "same numbers" from "ran but wrong".
-     *
-     * <p>Length, mean and spread catch a replay that produced zeros or noise; the leading values catch
-     * a layout that shifted. Cheap enough to sit in a report and be diffed by eye.
-     */
+    /** A compact fingerprint of one model output: enough to tell "same numbers" from "ran but wrong". */
     private static String signatureJson(float[] out) {
         if (out == null || out.length == 0) {
             return "{\"len\": 0}";
@@ -220,12 +189,7 @@ public final class SupercomboBenchActivity extends Activity {
                 android.os.Build.VERSION.SDK_INT);
     }
 
-    /**
-     * A fixed synthetic frame — a diagonal gradient with a horizon.
-     *
-     * <p>Deliberately not a camera frame: the two runners must see byte-identical input for their
-     * outputs to be comparable at all, and a live camera guarantees they never will.
-     */
+    /** A fixed synthetic frame — a diagonal gradient with a horizon. */
     private static YuvFrame syntheticFrame() {
         final byte[] y = new byte[WIDTH * HEIGHT];
         for (int row = 0; row < HEIGHT; row++) {

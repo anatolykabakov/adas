@@ -26,14 +26,11 @@ python3 bag/bag_report.py ../adas_logs/<заезд>
 | `bag/bag_arc_offset.py` | почему машина не по центру на дуге: сколько от слежения, сколько от опоры |
 | `bag/bag_override_episodes.py` | где водитель перехватывал руль и что в этот момент просил контроллер |
 | `bag/bag_safety_warn.py` | срабатывания FCW / AEB / LDW |
-| `bag/bag_speed_sources.py` | расхождение источников скорости: колёса, фильтр, ГНСС |
 
 ## Сравнение с comma
 
 | скрипт | |
 |---|---|
-| `rlog/rlog_lat_diff.py` | наш поперечный тракт против их логов на той же машине |
-| `rlog/rlog_arc_offset.py` | та же метрика смещения, что `bag_arc_offset`, но по их логам |
 
 Обоим нужен `OPENPILOT_ROOT` — путь к дереву openpilot/dragonpilot, откуда берётся `cereal`.
 
@@ -43,23 +40,14 @@ python3 bag/bag_report.py ../adas_logs/<заезд>
 
 | скрипт | |
 |---|---|
-| `bag/bag_controller_ab.py` | pp против mpc против fp на одном окне записи |
 | `bag/bag_config_sweep.py` | замкнутый перебор настроек удержания полосы |
 | `bag/bag_lane_keep_offline.py` | удержание полосы через симулированный AdasApp |
-| `bag/bag_mpc_sim.py` | замкнутый и теневой симулятор MPC |
-| `bag/bag_feedforward_ab.py` | что изменит другое упреждение — **разомкнуто**, читать как верхнюю границу |
-| `bag/bag_long_replay.py` | правила продольного плана на записи: старое поведение против нового |
-| `bag/bag_long_sim.py` | лид, продольный план и предупреждения из сырого выхода модели |
-| `bag/bag_coast_decel.py` | какое замедление машина даёт без тормозов |
-| `bag/bag_lane_sigma_ab.py` | σ разметки между заездами на сопоставимых условиях |
+| `bag/bag_mpc_sim.py` | окно бега и геометрия полосы — данные для `bag_config_sweep` |
 
 ## Подсистемы
 
 | скрипт | |
 |---|---|
-| `bag/bag_params_learner.py` | что выучил `paramsd`: жёсткость, передаточное, смещение угла |
-| `bag/bag_road_roll.py` | оценка крена дороги |
-| `bag/bag_map_data.py` | кривизна впереди по карте против того, что видит модель |
 | `mapmatch/` | сопоставление трека с картой по форме: поиск, переоценка, эталон |
 
 ## Картинки
@@ -74,7 +62,6 @@ python3 bag/bag_report.py ../adas_logs/<заезд>
 | скрипт | |
 |---|---|
 | `tools/panda_flash.py` | прошивка панды |
-| `tools/steering_calibration.py` | смещение нуля руля |
 | `tools/camera_calib_chessboard.py`, `tools/make_chessboard.py` | интринсики по доске |
 
 ## Сборка и устройство

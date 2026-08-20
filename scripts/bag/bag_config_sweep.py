@@ -142,7 +142,6 @@ def build_app(cfg: dict) -> "pyadas.AdasApp":
     app = pyadas.AdasApp(wheelbase=WHEELBASE)
     app.set_lane_keep_controller(cfg.get("controller", "fp"))
     app.set_lane_keep_max_steer_deg(25.0)
-    app.set_lane_keep_mpc_ema_alphas(1.0, 1.0, 1.0)
     app.set_lane_keep_vehicle_model(
         bool(cfg.get("vm", True)), float(cfg.get("tsf", 0.64))
     )

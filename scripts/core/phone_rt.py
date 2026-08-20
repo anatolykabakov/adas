@@ -100,19 +100,6 @@ class PhoneRtGeometry:
                 pts.append(None)
         return pts
 
-    def project_ego_xy(
-        self,
-        xs: np.ndarray,
-        ys: np.ndarray,
-        *,
-        x_min: float = 1.5,
-        z: Optional[float] = None,
-    ) -> List[Tuple[int, int]]:
-        """PP / HUD: lateral path on plane Z≈camera height (LaneOverlayView.projectEgo)."""
-        z_val = self.camera_height_m if z is None else float(z)
-        zs = np.full_like(np.asarray(xs, dtype=np.float64), z_val)
-        return self.project_device(xs, ys, zs, x_min=x_min, path_lift=False)
-
 
 OverlayGeom = Union["PhoneRtGeometry", object]  # CameraGeometry duck-typed
 

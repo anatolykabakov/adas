@@ -16,6 +16,7 @@ struct PathLateralState {
   int n_points = 0;
 };
 
+/// \return Cross-track error, heading error and curvature of the path near the ego.
 PathLateralState estimatePathLateralState(const std::vector<Vec2>& polyline_ego, double x_min_m = 1.0,
                                           double x_max_m = 12.0);
 

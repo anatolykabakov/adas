@@ -47,13 +47,7 @@ struct __attribute__((packed)) can_header {
   uint8_t checksum : 8;
 };
 
-/**
- * \brief The panda itself: frames in, frames out, health, safety mode.
- *
- * \details A port of upstream's `boardd` down to the packet layout, so the interface is a queue of CAN
- * frames and nothing above it. Knows no car brand: which addresses matter and what the signals mean is
- * decided a layer up.
- */
+/** The panda itself: frames in, frames out, health, safety mode. */
 class Panda {
 public:
   std::unique_ptr<PandaCommsHandle> handle;

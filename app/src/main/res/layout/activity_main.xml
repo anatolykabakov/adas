@@ -211,6 +211,45 @@
                 </RadioGroup>
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingEnd="12dp"
+                    android:text="@string/params_camera_fps"
+                    android:textColor="#CCFFFFFF"
+                    android:textSize="13sp" />
+
+                <RadioGroup
+                    android:id="@+id/cameraFpsGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/fps20"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/params_camera_fps_20"
+                        android:textColor="#FFFFFF" />
+
+                    <RadioButton
+                        android:id="@+id/fps30"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/params_camera_fps_30"
+                        android:textColor="#FFFFFF" />
+                </RadioGroup>
+            </LinearLayout>
+
             <TextView
                 style="@style/ParamsSection"
                 android:text="@string/params_section_logging" />

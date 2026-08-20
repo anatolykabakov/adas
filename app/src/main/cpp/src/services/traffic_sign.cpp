@@ -17,8 +17,7 @@ void TrafficSign::configure()
   });
   subscribe<adas::proto::TrafficDetections>(topics::kTrafficDetections,
                                             [this](const adas::proto::TrafficDetections& m) { onDets(m); });
-  scheduleTimer(
-      100, [this] { tick(); }, "tick");
+  scheduleTimer(100, [this] { tick(); }, "tick");
   LOGI("TrafficSign: %s + chassis → %s (speed limit / TFL / overspeed)", topics::kTrafficDetections,
        topics::kTrafficVision);
 }

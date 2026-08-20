@@ -226,10 +226,6 @@ class LeadTrack:
     a: np.ndarray
     prob_time: float = 0.0
 
-    @property
-    def d_rel(self) -> float:
-        return float(self.x[0]) if self.x.size else 0.0
-
 
 @dataclass
 class ModelLongOut:
@@ -243,9 +239,6 @@ class ModelLongOut:
     pose_vy: float = 0.0
     pose_vz: float = 0.0
     pose_valid: bool = False
-
-    def best_lead(self) -> LeadTrack:
-        return max((self.lead0, self.lead1, self.lead2), key=lambda L: L.prob)
 
 
 LEAD_IDX = ROAD_END
@@ -291,34 +284,6 @@ def _fill_lead(out: np.ndarray, t_offset: int, prob_time: float) -> LeadTrack:
         vs[i] = out[row + 2]
         aas[i] = out[row + 3]
     return LeadTrack(prob=prob, prob_time=prob_time, x=xs, y=ys, v=vs, a=aas)
-
-
-def parse_model_long(out: np.ndarray) -> Optional[ModelLongOut]:
-    """Parse lead + PLAN velocity (+ pose) from flat supercombo output."""
-    res = np.asarray(out, dtype=np.float64).reshape(-1)
-    if res.size < LEAD_PROB_IDX + 2:
-        return None
-    best_i, best_logit = 0, -1e9
-    for i in range(PLAN_MHP_N):
-        logit = float(res[(i + 1) * PLAN_GROUP - 1])
-        if logit > best_logit:
-            best_logit, best_i = logit, i
-    base = best_i * PLAN_GROUP
-    means = res[base : base + PLAN_COLS * TRAJ_N].reshape(TRAJ_N, PLAN_COLS)
-    pose_valid = res.size >= pose_idx_for_output(res.size) + 3
-    pidx = pose_idx_for_output(int(res.size))
-    return ModelLongOut(
-        plan_vx=means[:, 3].copy(),
-        plan_vy=means[:, 4].copy(),
-        plan_vz=means[:, 5].copy(),
-        lead0=_fill_lead(res, 0, 0.0),
-        lead1=_fill_lead(res, 1, 2.0),
-        lead2=_fill_lead(res, 2, 4.0),
-        pose_vx=float(res[pidx]) if pose_valid else 0.0,
-        pose_vy=float(res[pidx + 1]) if pose_valid else 0.0,
-        pose_vz=float(res[pidx + 2]) if pose_valid else 0.0,
-        pose_valid=pose_valid,
-    )
 
 
 def explain_output(out: SupercomboOut) -> str:

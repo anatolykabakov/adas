@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 
 from .lane_projection import CameraGeometry, project_iso_xyz
+from .supercombo_097 import parse_image_yuv  # re-exported: callers import it from here
 from .phone_rt import PhoneRtGeometry, project_overlay_xyz
 from .supercombo_parse import (
     X_IDXS,
@@ -43,9 +44,13 @@ def resolve_supercombo_model(explicit: Optional[str | Path] = None) -> Path:
         p = Path(env_model).expanduser()
         if p.is_file():
             return p
+    # The shipped asset first: it is the network the car runs, and "one network on both paths" only
+    # holds if the offline tools resolve to it too. A stale models/sc_v0.8.x lying around used to win
+    # this race and quietly swap the network under the simulator.
     candidates = [
-        _DEFAULT_DEVICE_MODEL,
         _ASSETS_MODEL,
+        _REPO_MODELS / "supercombo_097_fp32.onnx",
+        _DEFAULT_DEVICE_MODEL,
         _REPO_MODELS / "sc_v0.8.5.onnx",
     ]
     if SUPERCOMBO_DIR is not None:
@@ -57,19 +62,6 @@ def resolve_supercombo_model(explicit: Optional[str | Path] = None) -> Path:
 
 
 DEFAULT_MODEL = resolve_supercombo_model()
-
-
-def parse_image_yuv(frame_yuv_i420: np.ndarray) -> np.ndarray:
-    H = (frame_yuv_i420.shape[0] * 2) // 3
-    W = frame_yuv_i420.shape[1]
-    parsed = np.zeros((6, H // 2, W // 2), dtype=np.uint8)
-    parsed[0] = frame_yuv_i420[0:H:2, 0::2]
-    parsed[1] = frame_yuv_i420[1:H:2, 0::2]
-    parsed[2] = frame_yuv_i420[0:H:2, 1::2]
-    parsed[3] = frame_yuv_i420[1:H:2, 1::2]
-    parsed[4] = frame_yuv_i420[H : H + H // 4].reshape((-1, H // 2, W // 2))
-    parsed[5] = frame_yuv_i420[H + H // 4 : H + H // 2].reshape((-1, H // 2, W // 2))
-    return parsed
 
 
 def make_overlay_geometry(
@@ -115,31 +107,6 @@ def make_overlay_geometry(
         image_height=h,
         intrinsic_matrix=K,
     )
-
-
-def project_xyz(
-    xs: np.ndarray,
-    ys: np.ndarray,
-    zs: np.ndarray,
-    fx: float,
-    fy: float,
-    cx: float,
-    cy: float,
-    camera_height: float,
-    y_sign: float,
-    w: int,
-    h: int,
-    x_min: float = 1.5,
-    pitch_deg: float = 0.0,
-    yaw_deg: float = 0.0,
-    geom: Optional[CameraGeometry] = None,
-) -> List[Tuple[int, int]]:
-    """Ego (X fwd, Y left, Z up) → image via AAD CameraGeometry (pitch/yaw)."""
-    if geom is None:
-        geom = make_overlay_geometry(
-            fx, fy, cx, cy, w, h, camera_height, pitch_deg=pitch_deg, yaw_deg=yaw_deg
-        )
-    return project_iso_xyz(xs, ys, zs, geom, w, h, x_min=x_min, y_sign=y_sign)
 
 
 # Nearest distance drawn for a lane, edge or plan [m]. The lateral projection is fx·y/x, so it runs
@@ -360,18 +327,23 @@ def draw_supercombo_overlay(
 
 
 class SupercomboBev:
-    """Lazy ONNX runner; Android-parity preprocess (calib warp + RNN) + parse."""
+    """supercombo 0.9.7 for offline tools: phone-parity preprocess, recurrence and parse.
+
+    A thin seat for :class:`core.supercombo_097.Supercombo097` — the runtime lives there so the
+    simulator, the auto-labeller and this class cannot drift into three different networks again.
+    What this adds is what the callers here need: a lazy session (so a missing model is a message on
+    the frame, not a crash at startup), a per-frame cache, and the "frames must be consecutive" rule
+    that scrubbing a log breaks.
+    """
 
     def __init__(self, model_path: Optional[Path] = None):
         self.model_path = resolve_supercombo_model(model_path)
-        self._session = None
-        self._names: Optional[Tuple[str, str, str, str, str]] = None
-        self._prev: Optional[np.ndarray] = None
+        self._net = None  # type: Optional[Any]
         self._prev_key: Optional[int] = None
         self._cache_key: Optional[int] = None
         self._cache_out: Optional[SupercomboOut] = None
-        self._rnn = np.zeros((1, 512), np.float32)
         self.error: Optional[str] = None
+        self.ego_speed_mps = 0.0
         # Calib for ModelCalibWarp (phone full-res prior by default).
         self.roll_deg = 0.0
         self.pitch_deg = 0.0
@@ -412,49 +384,8 @@ class SupercomboBev:
         self.cx = float(cx)
         self.cy = float(cy)
         self.use_calib_warp = bool(use_warp)
-        if changed:
-            # Intrinsics / RPY change → temporal stack + RNN invalid.
-            self.reset()
-
-    def _ensure(self) -> bool:
-        if self._session is not None:
-            return True
-        if not self.model_path.is_file():
-            self.error = f"model missing: {self.model_path}"
-            return False
-        try:
-            import onnxruntime as ort
-
-            self._session = ort.InferenceSession(
-                str(self.model_path), providers=["CPUExecutionProvider"]
-            )
-            ins = self._session.get_inputs()
-            outs = self._session.get_outputs()
-            self._names = (
-                ins[0].name,
-                ins[1].name,
-                ins[2].name,
-                ins[3].name,
-                outs[0].name,
-            )
-            self.error = None
-            return True
-        except Exception as e:
-            self.error = str(e)
-            return False
-
-    def reset(self) -> None:
-        self._prev = None
-        self._prev_key = None
-        self._cache_key = None
-        self._cache_out = None
-        self._rnn = np.zeros((1, 512), np.float32)
-
-    def _preprocess_yuv6(self, bgr: np.ndarray) -> np.ndarray:
-        from .model_calib_warp import warp_matrix_deg, warp_to_model
-
-        if self.use_calib_warp:
-            m = warp_matrix_deg(
+        if self._net is not None:
+            self._net.set_calib(
                 self.roll_deg,
                 self.pitch_deg,
                 self.yaw_deg,
@@ -463,14 +394,57 @@ class SupercomboBev:
                 self.cx,
                 self.cy,
             )
-            img = warp_to_model(bgr, m)
-        else:
-            img = cv2.resize(bgr, (512, 256))
-        yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV_I420)
-        return parse_image_yuv(yuv).astype(np.float32)
+        if changed:
+            # Intrinsics / RPY change → temporal stack + recurrence invalid.
+            self.reset()
+
+    def _ensure(self) -> bool:
+        if self._net is not None:
+            return True
+        if not self.model_path.is_file():
+            self.error = f"model missing: {self.model_path}"
+            return False
+        try:
+            from .supercombo_097 import Supercombo097
+
+            net = Supercombo097(self.model_path)
+            net.set_calib(
+                self.roll_deg,
+                self.pitch_deg,
+                self.yaw_deg,
+                self.fx,
+                self.fy,
+                self.cx,
+                self.cy,
+            )
+            ok, measured, expected = net.check_zero_input()
+            if not ok:
+                # The same guard the phone runs at startup. A network that computes something else
+                # does not report an error — it reports plausible numbers about the wrong road.
+                self.error = (
+                    f"zero-input signature {measured[0]:.4f}/{measured[1]:.4f} "
+                    f"≠ expected {expected[0]:.4f}/{expected[1]:.4f}"
+                )
+                return False
+            self._net = net
+            self.error = None
+            return True
+        except Exception as e:
+            self.error = str(e)
+            return False
+
+    def reset(self) -> None:
+        self._prev_key = None
+        self._cache_key = None
+        self._cache_out = None
+        if self._net is not None:
+            self._net.reset()
 
     def infer(
-        self, bgr: np.ndarray, cache_key: Optional[int] = None
+        self,
+        bgr: np.ndarray,
+        cache_key: Optional[int] = None,
+        v_ego: Optional[float] = None,
     ) -> Optional[SupercomboOut]:
         if (
             cache_key is not None
@@ -480,151 +454,36 @@ class SupercomboBev:
             return self._cache_out
         if not self._ensure():
             return None
+        assert self._net is not None
 
-        assert self._session is not None and self._names is not None
-        parsed = self._preprocess_yuv6(bgr)
-        # Temporal pair must be consecutive frames. Skipping (fast play / scrub)
-        # makes lanes lag — duplicate current instead of a stale _prev (Android-like).
+        # The temporal pair must be consecutive frames. Scrubbing or fast play breaks that, and a
+        # stale previous frame makes the lanes lag; start the pair over instead.
         consecutive = (
             cache_key is not None
             and self._prev_key is not None
             and cache_key == self._prev_key + 1
         )
-        if self._prev is None or not consecutive:
-            prev = parsed
-        else:
-            prev = self._prev
-        data = np.stack([prev, parsed], axis=0).reshape(1, 12, 128, 256)
-        self._prev = parsed
+        if cache_key is not None and not consecutive:
+            self._net.reset()
         self._prev_key = cache_key
 
-        desire = np.zeros((1, 8), np.float32)
-        traffic = np.array([[1.0, 0.0]], np.float32)
-        in_imgs, in_desire, in_traffic, in_state, out_name = self._names
-        (out,) = self._session.run(
-            [out_name],
-            {
-                in_imgs: data,
-                in_desire: desire,
-                in_traffic: traffic,
-                in_state: self._rnn,
-            },
-        )
-        flat = out.reshape(-1)
-        # Recurrent GRU state — last 512 floats (Android SupercomboOnnxRunner).
-        if flat.size >= 512:
-            self._rnn = flat[-512:].astype(np.float32).reshape(1, 512).copy()
+        if not self.use_calib_warp:
+            # No calibration to warp with: hand the model a plain resize, as before.
+            img = cv2.resize(bgr, (512, 256))
+            yuv6 = parse_image_yuv(cv2.cvtColor(img, cv2.COLOR_BGR2YUV_I420))
+            flat = self._net.run_frame6(
+                yuv6, yuv6, self.ego_speed_mps if v_ego is None else float(v_ego)
+            )
+        else:
+            flat = self._net.run_bgr(
+                bgr, self.ego_speed_mps if v_ego is None else float(v_ego)
+            )
+        if flat is None:
+            # First frame of a pair — nothing to parse yet.
+            return None
+
         parsed_out = parse_supercombo(flat)
         if cache_key is not None:
             self._cache_key = cache_key
             self._cache_out = parsed_out
         return parsed_out
-
-    def overlay_on_image(
-        self,
-        bgr: np.ndarray,
-        fx: float,
-        fy: float,
-        cx: float,
-        cy: float,
-        camera_height: float = 1.22,
-        cache_key: Optional[int] = None,
-        y_sign: float = -1.0,
-        min_lane_prob: float = 0.3,
-        pitch_deg: float = 0.0,
-        yaw_deg: float = 0.0,
-        roll_deg: float = 0.0,
-        geom: Optional[CameraGeometry] = None,
-    ) -> np.ndarray:
-        """Draw PLAN (green), lanes (yellow), road edges (red) on camera image.
-
-        ``y_sign=-1``: this ONNX matches Android ``u=cx+fx*Y/X`` (Y positive right).
-        ``project_iso_xyz`` assumes ISO Y-left, so we flip once.
-        """
-        h_img, w_img = bgr.shape[:2]
-        out = self.infer(bgr, cache_key=cache_key)
-        if out is None:
-            cv2.putText(
-                bgr,
-                f"supercombo ERR: {(self.error or '')[:50]}",
-                (8, h_img - 12),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.45,
-                (0, 0, 255),
-                1,
-                cv2.LINE_AA,
-            )
-            return bgr
-
-        if geom is None:
-            geom = make_overlay_geometry(
-                fx,
-                fy,
-                cx,
-                cy,
-                w_img,
-                h_img,
-                camera_height,
-                pitch_deg=pitch_deg,
-                yaw_deg=yaw_deg,
-                roll_deg=roll_deg,
-            )
-
-        # road edges (z≈noise in this ONNX — project on ground like LaneOverlayView)
-        for edge in out.edges:
-            pts = project_iso_xyz(
-                X_IDXS,
-                edge.y,
-                np.zeros_like(edge.y),
-                geom,
-                w_img,
-                h_img,
-                y_sign=y_sign,
-            )
-            draw_pts(bgr, pts, (0, 0, 255), 2)
-
-        draw_runtime_lanes(
-            bgr,
-            out,
-            geom,
-            w_img,
-            h_img,
-            y_sign=y_sign,
-            min_lane_prob=min_lane_prob,
-        )
-
-        # planned path (best of 5 MHP) — this is the primary model output
-        pts = project_iso_xyz(
-            out.plan.x,
-            out.plan.y,
-            out.plan.z,
-            geom,
-            w_img,
-            h_img,
-            x_min=0.5,
-            y_sign=y_sign,
-        )
-        draw_pts(bgr, pts, (0, 255, 0), 3)
-
-        probs = [f"{l.prob:.2f}" for l in out.lanes]
-        cv2.putText(
-            bgr,
-            f"plan hyp#{out.plan.hyp_index}  lanes p={probs}",
-            (8, 20),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.4,
-            (255, 255, 255),
-            1,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            bgr,
-            "green=PLAN  yellow=lanes  red=edges",
-            (8, h_img - 12),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.45,
-            (0, 255, 0),
-            1,
-            cv2.LINE_AA,
-        )
-        return bgr

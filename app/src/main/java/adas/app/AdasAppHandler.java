@@ -23,13 +23,11 @@ class AdasAppInstance implements Runnable {
     private final int fd;
     private final String dbcPath;
     private final String configPath;
-    private final String mapPath;
 
-    public AdasAppInstance(int fd, String dbcPath, String configPath, String mapPath) {
+    public AdasAppInstance(int fd, String dbcPath, String configPath) {
         this.fd = fd;
         this.dbcPath = dbcPath;
         this.configPath = configPath;
-        this.mapPath = mapPath;
     }
 
     @Override
@@ -39,7 +37,7 @@ class AdasAppInstance implements Runnable {
             return;
         }
         try {
-            AdasAppHandler.nativeStart(this.fd, this.dbcPath, this.configPath, this.mapPath);
+            AdasAppHandler.nativeStart(this.fd, this.dbcPath, this.configPath);
             AdasAppHandler.flushPendingLaneKeepParams();
         } catch (Throwable t) {
             Log.e("AdasAppHandler", "nativeStart failed (fd=" + fd + ")", t);
@@ -61,12 +59,28 @@ public class AdasAppHandler extends Service {
 
     private String dbcPath;
     private String configPath;
-    private String mapPath;
 
     private UsbDeviceConnection pandaConnection;
     private boolean nativeStarted;
     /** The descriptor the native side was started with. -1 means "no panda". */
     private int startedFd = -1;
+
+    /** Watchdog for a panda that stopped answering. */
+    private static final long PANDA_DEAD_MS = 3000;
+    /** Time after a (re)start before the watchdog may judge: the native side needs a few seconds. */
+    private static final long PANDA_GRACE_MS = 12000;
+    /** Between attempts. Re-opening a USB device is not free and the cause may be outside our reach. */
+    private static final long PANDA_RETRY_MS = 5000;
+    private static final long PANDA_TICK_MS = 2000;
+    /** How many times to try seating a new descriptor before restarting the native side instead. */
+    private static final int PANDA_RESEAT_MAX = 2;
+
+    private final android.os.Handler pandaWatchdog =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private long lastPandaActionMs;
+    private int pandaReconnects;
+    /** Seat attempts since the last time health actually arrived. */
+    private int reseatStreak;
 
     private BroadcastReceiver usbReceiver = new BroadcastReceiver() {
         @Override
@@ -106,16 +120,6 @@ public class AdasAppHandler extends Service {
         Log.i(TAG, "DBC path: " + dbcPath);
         Log.i(TAG, "Config path: " + configPath);
 
-        // The road map is 4.9 MB, so it is unpacked only when the service that reads it is on. Copying it
-        // unconditionally would cost every install that storage for a node that is off by default.
-        if (AdasConfig.mapDataEnabled(this)) {
-            mapPath = ensureAssetCopied(this, AdasConfig.mapAsset(this), /*force=*/false);
-            Log.i(TAG, "Map path: " + mapPath);
-        } else {
-            mapPath = "";
-            Log.i(TAG, "map_data node off — road map not unpacked");
-        }
-
         IntentFilter filter = new IntentFilter();
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(ACTION_USB_PERMISSION);
@@ -125,6 +129,8 @@ public class AdasAppHandler extends Service {
         } else {
             registerReceiver(usbReceiver, filter);
         }
+
+        pandaWatchdog.postDelayed(pandaWatchdogTick, PANDA_TICK_MS);
 
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             UsbManager manager = (UsbManager) getSystemService(Context.USB_SERVICE);
@@ -155,6 +161,10 @@ public class AdasAppHandler extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.i(TAG, "AdasAppHandler destroying...");
+
+        // Before anything else: a watchdog that outlives the service would try to restart the native
+        // side of a dead process.
+        pandaWatchdog.removeCallbacks(pandaWatchdogTick);
 
         if (usbReceiver != null) {
             unregisterReceiver(usbReceiver);
@@ -190,6 +200,106 @@ public class AdasAppHandler extends Service {
 
     private static boolean isPanda(UsbDevice device) {
         return device != null && device.getVendorId() == PANDA_VID && device.getProductId() == PANDA_PID;
+    }
+
+    private final Runnable pandaWatchdogTick = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                checkPandaAlive();
+            } catch (Throwable t) {
+                Log.w(TAG, "panda watchdog", t);   // a watchdog that dies is worse than none
+            }
+            pandaWatchdog.postDelayed(this, PANDA_TICK_MS);
+        }
+    };
+
+    /** If the panda has gone quiet, take the descriptor again. */
+    private synchronized void checkPandaAlive() {
+        if (!nativeStarted || startedFd == -1) {
+            return;
+        }
+        final long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastPandaActionMs < PANDA_GRACE_MS) {
+            return;
+        }
+        final long lastHealth = adas.app.bridge.ZMQBridgeService.lastPandaHealthElapsedMs();
+        // Never seen a health message at all: the grace period above already gave it time, so this is
+        // the same fault as having lost it.
+        final long silentMs = lastHealth == 0 ? now - lastPandaActionMs : now - lastHealth;
+        if (silentMs < PANDA_DEAD_MS) {
+            // Health is flowing, so whatever we did last time worked: the next fault starts from zero.
+            reseatStreak = 0;
+            return;
+        }
+        if (now - lastPandaActionMs < PANDA_RETRY_MS) {
+            return;
+        }
+
+        final UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        if (usbManager == null) {
+            return;
+        }
+        UsbDevice panda = null;
+        for (UsbDevice d : usbManager.getDeviceList().values()) {
+            if (isPanda(d)) {
+                panda = d;
+                break;
+            }
+        }
+        if (panda == null) {
+            // Physically gone. Nothing to re-open; the attach broadcast will bring us back.
+            Log.w(TAG, "panda silent " + silentMs + " ms and not in the device list — waiting for attach");
+            lastPandaActionMs = now;
+            return;
+        }
+        if (!usbManager.hasPermission(panda)) {
+            Log.w(TAG, "panda silent " + silentMs + " ms but permission is gone — asking again");
+            lastPandaActionMs = now;
+            maybeRequestUSBPermission(panda, this);
+            return;
+        }
+
+        Log.w(TAG, "panda silent " + silentMs + " ms — reopening the descriptor (attempt "
+                + (pandaReconnects + 1) + ")");
+        // The old connection has to go first, or openDevice hands back the same dead one.
+        if (pandaConnection != null) {
+            try {
+                pandaConnection.close();
+            } catch (Throwable t) {
+                Log.w(TAG, "closing the stale panda connection", t);
+            }
+            pandaConnection = null;
+        }
+        final UsbDeviceConnection conn = usbManager.openDevice(panda);
+        lastPandaActionMs = now;
+        if (conn == null) {
+            Log.e(TAG, "openDevice returned null — will try again in " + PANDA_RETRY_MS + " ms");
+            return;
+        }
+        pandaConnection = conn;
+        pandaReconnects++;
+        final int fd = conn.getFileDescriptor();
+
+        // Hand the descriptor to the panda driver alone. Everything else — planner, controller, pose
+        // estimator, paramsd — keeps running with the state it has built up during the drive; the driver
+        // is usually about to pull away, which is the worst moment to be back on default parameters.
+        if (reseatStreak < PANDA_RESEAT_MAX && reseatPandaNative(fd)) {
+            reseatStreak++;
+            startedFd = fd;
+            Log.i(TAG, "panda reopened, fd=" + fd + " — seated into the running native side"
+                    + " (reconnect #" + pandaReconnects + ", seat " + reseatStreak + "/" + PANDA_RESEAT_MAX + ")");
+            return;
+        }
+
+        Log.w(TAG, "panda reopened, fd=" + fd + " — "
+                + (reseatStreak >= PANDA_RESEAT_MAX ? "seating it twice did not bring the board back"
+                                                    : "the native side would not take it")
+                + ", restarting native (reconnect #" + pandaReconnects + ")");
+        reseatStreak = 0;
+        // Force the restart: after closing the old connection the kernel usually hands back the *same*
+        // descriptor number, and `startNative` treats an unchanged fd as "nothing to do".
+        restartNativeWith(fd);
     }
 
     private void maybeRequestUSBPermission(UsbDevice usbDevice, Context context) {
@@ -231,11 +341,12 @@ public class AdasAppHandler extends Service {
         startNative(fd);
     }
 
-    /** Start the native side on this descriptor.
-     *
-     *  The panda may arrive after the bench does: a live process running without one is then stopped
-     *  and started again with the descriptor. Car-side services are created once at startup and
-     *  cannot be handed hardware on the fly — a restart is honester than half a living app. */
+    /** Stop and start the native side on this descriptor, even if the number has not changed. */
+    private synchronized void restartNativeWith(int fd) {
+        startedFd = -1;
+        startNative(fd);
+    }
+
     private synchronized void startNative(int fd) {
         if (nativeStarted) {
             if (fd == -1 || startedFd == fd) {
@@ -252,8 +363,9 @@ public class AdasAppHandler extends Service {
         }
         nativeStarted = true;
         startedFd = fd;
+        lastPandaActionMs = android.os.SystemClock.elapsedRealtime();
         Log.i(TAG, fd == -1 ? "Starting native without a panda (bench mode)" : "Starting native with panda fd=" + fd);
-        new Thread(new AdasAppInstance(fd, dbcPath, configPath, mapPath), "AdasNative").start();
+        new Thread(new AdasAppInstance(fd, dbcPath, configPath), "AdasNative").start();
     }
 
     static String ensureAssetCopied(Context context, String assetName, boolean force) {
@@ -277,11 +389,28 @@ public class AdasAppHandler extends Service {
     }
 
     /** @param mapPath absolute path to the OSM road map, or "" to leave the configured one alone. */
-    public static native void nativeStart(int fd, String dbcPath, String configPath, String mapPath);
+    public static native void nativeStart(int fd, String dbcPath, String configPath);
 
     public static native void nativeStop();
 
     public static native int nativeUpdateParams(String jsonParams);
+
+    /**
+     * Seat a re-opened panda descriptor in the running native side.
+     *
+     * @return false when the native side is down or has no panda service — the caller must restart then.
+     */
+    public static native boolean nativeReseatPanda(int fd);
+
+    /** As above, but a missing symbol or a native throw costs a restart, not the watchdog. */
+    private static boolean reseatPandaNative(int fd) {
+        try {
+            return nativeReseatPanda(fd);
+        } catch (Throwable t) {
+            Log.w("AdasAppHandler", "nativeReseatPanda unavailable — falling back to a restart", t);
+            return false;
+        }
+    }
 
     private static volatile RuntimeParams pendingLaneKeepParams;
 

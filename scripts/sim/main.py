@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -269,6 +270,11 @@ class MetaDriveSimulator:
             args.yaw_deg = float(aad["yaw_deg"])
         if args.roll_deg is None:
             args.roll_deg = float(aad["roll_deg"])
+        # MetaDrive's camera is not at the agent origin: it sits ~0.78 m ahead of it, while GT lanes
+        # and the map centreline are given *from* that origin. Overlays are drawn from the camera, so
+        # the offset has to be taken off the points — see `_ego_to_camera`.
+        self._cam_offset_x = float(aad.get("cam_x", 0.0))
+        self._cam_offset_y_right = -float(aad.get("cam_y_left", 0.0))
         print(
             f"Calib from MetaDrive mount: h={args.camera_height:.3f}m "
             f"cam_x={aad['cam_x']:.3f} pitch={args.pitch_deg:.3f}° "
@@ -280,7 +286,14 @@ class MetaDriveSimulator:
     def _make_overlay_geom(
         self, fx: float, fy: float, cx: float, cy: float, w: int, h: int
     ):
-        """Phone-Rt (matches warp) or AAD (with mount cam_x)."""
+        """Phone-Rt (matches the warp) or AAD — both camera-relative, so they agree.
+
+        Neither projector carries the mount offset any more. It used to live in the AAD geometry's
+        ``cam_x`` and nowhere in phone-rt, which made each of them right about one kind of point and
+        wrong about the other: GT lanes are given from the agent origin, supercombo's output is
+        already relative to the camera. Now the projector is purely camera-relative and the caller
+        moves ego-frame points instead.
+        """
         args = self.args
         if args.draw == "phone-rt":
             return PhoneRtGeometry(
@@ -307,8 +320,42 @@ class MetaDriveSimulator:
             pitch_deg=args.pitch_deg,
             yaw_deg=args.yaw_deg,
             roll_deg=args.roll_deg,
-            cam_x=float(aad.get("cam_x", 0.0)),
-            cam_y_left=float(aad.get("cam_y_left", 0.0)),
+            cam_x=0.0,
+            cam_y_left=0.0,
+        )
+
+    def _ego_to_camera(self, poly: Optional[np.ndarray]) -> Optional[np.ndarray]:
+        """Device-frame points measured from the agent origin → measured from the camera."""
+        if poly is None:
+            return None
+        arr = np.asarray(poly, dtype=np.float64)
+        if arr.ndim != 2 or arr.shape[1] < 2:
+            return poly
+        out = arr.copy()
+        out[:, 0] -= self._cam_offset_x
+        out[:, 1] -= self._cam_offset_y_right
+        return out
+
+    def _lk_for_drawing(self, lk: LaneKeepResult) -> LaneKeepResult:
+        """A copy of the control result in camera coordinates, for the overlay only.
+
+        Control runs where the lanes are given; drawing happens from the camera. Mixing the two puts
+        the path a mount-length off in the near field, which is exactly where a lane-keep overlay is
+        read.
+        """
+        pp = lk.pure_pursuit
+        if pp is not None:
+            target = pp.target_ego
+            if target is not None:
+                shifted = self._ego_to_camera(np.asarray(target, dtype=np.float64)[None])
+                target = shifted[0] if shifted is not None else target
+            pp = dataclasses.replace(
+                pp,
+                target_ego=target,
+                polyline_ego=self._ego_to_camera(pp.polyline_ego),
+            )
+        return dataclasses.replace(
+            lk, polyline=self._ego_to_camera(lk.polyline), pure_pursuit=pp
         )
 
     def _overlay_y_sign(self) -> float:
@@ -320,7 +367,9 @@ class MetaDriveSimulator:
             return img
         return (np.clip(img, 0.0, 1.0) * 255.0).astype(np.uint8)
 
-    def _run_supercombo(self, camera_image: np.ndarray) -> Optional[SupercomboOut]:
+    def _run_supercombo(
+        self, camera_image: np.ndarray, v_ego: float = 0.0
+    ) -> Optional[SupercomboOut]:
         if self.supercombo is None:
             return None
         bgr = self._to_uint8(camera_image)
@@ -328,7 +377,7 @@ class MetaDriveSimulator:
         if camera_image.ndim == 3 and camera_image.shape[2] == 3:
             # perceive() returns RGB; OpenCV expects BGR
             bgr = cv2.cvtColor(bgr, cv2.COLOR_RGB2BGR)
-        out = self.supercombo.infer(bgr, cache_key=self.frame)
+        out = self.supercombo.infer(bgr, cache_key=self.frame, v_ego=v_ego)
         self._last_sc = out
         return out
 
@@ -442,19 +491,24 @@ class MetaDriveSimulator:
             viz_lanes = None
             if self.args.draw_gt_lanes or self.args.lanes == "gt":
                 # Always the MetaDrive boundaries here, and those are ISO left+ whichever
-                # source drives control, so the conversion to device is unconditional.
+                # source drives control, so the conversion to device is unconditional. They are also
+                # measured from the agent origin, so they need the mount offset taken off.
                 src = gt_lanes if gt_lanes is not None else lanes
                 viz_lanes = {}
                 for key in ("left_road", "right_road"):
                     arr = src.get(key)
                     if arr is None:
                         continue
-                    viz_lanes[key] = iso_left_polyline_to_device(
-                        np.asarray(arr, dtype=np.float64)
+                    viz_lanes[key] = self._ego_to_camera(
+                        iso_left_polyline_to_device(np.asarray(arr, dtype=np.float64))
                     )
+            # supercombo's output is already relative to the camera; everything else is not.
+            from_camera = self.args.lanes == "supercombo"
+            lk_draw = lk if from_camera else self._lk_for_drawing(lk)
+            shift = self.args.pp_shift + (0.0 if from_camera else self._cam_offset_x)
             bgr = draw_lane_keep_overlay(
                 bgr,
-                lk,
+                lk_draw,
                 fx=fx,
                 fy=fy,
                 cx=cx,
@@ -466,7 +520,7 @@ class MetaDriveSimulator:
                 yaw_deg=self.args.yaw_deg,
                 roll_deg=self.args.roll_deg,
                 camera_height=self.args.camera_height,
-                waypoint_shift=self.args.pp_shift,
+                waypoint_shift=shift,
                 draw_bev=self.args.bev,
                 draw_footer=True,
                 geom=geom,
@@ -528,7 +582,7 @@ class MetaDriveSimulator:
 
                 sc = None
                 if camera_image is not None and self.supercombo is not None:
-                    sc = self._run_supercombo(camera_image)
+                    sc = self._run_supercombo(camera_image, odometry["speed"])
 
                 lanes = self._control_lanes(gt_lanes, sc)
                 lk, action = self._compute_control(odometry["speed"], lanes, sc)

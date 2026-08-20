@@ -15,28 +15,17 @@
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/math_utils.h"
 #include "adas/lateral/pp_planner.h"
-#include "adas/lateral/vp_planner.h"
 #include "adas/lateral/fp_planner.h"
 #include "adas/lateral/planner.h"
 #include "adas/utils/long_planner.h"
 
 namespace adas {
 namespace services {
-/**
- * \brief Turns lane lines into a plan: curvature laterally, target speed longitudinally.
- *
- * \details The lateral half selects between the pure-pursuit, visionpilot and flowpilot solvers and
- * emits their result as curvature, never as an angle — that keeps the interface identical whichever
- * solver runs, and leaves the conversion to steering to `Control`. The longitudinal half produces target
- * speed and the gap to the lead, mirroring how upstream's `plannerd` emits both plans.
- *
- * Nothing here touches the bus or the actuator. The last steering command is subscribed to only so the
- * debug record can show the request next to what was actually commanded.
- */
+/** Turns lane lines into a plan: curvature laterally, target speed longitudinally. */
 class Planner : public adas::middleware::Service {
 public:
   struct Config {
-    std::string controller = "pp";  ///< Active planner: "pp", "mpc" or "fp" — `vehicle.lane_keep_controller`.
+    std::string controller = "pp";  ///< Active planner: "pp" or "fp" — `vehicle.lane_keep_controller`.
     double wheelbase_m = 2.636;     ///< Wheelbase [m].
     double max_steer_deg = 8.0;     ///< Ceiling on the commanded road-wheel angle [deg].
     double pp_k_dd = 0.4;           ///< Pure pursuit: lookahead per unit speed [s].
@@ -65,26 +54,7 @@ public:
     double mpc_rate_min_speed = 2.0;    ///< Below this speed the rate limit is not applied [m/s].
     double mpc_rate_limit_deg = 6.0;    ///< Maximum change of the solver output per second [deg/s].
 
-    double mpc_kappa_yaw_blend = 0.0;      ///< Weight of yaw-rate-implied curvature against the path's, in [0, 1].
-    double mpc_kappa_yaw_min_speed = 3.0;  ///< Below this speed the blend is off [m/s]: yaw rate is noise there.
-
-    double mpc_epsi_gain = 0.5;  ///< Weight on heading error in the cost.
-    double mpc_ff_scale = 2.0;   ///< Scale on the curvature feedforward inside the solver.
-
-    double mpc_cte_weight_base = 20.0;   ///< Weight on cross-track error at small errors.
-    double mpc_cte_quartic_scale = 5.0;  ///< How much faster that weight grows on large errors.
-
-    double mpc_cte_gain_base = 0.6;  ///< Gain applied to the cross-track correction.
-
-    double mpc_cte_gain_floor = 0.0;  ///< Lower clamp on that gain, so the correction never disappears entirely.
-
     double fp_steering_rate_weight = 400.0;  ///< fp solver: cost on steering rate; higher is smoother and slower.
-
-    double mpc_kappa_ema_alpha = 1.0;  ///< Smoothing on curvature input, in [0, 1]; 1 disables it.
-
-    double mpc_epsi_ema_alpha = 1.0;  ///< Smoothing on heading error, in [0, 1].
-
-    double mpc_cte_ema_alpha = 1.0;  ///< Smoothing on cross-track error, in [0, 1].
 
     double steer_slew_limit_deg = 8.0;  ///< Rate limit on the commanded steering-wheel angle [deg/s].
 
@@ -111,7 +81,9 @@ public:
     LanePathConfig lane_path{};  ///< How lane lines are turned into a reference path.
   };
 
+  /// Constructs with the default config.
   Planner() : Planner(Config{}) {}
+  /// \param[in] config Planner settings; see Config fields.
   explicit Planner(Config config);
 
   void configure() override;
@@ -120,7 +92,6 @@ public:
 
   /**
    * \brief One planning tick.
-   *
    * \param[in] speed_mps Ego speed [m/s]; the lookahead and every speed-dependent limit scale with it.
    * \param[in] path Reference path in the ego frame plus the lane-line diagnostics that came with it.
    * \return The plan and the debug trail behind it.
@@ -128,7 +99,6 @@ public:
   LaneKeepOutput step(double speed_mps, const LanePathMsg& path);
   /**
    * \brief Same tick from a bare polyline, for tests and offline harnesses.
-   *
    * \param[in] speed_mps Ego speed [m/s].
    * \param[in] polyline_ego Reference path in the ego frame [m], x forward.
    */
@@ -144,9 +114,11 @@ public:
 
   /// Per-planner configuration derived from this service's config, as each planner expects it.
   lateral::PpPlanner::Config ppPlannerConfig() const;
-  lateral::VpPlanner::Config vpPlannerConfig() const;
+  /// \return The flowpilot planner's config, derived from this service's.
   lateral::FpPlanner::Config fpPlannerConfig() const;
+  /// \return The config in force.
   const Config& config() const { return config_; }
+  /// \return True when the fp solver is the active controller.
   bool useFlowpilot() const { return config_.controller == "fp"; }
   /// Name of the active planner, as it goes into the bag: "pp", "vp" or "fp".
   const char* solverName() const;
@@ -164,7 +136,6 @@ public:
   void setController(std::string controller);
   /**
    * \brief Pure-pursuit geometry.
-   *
    * \param[in] k_dd Lookahead per unit speed [s]: the distance is `k_dd * v`, clamped below.
    * \param[in] ld_min Lower clamp on the lookahead [m]; below it the command chatters.
    * \param[in] ld_max Upper clamp on the lookahead [m]; above it the car cuts corners.
@@ -186,33 +157,6 @@ public:
 
   /// \param[in] ratio Steering-wheel to road-wheel ratio; the configured value, not the learned one.
   void setSteerRatio(double ratio) { veh_.setSteerRatio(ratio); }
-  /**
-   * \brief Blend between path curvature and yaw-rate-implied curvature.
-   *
-   * \param[in] alpha Weight of the yaw-rate term, clamped to [0, 1]; 0 uses the path alone.
-   * \param[in] min_speed Speed below which the blend is not applied [m/s], since yaw rate is noise there.
-   */
-  void setMpcKappaYawBlend(double alpha, double min_speed)
-  {
-    config_.mpc_kappa_yaw_blend = std::clamp(alpha, 0.0, 1.0);
-    config_.mpc_kappa_yaw_min_speed = std::max(min_speed, 0.0);
-    solver_.reset();
-  }
-
-  /**
-   * \brief Smoothing on the MPC inputs. Each alpha is the weight of the new sample, clamped to [0, 1].
-   *
-   * \param[in] kappa_alpha Curvature smoothing; 1 disables it.
-   * \param[in] epsi_alpha Heading-error smoothing.
-   * \param[in] cte_alpha Cross-track-error smoothing.
-   */
-  void setMpcEmaAlphas(double kappa_alpha, double epsi_alpha, double cte_alpha)
-  {
-    config_.mpc_kappa_ema_alpha = std::clamp(kappa_alpha, 0.0, 1.0);
-    config_.mpc_epsi_ema_alpha = std::clamp(epsi_alpha, 0.0, 1.0);
-    config_.mpc_cte_ema_alpha = std::clamp(cte_alpha, 0.0, 1.0);
-    solver_.reset();
-  }
   /// \param[in] deg Maximum change of the commanded steering-wheel angle per second [deg/s].
   void setSteerSlewLimitDeg(double deg)
   {
@@ -263,6 +207,7 @@ public:
    *  Public because the debug message prints them: a recording that does not say which stiffness produced
    *  a command cannot be used to judge the transition. */
   double effectiveStiffnessFactor() const { return veh_.effectiveStiffnessFactor(); }
+  /// \return Steering ratio in force.
   double effectiveSteerRatio() const { return veh_.effectiveSteerRatio(); }
   /// Learned steering-wheel angle zero [deg]; 0 while the estimate is not in use.
   double effectiveAngleOffsetDeg() const { return veh_.effectiveAngleOffsetDeg(); }
@@ -285,7 +230,6 @@ public:
     config_.cam_y_left_m = m;
     config_.lane_path.cam_y_left_m = m;
   }
-  void setSteerSign(double sign) { veh_.setSteerSign(sign); }
 
 private:
   LaneFusionState lane_fusion_{};

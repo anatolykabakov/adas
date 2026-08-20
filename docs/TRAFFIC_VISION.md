@@ -1,140 +1,57 @@
-# Traffic vision — signs / lights / overspeed HUD
+# Traffic vision — светофоры
 
-Low-frequency YOLO (~3 Hz) on a dedicated Java thread → `vision/traffic_dets` → C++ `TrafficSignService` → `traffic/state` → HUD (speed disc, light stack, overspeed border).
+Низкочастотный YOLO (~3 Гц) на своём Java-потоке → `vision/traffic_dets` → C++ `TrafficSign` →
+`traffic/state` → крупный диск светофора на экране. С supercombo не делит ни поток, ни GPU.
 
-Does **not** share SupercomboInfer. Supercombo has no TFL/sign heads.
+Состояние на 2026-08-21: **только светофоры**. Знаковая половина (OCR лимитов, отдельная RU-сеть,
+bench-активность, `export_traffic_yolo.sh`) удалена: рабочих RU-весов не нашлось (public-чекпойнты
+не переносятся на наши кадры), а COCO-сеть классов знаков не имеет. Всё — в истории git до этой даты.
 
-## The model is not in the repository
+## Модель не в репозитории
 
-`assets/traffic_yolo.onnx` was removed on 2026-08-18: it is derived from Ultralytics YOLOv8, which ships
-under **AGPL-3.0**, and shipping it inside the APK is distribution — see `THIRD_PARTY.md`. The detector code
-is untouched; only the weights are gone.
+`assets/traffic_yolo.onnx` — производная Ultralytics YOLOv8 (**AGPL-3.0**), в git не коммитится —
+см. `THIRD_PARTY.md`. Два способа дать её приложению:
 
-Two ways to run it, neither of which puts the file back into the repository:
+* `adb push <ваш>.onnx /sdcard/adas_models/traffic_yolo.onnx` — без пересборки, раннер смотрит туда
+  первым;
+* положить в `models/` и пересобрать — `syncTrafficYoloModel` упакует.
 
-* `adb push <your>.onnx /sdcard/adas_models/traffic_yolo.onnx` — no rebuild, `TrafficYoloRunner` looks there
-  first;
-* drop it into `models/` and rebuild — `syncTrafficYoloModel` packages whatever is there.
+Экспорт из `yolov8n.pt` (COCO): `pip install ultralytics onnx onnxsim`, далее командой из истории
+git (`export_traffic_yolo.sh`) или напрямую `yolo export format=onnx imgsz=256 opset=12`.
+COCO-класс `traffic light` → цвет определяется HSV-эвристикой по кропу.
 
-With no model and `nodes.vision_traffic` off (the default) nothing tries to load it. With the node on and no
-model, `MainActivity` logs where to put one and carries on.
-
-## Model download (you fetch)
-
-### Quick start — COCO (traffic lights only)
-
-Weights (already may exist as `models/yolov8n.pt`):
-
-- **YOLOv8n COCO**: https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt
-
-Export ONNX 320:
-
-```bash
-cd <repository root>
-pip install ultralytics onnx onnxsim
-./scripts/export_traffic_yolo.sh models/yolov8n.pt
-# → models/yolov8n_traffic_320.onnx  (Gradle → assets/traffic_yolo.onnx)
-```
-
-Or push without rebuilding APK:
-
-```bash
-adb push models/yolov8n_traffic_320.onnx /sdcard/adas_models/traffic_yolo.onnx
-```
-
-COCO class `traffic light` → HSV color (R/Y/G). COCO also has `stop sign` and `person` (now drawn on HUD).
-
-**Why no RU speed signs yet:** stock YOLOv8n is COCO-80 — there is no `speed_60` / `3_24_*` class. Those need a separately trained RTSD (or similar) checkpoint + matching `traffic_labels.txt`. Ready weights are usually on Kaggle / after you train; public GitHub repos often ship code without `.pt` in-tree.
-
-HUD keep-list now: traffic light, stop/sign*, person, bicycle, motorcycle, any label that parses as speed limit.
-
-
-### Ready weights (RU signs / lights)
-
-| What | Link | Notes |
-|-----|--------|---------|
-| **RU signs `.pt` (direct download)** | https://github.com/nhassl3/Detect-russian-road-signs/releases/download/weights-first-train-v0.1.0/best.pt | YOLOv8, Roboflow RU signs; ~22 MB |
-| **RU signs (doronin, 29 cls, GDrive)** | https://drive.google.com/file/d/1Kz4Iwc8lURpjwq1Om_z2NGfODRNX7PsC/view | Best public RTSD checkpoint from README; demo: [29 cls.](https://drive.google.com/file/d/12SndJXBaDCoJYB-sJqZxPP2ucQKplaSJ/view) |
-| **Roboflow "Russian signs" + hosted model** | https://universe.roboflow.com/cchegeu/russian-signs/model/14 | 50 classes, can download dataset/YOLOv8 and/or API |
-| **Skoltech RU signs dataset** | https://universe.roboflow.com/skoltech-zlr4k/yolo-v8-russian-road-signs | dataset for YOLOv8 |
-| **RTSD (training dataset)** | https://www.kaggle.com/datasets/watchman/rtsd-dataset | source for most RU pipelines; codes `3_24`, `5_19_1`, … |
-| **RTSD→YOLOv8 pipeline (classes `5_19_1`, `3_24`, …)** | https://github.com/medphisiker/drivers_helper | no weights in repo; `include_classes.txt` = codes we need (crosswalk, speed) |
-| **RTSD training (notebooks)** | https://github.com/doronin99/RoadSignsDetection · https://github.com/trafficsurfer/YOLOv8 · https://github.com/kth-vyu/traffic_sign_detection_yolov8s | code + metrics; weights often GDrive only |
-| **Pedestrian traffic light R/G (RU HF)** | https://huggingface.co/Aleton/trafficlight | YOLOv8n, 2 classes red/green — not vehicle TFL |
-| **Vehicle TFL + color (not RU)** | https://drive.google.com/drive/folders/11nL-1PpbyIKa89_QKcn6R-Exl9IRWxpu | Satish-Vennapu YOLOv8; or our COCO `traffic light` + HSV |
-
-Connecting to ADAS:
-
-```bash
-# example: nhassl3
-curl -L -o models/ru_signs.pt \
-  https://github.com/nhassl3/Detect-russian-road-signs/releases/download/weights-first-train-v0.1.0/best.pt
-./scripts/export_traffic_yolo.sh models/ru_signs.pt
-# put model class names in app/src/main/assets/traffic_labels.txt
-adb push models/yolov8n_traffic_256.onnx /sdcard/adas_models/traffic_yolo.onnx
-```
-
-Runner already parses `3_24_*` / `speed_60` from the label. With an RU model, speed and `5_19_1` (pedestrian crossing) appear automatically if the class is named that way.
-
-## Config
-
-`config.json` (current default: traffic YOLO **off** while hunting lighter weights):
+## Конфиг
 
 ```json
-"nodes": {
-  "vision_traffic": false,
-  "vision_traffic_signs": true,
-  "vision_traffic_lights": true,
-  "traffic_sign": true
-},
+"nodes": { "vision_traffic": false, "traffic_sign": true },
 "traffic_yolo_asset": "traffic_yolo.onnx"
 ```
 
-| Flag | Effect |
-|------|--------|
-| `vision_traffic` | Master: load / run YOLO pipeline |
-| `vision_traffic_signs` | Keep sign / speed / VRU dets + OCR |
-| `vision_traffic_lights` | Keep TFL dets + HSV color |
-| `traffic_sign` | C++ fusion → `traffic/state` HUD |
+`vision_traffic` — детектор целиком (по умолчанию выключен); `traffic_sign` — C++-фьюжен в
+`traffic/state`. Без модели и с выключенным узлом ничего не загружается; с включённым узлом и без
+модели `MainActivity` пишет в лог, куда её положить, и едет дальше.
 
-Pipeline starts only if master is on **and** at least one of signs/lights is on.
-Both sub-flags off (or master false) → no YOLO thread.
+## Измерено на OnePlus 7T
 
-### Lightweight candidates (next)
+**CPU быстрее NNAPI для YOLOv8n** (у supercombo наоборот): 256+NNAPI 117 мс против 256+XNNPACK
+**29 мс**; @192 — 22 мс. `auto` = XNNPACK → CPU.
 
-Current packaged RU `best.pt` → ONNX @256 is **~43 MB / ~11M params** → ORT med **~170 ms** under Supercombo (isolated ~84 ms). Too heavy.
+Цена для контура вождения (стол, 45 с, nano@192, ~3 Гц): темп зрения 28.01 → 27.91 Гц, инференс
+supercombo 17.3 → 18.0 мс. Платит детектор: изолированные 22 мс становятся 37 мс медианы под
+нагрузкой (p90 55) — фоновый поток голодает вместо рулевого, что и требовалось.
 
-| Candidate | Size / params | What it gives | Notes |
-|-----------|---------------|---------------|--------|
-| **COCO YOLOv8n @192/256** (`yolov8n.pt` already in repo, ONNX 13 MB) | ~3.2M | TFL + person + stop | Bench on 7T: **~22–29 ms** total @256 XNNPACK. No RU speeds. |
-| **doronin RTSD yolov8n** (29 cls) | nano (claimed) | RU signs + generic speed | **Public Drive weights are 8-cls yolov8s (~11M), not 29-cls nano.** See `models/doronin/README.md`. Labels ready in `labels_29.txt`. |
-| **HF Aleton/trafficlight** | YOLOv8n | ped TFL R/G only | Not vehicle TFL |
-| Split: COCO nano (lights) + tiny sign head later | 2× nano | Fast path now | Prefer over single heavy RU mid |
+Выше ~3 Гц — обрыв: на 6 Гц зрение падало до 18.3 Гц, инференс supercombo рос на 61 %. Отсюда
+период 333 мс и бэкофф ×2…×4 по живому темпу зрения в `TrafficVisionPipeline`.
 
-Re-enable: set `"vision_traffic": true`, push lighter ONNX to `/sdcard/adas_models/traffic_yolo.onnx`.
+Хвост 103 мс был кучей, не сетью: в худшем прогоне ort 36 мс (медиана 32), а decode 56 мс (медиана
+2) — пауза сборщика от ~7.8 МБ аллокаций на прогон. Вылечено переиспользованием буферов.
 
-OCR: template digits on speed-limit sign crops when label has no km/h (~1–5 ms).
+## Почему детектор не на GPU
 
-Bag `vision/traffic_dets`: `prep_ms`, `ort_ms`, `decode_ms`, `ocr_ms`, `infer_ms`,
-`capture_ts_ms`, `infer_ts_ms`, `ep`. PlotJuggler: `latency/traffic/*`.
-HUD (optional): `yolo p/o/d/ocr` + `tot/e2e` under supercombo latency.
+GPU занят supercombo на ~49 % длительности кадра, OpenCL-ядра не вытесняются — детекторное ядро в
+полёте задерживает рулевого на свою длину, ради экономии ~12 мс трижды в секунду. NNAPI медленнее
+CPU для обеих сетей на этом телефоне; OpenCL-провайдера у ORT под Android нет. Если детектору
+понадобится быстрее — int8 через XNNPACK.
 
-
-Overspeed if `v_ego > speed_limit + 5` km/h (margin in `TrafficSignService::Config`). Last speed limit held 60 s; TFL held 1.5 s.
-
-## On-device bench (OnePlus 7T / HD1901)
-
-```bash
-./scripts/bench_traffic_yolo_phone.sh [iters] [warmup] [ep=auto|cpu|nnapi|xnnpack] [size=256|192|320]
-```
-
-**Finding:** for YOLOv8n, **CPU is much faster than NNAPI** on this phone (opposite of Supercombo).
-
-| config | total med | ort med |
-|--------|-----------|---------|
-| 320 + NNAPI (old) | ~127 ms | ~100 ms |
-| 256 + NNAPI | 117 ms | 90 ms |
-| **256 + XNNPACK/CPU (new default)** | **29 ms** | **21 ms** |
-| 192 + XNNPACK | 22 ms | 17 ms |
-
-Default package: `models/yolov8n_traffic_256.onnx`. `auto` = XNNPACK → CPU (not NNAPI — YOLO regresses on NNAPI here).
+Все числа сняты на столе (без бага, без панды, холодный SoC); на дороге хвост будет хуже — поэтому
+бэкофф ключуется на живом темпе зрения, а не на этих цифрах.

@@ -2,14 +2,6 @@
 
 #include "adas/utils/logger.h"
 
-AdasApp::AdasApp() : mode_(Mode::RealTime), running_(false) {}
-
-AdasApp::AdasApp(Config cfg) : mode_(Mode::RealTime), running_(false), cfg_(std::move(cfg)) {}
-
-AdasApp::AdasApp(int usb_fd) : AdasApp(usb_fd, {}, Config{}) {}
-
-AdasApp::AdasApp(int usb_fd, std::string dbc_path) : AdasApp(usb_fd, std::move(dbc_path), Config{}) {}
-
 AdasApp::AdasApp(int usb_fd, std::string dbc_path, Config cfg)
   : mode_(Mode::RealTime), running_(false), cfg_(std::move(cfg))
 {
@@ -24,10 +16,10 @@ AdasApp::AdasApp(Mode mode, double wheelbase, double pitch0_deg, double yaw0_deg
   cfg_.camera_calib.history_len = camera_calib_history_len;
   cfg_.localization.gps_noise_pos = gps_noise_pos;
   cfg_.localization.gps_update_interval = gps_update_interval;
-  sim_topic_convert_ = topic_convert;
+  (void)topic_convert;  // kept in the signature for the Python callers; the convert path is gone
   if (mode_ != Mode::Simulated)
     return;
-  setupSimulatedServices();
+  setupServices();
 }
 
 AdasApp::~AdasApp() { stop(); }
@@ -41,7 +33,7 @@ bool AdasApp::start()
 
   try {
     if (mode_ == Mode::RealTime) {
-      setupRealtimeServices();
+      setupServices();
       size_t started = middleware_->startAll();
       LOGI("Started %zu realtime services", started);
     } else {
@@ -71,28 +63,37 @@ void AdasApp::stop()
   LOGI("AdasApp stopped");
 }
 
-void AdasApp::setupRealtimeServices()
+void AdasApp::setupServices()
 {
+  // One list instead of two. The realtime and the simulated app used to build their service sets in
+  // separate functions, and the sets drifted: the simulated one once ran without a SafetyWarn config
+  // and nothing said so. Here every service states, on one line, in which modes it exists — a service
+  // added for one mode is now a visible decision about the other, not an omission.
+  const bool rt = (mode_ == Mode::RealTime);
   const auto& f = cfg_.feature_flags;
 
-  LOGI("Setting up realtime services (lane_keep=%d localization=%d camera_calib=%d)...", f.enable_lane_keep ? 1 : 0,
-       f.enable_localization ? 1 : 0, f.enable_camera_calib ? 1 : 0);
+  middleware_ = std::make_shared<adas::middleware::Manager>(rt ? adas::middleware::Manager::Mode::RealTime :
+                                                                 adas::middleware::Manager::Mode::Simulated);
 
-  middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::RealTime);
-
-  if (cfg_.panda.usb_fd != -1 && f.enable_panda) {
+  // The bus driver exists only where a bus does. The control law also runs in replay: the scripts
+  // feed it state and read its commands, which is the whole point of an offline run.
+  const bool have_car = rt && cfg_.panda.usb_fd != -1 && f.enable_panda;
+  if (have_car)
     platform_service_ = middleware_->registerService<adas::services::Platform>(adas::services::Platform::Config{
         cfg_.panda.usb_fd, cfg_.panda.dbc_path, cfg_.vehicle_name, cfg_.panda.cruise_buttons_enabled,
         cfg_.panda.cruise_tip_cooldown_ms, cfg_.panda.speed_filter});
+  if (have_car || !rt)
     control_service_ = middleware_->registerService<adas::services::Control>(controlConfig());
-  }
 
-  if (f.enable_zmq_bridge)
+  if (rt && f.enable_zmq_bridge)
     zmq_bridge_service_ = middleware_->registerService<adas::services::ZmqBridge>(cfg_.zmq_bridge);
 
-  if (f.enable_lane_keep) {
+  // The simulated app ignores the lane-keep/localization/camera-calib flags on purpose: a replay
+  // without them answers nothing, so turning them off there would only manufacture confusion.
+  if (!rt || f.enable_lane_keep) {
     auto lk = cfg_.lane_keep;
-    lk.long_plan_enabled = f.enable_long_plan;
+    if (rt)  // long_plan is wired to its flag only on the car; a replay keeps what the config says.
+      lk.long_plan_enabled = f.enable_long_plan;
     lane_keep_service_ = middleware_->registerService<adas::services::Planner>(lk);
     LOGI("adas::services::Planner controller=%s max_steer=%.1f° ratio=%.1f max_tq=%.0f pp=%.2f/[%.1f,%.1f] "
          "pid=%.2f/%.2f/%.5f",
@@ -103,21 +104,22 @@ void AdasApp::setupRealtimeServices()
   if (f.enable_safety_warn)
     safety_warn_service_ = middleware_->registerService<adas::services::SafetyWarn>(cfg_.safety_warn);
 
-  if (f.enable_traffic_sign)
+  if (rt && f.enable_traffic_sign)
     traffic_sign_service_ = middleware_->registerService<adas::services::TrafficSign>(cfg_.traffic_sign);
 
-  if (f.enable_localization)
+  if (!rt || f.enable_localization)
     localization_service_ = middleware_->registerService<adas::services::Localization>(cfg_.localization);
 
-  if (f.enable_camera_calib)
+  if (!rt || f.enable_camera_calib)
     camera_calib_service_ = middleware_->registerService<adas::services::CameraCalib>(cfg_.camera_calib);
 
-  if (f.enable_map_data)
-    map_data_service_ = middleware_->registerService<adas::services::MapData>(cfg_.map_data);
+  if (rt)
+    middleware_->registerService<adas::services::MiddlewareStats>();
 
-  middleware_->registerService<adas::services::MiddlewareStats>();
+  if (!rt)
+    internal_subscriber_ = middleware_->registerService<adas::services::InternalSubscriber>();
 
-  LOGI("Realtime services setup completed (%zu services)", middleware_->getServiceCount());
+  LOGI("%s services ready (%zu)", rt ? "Realtime" : "Simulated", middleware_->getServiceCount());
 }
 
 adas::services::Control::Config AdasApp::controlConfig() const
@@ -139,78 +141,6 @@ adas::services::Control::Config AdasApp::controlConfig() const
   c.lka_blinker_resume_delay_s = lk.lka_blinker_resume_delay_s;
   c.assist_max_age_s = lk.assist_max_age_s;
   return c;
-}
-
-void AdasApp::setupSimulatedServices()
-{
-  auto lk = cfg_.lane_keep;
-
-  inbound_path_cfg_ = cfg_.lane_keep.lane_path;
-  middleware_ = std::make_shared<adas::middleware::Manager>(adas::middleware::Manager::Mode::Simulated);
-  lane_keep_service_ = middleware_->registerService<adas::services::Planner>(lk);
-  control_service_ = middleware_->registerService<adas::services::Control>(controlConfig());
-  localization_service_ = middleware_->registerService<adas::services::Localization>(cfg_.localization);
-  camera_calib_service_ = middleware_->registerService<adas::services::CameraCalib>(cfg_.camera_calib);
-
-  if (cfg_.feature_flags.enable_safety_warn)
-    safety_warn_service_ = middleware_->registerService<adas::services::SafetyWarn>(cfg_.safety_warn);
-  internal_subscriber_ = middleware_->registerService<adas::services::InternalSubscriber>();
-  LOGI("Simulated AdasApp services ready (%zu)", middleware_->getServiceCount());
-}
-
-void AdasApp::publishChassis(const adas::ChassisSample& chassis)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kVehicleState, adas::carStateFromChassis(chassis));
-}
-
-void AdasApp::publishLanes(const adas::LanePathMsg& lanes)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kVisionPathIn, adas::createLanePath(lanes));
-}
-
-void AdasApp::publishLanePath(const adas::proto::LanePath& path)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kVisionPathIn, path);
-}
-
-void AdasApp::publishLaneLines(const adas::proto::LaneLines& lanes)
-{
-  if (!middleware_)
-    return;
-  middleware_->publish(adas::topics::kVisionLanes, lanes);
-}
-
-void AdasApp::publishGps(const adas::GpsSample& gps)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kGpsLocation, gps);
-}
-
-void AdasApp::publishImu(const adas::ImuSample& imu)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kImuYaw, imu);
-}
-
-void AdasApp::publishGpsLocation(const adas::proto::GPSLocation& gps)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kGpsLocation, gps);
-}
-
-void AdasApp::publishImuData(const adas::proto::IMUData& imu)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kImu, imu);
-}
-
-void AdasApp::publishLaneUv(const adas::LaneUvMsg& uv)
-{
-  if (middleware_)
-    middleware_->publish(adas::topics::kCalibLaneUv, uv);
 }
 
 void AdasApp::resetLocalization(double x, double y, double yaw, double v, double yaw_rate)
@@ -235,6 +165,16 @@ void AdasApp::setCameraHeight(double height_m)
 {
   if (camera_calib_service_)
     camera_calib_service_->setHeight(height_m);
+}
+
+bool AdasApp::reseatPanda(int usb_fd)
+{
+  if (!platform_service_) {
+    LOGW("reseatPanda(fd=%d): no panda service in this app — nothing to seat it in", usb_fd);
+    return false;
+  }
+  platform_service_->reseatPanda(usb_fd);
+  return true;
 }
 
 bool AdasApp::setParam(const std::string& name, const std::string& value)
@@ -270,65 +210,6 @@ size_t AdasApp::updateParams(const std::map<std::string, std::string>& params)
     LOGW("updateParams: applied %zu of %zu", applied, params.size());
   return applied;
 }
-
-void AdasApp::setLaneKeepPp(double k_dd, double ld_min, double ld_max, double shift)
-{
-  if (lane_keep_service_)
-    lane_keep_service_->setPurePursuit(k_dd, ld_min, ld_max, shift);
-}
-
-void AdasApp::setLaneKeepPpLdCurvGain(double gain) { setParam("pp_ld_curv_gain", gain); }
-
-void AdasApp::setLaneKeepMaxSteerDeg(double max_steer_deg) { setParam("max_steer_deg", max_steer_deg); }
-
-void AdasApp::setLaneKeepSteerRatio(double ratio) { setParam("steer_ratio", ratio); }
-
-void AdasApp::setLaneKeepSteerSign(double sign)
-{
-  if (lane_keep_service_)
-    lane_keep_service_->setSteerSign(sign);
-}
-
-void AdasApp::setLaneKeepController(const std::string& controller) { setParam("lane_keep_controller", controller); }
-
-void AdasApp::setLaneKeepMpcKappaYawBlend(double alpha, double min_speed)
-{
-  if (lane_keep_service_)
-    lane_keep_service_->setMpcKappaYawBlend(alpha, min_speed);
-}
-
-void AdasApp::setLaneKeepMpcEmaAlphas(double kappa_alpha, double epsi_alpha, double cte_alpha)
-{
-  if (lane_keep_service_)
-    lane_keep_service_->setMpcEmaAlphas(kappa_alpha, epsi_alpha, cte_alpha);
-}
-
-void AdasApp::setLaneKeepSteerSlewLimitDeg(double deg) { setParam("steer_slew_limit_deg", deg); }
-
-void AdasApp::setLaneKeepTireStiffness(double tire_stiffness_factor)
-{
-  setParam("tire_stiffness_factor", tire_stiffness_factor);
-}
-
-void AdasApp::setLaneKeepVehicleModel(bool use_vehicle_model, double tire_stiffness_factor)
-{
-  setParam("lat_use_vehicle_model", use_vehicle_model);
-  setParam("tire_stiffness_factor", tire_stiffness_factor);
-}
-
-void AdasApp::setLaneKeepFpSteerDelayS(double seconds) { setParam("fp_steer_delay_s", seconds); }
-
-void AdasApp::setLaneKeepFpSteeringRateWeight(double weight) { setParam("fp_steering_rate_weight", weight); }
-
-void AdasApp::setLaneKeepCamYLeftM(double m) { setParam("cam_y_left_m", m); }
-
-void AdasApp::setLaneKeepPidGains(double kp, double ki, double kf)
-{
-  if (control_service_)
-    control_service_->setPidGains(kp, ki, kf);
-}
-
-void AdasApp::setLaneBlendScale(double scale) { setParam("path_lane_blend_scale", scale); }
 
 void AdasApp::step(uint64_t timestamp_us)
 {

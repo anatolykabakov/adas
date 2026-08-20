@@ -11,12 +11,7 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Pure pursuit: steer by the angle to a target taken on the reference line.
- *
- * The steering ceiling here is constant rather than speed-dependent as in the MPC family: pure
- * pursuit has always been clamped that way, and the speed-dependent limit would silently change it.
- */
+/** Pure pursuit: steer by the angle to a target taken on the reference line. */
 class PpPlanner final : public IPlanner {
 public:
   struct Config {
@@ -31,13 +26,16 @@ public:
     double max_steer_rad = 8.0 * M_PI / 180.0;  ///< Ceiling on the commanded angle [rad].
   };
 
+  /// \param[in] config Lookahead law and clamps.
   explicit PpPlanner(Config config) : cfg_(std::move(config)) {}
 
   const char* name() const override { return "pp"; }
 
   Output update(const Input& in) override;
 
+  /// \return The config in force.
   const Config& config() const { return cfg_; }
+  /// Replace the config.
   void setConfig(const Config& config) { cfg_ = config; }
 
 private:

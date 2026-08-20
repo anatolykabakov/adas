@@ -17,22 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Camera intrinsics from a printed chessboard, measured on the phone that will drive.
- *
- * <p>The running system takes fx/fy/cx/cy from {@code intrinsics_prior} in the config — a number typed
- * in for whichever phone it was typed in for. The device's own {@code LENS_INTRINSIC_CALIBRATION} is
- * better where it exists, but plenty of devices leave it empty. A chessboard measures the lens
- * actually fitted, and it is the only one of the three that also yields distortion.
- *
- * <p>Follows flowpilot's {@code CameraCalibratorIntrinsic}: find the corners, refine them to sub-pixel,
- * and keep the view only when it differs enough from the ones already held. That last part is what
- * makes it work — thirty photographs of the same pose constrain the focal length no better than one,
- * and the solver will happily return a confident wrong answer from them.
- *
- * <p>No UI and no camera here: frames are pushed in from whoever owns the stream, so this runs against
- * the pipeline's live camera instead of opening a second session that Android would refuse.
- */
+/** Camera intrinsics from a printed chessboard, measured on the phone that will drive. */
 public final class IntrinsicsCalibrator {
     private static final String TAG = "IntrinsicsCalib";
 
@@ -109,9 +94,7 @@ public final class IntrinsicsCalibrator {
 
     /**
      * Offer one frame.
-     *
-     * @param y      Luminance plane, tightly packed, {@code w * h} bytes. Corner detection is a
-     *               grayscale problem, so the chroma planes are never touched.
+     * @param y      Luminance plane, tightly packed, {@code w * h} bytes. Corner detection is a grayscale problem, so the chroma planes are never touched.
      * @param w      Frame width [px].
      * @param h      Frame height [px].
      * @return What was found, for drawing; never null.
@@ -160,13 +143,7 @@ public final class IntrinsicsCalibrator {
         return new Detection(flat, novel);
     }
 
-    /**
-     * Corners as a flat x,y array.
-     *
-     * <p>Through {@code toArray} rather than {@code Mat.get}: the matrix is {@code CV_32FC2}, and the
-     * double-buffer overload of {@code get} rejects it outright — the detector found the board and the
-     * read threw, which looked from outside like a board that was never seen.
-     */
+    /** Corners as a flat x,y array. */
     private static float[] flatten(MatOfPoint2f corners) {
         final Point[] points = corners.toArray();
         final float[] flat = new float[points.length * 2];
@@ -177,12 +154,7 @@ public final class IntrinsicsCalibrator {
         return flat;
     }
 
-    /**
-     * True when this view is far enough from every view already kept.
-     *
-     * <p>The corners come back in the same order every time, so comparing point by point is
-     * meaningful: the mean displacement is how far the board moved in the image between the two.
-     */
+    /** True when this view is far enough from every view already kept. */
     private boolean isNovel(MatOfPoint2f candidate) {
         final Point[] a = candidate.toArray();
         for (Mat prev : kept) {
@@ -201,12 +173,7 @@ public final class IntrinsicsCalibrator {
         return true;
     }
 
-    /**
-     * Solve for the camera matrix from the views collected so far.
-     *
-     * <p>The collected views are released either way: a solve consumes them, and a failed solve is not
-     * improved by keeping the frames that failed it.
-     */
+    /** Solve for the camera matrix from the views collected so far. */
     public Result solve() {
         if (kept.isEmpty()) {
             return new Result(false, 0, 0, 0, 0, 0, width, height, "no views collected");

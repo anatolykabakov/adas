@@ -36,13 +36,7 @@ struct LatMpcResult {
   double cost = 0.0;
 };
 
-/**
- * \brief Flowpilot's lateral MPC over the lane path.
- *
- * \details Optimises a steering trajectory against the path rather than a single point on it, which is
- * what lets it anticipate a curve instead of reacting inside one. The cost, the horizon and the limits
- * come from `LatMpcConfig`, so a drive's configuration records what it drove with.
- */
+/** Flowpilot's lateral MPC over the lane path. */
 class LateralMpc {
 public:
   static constexpr int N = 16;
@@ -51,17 +45,28 @@ public:
   static constexpr double kTIdxMax = 32.0;
   static constexpr double kDefaultDtS = 0.05;
 
+  /// \param[in] cfg Weights and rate limits.
   explicit LateralMpc(LatMpcConfig cfg = {});
 
+  /// Replace the config.
   void setConfig(const LatMpcConfig& cfg) { cfg_ = cfg; }
+  /// Drop the previous solution (warm start and rate-limit history).
   void reset();
 
+  /**
+   * \brief One MPC step.
+   * \param[in] speed_mps Ego speed [m/s]; \p yaw_rate measured [rad/s]; \p Lf lever arm [m].
+   * \param[in] polyline_ego Reference path in the ego frame [m].
+   * \return Commanded curvature and the solver diagnostics.
+   */
   LatMpcResult update(double speed_mps, double yaw_rate, double Lf, const std::vector<Vec2>& polyline_ego,
                       const std::vector<Vec2>& plan_poly_device = {}, const std::vector<double>& plan_yaw_device = {},
                       const std::vector<double>& plan_yaw_rate_device = {}, double dt_s = kDefaultDtS);
 
+  /// \return Curvature the previous solution predicts \p dt_s ahead, or nothing without one.
   std::optional<double> curvatureAtSpeed(double speed_mps, double dt_s) const;
 
+  /// Sample the reference path at the horizon nodes. \return False when the path is too short.
   static bool sampleRefs(const std::vector<Vec2>& polyline_ego, double v, const std::vector<Vec2>& plan_poly_device,
                          const std::vector<double>& plan_yaw_device, const std::vector<double>& plan_yaw_rate_device,
                          std::vector<double>& y_ref, std::vector<double>& psi_ref, std::vector<double>& r_ref);

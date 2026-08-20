@@ -11,15 +11,7 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Solve for curvature over the model plan horizon, then convert curvature to steering.
- *
- * The numerical method is picked by name at construction, so the choice lives here, not in the
- * service. The planner owns the solver and the memory between frames, which is why it also answers
- * the between-frame setpoint recompute: the curvature comes from the same solution as the frame did
- * and the rate limit sees the same history, so the 100 Hz path and the per-frame path cannot
- * command from different starting points.
- */
+/** Solve for curvature over the model plan horizon, then convert curvature to steering. */
 class FpPlanner final : public IPlanner {
 public:
   struct Config {
@@ -37,6 +29,7 @@ public:
     SteerLimits limits{};  ///< Speed-dependent ceiling on the angle.
   };
 
+  /// \param[in] config Solver choice, weights and limits.
   explicit FpPlanner(Config config);
 
   const char* name() const override { return "fp"; }
@@ -59,6 +52,7 @@ public:
    *  out. */
   std::optional<Recompute> recomputeSteer(double speed_mps, double frame_dt_s, const VehicleParams& vehicle);
 
+  /// \return The config in force.
   const Config& config() const { return cfg_; }
 
 private:

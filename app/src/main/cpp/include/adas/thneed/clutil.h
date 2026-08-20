@@ -13,7 +13,7 @@
   ({                                                                                                                   \
     cl_int err = CL_INVALID_VALUE;                                                                                     \
     __typeof__(_expr) _ret = _expr;                                                                                    \
-    assert(_ret&& err == CL_SUCCESS);                                                                                  \
+    assert(_ret && err == CL_SUCCESS);                                                                                 \
     _ret;                                                                                                              \
   })
 
