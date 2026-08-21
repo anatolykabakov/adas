@@ -93,6 +93,10 @@ app/src/main/assets/NOTICE.txt
 # Recording archives pulled from the phone by hand — same rule as adas_logs/
 /REC_*.tar.gz
 
-# YOLO weights are Ultralytics AGPL derivatives — never committed (THIRD_PARTY.md); pushed to the
-# device or synced from models/ at build time instead.
+# Everything gradle syncs into assets/ at build time from models/: the vision model, its GPU build and
+# the YOLO weights. None of them belongs in git — the model is comma's to distribute (MIT notice in
+# NOTICE), the YOLO weights are an Ultralytics AGPL derivative, and both are reproducible from
+# scripts/models.manifest. See THIRD_PARTY.md.
+app/src/main/assets/supercombo.onnx
+app/src/main/assets/supercombo.thneed
 app/src/main/assets/traffic_yolo.onnx
