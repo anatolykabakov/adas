@@ -26,28 +26,28 @@ tasks.register('syncSupercomboModel', Copy) {
     }
 }
 
-// OSM road map for the `map_data` service (docs/MAP_CURVATURE.md). Built by
-// scripts/mapmatch/osm_graph.py; 4.9 MB, ~3.3 MB once the APK compresses it.
-// Override: ./gradlew assembleDebug -ProadMap=/path/to.admap
-def roadMapSrc = file(findProperty('roadMap') ?: "${rootProject.projectDir}/maps/Moscow.osm.admap")
-def roadMapDst = file("${projectDir}/src/main/assets/Moscow.osm.admap")
+// The same network compiled for the phone GPU. Not committed either: it is reproducible from the ONNX
+// by scripts/tools/thneed_from_onnx.py, and scripts/models.manifest carries its sha256.
+// Override: ./gradlew assembleDebug -PsupercomboThneed=/path/to.thneed
+def thneedSrc = file(findProperty('supercomboThneed')
+        ?: "${rootProject.projectDir}/models/supercombo.thneed")
+def thneedDst = file("${projectDir}/src/main/assets/supercombo.thneed")
 
-tasks.register('syncRoadMap', Copy) {
-    description = 'Copy maps/Moscow.osm.admap → assets/Moscow.osm.admap for APK'
+tasks.register('syncSupercomboThneed', Copy) {
+    description = 'Copy models/supercombo.thneed → assets/supercombo.thneed for APK'
     onlyIf {
-        if (!roadMapSrc.isFile()) {
-            logger.warn("road map missing: ${roadMapSrc} — keeping existing assets/Moscow.osm.admap " +
-                    "(map_data node will stay idle without it)")
+        if (!thneedSrc.isFile()) {
+            logger.warn("thneed source missing: ${thneedSrc} — the app will fall back to the ONNX runner")
             return false
         }
         return true
     }
-    from roadMapSrc
-    into roadMapDst.parentFile
-    rename { 'Moscow.osm.admap' }
-    outputs.file(roadMapDst)
+    from thneedSrc
+    into thneedDst.parentFile
+    rename { 'supercombo.thneed' }
+    outputs.file(thneedDst)
     doFirst {
-        logger.lifecycle("Packaging road map: ${roadMapSrc} → ${roadMapDst}")
+        logger.lifecycle("Packaging thneed: ${thneedSrc} → ${thneedDst}")
     }
 }
 
@@ -73,7 +73,7 @@ tasks.register('syncNotice', Copy) {
 }
 
 tasks.named('preBuild').configure {
-    dependsOn('syncSupercomboModel', 'syncTrafficYoloModel', 'syncRoadMap', 'syncNotice')
+    dependsOn('syncSupercomboModel', 'syncSupercomboThneed', 'syncTrafficYoloModel', 'syncNotice')
 }
 
 // The traffic detector is deliberately NOT committed under assets/: it is derived from Ultralytics

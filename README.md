@@ -58,7 +58,7 @@ Reviews and pull requests are welcome.
 No host install — use the container (docker only):
 
 ```bash
-git lfs install && git lfs pull                            # models and map are LFS objects
+./scripts/fetch_models.sh                                   # the vision model (not in the repo)
 ./scripts/docker.sh build                                  # image with C++/python environment
 ./scripts/docker.sh tests                                  # unit tests
 ./scripts/docker.sh host                                   # host build + pyadas
@@ -77,10 +77,13 @@ On the host:
 pip install -r scripts/sim/requirements.txt   # + MetaDrive
 ```
 
-Models and the map can be kept out of the repository instead of pulled from LFS:
-`./scripts/fetch_models.sh` brings them into `models/` and `maps/` (both gitignored) from the places
-entitled to distribute them, checking sha256 against `scripts/models.manifest`; gradle packages from there.
-Why that matters beyond repo size — [`THIRD_PARTY.md`](THIRD_PARTY.md), [`LICENSE.md`](LICENSE.md).
+**The repository carries no model.** `./scripts/fetch_models.sh` brings it into `models/` (gitignored)
+from the place entitled to distribute it — comma's own release — and checks sha256 against
+[`scripts/models.manifest`](scripts/models.manifest), which also records the two derivation steps: fp16 →
+fp32 (onnxruntime computes the fp16 graph incorrectly on ARM) and ONNX → thneed for the phone GPU. Gradle
+packages whatever is in `models/` into the APK. So we distribute nothing we did not make, and a clone is
+a few tens of megabytes instead of half a gigabyte — [`THIRD_PARTY.md`](THIRD_PARTY.md),
+[`LICENSE.md`](LICENSE.md).
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`, native lib: `app/libs/arm64-v8a/`.
 C++ builds land in `app/src/main/cpp/build/<target>/<BuildType>` — one root, split by target.
