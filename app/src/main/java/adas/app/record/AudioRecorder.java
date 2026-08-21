@@ -6,21 +6,7 @@ import android.util.Log;
 
 import java.io.File;
 
-/**
- * Microphone audio recorded alongside the bag, for the duration of the bag. The bag records what the
- * car did; the audio records what was happening around it — a horn, a thump, or the driver saying
- * what they just felt, timestamped better than the memory of it.
- *
- * <p>AAC in MP4, 44.1 kHz mono, 64 kbit/s: about 28 MB per hour against 1.2 GB for the video stream
- * over the same time, encoded by the hardware codec.
- *
- * <p>The start time is in the file name, {@code audio_<t>.m4a}, taken from {@link TimeUtil#nowMs} —
- * the same monotonic clock every bag message is stamped with, so aligning sound to a message is a
- * subtraction. A sidecar file holding that stamp would be one more thing to fall out of sync.
- *
- * <p>A microphone failure must never take the data recording down: no permission, a busy microphone
- * or a codec refusal all log a warning and leave the bag running without sound.
- */
+/** Microphone audio recorded alongside the bag, for the duration of the bag. */
 public final class AudioRecorder {
     private static final String TAG = "AudioRecorder";
 

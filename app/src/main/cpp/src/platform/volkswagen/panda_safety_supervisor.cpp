@@ -21,6 +21,17 @@ void PandaSafetySupervisor::clearSafetyRetry()
   next_safety_attempt_ms_ = 0;
 }
 
+void PandaSafetySupervisor::resetBoardState()
+{
+  initialized_ = false;
+  safety_configured_ = false;
+  alt_exp_configured_ = false;
+  clearSafetyRetry();
+  last_safety_mode_ = C::kNoOutput;
+  last_controls_allowed_ = false;
+  LOGI("Panda supervisor: board state forgotten, next tick re-inits");
+}
+
 bool PandaSafetySupervisor::updateIgnitionSticky(bool ignition_hw, uint32_t voltage_mv, int64_t now_ms)
 {
   const bool voltage_on = voltage_mv >= C::kIgnVoltageOnMv;

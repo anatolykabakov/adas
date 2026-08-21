@@ -272,9 +272,6 @@ adas::proto::LaneKeepDebug createLaneKeepDebug(const LaneKeepOutput& out, int64_
   d->set_p_ld_curv_gain(config.pp_ld_curv_gain);
   d->set_p_max_steer_deg(config.max_steer_deg);
   d->set_p_max_torque_cnm(static_cast<int>(std::lround(max_torque_cnm)));
-  d->set_p_mpc_epsi_gain(config.mpc_epsi_gain);
-  d->set_p_mpc_ff_scale(config.mpc_ff_scale);
-  d->set_p_mpc_kappa_yaw_blend(config.mpc_kappa_yaw_blend);
 
   d->set_lane_anchored(out.dbg.lane_anchored);
   d->set_lanelines_active(out.dbg.lanelines_active);
@@ -516,25 +513,6 @@ CameraOdometrySample cameraOdometryToSample(const adas::proto::CameraOdometry& o
   return s;
 }
 
-void fillLocalMap(adas::proto::MapLocalState& out, const mapmatch::RoadMap& map, double x, double y, double radius_m)
-{
-  out.set_has_local_map(true);
-  out.set_local_map_radius_m(static_cast<float>(radius_m));
-
-  std::vector<double> xs, ys;
-  for (const std::uint32_t ei : map.edgesInBBox(x - radius_m, y - radius_m, x + radius_m, y + radius_m)) {
-    map.edgePolyline(ei, xs, ys);
-    if (xs.size() < 2)
-      continue;
-    auto* e = out.add_local_edges();
-    e->set_name(map.edgeName(ei));
-    for (std::size_t k = 0; k < xs.size(); ++k) {
-      e->add_x(static_cast<float>(xs[k]));
-      e->add_y(static_cast<float>(ys[k]));
-    }
-  }
-}
-
 void applyLanePath(LaneKeepOutput& out, const LanePathMsg& msg)
 {
   out.dbg.lane_anchored = msg.lane_anchored;
@@ -690,74 +668,6 @@ longplan::LeadState leadFromModel(const adas::proto::ModelLongPlan& plan)
   out.v_lead = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
   out.y_rel = lead.y_rel();
   return out;
-}
-
-adas::proto::MapLocalState createMapLocal(const MapLocalInputs& in)
-{
-  constexpr double kDeg = M_PI / 180.0;
-
-  adas::proto::MapLocalState m;
-  m.set_timestamp(in.timestamp_us / 1000);
-  m.set_map_loaded(true);
-  m.set_pose_gps_gap_m(static_cast<float>(in.pose_gps_gap_m));
-  if (!in.positioned || in.route == nullptr)
-    return m;
-
-  const mapmatch::RouteAhead& route = *in.route;
-  m.set_lat(in.lat);
-  m.set_lon(in.lon);
-  m.set_map_x(in.map_x);
-  m.set_map_y(in.map_y);
-  m.set_yaw(in.yaw);
-  m.set_speed_mps(static_cast<float>(in.speed_mps));
-  m.set_matched(route.matched);
-  m.set_build_ms(static_cast<float>(in.build_ms));
-  if (!route.matched)
-    return m;
-
-  m.set_match_dist_m(static_cast<float>(route.match_dist_m));
-  m.set_heading_delta_deg(static_cast<float>(route.heading_delta_rad / kDeg));
-  m.set_road_name(route.road_name);
-  m.set_route_step_m(static_cast<float>(in.route_step_m));
-  m.set_route_length_m(static_cast<float>(route.length_m));
-  m.set_route_node_spacing_m(static_cast<float>(route.node_spacing_m));
-
-  m.mutable_route_x()->Reserve(static_cast<int>(route.x_m_pts.size()));
-  m.mutable_route_y()->Reserve(static_cast<int>(route.y_m_pts.size()));
-  m.mutable_route_kappa()->Reserve(static_cast<int>(route.kappa.size()));
-  for (std::size_t i = 0; i < route.x_m_pts.size(); ++i) {
-    m.add_route_x(static_cast<float>(route.x_m_pts[i]));
-    m.add_route_y(static_cast<float>(route.y_m_pts[i]));
-    m.add_route_kappa(static_cast<float>(i < route.kappa.size() ? route.kappa[i] : 0.0));
-  }
-
-  for (const auto& t : route.turns) {
-    auto* s = m.add_turns();
-    s->set_start_m(static_cast<float>(t.start_m));
-    s->set_end_m(static_cast<float>(t.end_m));
-    s->set_kappa(static_cast<float>(t.kappa));
-    s->set_speed_mps(static_cast<float>(t.speed_mps));
-    s->set_sign(t.sign);
-  }
-
-  for (const auto& t : route.turns) {
-    if (t.start_m <= 0.5 && t.end_m > 0.0) {
-      m.set_turn_speed_valid(true);
-      m.set_turn_speed_mps(static_cast<float>(t.speed_mps));
-      m.set_turn_speed_end_m(static_cast<float>(t.end_m));
-      m.set_turn_speed_sign(t.sign);
-      break;
-    }
-  }
-  for (const auto& t : route.turns) {
-    if (t.start_m > 0.5) {
-      m.set_next_turn_valid(true);
-      m.set_next_turn_speed_mps(static_cast<float>(t.speed_mps));
-      m.set_next_turn_distance_m(static_cast<float>(t.start_m));
-      break;
-    }
-  }
-  return m;
 }
 
 }  // namespace adas

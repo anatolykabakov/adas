@@ -3,10 +3,7 @@ package adas.app.vision;
 import android.graphics.Bitmap;
 
 /**
- * Flowpilot-style model warp: camera K + calib RPY → 3×3 homography that maps
- * model-frame pixels → camera pixels (same convention as TransformCL / OpenCL).
- *
- * {@code warp = K · view_from_device · R(rpy) · inv(medmodel_K · view_from_device)}
+ * Flowpilot-style model warp: camera K + calib RPY → 3×3 homography that maps model-frame pixels → camera pixels (same convention as TransformCL / OpenCL).
  */
 public final class ModelCalibWarp {
     public static final int MODEL_W = 512;
@@ -89,17 +86,7 @@ public final class ModelCalibWarp {
         }
     }
 
-    /**
-     * Prepare both model frames — narrow and wide — in one go.
-     *
-     * <p>On the GPU this is one and a half million independent bilinear samples, exactly the work it
-     * exists for. On the CPU the same two warps cost 12 ms out of 30 per frame.
-     *
-     * <p>The first call additionally computes the same thing on the CPU and compares. A wrong warp
-     * does not crash and gives nothing away: the model receives a plausible-looking picture and
-     * returns plausible-looking numbers, just not about this road. The check costs one frame per
-     * start.
-     */
+    /** Prepare both model frames — narrow and wide — in one go. */
     public static void warpPair(YuvFrame src, float[] mNarrow, float[] mWide,
                                 float[] outNarrow, float[] outWide) {
         if (ensureGpuWarp()) {
@@ -133,35 +120,14 @@ public final class ModelCalibWarp {
         lastFocusScore = focusScore(outNarrow);
     }
 
-    /**
-     * Sharpness of the last prepared frame.
-     *
-     * <p>Computed here rather than in a runner because there are two paths and the question "does the
-     * camera see the road" is common to both. While the metric lived in the thneed runner, falling
-     * back to ONNX silently dropped the protection — precisely when something had already gone wrong.
-     *
-     * <p>Zero means "not measured yet".
-     */
+    /** Sharpness of the last prepared frame. */
     public static float lastFocusScore() {
         return lastFocusScore;
     }
 
     private static volatile float lastFocusScore;
 
-    /**
-     * How sharp the frame looked to the model.
-     *
-     * <p>Mean squared gradient over the luminance plane of the input — the very one the net receives,
-     * not the whole camera frame. The value is dimensionless; compare it against itself on other
-     * drives.
-     *
-     * <p>Why it lives here. Defocus breaks nothing visibly: the net runs, the numbers come out
-     * plausible, there are simply no lane lines in them. The drive of 2026-08-16 showed the price —
-     * line probabilities of 0.11 and 0.20, 82.6% of frames without either line, a pose unrelated to
-     * the wheels, and not a single message about it in fifty minutes. Frame sharpness was 9.9-14.9
-     * against 369-942 on the healthy drives of 08-13, a fiftyfold difference — plain to see if
-     * anyone looks.
-     */
+    /** How sharp the frame looked to the model. */
     public static float focusScore(float[] frame6) {
         final int w = MODEL_W / 2;
         final int h = MODEL_H / 2;
@@ -223,17 +189,8 @@ public final class ModelCalibWarp {
     }
 
     /**
+     * The 0.9.x generation takes two images, narrow and wide.
      * @param bigModel use the wide model geometry instead of medmodel.
-     *
-     * <p>The 0.9.x generation takes two images, narrow and wide. With one camera, flowpilot feeds the
-     * same frame to the second input warped by `sbigmodel_intrinsics` instead of `medmodel_intrinsics`
-     * — camera intrinsics are unchanged, only the model ones differ. Values from their
-     * `transformations/Model.java`: `SBIGMODEL_FL = 455` against `MEDMODEL_FL = 910`, and
-     * `cy = 0.5 * (256 + MEDMODEL_CY) = 151.8`.
-     *
-     * <p>This does not produce a real wide field: the frame holds nothing outside the narrow view, so
-     * the periphery of the wide input is extrapolation past the source edge while the model was trained
-     * on a real wide camera. The main unmeasured risk of this path — docs/VISION_RATE.md §5.
      */
     public static float[] warpMatrix(double rollRad, double pitchRad, double yawRad,
                                      float fx, float fy, float cx, float cy, boolean bigModel) {

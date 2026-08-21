@@ -2,16 +2,23 @@
   "version": 1,
   "nodes": {
     "vision_traffic": false,
-    "vision_traffic_signs": false,
-    "vision_traffic_lights": false,
     "phone_stats": true
   },
   "traffic_yolo_asset": "traffic_yolo.onnx",
   "vision": {
     "model_runner": "thneed",
+    "camera_fps": 20,
     "nnapi_fp16": false,
-    "zero_input": {"onnx": {"mean": -1.2455, "std": 3.2799}, "thneed": {"mean": -1.2498, "std": 3.2745}},
-    "comment_nnapi_fp16": "Разрешить NNAPI считать supercombo в половинной точности. ПРОВЕРЕНО НА ДОРОГЕ 2026_08_08_10_47_41 и ВЫКЛЮЧЕНО: инференс стал МЕДЛЕННЕЕ, 44.7 -> 64.9 мс медианно (p95 53.2 -> 75.6), то есть +45 % вместо ожидаемых -45 %. На этом SoC флаг USE_FP16 не ускоряет, а замедляет — вероятно NNAPI иначе разбивает граф или вставляет преобразования точности, и часть уходит на менее подходящий вычислитель. Ожидание строилось на паттерне из TrafficYoloRunner и на общем правиле 1.5-2x для fp16, и оно оказалось неверным именно здесь. Офлайн-проверка качества (bag_fp16_ab.py, 200 кадров бега 2026_08_06_00_36_42) была про ТОЧНОСТЬ и остаётся в силе: центр полосы сдвинулся на 0.027 м, смещение плана на 0.037 м, вероятности линий выросли, хвост σ укоротился, деградации нет. Она просто не отвечала на вопрос о скорости, а ускорение и было единственной причиной включать. Возвращаться к этому стоит только с профилем NNAPI на самом устройстве, а не по логу."
+    "zero_input": {
+      "onnx": {
+        "mean": -1.2455,
+        "std": 3.2799
+      },
+      "thneed": {
+        "mean": -1.2498,
+        "std": 3.2745
+      }
+    }
   },
   "vehicle": {
     "name": "vw_golf_7_mqb",
@@ -28,7 +35,6 @@
     "lane_std_good_m": 0.15,
     "lane_std_bad_m": 0.3,
     "lane_std_range_m": 20.0,
-    "comment_lane_std_range_m": "Дальность, по которой σ сворачивается в уверенность подмешивания. Было жёстко 5–40 м. Измерено на беге 2026_08_06_00_36_42: σ худшей линии примерно удваивается от ближней половины к дальней (правые дуги 0.34 на 5–20 м против 0.78 на 20–40 и 1.66 на 40–80) — на дуге внутренняя линия уходит из кадра, и дальние отсчёты становятся экстраполяцией. То есть окно 5–40 м позволяет «я так далеко не видел» забраковать линию, у которой ближняя половина в порядке: порог 1.5 отбрасывал 20 % кадров левых дуг вместо 5 %. Поднимать сам порог не помогает — проверено прогоном по тому же бегу: 2.0 оставляет подмешивание на правых дугах ровно 0.00 (σ там 2.48), 2.5 даёт 0.05 м. 20 м — это ближняя зона, по которой команда и формируется, а дальняя часть эталона пересчитывается каждый кадр задолго до того, как машина туда доедет.",
     "lane_width_min_m": 2.6,
     "lane_width_max_m": 4.6,
     "center_force_gain": 0.0,
@@ -42,17 +48,6 @@
     "mpc_max_lateral_jerk": 5.0,
     "mpc_rate_min_speed": 2.0,
     "mpc_rate_limit_deg": 6.0,
-    "mpc_kappa_yaw_blend": 0.4,
-    "mpc_kappa_yaw_min_speed": 3.0,
-    "mpc_epsi_gain": 0.3,
-    "mpc_ff_scale": 1.0,
-    "mpc_cte_weight_base": 5.0,
-    "mpc_cte_quartic_scale": 5.0,
-    "mpc_cte_gain_base": 0.6,
-    "mpc_cte_gain_floor": 0.02,
-    "mpc_kappa_ema_alpha": 0.5,
-    "mpc_epsi_ema_alpha": 0.5,
-    "mpc_cte_ema_alpha": 0.5,
     "fp_steering_rate_weight": 400.0,
     "wheel_speed_factor": 1.0,
     "speed_accel_process_noise": 1.5,
@@ -67,8 +62,7 @@
     "assist_max_age_s": 0.5,
     "steer_slew_limit_deg": 8.0,
     "vision_nominal_dt_s": 0.09,
-    "fp_solver": "acados",
-    "comment_fp_solver": "Численный метод для controller=fp: grad — собственные итерации Риккати, acados — SQP_RTI+HPIPM (библиотека собирается рецептом app/src/main/cpp/recipes/acados). Постановка задачи одна, различается только метод. На беге 2026_08_10_02_07_55 acados расходился со сошедшимся grad на 0.36 град по медиане и сильнее дёргался между кадрами, поэтому по умолчанию grad. Недоступный acados откатывается на grad."
+    "fp_solver": "acados"
   },
   "long_plan": {
     "t_follow": 1.5,
@@ -115,7 +109,7 @@
         "yaw": 0.5
       },
       "intrinsics_from_device": true,
-    "intrinsics_prior": {
+      "intrinsics_prior": {
         "device": "HD1901",
         "fx": 993.4,
         "fy": 995.2,
@@ -140,21 +134,6 @@
     "params_max_lateral_jerk": 1.0,
     "params_max_roll_std_deg": 3.0,
     "params_use_roll": false
-  },
-  "map": {
-    "path": "Moscow.osm.admap",
-    "update_hz": 2.0,
-    "local_map_period_s": 5.0,
-    "local_map_radius_m": 400.0,
-    "min_speed_mps": 1.5,
-    "max_fix_age_s": 30.0,
-    "horizon_m": 2000.0,
-    "max_match_dist_m": 40.0,
-    "step_m": 5.0,
-    "window_m": 25.0,
-    "turn_kappa": 0.002,
-    "max_lat_acc": 2.6,
-    "min_section_m": 100.0
   },
   "zmq": {
     "endpoint_in": "tcp://127.0.0.1:5555",

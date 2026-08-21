@@ -10,54 +10,54 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-/**
- * \brief Finds which way the phone is mounted from gravity and rotation.
- *
- * \details A phone in a windshield cradle has no known orientation, so the yaw axis has to be estimated:
- * on one recorded mount it turned out to be the sensor's x axis, correlating with the ESP yaw rate at
- * 0.999 while the z axis correlated at -0.52. Feeding a raw axis straight into the filter is therefore a
- * guess, and this class exists so nothing has to guess.
- */
+/** Finds which way the phone is mounted from gravity and rotation. */
 class ImuCalibrator {
 public:
+  /// \param[in] speed_threshold_mps Below this the car counts as stationary for bias collection.
   explicit ImuCalibrator(double speed_threshold_mps = 0.5 / 3.6, int min_samples = 50, int max_buffer = 400,
                          bool invert_yaw_rate = true);
 
+  /// Forget bias, orientation and buffers.
   void reset();
+  /// Feed the current speed [m/s]; gates stationary-only collection.
   void setSpeed(double speed_mps);
 
+  /// Seed the mount orientation from the config [deg].
   void setMountPrior(double roll_deg, double pitch_deg, double yaw_deg);
 
+  /// One raw IMU sample in. \return Vehicle-frame yaw rate [rad/s] once calibrated, nothing before.
   std::optional<double> push(const RawImuSample& raw);
 
+  /// \return True when a mount prior was set.
   bool hasPrior() const { return has_prior_; }
+  /// \return True once gravity fixed the orientation.
   bool orientationLocked() const { return orientation_locked_; }
+  /// \return True when samples can be resolved into the vehicle frame.
   bool ready() const { return has_prior_ || orientation_locked_; }
+  /// \return Gyro bias estimate [rad/s].
   const Vec3& bias() const { return bias_; }
+  /// \return Phone-to-vehicle rotation.
   const Mat3& rotation() const { return R_; }
 
   /** Lateral specific force in the vehicle frame (x forward, y right, z down) for the last sample, i.e.
    *  the accelerometer's y component after calibration. This is what `RoadRollEstimator` needs; it is only
    *  meaningful once a heading exists, which is what `hasHeading` reports. */
   double lastLatAccel() const { return last_lat_accel_; }
+  /// \return True when yaw about gravity is known (prior only).
   bool hasHeading() const { return has_prior_; }
+  /// \return Accelerometer samples buffered for orientation.
   int orient_samples() const { return static_cast<int>(accel_buf_.size()); }
+  /// \return Gyro samples buffered for bias.
   int bias_samples() const { return static_cast<int>(gyro_buf_.size()); }
 
+  /// \return Rotation aligning \p accel with gravity; yaw about gravity stays free.
   static Mat3 rotationFromGravity(const Vec3& accel);
 
-  /** Roll and pitch from gravity, heading kept from `heading_ref`.
-   *
-   *  Gravity fixes two of the three angles and says nothing about the third: any rotation about the
-   *  gravity axis leaves the measured vector unchanged. `rotationFromGravity` resolves that freedom by
-   *  taking the minimal rotation, which is fine for yaw rate — only the z component is read, and gravity
-   *  fixes z — and wrong for anything lateral, because the resulting y axis points nowhere in particular.
-   *
-   *  So the standstill lock keeps the heading it already had (from the mount prior) and replaces only what
-   *  gravity actually measured. Without this the lock silently destroys the heading, and the lateral
-   *  specific force published alongside the yaw rate would be a mixture of longitudinal and lateral. */
+  /** Roll and pitch from gravity, heading kept from `heading_ref`. */
   static Mat3 rotationFromGravityKeepingHeading(const Vec3& accel, const Mat3& heading_ref);
+  /// Component overload.
   static Mat3 rotationFromGravity(double ax, double ay, double az) { return rotationFromGravity(Vec3(ax, ay, az)); }
+  /// \return Rotation from mount roll/pitch/yaw [deg].
   static Mat3 rotationFromMountRpy(double roll_deg, double pitch_deg, double yaw_deg);
 
 private:

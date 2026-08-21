@@ -87,7 +87,7 @@ def _summarize(name: str, rows: list[dict]) -> None:
     print(
         f"  |err vs meas| mean/p95  = {np.mean(np.abs(err)):.1f} / {np.percentile(np.abs(err), 95):.1f} °"
     )
-    if name.startswith("mpc") or any(r["controller"] == "mpc" for r in ok):
+    if name.startswith("mpc") or any(r["controller"] == "fp" for r in ok):
         print(
             f"  CTE_m      min/max/mean = {cte.min():+.3f} / {cte.max():+.3f} / {cte.mean():+.3f}"
         )
@@ -131,7 +131,7 @@ def main() -> None:
     ap.add_argument("--pp-shift", type=float, default=1.4)
     ap.add_argument("--max-steer-deg", type=float, default=DEFAULT_MAX_STEER_DEG)
     ap.add_argument("--min-lane-prob", type=float, default=0.3)
-    ap.add_argument("--controller", choices=("pp", "mpc", "both"), default="both")
+    ap.add_argument("--controller", choices=("pp", "fp", "both"), default="both")
     ap.add_argument(
         "--cam-y-left",
         type=float,
@@ -153,8 +153,8 @@ def main() -> None:
     modes = []
     if args.controller in ("pp", "both"):
         modes.append("pure_pursuit")
-    if args.controller in ("mpc", "both"):
-        modes.append("mpc")
+    if args.controller in ("fp", "both"):
+        modes.append("fp")
 
     all_rows = []
     for mode in modes:
@@ -172,7 +172,7 @@ def main() -> None:
         rows = _run_controller(
             ctrl, lanes, state, args.max_dt, args.min_lane_prob, args.steer_ratio
         )
-        tag = "mpc" if mode == "mpc" else "pp"
+        tag = "fp" if mode == "fp" else "pp"
         suffix = f" cam_y={args.cam_y_left:+.3f}" if abs(args.cam_y_left) > 1e-9 else ""
         _summarize(f"{tag}{suffix}", rows)
         for r in rows:
@@ -194,7 +194,7 @@ def main() -> None:
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(2, 1, figsize=(11, 6), sharex=True)
-        for mode, color in (("pp", "C0"), ("mpc", "C1")):
+        for mode, color in (("pp", "C0"), ("fp", "C1")):
             rs = [r for r in all_rows if r["mode"] == mode]
             if not rs:
                 continue
@@ -202,13 +202,13 @@ def main() -> None:
             ax[0].plot(
                 t, [r["steer_cmd_deg"] for r in rs], label=f"{mode} SWA_cmd", color=color
             )
-            if mode == "mpc":
+            if mode == "fp":
                 ax[1].plot(t, [r["cte_m"] for r in rs], label="CTE", color=color)
         meas = [
             r for r in all_rows if r["mode"] == modes[0] and modes[0] == "pure_pursuit"
         ] or [r for r in all_rows if r["mode"] == "pp"]
         if not meas:
-            meas = [r for r in all_rows if r["mode"] == "mpc"]
+            meas = [r for r in all_rows if r["mode"] == "fp"]
         # unique times for meas
         seen = set()
         tm, sm = [], []

@@ -4,44 +4,7 @@
 #include <cmath>
 
 namespace adas {
-/** Road bank (roll) from the lateral accelerometer, the yaw rate and the speed.
- *
- *  Why this exists: `paramsd` cannot learn tyre stiffness honestly without it. A banked road and an
- *  understeering car produce the same lateral-acceleration signature, so a parameter estimator with no
- *  roll input silently folds the road into the vehicle. Upstream's `paramsd` takes roll from its localizer
- *  and falls back to "zero with a 10° standard deviation" when it cannot — that fallback is what we have
- *  today, and this class is the alternative.
- *
- *  ## The measurement
- *
- *  In the vehicle frame (x forward, y right, z down), with the road banked by φ, gravity has a lateral
- *  component, so the accelerometer reads
- *
- *      f_y = a_y − g·sin(φ),      a_y = −v · yaw_rate_can
- *
- *  hence `sin(φ) = (a_y − f_y) / g`. The minus in `a_y` is not optional: `chassis.yaw_rate` is decoded the
- *  way flowpilot decodes `ESP_02`, i.e. in openpilot's ISO convention with z up and positive for a **left**
- *  turn, while this frame has z down. Getting it backwards produces an apparent body-roll gradient of
- *  116 °/g — seventeen times what a car can do — which is the only reason the sign error was caught.
- *
- *  ## The body-roll confound, and why it is subtracted rather than ignored
- *
- *  The phone is bolted to the body, and the body rolls on its suspension away from the turn in proportion
- *  to lateral acceleration. To first order that tilt is indistinguishable from road bank, so the estimate
- *  reads `φ_road + K·a_y`. Measured on two runs (`bag_road_roll.py`), restricted to real cornering where
- *  the regression has a lever arm at all (|a_y| between 1 and 2 m/s²): **+3.2 and +2.8 °/g**, which is the
- *  low end of the physical range for a hatchback. On near-straight samples the same regression returns
- *  −7 °/g with a correlation of −0.07 — fitting noise, and a good reminder to gate a slope estimate on
- *  having some signal to slope against.
- *
- *  ## What accuracy to expect
- *
- *  Per-sample scatter is 2.1–2.3° (the phone is on a windscreen mount at 15 Hz; road vibration dominates).
- *  Averaging brings that to 0.9° over one second and **0.65° over ten**, and then it stops falling — the
- *  floor is the road's own camber changing along the route, which is the thing we are trying to see. So
- *  the filter is deliberately slow, and it reports its own uncertainty so a consumer can gate on it the
- *  way `paramsd` does.
- */
+/** Road bank (roll) from the lateral accelerometer, the yaw rate and the speed. */
 class RoadRollEstimator {
 public:
   struct Config {
@@ -62,11 +25,15 @@ public:
   };
 
   RoadRollEstimator() = default;
+  /// \param[in] cfg Gates and smoothing.
   explicit RoadRollEstimator(Config cfg) : cfg_(cfg) {}
 
+  /// Replace the config.
   void setConfig(const Config& cfg) { cfg_ = cfg; }
+  /// \return The config in force.
   const Config& config() const { return cfg_; }
 
+  /// Drop the estimate and the counters.
   void reset()
   {
     roll_deg_ = 0.0;
@@ -114,7 +81,9 @@ public:
     return finish(true);
   }
 
+  /// \return Road-bank estimate [deg], positive right side down.
   double rollDeg() const { return roll_deg_; }
+  /// \return Accepted samples.
   int sampleCount() const { return n_; }
 
   /** Reported uncertainty, degrees. Shrinks as `sample_std / sqrt(n)` but never below the 0.65° floor the
@@ -128,6 +97,7 @@ public:
     return std::max(0.65, shrunk);
   }
 
+  /// \return True once enough samples were accepted.
   bool valid() const { return n_ >= 30; }
 
 private:

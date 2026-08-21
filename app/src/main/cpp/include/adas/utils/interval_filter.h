@@ -4,14 +4,7 @@
 #include <cstdint>
 
 namespace adas {
-/**
- * \brief Smoothed interval between messages, taken from their timestamps.
- *
- * The source rate enters the filter, rate-limit and PID formulas. A configured constant will not do
- * — vision slows down under load and chassis arrives unevenly — and the raw difference will not do
- * either: one dropped frame would give a step several times larger and a jerk on the output. So the
- * difference is clamped and smoothed, and a large enough gap counts as a break in the stream.
- */
+/** Smoothed interval between messages, taken from their timestamps. */
 class IntervalFilter {
 public:
   struct Config {
@@ -23,11 +16,15 @@ public:
   };
 
   IntervalFilter() = default;
+  /// \param[in] cfg Nominal value and smoothing.
   explicit IntervalFilter(Config cfg) : cfg_(cfg), value_s_(cfg.nominal_s) {}
 
+  /// \return Filtered interval [s].
   double value() const { return value_s_; }
+  /// \return True after the first sample.
   bool primed() const { return last_ts_us_ > 0; }
 
+  /// Back to the nominal interval.
   void reset()
   {
     value_s_ = cfg_.nominal_s;
@@ -75,27 +72,27 @@ private:
   int64_t last_ts_us_ = 0;
 };
 
-/**
- * \brief Gate with hysteresis: opens above one threshold, closes below another.
- *
- * A single threshold for both directions would chatter exactly where the value sits near it — for
- * instance, speed in traffic around the control threshold.
- */
+/** Gate with hysteresis: opens above one threshold, closes below another. */
 class HysteresisGate {
 public:
   HysteresisGate() = default;
+  /// \param[in] close_below / open_above Thresholds; the gap is the hysteresis.
   HysteresisGate(double close_below, double open_above) : close_below_(close_below), open_above_(open_above) {}
 
+  /// \return Current gate state.
   bool isOpen() const { return open_; }
 
+  /// Replace the thresholds.
   void setThresholds(double close_below, double open_above)
   {
     close_below_ = close_below;
     open_above_ = open_above;
   }
 
+  /// Close the gate.
   void reset() { open_ = false; }
 
+  /// Feed a value. \return The gate state after it.
   bool update(double value)
   {
     open_ = open_ ? !(value < close_below_) : !(value < open_above_);

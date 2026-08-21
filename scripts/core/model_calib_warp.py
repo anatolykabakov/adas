@@ -15,6 +15,12 @@ MODEL_W = 512
 MODEL_H = 256
 MED_FL = 910.0
 MED_CY = 47.6
+# flowpilot `SBIGMODEL_FL`: half the medmodel focal length, so twice the field of view. The 0.9.x
+# network takes two pictures, narrow and wide; with one camera both come from the same frame, warped
+# by different *model* intrinsics — the camera's own K does not change. Mirrors
+# `ModelCalibWarp.warpMatrix(..., bigModel)`.
+SBIG_FL = 455.0
+SBIG_CY = 0.5 * (MODEL_H + MED_CY)
 
 # device (x forward, y right, z down) → camera view
 VIEW_FROM_DEVICE = np.array(
@@ -46,11 +52,14 @@ def warp_matrix(
     fy: float,
     cx: float,
     cy: float,
+    big_model: bool = False,
 ) -> np.ndarray:
-    """3×3 model→camera homography (row-major)."""
+    """3×3 model→camera homography (row-major); ``big_model`` for the wide input."""
     K = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
+    mfl = SBIG_FL if big_model else MED_FL
+    mcy = SBIG_CY if big_model else MED_CY
     med_k = np.array(
-        [[MED_FL, 0.0, 0.5 * MODEL_W], [0.0, MED_FL, MED_CY], [0.0, 0.0, 1.0]],
+        [[mfl, 0.0, 0.5 * MODEL_W], [0.0, mfl, mcy], [0.0, 0.0, 1.0]],
         dtype=np.float64,
     )
     med_from_calib = med_k @ VIEW_FROM_DEVICE
@@ -69,6 +78,7 @@ def warp_matrix_deg(
     fy: float,
     cx: float,
     cy: float,
+    big_model: bool = False,
 ) -> np.ndarray:
     return warp_matrix(
         np.deg2rad(roll_deg),
@@ -78,6 +88,7 @@ def warp_matrix_deg(
         fy,
         cx,
         cy,
+        big_model,
     )
 
 
@@ -93,13 +104,3 @@ def warp_to_model(bgr: np.ndarray, m_model_to_cam: np.ndarray) -> np.ndarray:
         borderMode=cv2.BORDER_CONSTANT,
         borderValue=(0, 0, 0),
     )
-
-
-def default_calib(
-    width: int = 1280,
-    height: int = 720,
-    fx: float = 930.0,
-    fy: float = 930.0,
-) -> Tuple[float, float, float, float, float, float, float]:
-    """roll, pitch, yaw deg, fx, fy, cx, cy for full-res phone prior."""
-    return 0.0, 0.0, 0.0, fx, fy, 0.5 * width, 0.5 * height

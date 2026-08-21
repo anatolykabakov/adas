@@ -11,18 +11,7 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief The angle loop: road-wheel angle to steering-wheel angle to normalised torque.
- *
- * \details Lives inside the `Control` service and nowhere else — this is the control law itself. It
- * carries no middleware and no topics, so it is testable the way `longplan::compute` is, without
- * bringing an application up.
- *
- * What is here: the road-to-steering-wheel conversion including the learned parameters, the slew limit
- * on the command, and the angle PID. What is not: the gates and the decision whether to command at all.
- * Those stay outside, because the reasons to refuse arrive from unrelated places — a stale reference, a
- * blinker, the assist gate — and mixing them into angle arithmetic buys nothing.
- */
+/** The angle loop: road-wheel angle to steering-wheel angle to normalised torque. */
 class AngleControl {
 public:
   struct Config {
@@ -34,7 +23,7 @@ public:
      *
      *  A constant, as upstream's `PIDController(rate=100)` is: taking the measured interval instead made
      *  the command depend on the very first tick, and it buys about 1 cNm RMS. */
-    double pid_rate_hz = 100.0;
+    double pid_rate_hz = 100.0;  ///< Tick rate the integral is scaled by [Hz].
 
     double steer_ratio = 15.7;            ///< Steering-wheel to road-wheel ratio.
     double steer_sign = -1.0;             ///< Which way a positive command turns the wheel: +1 or -1.
@@ -42,6 +31,7 @@ public:
     double tire_stiffness_factor = 0.64;  ///< Scale on the reference tyre stiffness; 1.0 is the reference car.
   };
 
+  /// \param[in] cfg PID gains, vehicle geometry and limits.
   explicit AngleControl(Config cfg)
     : cfg_(cfg)
     , pid_(cfg.pid_kp, cfg.pid_ki, cfg.pid_kf, cfg.pid_rate_hz, cfg.pid_ff_floor_mps)
@@ -79,13 +69,11 @@ public:
   void setSlewConfig(const SlewGuard::Config& c) { slew_.setConfig(c); }
   /**
    * \brief Rate-limit the requested angle in place.
-   *
    * \param[in,out] steer_rad Requested road-wheel angle [rad]; clipped to the allowed step.
    * \param[in] speed_mps Ego speed [m/s]; the allowance narrows with speed.
    * \param[in] frame_dt_s Time since the previous request [s].
    * \param[in] commanded False while not steering, so the guard tracks instead of limiting.
    * \return True when the request was actually clipped — recorded, since a permanently clipped command
-   * looks like an under-tuned gain.
    */
   bool applySlew(double& steer_rad, double speed_mps, double frame_dt_s, bool commanded)
   {
@@ -94,7 +82,6 @@ public:
 
   /**
    * \brief One control step against the current chassis frame.
-   *
    * \param[in] active Whether the gates allow steering; false releases the loop.
    * \param[in] ch Chassis: measured steering angle, speed, and whether the driver is on the wheel.
    * \return Command and PID internals.
@@ -105,14 +92,19 @@ public:
                        desired_swa_no_offset_deg_);
   }
 
+  /// Hand the paramsd estimate over; used only while \p valid is true.
   void setLearnedParams(bool valid, double stiffness, double ratio, double offset_deg)
   {
     veh_.setLearnedParams(valid, stiffness, ratio, offset_deg);
   }
 
+  /// \return True when the effective* values come from the learner rather than the config.
   bool usingLearnedParams() const { return veh_.usingLearnedParams(); }
+  /// \return Stiffness factor in force.
   double effectiveStiffnessFactor() const { return veh_.effectiveStiffnessFactor(); }
+  /// \return Steering ratio in force.
   double effectiveSteerRatio() const { return veh_.effectiveSteerRatio(); }
+  /// \return Steering-zero offset in force [deg].
   double effectiveAngleOffsetDeg() const { return veh_.effectiveAngleOffsetDeg(); }
 
   /// The configured ratio, ignoring the learned one: converts a measured steering-wheel angle into a
@@ -120,13 +112,18 @@ public:
   double steerRatio() const { return veh_.steerRatio(); }
   /// Current setpoint [deg], including the learned angle zero.
   double desiredSwaDeg() const { return desired_swa_deg_; }
+  /// \return Road-wheel angle ceiling [rad].
   double maxSteerRad() const { return veh_.maxSteerRad(); }
 
+  /// Set the road-wheel angle ceiling [deg].
   void setMaxSteerDeg(double deg) { veh_.setMaxSteerDeg(deg); }
+  /// Set the steering ratio.
   void setSteerRatio(double ratio) { veh_.setSteerRatio(ratio); }
+  /// Set the wheel-direction sign: +1 or -1.
   void setSteerSign(double sign) { veh_.setSteerSign(sign); }
   /// Gains as in \ref PidController.
   void setPidGains(double kp, double ki, double kf) { pid_.setGains(kp, ki, kf); }
+  /// Set the tyre-stiffness factor.
   void setTireStiffnessFactor(double f) { veh_.setTireStiffnessFactor(f); }
 
 private:

@@ -3,28 +3,7 @@
 #include <cmath>
 
 namespace adas {
-/** Two-state (speed, acceleration) Kalman filter over the CAN wheel speed.
- *
- *  Why this exists. The decoder used to publish `v_ego` as the raw four-wheel average and `a_ego` as a
- *  finite difference over the message interval. Measured on run 2026_08_06_00_36_42 above 5 m/s, that
- *  `a_ego` came out with p5/p95 of ±3.8 m/s², extremes of −61.5 and +74.5, and an RMS step of
- *  4.16 m/s² between consecutive samples — a car's real acceleration lives inside ±3 m/s² and cannot
- *  change by 4 m/s² in 10 ms. The field was quantisation noise wearing an acceleration label. Nothing
- *  read it, which is the only reason it did no harm; anything longitudinal that started using it would
- *  have been poisoned.
- *
- *  Upstream solves this the same way — `CarInterfaceBase.update_speed_kf` in
- *  `flowpilot/selfdrive/car/interfaces.py` runs a fixed-gain `KF1D` with `A = [[1, dt], [0, 1]]`,
- *  `C = [1, 0]` and `K = [0.174, 1.659]` at 100 Hz, and takes both `vEgo` and `aEgo` from it. Their
- *  gains are baked for one rate; ours are computed from the actual `dt` between frames, because
- *  `ESP_02` does not arrive on a metronome and a gain tuned for 10 ms is wrong at 25.
- *
- *  Also here: `wheel_speed_factor`. Wheel speed is a wheel circumference times a rate, so a worn or
- *  under-inflated tyre makes the whole signal read high by a constant. Measured against GNSS Doppler
- *  on two runs (`bag_speed_sources.py`): **+1.17 % and +1.20 %**, flat across speed bands (1.005 to
- *  1.022, no trend) — the signature of a radius constant rather than slip. It matters because
- *  everything lateral is scaled by speed: the understeer term `κ = δ / (L·(1 + K·v²))` squares it.
- */
+/** Two-state (speed, acceleration) Kalman filter over the CAN wheel speed. */
 class SpeedFilter {
 public:
   struct Config {
@@ -38,11 +17,15 @@ public:
   };
 
   SpeedFilter() = default;
+  /// \param[in] cfg Smoothing constants.
   explicit SpeedFilter(Config cfg) : cfg_(cfg) {}
 
+  /// Replace the config.
   void setConfig(const Config& cfg) { cfg_ = cfg; }
+  /// \return The config in force.
   const Config& config() const { return cfg_; }
 
+  /// Forget the state; the next sample re-primes it.
   void reset()
   {
     inited_ = false;
@@ -97,8 +80,11 @@ public:
     p_aa_ = new_p_aa;
   }
 
+  /// \return True after the first sample.
   bool ready() const { return inited_; }
+  /// \return Filtered speed [m/s].
   double speed() const { return v_; }
+  /// \return Filtered acceleration [m/s^2].
   double accel() const { return a_; }
 
 private:

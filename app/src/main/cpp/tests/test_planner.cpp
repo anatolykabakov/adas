@@ -16,14 +16,11 @@
 #include "adas/utils/path_lateral_state.h"
 #include "adas/utils/proto_convert.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
-#include "adas/lateral/visionpilot_mpc.h"
 
 using adas::estimatePathLateralState;
 using adas::PathLateralState;
 using adas::Vec2;
 using adas::services::Planner;
-using visionpilot::build_kappa_schedule;
-using visionpilot::LateralPlanner;
 
 namespace {
 std::vector<Vec2> straightLaneRightOffset(double offset_m)
@@ -47,10 +44,11 @@ adas::proto::LaneLines lanesFromPolyline(const std::vector<Vec2>& poly, int64_t 
   return ll;
 }
 
-Planner::Config mpcConfig()
+Planner::Config fpConfig()
 {
   Planner::Config c;
-  c.controller = "mpc";
+  c.controller = "fp";
+  c.fp_solver = "grad";  // детерминированный решатель: тесты меряют сервисные клампы, не капсулу
   return c;
 }
 
@@ -69,61 +67,9 @@ TEST(PathLateralState, StraightOffsetRightGivesNegativeCteInVpFrame)
   EXPECT_NEAR(s.kappa, 0.0, 0.01);
 }
 
-TEST(VisionPilotMpc, FeedforwardMatchesAckermannOnCurve)
+TEST(LaneKeepServiceFp, LowSpeedClampNearPpLimit)
 {
-  const visionpilot::Params params;
-  LateralPlanner mpc(params);
-  const double Lf = 2.67;
-  const double kappa = 0.02;
-  const double v = 10.0;
-  Eigen::Vector3d state;
-  state << 0.0, 0.0, kappa;
-  const auto ks = build_kappa_schedule(Lf, 0.0, kappa, 0.0, params.N);
-  Eigen::VectorXd vs(static_cast<int>(params.N));
-  vs.setConstant(v);
-  const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
-  ASSERT_GE(deltas.size(), 2u);
-
-  const double ff = std::atan(Lf * kappa) + 0.0015 * v * v * kappa;
-  EXPECT_NEAR(deltas[1], ff, 0.08);
-}
-
-TEST(VisionPilotMpc, CorrectsPositiveCte)
-{
-  const visionpilot::Params params;
-  LateralPlanner mpc(params);
-  const double Lf = 2.67;
-  Eigen::Vector3d state;
-  state << 0.8, 0.0, 0.0;
-  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0, params.N);
-  Eigen::VectorXd vs(static_cast<int>(params.N));
-  vs.setConstant(8.0);
-  const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
-  ASSERT_GE(deltas.size(), 2u);
-
-  EXPECT_NE(deltas[1], 0.0);
-  EXPECT_GT(deltas[1], 0.0);
-}
-
-TEST(VisionPilotMpc, LowSpeedModerateCteDoesNotSaturate)
-{
-  const visionpilot::Params params;
-  LateralPlanner mpc(params);
-  const double Lf = 2.67;
-  Eigen::Vector3d state;
-  state << 0.6, 0.0, 0.0;
-  const auto ks = build_kappa_schedule(Lf, 0.0, 0.0, 0.0, params.N);
-  Eigen::VectorXd vs(static_cast<int>(params.N));
-  vs.setConstant(1.5);
-  const auto deltas = mpc.compute_steering(Lf, state, vs, ks);
-  ASSERT_GE(deltas.size(), 2u);
-  EXPECT_GT(deltas[1], 0.0);
-  EXPECT_LT(std::abs(deltas[1]), 0.40);
-}
-
-TEST(LaneKeepServiceMpc, LowSpeedClampNearPpLimit)
-{
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   Planner svc(c);
@@ -134,9 +80,9 @@ TEST(LaneKeepServiceMpc, LowSpeedClampNearPpLimit)
   EXPECT_LE(std::abs(out.steer_rad), 9.0 * M_PI / 180.0 + 1e-6);
 }
 
-TEST(LaneKeepServiceMpc, FrameDtComesFromMessageTimestamps)
+TEST(LaneKeepServiceFp, FrameDtComesFromMessageTimestamps)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   Planner svc(c);
 
   auto frame = [](double offset_m, int64_t ts_us) {
@@ -173,9 +119,9 @@ TEST(LaneKeepServiceMpc, FrameDtComesFromMessageTimestamps)
   EXPECT_GT(slow, 1.5 * fast);
 }
 
-TEST(LaneKeepServiceMpc, RateLimitBoundsFrameToFrameStep)
+TEST(LaneKeepServiceFp, RateLimitBoundsFrameToFrameStep)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   Planner svc(c);
 
   const auto o1 = svc.step(10.0, straightLaneRightOffset(0.8));
@@ -191,29 +137,9 @@ TEST(LaneKeepServiceMpc, RateLimitBoundsFrameToFrameStep)
   EXPECT_LT(step_deg, 3.0);
 }
 
-TEST(LaneKeepServiceMpc, KappaYawBlendDefaultsToPathOnly)
-{
-  Planner::Config c = mpcConfig();
-  EXPECT_DOUBLE_EQ(c.mpc_kappa_yaw_blend, 0.0);
-  Planner svc(c);
-
-  std::vector<Vec2> poly;
-  for (int i = 2; i <= 40; ++i) {
-    const double x = static_cast<double>(i);
-    poly.emplace_back(x, 0.002 * x * x);
-  }
-  const auto lat = estimatePathLateralState(poly);
-  ASSERT_TRUE(lat.valid);
-
-  const auto out = svc.step(8.0, poly);
-  ASSERT_EQ(out.status, "ok");
-
-  EXPECT_DOUBLE_EQ(out.curvature, lat.kappa);
-}
-
 TEST(Planner, CamYLeftShiftsPathToVehicleFrame)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.cam_y_left_m = 0.5;
   Planner svc(c);
 
@@ -225,7 +151,7 @@ TEST(Planner, CamYLeftShiftsPathToVehicleFrame)
 
 TEST(Planner, CamYLeftZeroLeavesCteUnchanged)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   EXPECT_DOUBLE_EQ(c.cam_y_left_m, 0.0);
   Planner svc(c);
   const auto out = svc.step(10.0, straightLaneRightOffset(0.5));
@@ -240,9 +166,9 @@ TEST(LaneKeepServicePublish, SlewGuardConfigDefaultActive)
   EXPECT_LE(c.steer_slew_limit_deg, 25.0);
 }
 
-TEST(LaneKeepServiceMpc, StraightModerateCteDoesNotRailAtSpeed)
+TEST(LaneKeepServiceFp, StraightModerateCteDoesNotRailAtSpeed)
 {
-  Planner svc(mpcConfig());
+  Planner svc(fpConfig());
 
   const auto slow = svc.step(4.0, straightLaneRightOffset(0.5));
   ASSERT_EQ(slow.status, "ok");
@@ -255,9 +181,9 @@ TEST(LaneKeepServiceMpc, StraightModerateCteDoesNotRailAtSpeed)
   EXPECT_LT(std::abs(fast.steer_rad), std::abs(slow.steer_rad));
 }
 
-TEST(LaneKeepServiceMpc, RateLimitCeilingHoldsAtLowSpeed)
+TEST(LaneKeepServiceFp, RateLimitCeilingHoldsAtLowSpeed)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   Planner svc(c);
@@ -271,7 +197,7 @@ TEST(LaneKeepServiceMpc, RateLimitCeilingHoldsAtLowSpeed)
 
 TEST(LaneKeepServiceFlowpilot, StraightOffsetSteersTowardCenter)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.controller = "fp";
   Planner svc(c);
 
@@ -286,7 +212,7 @@ TEST(LaneKeepServiceFlowpilot, StraightOffsetSteersTowardCenter)
 
 TEST(LaneKeepServiceFlowpilot, ControllerSwitchAcceptsFlowpilot)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.controller = "pp";
   Planner svc(c);
   svc.setController("fp");
@@ -298,7 +224,7 @@ TEST(LaneKeepServiceFlowpilot, ControllerSwitchAcceptsFlowpilot)
 
 TEST(LaneKeepServiceFlowpilot, CurvedPathCommandsNonZero)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.controller = "fp";
   Planner svc(c);
   std::vector<Vec2> poly;
@@ -314,9 +240,9 @@ TEST(LaneKeepServiceFlowpilot, CurvedPathCommandsNonZero)
   EXPECT_GT(out.steer_rad, 0.005);
 }
 
-TEST(LaneKeepServiceMpc, LowSpeedGateHoldsZeroAndHasHysteresis)
+TEST(LaneKeepServiceFp, LowSpeedGateHoldsZeroAndHasHysteresis)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.controller = "fp";
   Planner svc(c);
   const auto poly = straightLaneRightOffset(1.0);
@@ -389,7 +315,7 @@ public:
 
 TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   c.lane_max_age_s = 0.30;
@@ -434,7 +360,7 @@ TEST(LaneKeepStaleGate, OldReferenceDisablesTheCommand)
 
 TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   c.lane_max_age_s = 0.0;
@@ -466,7 +392,7 @@ TEST(LaneKeepStaleGate, ZeroDisablesTheGate)
 // 2026_08_04_21_00_18 (left 7 episodes, right 11).
 TEST(LaneKeepBlinkerGate, TurnSignalClearsTheCommandAndResumesAfterDelay)
 {
-  Planner::Config c = mpcConfig();
+  Planner::Config c = fpConfig();
   c.min_control_speed_mps = 0.0;
   c.min_control_speed_hyst_mps = 0.0;
   c.lane_max_age_s = 0.0;  // staleness gate off — this test is about the blinker only
@@ -525,7 +451,7 @@ struct AssistRig {
   explicit AssistRig(double max_age_s = 0.5)
     : sink(std::make_shared<SteerSink>()), mw(adas::middleware::Manager::Mode::Simulated)
   {
-    Planner::Config c = mpcConfig();
+    Planner::Config c = fpConfig();
     c.min_control_speed_mps = 0.0;
     c.min_control_speed_hyst_mps = 0.0;
     c.lane_max_age_s = 0.0;
@@ -803,4 +729,31 @@ TEST(AcadosLatMpc, AgreesWithOurOwnSolverOnTheSameProblem)
   EXPECT_NEAR(ra.desired_curvature, ro.desired_curvature, 0.5 * std::abs(kappa)) << "and a close magnitude — the "
                                                                                     "problem "
                                                                                     "is the same one";
+}
+
+TEST(LaneKeepTuning, RuntimeChangesReachThePlanner)
+{
+  Planner::Config c;
+  c.controller = "fp";
+  adas::middleware::Manager mw(adas::middleware::Manager::Mode::Simulated);
+  auto lk = mw.registerService<Planner>(c);
+
+  lk->setFpSteerDelayS(0.5);
+  EXPECT_DOUBLE_EQ(0.5, lk->fpPlannerConfig().steer_delay_s);
+
+  lk->setFpSteeringRateWeight(123.0);
+  EXPECT_DOUBLE_EQ(123.0, lk->fpPlannerConfig().steering_rate_weight);
+
+  lk->setSteerSlewLimitDeg(3.0);
+  EXPECT_DOUBLE_EQ(3.0, lk->fpPlannerConfig().steer_slew_limit_deg);
+
+  lk->setMaxSteerDeg(11.0);
+  EXPECT_NEAR(11.0 * M_PI / 180.0, lk->ppPlannerConfig().max_steer_rad, 1e-12);
+
+  lk->setPurePursuit(0.9, 4.0, 21.0, 1.7);
+  const auto pp = lk->ppPlannerConfig();
+  EXPECT_DOUBLE_EQ(0.9, pp.k_dd);
+  EXPECT_DOUBLE_EQ(4.0, pp.ld_min);
+  EXPECT_DOUBLE_EQ(21.0, pp.ld_max);
+  EXPECT_DOUBLE_EQ(1.7, pp.waypoint_shift);
 }

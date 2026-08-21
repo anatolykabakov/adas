@@ -26,7 +26,7 @@ Planner::Planner(Config p)
   , veh_({config_.steer_ratio, config_.steer_sign, config_.max_steer_deg, config_.tire_stiffness_factor})
   , max_torque_cnm_(config_.max_torque_cnm)
 {
-  if (config_.controller != "mpc" && config_.controller != "fp")
+  if (config_.controller != "fp")
     config_.controller = "pp";
 
   frame_dt_ = IntervalFilter({config_.vision_nominal_dt_s, kMinDtS, kMaxDtS, kMaxGapS, kDtAlpha});
@@ -40,7 +40,8 @@ void Planner::configure()
     onChassis(carStateToChassis(payload, veh_.steerRatio()));
   });
   subscribe<adas::proto::LaneLines>(topics::kVisionLanes, [this](const adas::proto::LaneLines& payload) {
-    const LanePathMsg path = laneLinesToPath(payload, config_.lane_path, &lane_fusion_);
+    const double v_ego = have_chassis_ ? chassis_.speed_mps : 0.0;
+    const LanePathMsg path = laneLinesToPath(payload, config_.lane_path, &lane_fusion_, v_ego);
     publish(topics::kVisionPath, createLanePath(path));
     onLanes(path);
   });
@@ -63,8 +64,7 @@ void Planner::configure()
       model_long_ = m;
       have_model_long_ = true;
     });
-    scheduleTimer(
-        50, [this] { longTick(); }, "long");
+    scheduleTimer(50, [this] { longTick(); }, "long");
   }
 
   registerParameters();
@@ -110,25 +110,8 @@ void Planner::registerParameters()
       "fp_steering_rate_weight", [this](const double& v) { setFpSteeringRateWeight(v); },
       [this] { return config_.fp_steering_rate_weight; });
   registerLanePathParameters(config_.lane_path, [this](const char* name, auto setter, auto getter) {
-    registerParameter<double>(
-        name, [setter](const double& v) { setter(v); }, [getter] { return getter(); });
+    registerParameter<double>(name, [setter](const double& v) { setter(v); }, [getter] { return getter(); });
   });
-
-  const auto reg_vp = [this](const char* name, double& field) {
-    registerParameter<double>(
-        name,
-        [this, &field](const double& v) {
-          field = std::max(0.0, v);
-          solver_.reset();
-        },
-        [&field] { return field; });
-  };
-  reg_vp("mpc_epsi_gain", config_.mpc_epsi_gain);
-  reg_vp("mpc_ff_scale", config_.mpc_ff_scale);
-  reg_vp("mpc_cte_weight_base", config_.mpc_cte_weight_base);
-  reg_vp("mpc_cte_quartic_scale", config_.mpc_cte_quartic_scale);
-  reg_vp("mpc_cte_gain_base", config_.mpc_cte_gain_base);
-  reg_vp("mpc_cte_gain_floor", config_.mpc_cte_gain_floor);
 }
 
 void Planner::reset()
@@ -145,9 +128,7 @@ void Planner::reset()
 
 void Planner::setController(std::string controller)
 {
-  if (controller == "mpc")
-    config_.controller = "mpc";
-  else if (controller == "fp_acados") {
+  if (controller == "fp_acados") {
     config_.controller = "fp";
     config_.fp_solver = "acados";
   } else if (controller == "fp" || controller == "flowpilot")
@@ -182,32 +163,6 @@ lateral::PpPlanner::Config Planner::ppPlannerConfig() const
   return c;
 }
 
-lateral::VpPlanner::Config Planner::vpPlannerConfig() const
-{
-  lateral::VpPlanner::Config c;
-  c.Lf = config_.mpc_Lf;
-  c.cte_ema_alpha = config_.mpc_cte_ema_alpha;
-  c.epsi_ema_alpha = config_.mpc_epsi_ema_alpha;
-  c.kappa_ema_alpha = config_.mpc_kappa_ema_alpha;
-  c.vision_nominal_dt_s = config_.vision_nominal_dt_s;
-  c.kappa_yaw_blend = config_.mpc_kappa_yaw_blend;
-  c.kappa_yaw_min_speed = config_.mpc_kappa_yaw_min_speed;
-  c.rate_limit_deg = config_.mpc_rate_limit_deg;
-  c.rate_min_speed = config_.mpc_rate_min_speed;
-  c.max_lateral_jerk = config_.mpc_max_lateral_jerk;
-
-  c.solver.epsi_gain = std::max(config_.mpc_epsi_gain, 0.0);
-  c.solver.ff_scale = std::max(config_.mpc_ff_scale, 0.0);
-  c.solver.cte_weight_base = std::max(config_.mpc_cte_weight_base, 0.0);
-  c.solver.cte_quartic_scale = std::max(config_.mpc_cte_quartic_scale, 0.0);
-  c.solver.cte_gain_base = std::max(config_.mpc_cte_gain_base, 0.0);
-  c.solver.cte_gain_floor = std::max(config_.mpc_cte_gain_floor, 0.0);
-
-  c.vehicle = vehicleParams();
-  c.limits = {config_.mpc_max_steer_deg, config_.mpc_low_speed_steer_deg, config_.mpc_steer_deg_per_mps};
-  return c;
-}
-
 void Planner::setMaxSteerDeg(double max_steer_deg)
 {
   config_.max_steer_deg = max_steer_deg;
@@ -215,15 +170,7 @@ void Planner::setMaxSteerDeg(double max_steer_deg)
   solver_.reset();
 }
 
-/** \brief Curvature equivalent to the planner's command.
- *
- *  `fp` computes curvature first and the angle from it, so its curvature goes out unchanged. `pp` and
- *  `vp` compute an angle, and their path curvature has nothing to do with the command — the lateral
- *  offset correction sits inside the angle. Their angle is therefore converted back to curvature with
- *  the same constants the controller uses in the forward direction, so the controller's output is
- *  exactly the angle the planner asked for.
- *
- *  That keeps the interface in curvature for every solver, not only for the one that thinks in it. */
+/** \brief Curvature equivalent to the planner's command. */
 double Planner::commandCurvature(double speed_mps) const
 {
   if (useFlowpilot())
@@ -283,10 +230,6 @@ void Planner::onLanes(const LanePathMsg& msg)
 
 void Planner::makeSolver()
 {
-  if (config_.controller == "mpc") {
-    solver_ = std::make_unique<lateral::VpPlanner>(vpPlannerConfig());
-    return;
-  }
   if (config_.controller != "fp") {
     solver_ = std::make_unique<lateral::PpPlanner>(ppPlannerConfig());
     return;

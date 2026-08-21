@@ -1,7 +1,7 @@
 """Path fusion matching C++ ``adas::laneLinesToPath`` (device Y-right).
 
-Use the returned Nx2 polyline with ``AdasApp.publish_lanes`` / PP — same frame
-as Android TopicConvert → LaneKeep.
+Stock comma ``LanePlanner.get_d_path``. Use the returned Nx2 polyline with
+``AdasApp.publish_lanes`` / PP — same frame as Android TopicConvert → LaneKeep.
 """
 
 from __future__ import annotations
@@ -84,17 +84,18 @@ def lane_lines_to_path(
     lane_std_range_m: float = DEFAULT_LANE_STD_RANGE_M,
     lane_width_min_m: float = DEFAULT_LANE_WIDTH_MIN_M,
     lane_width_max_m: float = DEFAULT_LANE_WIDTH_MAX_M,
+    v_ego: float = 0.0,
+    state: Optional[dict] = None,
 ) -> Optional[np.ndarray]:
     """Fuse PLAN + near L/R lanes → Nx2 device-frame polyline (Y right+).
 
-    ``lane_ys`` / ``lane_probs`` indexed like proto: 0=leftFar, 1=leftNear,
-    2=rightNear, 3=rightFar. Only indices 1 and 2 are used (Android/C++).
-    ``lane_blend_scale`` 0 ⇒ prefer model plan only (matches C++ path_lane_blend_scale).
-
-    Mirror of C++ ``laneLinesToPath``; keep in sync. ``lane_stds`` is the same
-    ``LanePolyline.y_std`` C++ reads (median over 5–40 m); None means no sigma in frame
-    and applies no penalty (bags before 2026-08-02).
+    Port of comma/openpilot ``LanePlanner.get_d_path``. Extra kwargs are kept so
+    callers do not break; only ``v_ego`` / ``state`` / the polylines affect the mix.
+    ``lane_stds[i][0]`` is comma's scalar ``laneLineStds[i]``; empty/None is no penalty.
     """
+    del min_lane_prob, lane_blend_scale, lane_std_good_m, lane_std_bad_m
+    del lane_std_range_m, lane_width_min_m, lane_width_max_m
+
     poly: Optional[np.ndarray] = None
     if plan_x is not None and plan_y is not None and len(plan_x) >= 2:
         poly = plan_to_polyline_ego(
@@ -106,96 +107,91 @@ def lane_lines_to_path(
         if poly.shape[0] < 2:
             poly = None
 
-    blend_scale = float(np.clip(lane_blend_scale, 0.0, 1.0))
-    if blend_scale <= 1e-9 and poly is not None:
+    xs = np.asarray(x_idxs, dtype=np.float64)
+    if xs.size < 2:
         return poly
 
-    xs = np.asarray(x_idxs, dtype=np.float64)
-    have_l = (
-        len(lane_ys) > 1
-        and lane_ys[1] is not None
-        and len(lane_ys[1]) == len(xs)
-        and len(xs) >= 2
+    def _line(idx: int) -> np.ndarray:
+        if (
+            len(lane_ys) > idx
+            and lane_ys[idx] is not None
+            and len(lane_ys[idx]) == len(xs)
+        ):
+            return np.asarray(lane_ys[idx], dtype=np.float64)
+        return np.zeros_like(xs)
+
+    def _prob(idx: int) -> float:
+        if (
+            len(lane_ys) > idx
+            and lane_ys[idx] is not None
+            and len(lane_ys[idx]) == len(xs)
+        ):
+            return float(lane_probs[idx]) if len(lane_probs) > idx else 0.0
+        return 0.0
+
+    def _std0(idx: int) -> float:
+        if lane_stds is None or len(lane_stds) <= idx or lane_stds[idx] is None:
+            return 0.0
+        s = np.asarray(lane_stds[idx], dtype=np.float64)
+        if s.size == 0 or not np.isfinite(s[0]) or s[0] <= 0.0:
+            return 0.0
+        return float(s[0])
+
+    have_any = (
+        _prob(1) > 0.0
+        or _prob(2) > 0.0
+        or (len(lane_ys) > 1 and lane_ys[1] is not None)
+        or (len(lane_ys) > 2 and lane_ys[2] is not None)
     )
-    have_r = (
-        len(lane_ys) > 2
-        and lane_ys[2] is not None
-        and len(lane_ys[2]) == len(xs)
-        and len(xs) >= 2
-    )
-    both = have_l and have_r
-    l_prob = (
-        _soft_lane_prob(
-            float(lane_probs[1]) if len(lane_probs) > 1 else 0.0, min_lane_prob
-        )
-        if both
-        else 0.0
-    )
-    r_prob = (
-        _soft_lane_prob(
-            float(lane_probs[2]) if len(lane_probs) > 2 else 0.0, min_lane_prob
-        )
-        if both
-        else 0.0
-    )
-    if both and lane_stds is not None:
-        l_prob *= _std_confidence(
-            _median_std(
-                lane_stds[1] if len(lane_stds) > 1 else None, xs, lane_std_range_m
-            ),
-            lane_std_good_m,
-            lane_std_bad_m,
-        )
-        r_prob *= _std_confidence(
-            _median_std(
-                lane_stds[2] if len(lane_stds) > 2 else None, xs, lane_std_range_m
-            ),
-            lane_std_good_m,
-            lane_std_bad_m,
-        )
-    width_ok = False
-    if both:
-        sel = (xs >= 5.0) & (xs <= 40.0)
-        if sel.any():
-            w_med = float(
-                np.mean(np.abs(np.asarray(lane_ys[2])[sel] - np.asarray(lane_ys[1])[sel]))
-            )
-            width_ok = lane_width_min_m < w_med < lane_width_max_m
-    anchored = width_ok and l_prob > 0.0 and r_prob > 0.0
-    d_prob = (l_prob + r_prob - l_prob * r_prob) * blend_scale if anchored else 0.0
+    if not have_any:
+        return poly
+
+    lll_y = _line(1)
+    rll_y = _line(2)
+    l_prob = _prob(1)
+    r_prob = _prob(2)
+    width_pts = rll_y - lll_y
+    mod = 1.0
+    for t_check in (0.0, 1.5, 3.0):
+        width_at_t = _interp_y(t_check * (float(v_ego) + 7.0), xs, width_pts)
+        mod = min(mod, float(np.interp(width_at_t, [4.0, 5.0], [1.0, 0.0])))
+    l_prob *= mod
+    r_prob *= mod
+    l_prob *= float(np.interp(_std0(1), [0.15, 0.3], [1.0, 0.0]))
+    r_prob *= float(np.interp(_std0(2), [0.15, 0.3], [1.0, 0.0]))
+
+    st = state if state is not None else {}
+    width_est = float(st.get("width_est_m", 3.7))
+    certainty = float(st.get("width_certainty", 1.0))
+    k_est = 0.05 / (9.95 + 0.05)
+    k_cert = 0.05 / (0.95 + 0.05)
+    certainty = (1.0 - k_cert) * certainty + k_cert * (l_prob * r_prob)
+    width_est = (1.0 - k_est) * width_est + k_est * abs(float(rll_y[0]) - float(lll_y[0]))
+    speed_w = float(np.interp(float(v_ego), [0.0, 31.0], [2.8, 3.5]))
+    lane_w = certainty * width_est + (1.0 - certainty) * speed_w
+    if state is not None:
+        state["width_est_m"] = width_est
+        state["width_certainty"] = certainty
+        state["lane_width_m"] = lane_w
+
+    clipped = min(4.0, lane_w)
+    from_l = lll_y + clipped / 2.0
+    from_r = rll_y - clipped / 2.0
+    d_prob = l_prob + r_prob - l_prob * r_prob
+    lane_path_y = (l_prob * from_l + r_prob * from_r) / (l_prob + r_prob + 0.0001)
 
     if d_prob <= 1e-6:
         return poly
-
-    yl = np.asarray(lane_ys[1], dtype=np.float64) if have_l else None
-    yr = np.asarray(lane_ys[2], dtype=np.float64) if have_r else None
-    lane_xs: List[float] = []
-    lane_mid: List[float] = []
-    for i in range(len(xs)):
-        x = float(xs[i])
-        y_l = float(yl[i]) if yl is not None else 0.0
-        y_r = float(yr[i]) if yr is not None else 0.0
-        w = min(lane_width_max_m, max(lane_width_min_m, abs(y_l - y_r)))
-        from_l = y_l + 0.5 * w
-        from_r = y_r - 0.5 * w
-        lane_y = (l_prob * from_l + r_prob * from_r) / (l_prob + r_prob + 1e-6)
-        lane_xs.append(x)
-        lane_mid.append(lane_y)
-
-    xs_a = np.asarray(lane_xs, dtype=np.float64)
-    ys_a = np.asarray(lane_mid, dtype=np.float64)
-
     if poly is not None and poly.shape[0] >= 2:
         out = poly.copy()
         for i in range(out.shape[0]):
-            y_lane = _interp_y(float(out[i, 0]), xs_a, ys_a)
+            y_lane = _interp_y(float(out[i, 0]), xs, lane_path_y)
             out[i, 1] = d_prob * y_lane + (1.0 - d_prob) * out[i, 1]
         return out
-
-    ok = xs_a >= 1.0
+    ok = xs >= 1.0
     if not np.any(ok):
         return None
-    return np.stack([xs_a[ok], ys_a[ok]], axis=1)
+    return np.stack([xs[ok], lane_path_y[ok]], axis=1)
 
 
 def path_from_supercombo(

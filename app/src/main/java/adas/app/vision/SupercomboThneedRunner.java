@@ -9,25 +9,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 
 /**
- * Runs supercombo 0.9.7 on the phone GPU through thneed: 17 ms of inference and 24 ms per frame on
- * this device against 50 and 54 through ONNX, which is what lets the pipeline hold the full 30 Hz
- * camera rate. Background in docs/VISION_RATE.md and docs/THNEED.md.
- *
- * <p>thneed is not a runtime but a serialized run of the network on the GPU: kernel sources, their
- * launch order, and the buffers they read. Upstream openpilot replays such a recording at the Adreno
- * ioctl layer; this loader does not — it creates ordinary OpenCL buffers and enqueues ordinary
- * kernels, so an Adreno is not required, only an OpenCL the app can reach. The file ships kernel
- * <em>sources</em>, compiled by the driver of whichever GPU is going to run them.
- *
- * <p>The same network is in assets/supercombo.onnx, and the thneed is generated from it by
- * scripts/tools/thneed_from_onnx.py, byte-for-byte reproducibly.
- *
- * <p>The output is parsed by {@link SupercomboOnnxRunner#parseLanes} because the plan and lane sections
- * of the two generations match bitwise: plans 15*33*2+1 = 991 per hypothesis, 991*5 = 4955, then the
- * same four lines of 33 YZ pairs — our PLAN_COLS, PLAN_GROUP and PLAN_END.
- *
- * <p>Not parsed here: the longitudinal part (leads, meta). It exists in the output at different
- * offsets, so {@code modelLong} is null and no longitudinal plan is published in this mode.
+ * Runs supercombo 0.9.7 on the phone GPU through thneed: 17 ms of inference and 24 ms per frame on this device against 50 and 54 through ONNX, which is what lets the pipeline hold the full 30 Hz camera rate.
  */
 public final class SupercomboThneedRunner implements ModelRunner {
 
@@ -50,14 +32,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
     private static final int NET_OUTPUT_SIZE = 6504;
 
     /**
-     * Camera pose offset in the 0.9.x output, summed from their driving.h: plans 4955 + lane_lines 536
-     * + road_edges 264 + leads 105 + meta 88. Cross-check: pose 12 + wide_from_device_euler 6 +
-     * temporal_pose 12 + road_transform 12 + action 1 = 5991, plus PAD_SIZE 1 = 5992, which is where
-     * the JNI takes the features from.
-     *
-     * <p>The length heuristic used for our model gives 5980 here, because 0.9.x has more fields after
-     * the pose. Pose feeds the online calibration whose warp feeds the model, so a wrong offset would
-     * quietly corrupt the lane output too.
+     * Camera pose offset in the 0.9.x output, summed from their driving.h: plans 4955 + lane_lines 536 + road_edges 264 + leads 105 + meta 88.
      */
     private static final int POSE_IDX = 5948;
 
@@ -75,18 +50,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
 
     private static native String nativeClInfo();
 
-    /**
-     * What OpenCL can do on this device, as JSON.
-     *
-     * <p>The question "will it run on another phone" reduces to four checkable things: is libOpenCL
-     * reachable by the app, is `cl_khr_fp16` present, can the device make images over buffers, and is
-     * the required row-pitch alignment no coarser than what the file assumes. All of it is handed out
-     * here rather than logged, so `tools/model_device_probe.py` can answer for a new phone without
-     * anyone running anything by hand.
-     *
-     * <p>Returns {@code {"opencl": false, ...}} when the runner library does not load: on such a
-     * device the ONNX path is what remains.
-     */
+    /** What OpenCL can do on this device, as JSON. */
     public static String openClInfo() {
         if (!available()) {
             return "{\"opencl\": false, \"reason\": \"libthneedrunner did not load\"}";
@@ -100,11 +64,6 @@ public final class SupercomboThneedRunner implements ModelRunner {
 
     /**
      * Save the current model as compiled by this GPU.
-     *
-     * <p>The point is that the Adreno compiler on the phone knows its own hardware, while the machine
-     * that prepared the file does not. Call after at least one run: before that there is nothing to
-     * write.
-     *
      * @param path where to write
      * @param binaries true — binaries for this device, false — kernel sources
      */
@@ -113,13 +72,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
     }
 
     /**
-     * Output signature on zero inputs, taken on a workstation when the file was built
-     * (`scripts/tools/thneed_from_onnx.py` writes the reference next to the thneed).
-     *
-     * <p>Serves as acceptance on a new phone. The file carries kernel sources, built by the driver of
-     * whichever device is going to run the model: whether it loaded is obvious at once, whether it
-     * computes the same thing is not. Differences in image row-pitch handling or in driver rounding
-     * yield plausible but foreign numbers, and a road frame cannot tell them apart.
+     * Output signature on zero inputs, taken on a workstation when the file was built (`scripts/tools/thneed_from_onnx.py` writes the reference next to the thneed).
      */
     private static final float ZERO_INPUT_MEAN = -1.2498f;
     private static final float ZERO_INPUT_STD = 3.2745f;
@@ -143,12 +96,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
     private float fx, fy, cx, cy;
     private float[] warpM, warpWideM;
 
-    /**
-     * Below this, input sharpness means there is nothing to look at.
-     *
-     * <p>The healthy drives of 08-13 gave 369-942, the defocused drive of 08-16 gave 9.9-14.9. The
-     * threshold sits in the middle on a log scale; no intermediate values occurred in the data.
-     */
+    /** Below this, input sharpness means there is nothing to look at. */
     private static final float FOCUS_MIN_SCORE = 60f;
 
     private long focusFrames;
@@ -191,13 +139,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
         requireSaneOnZeros();
     }
 
-    /**
-     * Model lookup: the external file first, the asset second.
-     *
-     * <p>Same as in the ONNX runner and for the same reason: testing a new thneed by rebuilding the
-     * APK every iteration means 300 MB and several minutes per attempt. The external path lets one
-     * push a file over adb and measure straight away.
-     */
+    /** Model lookup: the external file first, the asset second. */
     private static byte[] readAsset(Context context, String name) throws Exception {
         java.io.File external = new java.io.File("/sdcard/adas_models/" + name);
         if (external.isFile() && external.length() > 0) {
@@ -237,16 +179,7 @@ public final class SupercomboThneedRunner implements ModelRunner {
         this.warpWideM = ModelCalibWarp.warpMatrixDeg(rollDeg, pitchDeg, yawDeg, fx, fy, cx, cy, true);
     }
 
-    /**
-     * Run the model on zero inputs and compare against the reference taken when the file was built.
-     *
-     * <p>If it fails we throw: the app falls back to the ONNX path, which checks itself the same way.
-     * Driving on lane lines from a model computing who-knows-what is worse than driving slower.
-     *
-     * <p>A side effect worth knowing about: `nativeExecute` shifts the feature and desired-curvature
-     * history at the end, so after the check one zero frame remains inside it. It washes out over 99
-     * frames — the same first seconds the model spends warming up anyway.
-     */
+    /** Run the model on zero inputs and compare against the reference taken when the file was built. */
     private void requireSaneOnZeros() {
         java.util.Arrays.fill(input, 0f);
         float ms = nativeExecute(input, output);
@@ -344,19 +277,25 @@ public final class SupercomboThneedRunner implements ModelRunner {
                     pose.trans[0], pose.trans[1], pose.trans[2],
                     pose.rot[0], pose.rot[1], pose.rot[2], egoSpeedMps));
         }
-        return new SupercomboOnnxRunner.Result(lanes, pose, null);
+        // Same parse as on the ONNX path: one network, one reading of its output.
+        ModelLongParse.Out modelLong = ModelLongParse.parse(output);
+        if (modelLong != null && modelLong.ok) {
+            ModelLongParse.Lead best =
+                    modelLong.lead0.prob >= modelLong.lead1.prob ? modelLong.lead0 : modelLong.lead1;
+            if (modelLong.lead2 != null && modelLong.lead2.prob > best.prob) {
+                best = modelLong.lead2;
+            }
+            lanes.leadD = best.x[0];
+            lanes.leadY = best.y[0];
+            lanes.leadV = best.v[0];
+            lanes.leadProb = best.prob;
+            lanes.planV0 = modelLong.planVx[0];
+            lanes.leadValid = best.prob >= 0.4f && best.x[0] > 1.f && best.x[0] < 120.f;
+        }
+        return new SupercomboOnnxRunner.Result(lanes, pose, modelLong);
     }
 
-    /**
-     * Say out loud when the model is looking at a blur.
-     *
-     * <p>The threshold sits with a wide margin between the healthy drives (369-942) and the defocused
-     * one (9.9-14.9). There are no intermediate values in the data, so it is hard to get wrong; the
-     * quantity is dimensionless and is only ever compared against itself.
-     *
-     * <p>Once every hundred frames rather than every frame: the point is for this to be visible in a
-     * drive's log from the start, not to flood it.
-     */
+    /** Say out loud when the model is looking at a blur. */
     private void reportFocus(float score) {
         if (focusFrames++ % 100 != 0) {
             return;

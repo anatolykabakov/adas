@@ -9,7 +9,6 @@ add_executable(
   test_utils.cpp
   test_lat_control.cpp
   test_pp_planner.cpp
-  test_vp_planner.cpp
   test_lane_keep_gates.cpp
   test_panda_mqb.cpp
   test_planner.cpp
@@ -19,9 +18,6 @@ add_executable(
   test_speed_filter.cpp
   test_road_roll.cpp
   test_params_learner.cpp
-  test_road_route.cpp
-  test_map_data.cpp
-  test_toyota.cpp
 )
 
 target_compile_definitions(

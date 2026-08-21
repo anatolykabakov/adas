@@ -32,13 +32,7 @@ struct SafetyLogContext {
   bool ldw_valid = false;
 };
 
-/**
- * \brief Keeps the panda in the safety mode this car needs, and keeps it alive.
- *
- * \details The panda blocks actuation unless it receives a heartbeat and has been told which safety model
- * to enforce. Both are periodic obligations, not one-time setup, so they live in their own supervisor
- * rather than in the driver's send path.
- */
+/** Keeps the panda in the safety mode this car needs, and keeps it alive. */
 class PandaSafetySupervisor {
 public:
   using C = MqbSafetyConstants;
@@ -46,15 +40,25 @@ public:
   /** What to send the panda. Must agree with the `latActive` gate: the bit without the gate changes
    *  nothing, and the gate without the bit makes the panda drop our frames. One switch owns both. */
   void setAlternativeExperience(uint16_t alt_exp) { alt_exp_ = alt_exp; }
+  /// \return The alternative-experience bits to be written.
   uint16_t alternativeExperience() const { return alt_exp_; }
 
+  /// Ignition with voltage hysteresis and off-debounce. \return The debounced state.
   bool updateIgnitionSticky(bool ignition_hw, uint32_t voltage_mv, int64_t now_ms);
 
+  /// One supervisor tick: init on first call, heartbeat, safety re-assertion. \return Health to publish.
   std::optional<health_t> tick(Panda& panda, health_t health, int64_t now_ms, const SafetyLogContext& log);
 
+  /** Forget what we know about the board, keeping what we know about the car. */
+  void resetBoardState();
+
+  /// \return Safety mode last read from the board.
   uint16_t lastSafetyMode() const { return last_safety_mode_; }
+  /// \return controls_allowed last read.
   bool lastControlsAllowed() const { return last_controls_allowed_; }
+  /// \return Debounced ignition.
   bool lastIgnition() const { return last_ignition_; }
+  /// \return True when the wanted safety model stuck.
   bool safetyConfigured() const { return safety_configured_; }
 
 private:

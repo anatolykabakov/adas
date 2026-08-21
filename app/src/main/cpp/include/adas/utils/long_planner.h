@@ -12,16 +12,7 @@
 
 namespace adas {
 namespace longplan {
-/** Longitudinal plan for a car that cannot brake.
- *
- *  A Golf 7 Highline has plain cruise control: no radar, no ACC, therefore no brake-by-wire. The
- *  only actuator is the cruise set speed (`Panda::computeCruiseButtons` taps GRA +/−), and
- *  lowering it closes the throttle and nothing more. Every number here follows from that: the plan
- *  may ask for as much acceleration as the engine gives, but only as much deceleration as coasting
- *  gives, and anything beyond that has to become a message to the driver instead of a command.
- *
- *  Split out of `LongPlan` so the rules can be tested without a middleware instance, the
- *  same way `safety_planner.hpp` is split out of `SafetyWarn`. */
+/** Longitudinal plan for a car that cannot brake. */
 struct Config {
   double lead_prob_thresh = 0.5;  ///< Model confidence needed before a lead is believed.
   double t_follow = 1.5;          ///< Desired time gap to the lead [s].
@@ -105,6 +96,7 @@ inline double pathYAt(const std::vector<Vec2>& path, double x_m)
   return path.back().y();
 }
 
+/// \return Target speed and gap plan for this tick.
 inline Plan compute(const Config& cfg, const Input& in)
 {
   Plan out;

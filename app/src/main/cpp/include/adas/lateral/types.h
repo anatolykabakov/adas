@@ -38,12 +38,7 @@ struct Input {
   VehicleParams vehicle;
 };
 
-/**
- * \brief Everything a planner computed on the way to its command.
- *
- * \details Recorded on every drive, not only when debugging: a command without the intermediate values
- * cannot be re-derived afterwards, and "why did it steer there" is the question a bag has to answer.
- */
+/** Everything a planner computed on the way to its command. */
 struct Debug {
   double speed_mps = 0.0;
   int n_points = 0;

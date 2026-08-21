@@ -161,12 +161,7 @@ std::tuple<double, double, double> OnlineLocalizer::step(double dt, double speed
       }
     }
 
-    // GPS course and velocity do not depend on whether the position was accepted. The velocity vector's
-    // direction is trustworthy on a 10 m fix, and it stays trustworthy when the position is rejected on
-    // innovation — yet the course used to be discarded along with it. That made a funnel: heading error
-    // pushed the position outside the innovation gate, the gate closed, and the very course correction
-    // that would have fixed it stopped arriving. This is how 62° accumulate over 320 s on a healthy
-    // receiver.
+    // GPS course and velocity do not depend on whether the position was accepted.
     if (gps->course_valid) {
       const double yaw_err = std::abs(normalizeAngle(gps->yaw_enu - ekf_.yaw()));
       if (yaw_err > yaw_snap_err_rad) {

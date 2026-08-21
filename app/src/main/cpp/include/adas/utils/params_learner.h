@@ -8,14 +8,7 @@
 #include "adas/utils/vehicle_model.h"
 
 namespace adas {
-/**
- * \brief Learns steering ratio, tyre stiffness and the angle zero while driving.
- *
- * \details The port of upstream's `paramsd`: a small filter over steering angle, speed and yaw rate. The
- * estimate only reaches the controller when `lane_keep.use_learned_params` says so, so enabling the
- * learner changes no command by itself — the honest sequence is to drive, compare against the configured
- * constants in the bag, and only then hand it the wheel.
- */
+/** Learns steering ratio, tyre stiffness and the angle zero while driving. */
 class ParamsLearner {
 public:
   enum State {
@@ -94,15 +87,19 @@ public:
     double steer_ratio_std_max = 0.0;    ///< Spread above which the ratio is not handed over.
   };
 
+  /// Constructs with the default config.
   ParamsLearner() : ParamsLearner(Config{}) {}
+  /// \param[in] cfg Priors, clamps and noises.
   explicit ParamsLearner(Config cfg) : cfg_(cfg) { reset(); }
 
   /// Replace the configuration and restart the estimate, since the priors changed under it.
+  /// Apply a new config and reset to its priors.
   void setConfig(const Config& cfg)
   {
     cfg_ = cfg;
     reset();
   }
+  /// \return The config in force.
   const Config& config() const { return cfg_; }
 
   /// Back to the priors: state to the configured initial values, covariance to its initial spread.
@@ -139,16 +136,22 @@ public:
 
   /**
    * \brief One learner step.
-   *
    * \param[in] speed_ms Ego speed [m/s]. Below the configured minimum nothing is learned: at rest the
-   * steering angle says nothing about the ratio.
    * \param[in] swa_deg Measured steering-wheel angle [deg].
    * \param[in] yaw_rate_can Yaw rate from CAN [rad/s]. Deliberately not the EKF's — that one is partly
-   * produced by the bicycle model whose parameters are being estimated here.
    * \param[in] road_roll_deg Road bank [deg], which otherwise looks like understeer.
    * \param[in] road_roll_std_deg Its standard deviation [deg]; a bank known badly is weighted down.
    * \param[in] dt Step [s].
    * \return True when the sample was used.
+   */
+  /**
+   * \brief One filter step on a synchronized sample.
+   * \param[in] speed_ms Longitudinal speed [m/s].
+   * \param[in] swa_deg Measured steering-wheel angle [deg].
+   * \param[in] yaw_rate_can Measured yaw rate [rad/s].
+   * \param[in] road_roll_deg Road bank estimate [deg], with its \p road_roll_std_deg spread.
+   * \param[in] dt_s Time since the previous sample [s].
+   * \return True when the sample was accepted (moving fast enough, gates passed).
    */
   bool update(double speed_ms, double swa_deg, double yaw_rate_can, double road_roll_deg, double road_roll_std_deg,
               double dt_s, bool localizer_tick = true)
@@ -198,26 +201,39 @@ public:
   }
 
   /// Learned scale on the reference tyre stiffness; 1.0 is the reference car.
+  /// \return Learned tyre-stiffness factor, relative to the reference car.
   double stiffnessFactor() const { return x_[kStiffness]; }
   /// Learned steering-wheel to road-wheel ratio.
+  /// \return Learned steering ratio.
   double steerRatio() const { return x_[kSteerRatio]; }
   /// Slow part of the steering-wheel zero [deg] — the mechanical misalignment.
+  /// \return Slow (mechanical) steering-zero offset [deg].
   double angleOffsetDeg() const { return x_[kAngleOffset] * 180.0 / M_PI; }
+  /// \return Slow plus fast (camber-absorbing) zero offset [deg].
   double angleOffsetTotalDeg() const { return (x_[kAngleOffset] + x_[kAngleOffsetFast]) * 180.0 / M_PI; }
   /// Road bank as the filter currently believes it [deg].
+  /// \return Road-bank state [deg].
   double roadRollDeg() const { return x_[kRoadRoll] * 180.0 / M_PI; }
   /// Yaw rate the learner's own model predicts [rad/s], for comparison against CAN.
+  /// \return Filtered yaw rate [rad/s].
   double yawRate() const { return x_[kYawRate]; }
   /// Standard deviations of the estimates. The gate for handing them to the controller: a number with a
   /// wide spread is a guess.
+  /// \return 1-sigma spread of the stiffness estimate.
   double stiffnessStd() const { return std::sqrt(std::max(p_(kStiffness, kStiffness), 0.0)); }
+  /// \return 1-sigma spread of the ratio estimate.
   double steerRatioStd() const { return std::sqrt(std::max(p_(kSteerRatio, kSteerRatio), 0.0)); }
+  /// \return 1-sigma spread of the slow zero [deg].
   double angleOffsetStdDeg() const { return std::sqrt(std::max(p_(kAngleOffset, kAngleOffset), 0.0)) * 180.0 / M_PI; }
+  /// \return Accepted samples since reset.
   int sampleCount() const { return n_; }
+  /// \return Covariance entry (i, j), for diagnostics.
   double cov(int i, int j) const { return p_(i, j); }
 
+  /// \return Samples with enough steering excitation to inform the ratio.
   int excitedCount() const { return excited_; }
 
+  /// \return True when the estimates have tightened enough to be used by control.
   bool valid() const
   {
     return n_ >= 500 && excited_ >= cfg_.min_excited_samples && stiffnessStd() < 0.15 &&
@@ -226,6 +242,7 @@ public:
            std::abs(angleOffsetDeg()) < cfg_.angle_offset_max_deg;
   }
 
+  /// \return Yaw rate [rad/s] the learned model predicts for the given speed, wheel angle and bank.
   double predictYawRate(double speed_ms, double swa_deg, double roll_deg) const
   {
     constexpr double kG = 9.81;

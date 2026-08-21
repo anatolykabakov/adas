@@ -9,14 +9,7 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief Assesses traffic-sign detections against the car's state.
- *
- * \details A detection is not yet a fact: the same speed-limit plate is reported on and off across
- * frames, and a sign on a side road looks like a sign on ours. This service accumulates detections over
- * time and reports what currently holds, so consumers see a stable assessment rather than per-frame
- * flicker.
- */
+/** Assesses traffic-sign detections against the car's state. */
 class TrafficSign : public middleware::Service {
 public:
   struct Config {
@@ -28,12 +21,15 @@ public:
     double steer_ratio = 15.7;            ///< Steering ratio, used to tell which road a sign belongs to.
   };
 
+  /// Constructs with the default config.
   TrafficSign() : TrafficSign(Config{}) {}
+  /// \param[in] config Confidence gates and hold times.
   explicit TrafficSign(Config config) : config_(std::move(config)) {}
 
   void configure() override;
   void reset() override;
   std::string_view getName() const override { return "traffic_sign"; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
 
 private:

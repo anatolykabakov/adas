@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.Log;
 
@@ -56,11 +57,19 @@ public final class TrafficYoloRunner {
     private final int inputSize;
     private final float[] inputBuf;
     private final int[] pixels;
+
+    /** Reusable frame buffers. */
+    private int[] argbFull;
+    private int argbW;
+    private int argbH;
+    private Bitmap fullBmp;
+    private Bitmap letterBmp;
+    private Canvas letterCanvas;
+    private final Paint filterPaint = new Paint(Paint.FILTER_BITMAP_FLAG);
+    private final Rect srcRect = new Rect();
+    private final Rect dstRect = new Rect();
     private final String modelName;
     private final String epName;
-    /** Feature flags: which class families to keep after decode. */
-    private final boolean enableSigns;
-    private final boolean enableLights;
 
     public static final class Det {
         public String label;
@@ -102,29 +111,11 @@ public final class TrafficYoloRunner {
     }
 
     public TrafficYoloRunner(Context context) throws Exception {
-        this(context, "auto",
-                AdasConfig.visionTrafficSignsEnabled(context),
-                AdasConfig.visionTrafficLightsEnabled(context));
+        this(context, "auto");
     }
 
-    /**
-     * @param epPrefer auto | nnapi | xnnpack | cpu
-     */
+    /** \param epPrefer auto | nnapi | xnnpack | cpu */
     public TrafficYoloRunner(Context context, String epPrefer) throws Exception {
-        this(context, epPrefer,
-                AdasConfig.visionTrafficSignsEnabled(context),
-                AdasConfig.visionTrafficLightsEnabled(context));
-    }
-
-    /**
-     * @param epPrefer auto | nnapi | xnnpack | cpu
-     * @param enableSigns keep sign / speed / VRU classes
-     * @param enableLights keep traffic-light classes (+ HSV color)
-     */
-    public TrafficYoloRunner(Context context, String epPrefer,
-                             boolean enableSigns, boolean enableLights) throws Exception {
-        this.enableSigns = enableSigns;
-        this.enableLights = enableLights;
         env = OrtEnvironment.getEnvironment();
         modelName = AdasConfig.trafficYoloAsset(context);
         File model = resolveModelFile(context, modelName);
@@ -140,8 +131,7 @@ public final class TrafficYoloRunner {
         pixels = new int[inputSize * inputSize];
         labels = loadLabels(context);
         Log.i(TAG, "ready ep=" + epName + " in=" + inputName + " size=" + inputSize
-                + " labels=" + labels.length
-                + " signs=" + enableSigns + " lights=" + enableLights);
+                + " labels=" + labels.length);
     }
 
     public String modelName() {
@@ -286,14 +276,8 @@ public final class TrafficYoloRunner {
     }
 
     public Result run(YuvFrame yuv) throws Exception {
-        long t0 = System.currentTimeMillis();
-        Bitmap bmp = yuvToBitmap(yuv);
-        try {
-            return runBitmap(bmp);
-        } finally {
-            bmp.recycle();
-            // keep inferMs accurate
-        }
+        // The bitmap belongs to this runner and is reused on the next frame, so it is not recycled.
+        return runBitmap(yuvToBitmap(yuv));
     }
 
     public Result runBitmap(Bitmap src) throws Exception {
@@ -307,17 +291,21 @@ public final class TrafficYoloRunner {
         int padX = (sz - nw) / 2;
         int padY = (sz - nh) / 2;
 
-        Bitmap scaled = Bitmap.createScaledBitmap(src, nw, nh, true);
-        Bitmap letter = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(letter);
-        c.drawColor(Color.rgb(114, 114, 114));
-        c.drawBitmap(scaled, padX, padY, null);
-        if (scaled != src) {
-            scaled.recycle();
+        // One filtered blit into a reusable letterbox: the scaled intermediate that used to sit between
+        // them was pure garbage, and `drawBitmap` with a destination rect does the same resampling.
+        if (letterBmp == null || letterBmp.getWidth() != sz) {
+            if (letterBmp != null) {
+                letterBmp.recycle();
+            }
+            letterBmp = Bitmap.createBitmap(sz, sz, Bitmap.Config.ARGB_8888);
+            letterCanvas = new Canvas(letterBmp);
         }
+        letterCanvas.drawColor(Color.rgb(114, 114, 114));
+        srcRect.set(0, 0, srcW, srcH);
+        dstRect.set(padX, padY, padX + nw, padY + nh);
+        letterCanvas.drawBitmap(src, srcRect, dstRect, filterPaint);
 
-        letter.getPixels(pixels, 0, sz, 0, 0, sz, sz);
-        letter.recycle();
+        letterBmp.getPixels(pixels, 0, sz, 0, 0, sz, sz);
         final int n = sz * sz;
         for (int i = 0; i < n; i++) {
             int p = pixels[i];
@@ -338,51 +326,12 @@ public final class TrafficYoloRunner {
                 long tDec = System.nanoTime();
                 List<Det> dets = decodeTensor(ot, scale, padX, padY, srcW, srcH, src);
                 int decodeMs = (int) ((System.nanoTime() - tDec) / 1_000_000L);
-                long tOcr = System.nanoTime();
-                if (enableSigns) {
-                    applySpeedOcr(dets, src, srcW, srcH);
-                }
-                int ocrMs = (int) ((System.nanoTime() - tOcr) / 1_000_000L);
                 int totalMs = (int) ((System.nanoTime() - tAll) / 1_000_000L);
-                return new Result(dets, totalMs, prepMs, ortMs, decodeMs, ocrMs, modelName, epName, inputSize);
+                return new Result(dets, totalMs, prepMs, ortMs, decodeMs, 0, modelName, epName, inputSize);
             }
         }
     }
 
-    /** OCR digit on crops that look like speed-limit but have no km/h in the label. */
-    private static void applySpeedOcr(List<Det> dets, Bitmap src, int srcW, int srcH) {
-        if (dets == null || dets.isEmpty()) {
-            return;
-        }
-        for (Det d : dets) {
-            if (d.speedLimitKmh > 0 || !needsSpeedOcr(d.label)) {
-                continue;
-            }
-            int x1 = (int) (d.x1 * srcW);
-            int y1 = (int) (d.y1 * srcH);
-            int x2 = (int) (d.x2 * srcW);
-            int y2 = (int) (d.y2 * srcH);
-            int v = SpeedLimitOcr.readKmh(src, x1, y1, x2, y2);
-            if (v > 0) {
-                d.speedLimitKmh = v;
-                d.speedFromOcr = true;
-            }
-        }
-    }
-
-    static boolean needsSpeedOcr(String label) {
-        if (label == null) {
-            return false;
-        }
-        String l = label.toLowerCase(Locale.ROOT);
-        if (parseSpeedLimit(label) > 0) {
-            return false;
-        }
-        return l.contains("ограничен") || l.contains("скорост")
-                || l.contains("3_24") || l.equals("3_24")
-                || (l.contains("speed") && l.contains("limit"))
-                || l.contains("максимальн");
-    }
 
     private List<Det> decodeTensor(OnnxTensor ot, float scale, int padX, int padY,
                                    int srcW, int srcH, Bitmap colorSrc) throws Exception {
@@ -451,7 +400,7 @@ public final class TrafficYoloRunner {
             d.x2 = x2 / srcW;
             d.y2 = y2 / srcH;
             d.speedLimitKmh = speed;
-            d.tflColor = (tfl && enableLights)
+            d.tflColor = tfl
                     ? classifyLightColor(colorSrc, (int) x1, (int) y1, (int) x2, (int) y2)
                     : 0;
             cand.add(d);
@@ -532,9 +481,7 @@ public final class TrafficYoloRunner {
             d.speedLimitKmh = parseSpeedLimit(d.label);
             d.tflColor = 0;
             if (isTrafficLight(d.label)) {
-                d.tflColor = enableLights
-                        ? classifyLightColor(colorSrc, (int) x1, (int) y1, (int) x2, (int) y2)
-                        : 0;
+                d.tflColor = classifyLightColor(colorSrc, (int) x1, (int) y1, (int) x2, (int) y2);
             }
             if (keepDet(d.label, d.speedLimitKmh)) {
                 cand.add(d);
@@ -543,15 +490,9 @@ public final class TrafficYoloRunner {
         return nms(cand);
     }
 
-    /** Classes we surface on HUD, gated by feature flags. */
+    /** \brief Lights are the one class family this detector surfaces. */
     private boolean keepDet(String label, int speedKmh) {
-        if (isTrafficLight(label)) {
-            return enableLights;
-        }
-        if (speedKmh > 0 || isSignClass(label) || isPersonOrVru(label)) {
-            return enableSigns;
-        }
-        return false;
+        return isTrafficLight(label);
     }
 
     private static boolean isTrafficLight(String label) {
@@ -559,31 +500,6 @@ public final class TrafficYoloRunner {
         return l.contains("traffic") && l.contains("light")
                 || l.equals("tfl") || l.startsWith("traffic_light")
                 || l.contains("светофор");
-    }
-
-    private static boolean isPersonOrVru(String label) {
-        String l = label.toLowerCase(Locale.US);
-        // Crosswalk is a sign, not a person — handled in isSignClass.
-        if (l.contains("переход")) {
-            return false;
-        }
-        return l.equals("person") || l.contains("pedestrian") || l.equals("пешеход")
-                || l.equals("bicycle") || l.equals("motorcycle") || l.contains("велосипед");
-    }
-
-    private static boolean isSignClass(String label) {
-        String l = label.toLowerCase(Locale.ROOT);
-        return l.contains("stop") && l.contains("sign")
-                || l.equals("stop")
-                || l.startsWith("3_") || l.startsWith("2_") || l.startsWith("1_")
-                || l.startsWith("4_") || l.startsWith("5_") || l.contains("speed")
-                || l.contains("limit") || l.contains("знак") || l.contains("sign")
-                // RU nhassl3 / RTSD-style display names
-                || l.contains("ограничение") || l.contains("скорост")
-                || l.contains("переход") || l.contains("уступи") || l.contains("главн")
-                || l.contains("запрещ") || l.contains("дети") || l.contains("жилая")
-                || l.contains("заправк") || l.contains("работ") || l.contains("неровн")
-                || l.contains("грузовик") || l.contains("автобус") || l.contains("вело");
     }
 
     static int parseSpeedLimit(String label) {
@@ -690,10 +606,20 @@ public final class TrafficYoloRunner {
         return Math.max(lo, Math.min(hi, v));
     }
 
+    /** YUV → ARGB into this runner's own bitmap. The result is valid until the next call. */
     private Bitmap yuvToBitmap(YuvFrame yuv) {
         int w = yuv.width;
         int h = yuv.height;
-        int[] argb = new int[w * h];
+        if (argbFull == null || argbW != w || argbH != h) {
+            argbFull = new int[w * h];
+            argbW = w;
+            argbH = h;
+            if (fullBmp != null) {
+                fullBmp.recycle();
+            }
+            fullBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        }
+        final int[] argb = argbFull;
         for (int j = 0; j < h; j++) {
             int uvRow = (j >> 1) * (w >> 1);
             for (int i = 0; i < w; i++) {
@@ -709,9 +635,8 @@ public final class TrafficYoloRunner {
                 argb[j * w + i] = 0xff000000 | (r << 16) | (g << 8) | b;
             }
         }
-        Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        bmp.setPixels(argb, 0, w, 0, 0, w, h);
-        return bmp;
+        fullBmp.setPixels(argb, 0, w, 0, 0, w, h);
+        return fullBmp;
     }
 
     private static int clamp255(int v) {
@@ -795,6 +720,14 @@ public final class TrafficYoloRunner {
     }
 
     public void close() {
+        if (fullBmp != null) {
+            fullBmp.recycle();
+            fullBmp = null;
+        }
+        if (letterBmp != null) {
+            letterBmp.recycle();
+            letterBmp = null;
+        }
         try {
             session.close();
         } catch (Exception ignored) {

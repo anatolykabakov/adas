@@ -44,25 +44,9 @@ bool parseFile(const std::string& path, Json::Value* root, std::string* err)
   return Json::parseFromStream(builder, in, root, err);
 }
 
-/**
- * \brief Derived fields of the parameter learner, in one place.
- *
- * \details The learner does not read the config itself: it is handed a vehicle it must agree with.
- * Without this a simulated app builds the learner with steering sign +1 (the `ParamsLearner::Config`
- * default) while the car drives with −1, and the model can only reconcile an inverted sign by driving
- * stiffness into its clamp and the ratio sideways — the estimator diverges in every replay.
- *
- * Both construction paths call it, so the two cannot drift apart.
- */
+/** Derived fields of the parameter learner, in one place. */
 /**
  * \brief Fill in what the selected car is, before the config gets a say.
- *
- * \details Upstream keeps wheelbase, steering ratio and mass in `selfdrive/car/<brand>/interface.py`,
- * not in a user config, and for good reason: nobody tunes the wheelbase of their Golf, and a config
- * carried over from another car quietly describes the wrong vehicle. Here the platform supplies them
- * first and `setDouble` overrides only the keys the config actually contains — so an untouched config
- * means the car's own numbers, and a deliberate override still works for a trim that differs.
- *
  * \param[in,out] cfg Config whose vehicle fields are seeded from `cfg.vehicle_name`.
  */
 void applyCarDefaults(AdasApp::Config& cfg)
@@ -147,7 +131,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setBool(nodes, "long_plan", f.enable_long_plan);
   setBool(nodes, "safety_warn", f.enable_safety_warn);
   setBool(nodes, "traffic_sign", f.enable_traffic_sign);
-  setBool(nodes, "map_data", f.enable_map_data);
 
   const Json::Value& veh = root["vehicle"];
   setString(veh, "name", cfg.vehicle_name);
@@ -211,17 +194,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(veh, "mpc_max_lateral_jerk", cfg.lane_keep.mpc_max_lateral_jerk);
   setDouble(veh, "mpc_rate_min_speed", cfg.lane_keep.mpc_rate_min_speed);
   setDouble(veh, "mpc_rate_limit_deg", cfg.lane_keep.mpc_rate_limit_deg);
-  setDouble(veh, "mpc_kappa_yaw_blend", cfg.lane_keep.mpc_kappa_yaw_blend);
-  setDouble(veh, "mpc_kappa_yaw_min_speed", cfg.lane_keep.mpc_kappa_yaw_min_speed);
-  setDouble(veh, "mpc_epsi_gain", cfg.lane_keep.mpc_epsi_gain);
-  setDouble(veh, "mpc_ff_scale", cfg.lane_keep.mpc_ff_scale);
-  setDouble(veh, "mpc_cte_weight_base", cfg.lane_keep.mpc_cte_weight_base);
-  setDouble(veh, "mpc_cte_quartic_scale", cfg.lane_keep.mpc_cte_quartic_scale);
-  setDouble(veh, "mpc_cte_gain_base", cfg.lane_keep.mpc_cte_gain_base);
-  setDouble(veh, "mpc_cte_gain_floor", cfg.lane_keep.mpc_cte_gain_floor);
-  setDouble(veh, "mpc_kappa_ema_alpha", cfg.lane_keep.mpc_kappa_ema_alpha);
-  setDouble(veh, "mpc_epsi_ema_alpha", cfg.lane_keep.mpc_epsi_ema_alpha);
-  setDouble(veh, "mpc_cte_ema_alpha", cfg.lane_keep.mpc_cte_ema_alpha);
   setDouble(veh, "fp_steering_rate_weight", cfg.lane_keep.fp_steering_rate_weight);
   setDouble(veh, "steer_slew_limit_deg", cfg.lane_keep.steer_slew_limit_deg);
   setDouble(veh, "vision_nominal_dt_s", cfg.lane_keep.vision_nominal_dt_s);
@@ -325,24 +297,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   const Json::Value& zmq = root["zmq"];
   setString(zmq, "endpoint_in", cfg.zmq_bridge.endpoint_in);
   setString(zmq, "endpoint_out", cfg.zmq_bridge.endpoint_out);
-
-  const Json::Value& map = root["map"];
-  setString(map, "path", cfg.map_data.map_path);
-  setDouble(map, "update_hz", cfg.map_data.update_hz);
-  setDouble(map, "local_map_period_s", cfg.map_data.local_map_period_s);
-  setDouble(map, "local_map_radius_m", cfg.map_data.local_map_radius_m);
-  setDouble(map, "min_speed_mps", cfg.map_data.min_speed_mps);
-  setDouble(map, "max_pose_gap_m", cfg.map_data.max_pose_gap_m);
-  setDouble(map, "max_fix_age_s", cfg.map_data.max_fix_age_s);
-  auto& rt = cfg.map_data.route;
-  setDouble(map, "horizon_m", rt.horizon_m);
-  setDouble(map, "max_match_dist_m", rt.max_match_dist_m);
-  setDouble(map, "max_match_heading_deg", rt.max_match_heading_deg);
-  setDouble(map, "step_m", rt.step_m);
-  setDouble(map, "window_m", rt.window_m);
-  setDouble(map, "turn_kappa", rt.turn_kappa);
-  setDouble(map, "max_lat_acc", rt.max_lat_acc);
-  setDouble(map, "min_section_m", rt.min_section_m);
 
   LOGI("AdasApp::Config %s: lane_keep=%d ctrl=%s loc=%d cam=%d wb=%.3f "
        "max_steer=%.1f° max_tq=%.0f pid=%.2f/%.2f/%.5f P/Y=%.1f/%.1f h=%.2f",

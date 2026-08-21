@@ -109,7 +109,16 @@ class CameraParams:
         self.sensor.track(self.env.agent.origin, offset, hpr)
 
     def refresh_pose(self) -> None:
-        """Re-read pose relative to vehicle origin (Panda frame)."""
+        """Re-read pose relative to vehicle origin (Panda frame).
+
+        The mount offset is measured from ``agent.origin``, and that node is **not on the road** — it
+        sits at the chassis reference, 0.51 m up on the default vehicle. Taking its z as the camera
+        height (which this did) under-reports the height by exactly that much, and every ground-plane
+        projection then compresses distance by the ratio: a point drawn at 10 m is really at 13.4 m,
+        and lane edges at ±1.75 m land a metre outside the painted ones. Nothing in the model input
+        depends on it (the warp is a rotation), but the overlay, the BEV patch and any comparison of
+        model output against simulator ground truth all do.
+        """
         rgb_camera = self.sensor
         agent = self.env.agent
         hpr = np.array(rgb_camera.cam.getHpr(agent.origin), dtype=np.float64)
@@ -117,10 +126,15 @@ class CameraParams:
         self.hpr = hpr  # heading, pitch, roll (deg) in Panda vehicle frame
         self.xyz_panda = xyz_panda  # X right, Y forward, Z up
         self.xyz_iso = panda_vehicle_to_iso(xyz_panda)  # X fwd, Y left, Z up
-        self.height_m = float(self.xyz_iso[2])
+        self.origin_height_m = float(np.array(agent.origin.getPos(), dtype=np.float64)[2])
         self.cam_x = float(self.xyz_iso[0])
         self.cam_y_left = float(self.xyz_iso[1])
-        self.extrinsics = self.make_extrinsics_iso(self.xyz_iso, hpr)
+        self.height_m = float(self.xyz_iso[2]) + self.origin_height_m
+        # The extrinsics are handed out to projectors, so they carry the road-relative height too.
+        xyz_road = np.array(
+            [self.xyz_iso[0], self.xyz_iso[1], self.height_m], dtype=np.float64
+        )
+        self.extrinsics = self.make_extrinsics_iso(xyz_road, hpr)
 
     def aad_overlay_params(self) -> Dict[str, float]:
         """Parameters for ``make_overlay_geometry`` / AAD ``CameraGeometry``.

@@ -36,27 +36,18 @@ add_library(
   services/internal_subscriber.cpp
   services/middleware_stats.cpp
   platform/car_platform.cpp
-  platform/toyota/toyota_platform.cpp
   platform/volkswagen/vw_platform.cpp
   platform/volkswagen/mqbcan.cpp
   platform/volkswagen/carcontroller.cpp
   platform/volkswagen/car_iface.cpp
   platform/volkswagen/mqb_car_state_decoder.cpp
   platform/volkswagen/panda_safety_supervisor.cpp
-  services/map_data.cpp
-  mapmatch/track.cpp
   mapmatch/road_map.cpp
-  mapmatch/road_route.cpp
-  mapmatch/fit.cpp
-  mapmatch/search.cpp
-  mapmatch/window_search.cpp
   utils/can_parser.cc
   utils/path_lateral_state.cpp
   lateral/pp_planner.cpp
-  lateral/vp_planner.cpp
   lateral/fp_planner.cpp
   lateral/kappa_solver.cpp
-  lateral/visionpilot_mpc.cpp
   lateral/flowpilot_mpc.cpp
   utils/vehicle_ekf.cpp
   utils/online_localizer.cpp

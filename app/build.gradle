@@ -51,8 +51,36 @@ tasks.register('syncRoadMap', Copy) {
     }
 }
 
-tasks.named('preBuild').configure { dependsOn('syncSupercomboModel', 'syncTrafficYoloModel', 'syncRoadMap') }
+// MIT and the other permissive licences require their notice to travel with **every copy**, and an APK is
+// a copy: the repository's NOTICE alone does not cover someone who only ever downloads the app. Copied at
+// build time rather than committed, so there is one source of truth and it cannot drift.
+def noticeSrc = file("${rootProject.projectDir}/NOTICE")
+def noticeDst = file("${projectDir}/src/main/assets/NOTICE.txt")
 
+tasks.register('syncNotice', Copy) {
+    description = 'Copy NOTICE → assets/NOTICE.txt so the licence notices ship inside the APK'
+    onlyIf {
+        if (!noticeSrc.isFile()) {
+            throw new GradleException("NOTICE is missing at ${noticeSrc} — the APK may not be distributed " +
+                    "without the third-party notices it carries")
+        }
+        return true
+    }
+    from noticeSrc
+    into noticeDst.parentFile
+    rename { 'NOTICE.txt' }
+    outputs.file(noticeDst)
+}
+
+tasks.named('preBuild').configure {
+    dependsOn('syncSupercomboModel', 'syncTrafficYoloModel', 'syncRoadMap', 'syncNotice')
+}
+
+// The traffic detector is deliberately NOT committed under assets/: it is derived from Ultralytics
+// YOLOv8, which ships under AGPL-3.0, and putting it in the APK is distribution (THIRD_PARTY.md).
+// The task below still packages it when the file is present in models/ — that is an opt-in for whoever
+// has settled the licence, not something a plain checkout does. On the phone /sdcard/adas_models/ works
+// too, without rebuilding.
 def trafficYoloSrc = file(findProperty('trafficYoloModel')
         ?: "${rootProject.projectDir}/models/yolov8n_traffic_256.onnx")
 if (!trafficYoloSrc.isFile()) {
@@ -64,7 +92,8 @@ tasks.register('syncTrafficYoloModel', Copy) {
     description = 'Copy models/yolov8n_traffic_256.onnx (or _320) → assets/traffic_yolo.onnx'
     onlyIf {
         if (!trafficYoloSrc.isFile()) {
-            logger.warn("traffic YOLO missing: ${trafficYoloSrc} — put ONNX there or adb push to /sdcard/adas_models/traffic_yolo.onnx")
+            logger.lifecycle("traffic YOLO not packaged (none in models/) — the node is off by default; " +
+                    "adb push to /sdcard/adas_models/traffic_yolo.onnx to use it")
             return false
         }
         return true

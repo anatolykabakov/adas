@@ -90,6 +90,37 @@ public class CameraHandler {
     private boolean ownPrior;
     private static volatile boolean recordCameraImages = true;
 
+    /** Stopped cars produce nothing worth a JPEG. */
+    private static final float BAG_MOVING_MPS = 0.5f;
+    private static final long BAG_STOP_HOLD_MS = 3000;
+    private static volatile float egoSpeedMps;
+    private static volatile long egoSpeedAtMs;
+    private static volatile long lastMovingMs;
+    /** Logged once per transition so gaps in a bag are explainable rather than mysterious. */
+    private static volatile boolean bagSkipping;
+
+    /** Speed from `vehicle/state`, for the recording gate. Called from the ZMQ listener. */
+    public static void setEgoSpeed(float mps) {
+        egoSpeedMps = mps;
+        egoSpeedAtMs = adas.app.TimeUtil.nowMs();
+        if (mps > BAG_MOVING_MPS) {
+            lastMovingMs = egoSpeedAtMs;
+        }
+    }
+
+    /** Whether this frame is worth writing to the bag. */
+    private static boolean bagWantsFrame() {
+        final long now = adas.app.TimeUtil.nowMs();
+        // No speed, or a stale one: record. Not knowing is not a reason to stop.
+        if (egoSpeedAtMs == 0 || now - egoSpeedAtMs > 1000) {
+            return true;
+        }
+        if (egoSpeedMps > BAG_MOVING_MPS) {
+            return true;
+        }
+        return now - lastMovingMs <= BAG_STOP_HOLD_MS;
+    }
+
     public static void setRecordCameraImages(boolean on) {
         recordCameraImages = on;
         Log.i("CameraHandler", "bag camera images: " + (on ? "on" : "off"));
@@ -100,14 +131,29 @@ public class CameraHandler {
     }
 
     private static final int SCALE_FACTOR = 2;
+
+    /** The two rates the switch offers. Anything else is refused rather than silently rounded. */
+    public static final int FPS_MODEL = 20;
+    public static final int FPS_FAST = 30;
+
     /**
-     * Frames per second requested from the camera.
-     *
-     * <p>The vision rate is quantised by the camera period: when a cycle takes longer than one period,
-     * the pipeline takes every second frame. Measured at 20 fps on run 2026_08_04_21_00_18 — 2.02
-     * camera frames per processed one, 11.3 Hz. At 30 fps the quantum is 33 ms instead of 44.
+     * Frames per second requested from the camera — and therefore the spacing of the pair the model sees, which is not a cosmetic choice.
      */
-    private static final int TARGET_FPS = 30;
+    private static volatile int targetFps = FPS_MODEL;
+
+    /**
+     * Pick the capture rate. Takes effect on the next {@link #start()} — the AE range belongs to the
+     * capture session, so the session has to be rebuilt; the caller restarts the camera.
+     */
+    public static void setTargetFps(int fps) {
+        targetFps = fps == FPS_FAST ? FPS_FAST : FPS_MODEL;
+        Log.i("CameraHandler", "target fps -> " + targetFps + " (model step "
+                + Math.round(1000f / targetFps) + " ms)");
+    }
+
+    public static int getTargetFps() {
+        return targetFps;
+    }
 
     private float bagFx;
     private float bagFy;
@@ -118,13 +164,7 @@ public class CameraHandler {
     private volatile float measuredFocalPx;
     /** Where it came from: without this, "measured" and "defaulted" are indistinguishable. */
     private volatile String measuredFocalSource = "";
-    /**
-     * Who to call once the focal length first becomes known.
-     *
-     * <p>The characteristics arrive with the first frame's metadata rather than when the camera opens,
-     * so they cannot be asked for right after `start()`. Without a notification vision spends its
-     * first seconds on the config's number — on a different phone that is somebody else's geometry.
-     */
+    /** Who to call once the focal length first becomes known. */
     private volatile Runnable onIntrinsicsReady;
 
     public CameraHandler(Context context, TextureView preview) {
@@ -155,12 +195,7 @@ public class CameraHandler {
         this.failureListener = failureListener;
     }
 
-    /**
-     * Somebody else who wants the live frames — today the on-screen lens calibration.
-     *
-     * <p>A tap rather than a second camera session: Android hands a camera to one client at a time, so
-     * opening another one would take the stream away from the driving pipeline.
-     */
+    /** Somebody else who wants the live frames — today the on-screen lens calibration. */
     public interface FrameTap {
         /** False to be skipped this frame; checked before the copy so a busy tap costs nothing. */
         boolean wantsFrame();
@@ -464,7 +499,18 @@ public class CameraHandler {
                                     captureTs);
                         }
                         if (recordCameraImages && Logger.getInstance().isRunning()) {
-                            logBagJpegFromY(yuv, captureTs);
+                            if (bagWantsFrame()) {
+                                if (bagSkipping) {
+                                    bagSkipping = false;
+                                    Log.i(TAG, "moving again — camera frames back in the bag");
+                                }
+                                logBagJpegFromY(yuv, captureTs);
+                            } else if (!bagSkipping) {
+                                bagSkipping = true;
+                                Log.i(TAG, String.format(java.util.Locale.US,
+                                        "stopped (%.2f m/s) — camera frames paused after %d ms of hold",
+                                        egoSpeedMps, BAG_STOP_HOLD_MS));
+                            }
                         }
                     }
                 } catch (Throwable t) {
@@ -537,7 +583,9 @@ public class CameraHandler {
                 }
             }
 
-            Range<Integer> fps = pickTargetFpsRange(cameraCharacteristics, TARGET_FPS);
+            // The model position wants a pinned interval; the fast one wants the highest rate.
+            final Range<Integer> fps =
+                    pickTargetFpsRange(cameraCharacteristics, targetFps, targetFps == FPS_MODEL);
             if (fps != null) {
                 captureRequest.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fps);
                 Log.i(TAG, "Set target FPS range " + fps.getLower() + "-" + fps.getUpper());
@@ -600,18 +648,7 @@ public class CameraHandler {
         }
     }
 
-    /**
-     * Auto-exposure metering rectangle covering the road, so exposure is not computed against the sky.
-     *
-     * <p>Not a literal port of flowpilot's: they size the rectangle from the frame (1280x720), but
-     * `CONTROL_AE_REGIONS` is in active-array coordinates, and on a 4000x3000 sensor their rectangle
-     * would land in the top-left corner — the sky. Here the frame's aspect-ratio crop within the active
-     * array is found first, and their fractions are taken inside it: 0.4..0.6 across, 0.5..0.7 down.
-     *
-     * <p>The coordinate system depends on distortion correction: with DISTORTION_CORRECTION_MODE_OFF it
-     * is the pre-correction active array. We disable distortion, so that one is preferred
-     * pre-correction.
-     */
+    /** Auto-exposure metering rectangle covering the road, so exposure is not computed against the sky. */
     private MeteringRectangle[] roadMeteringRegions(CameraCharacteristics chars, int frameWidth, int frameHeight) {
         Integer maxRegions = chars.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
         if (maxRegions == null || maxRegions < 1) {
@@ -651,15 +688,18 @@ public class CameraHandler {
     }
 
     /**
-     * Picks the AE frame-rate range: highest achievable upper bound first, then the highest lower bound
-     * among equals — a high lower bound is what stops auto-exposure from dropping the rate for exposure.
-     * So [30,30] beats [15,30] beats [10,10].
-     *
-     * <p>Both halves are needed. Preferring any range that merely covers the target let [15,30] through
-     * and the camera ran at 67 ms (2026_08_07_19_04_05); preferring a fixed range pinned it to the only
-     * fixed range this phone offers, 10 fps, and the rate fell to 10.06 Hz (2026_08_08_10_47_41).
+     * Picks the AE frame-rate range: highest achievable upper bound first, then the highest lower bound among equals — a high lower bound is what stops auto-exposure from dropping the rate for exposure.
      */
-    private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int targetFps) {
+    private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int wanted) {
+        return pickTargetFpsRange(chars, wanted, false);
+    }
+
+    /**
+     * The two positions of the camera switch want opposite things.
+     * @param pinExact prefer a range that pins one rate, even if it is not the fastest available.
+     */
+    private static Range<Integer> pickTargetFpsRange(CameraCharacteristics chars, int wanted,
+                                                     boolean pinExact) {
         Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (ranges == null || ranges.length == 0) {
             return null;
@@ -670,22 +710,44 @@ public class CameraHandler {
         }
         Log.i(TAG, "AE fps ranges available: " + all.toString().trim());
 
+        if (pinExact) {
+            Range<Integer> nearest = null;
+            for (Range<Integer> r : ranges) {
+                if (!r.getLower().equals(r.getUpper())) {
+                    continue;   // a range, not a rate: auto-exposure would wander inside it
+                }
+                if (nearest == null
+                        || Math.abs(r.getUpper() - wanted) < Math.abs(nearest.getUpper() - wanted)
+                        || (Math.abs(r.getUpper() - wanted) == Math.abs(nearest.getUpper() - wanted)
+                            && r.getUpper() > nearest.getUpper())) {
+                    nearest = r;
+                }
+            }
+            if (nearest != null) {
+                Log.i(TAG, "pinning " + nearest.getUpper() + " fps ("
+                        + Math.round(1000f / nearest.getUpper()) + " ms step) — nearest fixed range to "
+                        + wanted);
+                return nearest;
+            }
+            Log.w(TAG, "no fixed AE range on this camera — falling back to the fastest under " + wanted);
+        }
+
         Range<Integer> best = null;
         for (Range<Integer> r : ranges) {
-            int upper = Math.min(r.getUpper(), targetFps);
+            int upper = Math.min(r.getUpper(), wanted);
             if (upper <= 0) {
                 continue;
             }
             // A range whose lower bound exceeds the target cannot deliver the target rate — it forces
             // its own. [60,60] ties [30,30] on the capped upper bound and would win on the lower one.
-            if (r.getLower() > targetFps) {
+            if (r.getLower() > wanted) {
                 continue;
             }
             if (best == null) {
                 best = r;
                 continue;
             }
-            int bestUpper = Math.min(best.getUpper(), targetFps);
+            int bestUpper = Math.min(best.getUpper(), wanted);
             if (upper > bestUpper || (upper == bestUpper && r.getLower() > best.getLower())) {
                 best = r;
             }
@@ -740,14 +802,7 @@ public class CameraHandler {
         }
     }
 
-    /**
-     * Focal length in pixels for the W×H frame according to the camera itself, or 0 if it said
-     * nothing.
-     *
-     * <p>Needed by the model warp. Until now it took fx from `intrinsics_prior` in the config — a
-     * number typed in by hand for whichever phone it was typed in for. On a different phone that is a
-     * silent geometry error: the lane lines land where they are not, and nobody is there to say so.
-     */
+    /** Focal length in pixels for the W×H frame according to the camera itself, or 0 if it said nothing. */
     public float measuredFocalPx() {
         return measuredFocalPx;
     }
@@ -855,18 +910,7 @@ public class CameraHandler {
                     intrinsicCalibration = cameraCharacteristics.get(CameraCharacteristics.LENS_INTRINSIC_CALIBRATION);
                 }
 
-                // Which of the three the numbers came from travels with them: the fields look the same
-                // either way, and a bag that cannot tell a measured lens from a fixed default cannot be
-                // trusted about distances.
-                // The order of preference matters, and it used to be the other way round.
-                // `LENS_INTRINSIC_CALIBRATION` is a calibration of this particular camera unit; the
-                // estimate from physical focal length and sensor width is arithmetic over datasheet
-                // figures. On the Xiaomi 14 the two differ by 11% (855 against 951 pixels for a
-                // 1280×720 frame), and picking one or the other from run to run is not acceptable:
-                // lane geometry depends on this number directly.
-                //
-                // The estimate used to win while the bag buffers were filled from the calibration —
-                // that is, the pipeline and the bag lived on different numbers.
+                // Which of the three the numbers came from travels with them: the fields look the same either way, and a bag that cannot tell a measured lens from a fixed default cannot be trusted about distances.
                 CameraIntrinsicsOuterClass.CameraIntrinsics.Source intrinsicsSource;
                 final boolean lensCalibUsable = intrinsicCalibration != null && intrinsicCalibration.length >= 4
                         && intrinsicCalibration[0] > 1f && intrinsicCalibration[1] > 1f && activeArrayWidth > 0;
@@ -889,16 +933,7 @@ public class CameraHandler {
                             focalLengthPxFull, (physicalFocalLengthMm / sensorWidthMm) * W));
                 }
 
-                // The bag frame is the same frame, only half the size, so the numbers are the same
-                // divided by two. There must be no separate branch with its own condition here: there
-                // used to be two, they diverged over the `activeArrayWidth > 0` requirement, and the
-                // source label stopped describing the value — the log showed `SOURCE_FOCAL_ESTIMATE`
-                // next to a number from the lens calibration. While debugging on the Xiaomi 14 this
-                // looked like "the focal length jumps between 855 and 951 from run to run".
-                //
-                // One scale for both axes, and that is not a simplification: a 16:9 stream is a crop
-                // of a 4:3 sensor preserving the horizontal field, and focal length in pixels depends
-                // on pixel size, not on how many rows survived the crop.
+                // The bag frame is the same frame, only half the size, so the numbers are the same divided by two.
                 if (intrinsicCalibration != null && intrinsicCalibration.length >= 4 && !lensCalibUsable) {
                     Log.w(TAG, "LENS_INTRINSIC_CALIBRATION present but unusable "
                             + "(zeros, or the sensor size is unknown) — using the datasheet estimate");
@@ -934,16 +969,6 @@ public class CameraHandler {
 
                 {
                     // In units of the FULL pipeline frame, not the downscaled bag frame.
-                    //
-                    // This is where the mistake that cost the drive of 2026-08-16 lived. The
-                    // calibration service takes these numbers as intrinsics of the W×H frame, while
-                    // they were published for the half-size bag frame: fx 475.5 instead of 951, centre
-                    // (320,180) instead of (640,360). From there they reached the model warp, which
-                    // built a projection at half the focal length with the centre in a corner — such a
-                    // frame cannot contain lane lines at all.
-                    //
-                    // The bag needs no separate numbers: every frame in the message carries its own
-                    // focal_length_x/y and principal_point, already in its own scale.
                     float[] frameK = new float[]{fxBag / scale, fyBag / scale, cxBag / scale, cyBag / scale, 0f};
                     Messages.ZMQMessage intrinsicsMessage = ProtoUtils.createCameraIntrinsicsMessage(
                         physicalFocalLengthMm,

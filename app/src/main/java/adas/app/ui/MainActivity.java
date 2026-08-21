@@ -12,6 +12,7 @@ import adas.app.sensors.IMUHandler;
 import adas.app.sensors.PhoneStatsHandler;
 import adas.proto.CameraCalibOuter;
 import adas.proto.LaneKeepOuter;
+import adas.proto.LanePathOuterClass;
 import adas.proto.Panda;
 import adas.proto.SafetyWarnOuter;
 import adas.proto.SteerOuter;
@@ -104,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
     private android.widget.CheckBox recordImagesCheck;
     private RadioGroup laneKeepControllerGroup;
     private RadioGroup modelRunnerGroup;
+    private RadioGroup cameraFpsGroup;
     private android.widget.Spinner carSpinner;
 
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -143,9 +145,6 @@ public class MainActivity extends AppCompatActivity {
         cameraHandler.setOnIntrinsicsReady(() -> runOnUiThread(this::applyParamsToVision));
         cameraHandler.setFailureListener(reason -> uiHandler.post(() -> {
             stopCamera();
-            if (laneOverlay != null) {
-                laneOverlay.setHcaStatus("Camera dead: " + reason);
-            }
             Toast.makeText(MainActivity.this, "Camera failed: " + reason, Toast.LENGTH_LONG).show();
         }));
         gpsHandler = new GPSHandler(this);
@@ -158,6 +157,9 @@ public class MainActivity extends AppCompatActivity {
         startService(new Intent(getApplicationContext(), AdasAppHandler.class));
 
         params = RuntimeParams.load(this);
+        // Before the camera opens: the rate is part of the capture session, and a switch afterwards
+        // costs a session rebuild.
+        CameraHandler.setTargetFps(RuntimeParams.normalizeCameraFps(params.cameraFps));
         setupParamsPanel();
         applyParamsToOverlay();
         AdasAppHandler.applyLaneKeepParams(params);
@@ -180,9 +182,8 @@ public class MainActivity extends AppCompatActivity {
             try {
                 trafficVisionPipeline = new adas.app.vision.TrafficVisionPipeline(this, laneOverlay);
                 cameraHandler.setTrafficVisionPipeline(trafficVisionPipeline);
-                Log.i(LOG_TAG, "TrafficVisionPipeline ready (~3 Hz YOLO)"
-                        + " signs=" + AdasConfig.visionTrafficSignsEnabled(this)
-                        + " lights=" + AdasConfig.visionTrafficLightsEnabled(this));
+                laneOverlay.setTrafficHudEnabled(true);
+                Log.i(LOG_TAG, "TrafficVisionPipeline ready (lights)");
             } catch (Exception e) {
                 Log.e(LOG_TAG,
                         "TrafficVisionPipeline init failed (put traffic_yolo.onnx in assets"
@@ -310,6 +311,16 @@ public class MainActivity extends AppCompatActivity {
             rebuildVisionPipeline();
         });
 
+        cameraFpsGroup = findViewById(R.id.cameraFpsGroup);
+        cameraFpsGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (suppressControllerUi) {
+                return;
+            }
+            params.cameraFps = checkedId == R.id.fps30
+                    ? CameraHandler.FPS_FAST : CameraHandler.FPS_MODEL;
+            applyCameraFps();
+        });
+
         carSpinner = findViewById(R.id.carSpinner);
         final String[] carLabels = new String[AdasConfig.CARS.length];
         for (int i = 0; i < AdasConfig.CARS.length; i++) {
@@ -347,13 +358,21 @@ public class MainActivity extends AppCompatActivity {
         bindSlidersFromParams();
     }
 
-    /**
-     * Rebuilds the vision pipeline for the selected model, live and without a restart.
-     *
-     * <p>Off the UI thread: ONNX init takes hundreds of milliseconds and thneed loads a 50 MB model,
-     * which would be an ANR on the main thread. While it rebuilds the camera delivers to nobody, so
-     * lateral control has no target for that moment — switch on a straight, not in a bend.
-     */
+    /** \brief Apply the chosen capture rate: the AE range lives in the session, so the camera restarts. */
+    private void applyCameraFps() {
+        CameraHandler.setTargetFps(RuntimeParams.normalizeCameraFps(params.cameraFps));
+        try {
+            params.save(this);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "save params failed", e);
+        }
+        stopCamera();
+        if (mImageView != null && mImageView.isAvailable()) {
+            startCameraIfNeeded(mImageView.getWidth(), mImageView.getHeight());
+        }
+        Toast.makeText(this, "Camera " + CameraHandler.getTargetFps() + " fps", Toast.LENGTH_SHORT).show();
+    }
+
     private void rebuildVisionPipeline() {
         final String choice = RuntimeParams.normalizeModelRunner(params.modelRunner);
         Toast.makeText(this, "Model -> " + choice.toUpperCase() + ", rebuilding...",
@@ -384,13 +403,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean suppressControllerUi;
 
-    /**
-     * Lay the parameters out over the panel's widgets.
-     *
-     * <p>The sliders are gone: geometry and steer ratio are facts about the car and live in its port
-     * (`platform/<brand>/`), as in openpilot's `interface.py`, while camera calibration is measured
-     * rather than tweaked by hand. What is left is what a person actually chooses.
-     */
+    /** Lay the parameters out over the panel's widgets. */
     private void bindSlidersFromParams() {
         if (recordImagesCheck != null) {
             recordImagesCheck.setChecked(params.recordCameraImages);
@@ -400,6 +413,12 @@ public class MainActivity extends AppCompatActivity {
             suppressControllerUi = true;
             modelRunnerGroup.check("thneed".equals(RuntimeParams.normalizeModelRunner(params.modelRunner))
                     ? R.id.modelThneed : R.id.modelOnnx);
+            suppressControllerUi = false;
+        }
+        if (cameraFpsGroup != null) {
+            suppressControllerUi = true;
+            cameraFpsGroup.check(RuntimeParams.normalizeCameraFps(params.cameraFps) == CameraHandler.FPS_FAST
+                    ? R.id.fps30 : R.id.fps20);
             suppressControllerUi = false;
         }
         if (carSpinner != null) {
@@ -441,8 +460,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         laneOverlay.setCameraHeight(params.heightM);
-        laneOverlay.setWaypointShift(params.ppShift);
-        laneOverlay.setSteerRatio(params.steerRatio);
         laneOverlay.setCalibRpyDeg(params.rollDeg, params.pitchDeg, params.yawDeg);
         int w = cameraHandler != null ? cameraHandler.W : params.calibWidth;
         int h = cameraHandler != null ? cameraHandler.H : params.calibHeight;
@@ -454,17 +471,7 @@ public class MainActivity extends AppCompatActivity {
                 params.fx * sx, params.fy * sy, params.cx * sx, params.cy * sy, w, h);
     }
 
-    /**
-     * Hand vision its calibration, preferring the focal length measured by the camera itself.
-     *
-     * <p>`intrinsics_prior` in the config is a number typed in by hand for one particular phone. On a
-     * different phone it does not fit, and the error is silent: the lane lines land where they are
-     * not, and nobody is there to warn. The camera does report its focal length — on the Xiaomi 14
-     * that is 855 pixels for a 1280×720 frame against the config's 993.4 taken from a OnePlus 7T.
-     *
-     * <p>The config stays as a fallback: not every camera reports its characteristics, and then
-     * driving on the typed-in number beats not driving at all.
-     */
+    /** Hand vision its calibration, preferring the focal length measured by the camera itself. */
     private void applyParamsToVision() {
         if (visionPipeline == null) {
             return;
@@ -539,29 +546,40 @@ public class MainActivity extends AppCompatActivity {
                     lk.getStatus());
             laneOverlay.setTorqueSaturated(lk.getTorqueSaturated());
         }
+        // vision/path: the reference line the lateral loop drives on, built in C++ by the Planner.
+        // Drawn instead of the model plan, which was one input to it rather than the result.
+        if (message.hasLanePath()) {
+            LanePathOuterClass.LanePath lp = message.getLanePath();
+            final int n = lp.getPolylineCount();
+            if (n >= 2) {
+                float[] xs = new float[n];
+                float[] ys = new float[n];
+                for (int i = 0; i < n; i++) {
+                    xs[i] = (float) lp.getPolyline(i).getX();
+                    ys[i] = (float) lp.getPolyline(i).getY();
+                }
+                laneOverlay.setCenterline(xs, ys, lp.getLaneAnchored());
+            } else {
+                laneOverlay.clearCenterline();
+            }
+        }
         if (message.hasSteerCommand()) {
             SteerOuter.SteerCommand cmd = message.getSteerCommand();
             laneOverlay.setSteerCommand(cmd.getTorqueCnm(), cmd.getEnabled());
         }
-        if (message.hasPandaHealth()) {
-            Panda.PandaHealth h = message.getPandaHealth();
-            boolean ign = h.getIgnitionLine() || h.getIgnitionCan();
-            String status;
-            if (!ign) {
-                status = "HCA blocked: no ignition";
-            } else if (!h.getControlsAllowed()) {
-                status = "HCA blocked: controls_allowed=0 (engage stock ACC)";
-            } else if (h.getHeartbeatLost()) {
-                status = "HCA warn: panda heartbeat lost";
-            } else {
-                status = String.format("HCA ok (safety=%d)", h.getSafetyMode());
-            }
-            laneOverlay.setHcaStatus(status);
-        }
+        // panda/health used to feed an HCA status line here; that HUD was taken off the screen, and
+        // the same gates are visible in the bag and in `Panda health:` logcat lines.
         // CAN speed, an input of the 0.9.x model. Arrives at 100 Hz, far more often than frames, so the
         // latest value is simply kept and the frame gets whatever it was at inference time.
-        if (message.hasCarState() && visionPipeline != null) {
-            visionPipeline.setEgoSpeed(message.getCarState().getVEgo());
+        if (message.hasCarState()) {
+            final float vEgo = message.getCarState().getVEgo();
+            if (visionPipeline != null) {
+                visionPipeline.setEgoSpeed(vEgo);
+            }
+            // The speed readout is the driver's, not the model's: it comes from CAN, at 100 Hz.
+            laneOverlay.setEgoSpeed(vEgo);
+            // Same value gates the bag: standing still writes no JPEGs.
+            CameraHandler.setEgoSpeed(vEgo);
         }
         if (message.hasSafetyWarn()) {
             SafetyWarnOuter.SafetyWarnState w = message.getSafetyWarn();
@@ -569,14 +587,7 @@ public class MainActivity extends AppCompatActivity {
         }
         if (message.hasTrafficVision()) {
             TrafficVisionOuter.TrafficVisionState tv = message.getTrafficVision();
-            laneOverlay.setTrafficVision(
-                    tv.getSpeedLimitKmh(),
-                    tv.getVEgoKmh(),
-                    tv.getOverspeed(),
-                    tv.getOverspeedKmh(),
-                    tv.getTflColorValue(),
-                    tv.getTflConf(),
-                    tv.getStatus());
+            laneOverlay.setTrafficVision(tv.getTflColorValue(), tv.getTflConf());
         }
         if (message.hasCameraCalib()) {
             CameraCalibOuter.CameraCalibrationState c = message.getCameraCalib();
@@ -603,30 +614,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Keep a converged calibration across restarts.
-     *
-     * <p>Pitch and yaw of a phone on a windshield mount are learned from the road, and until now that
-     * knowledge lived only in memory: the manual "Save" button was the single writer, so every launch
-     * started from the config prior and learned it again. On a new phone that is a whole warm-up per
-     * launch, spent driving on a calibration that is not yet right.
-     *
-     * <p>Only a converged estimate is written, at most once a minute, and only when it actually moved.
-     * What gets persisted is the live parameter set — the same one the running system uses — so this
-     * cannot save something the driver has not seen take effect.
-     */
-    /**
-     * Start or stop measuring the lens against a printed chessboard.
-     *
-     * <p>Runs inside this screen on the pipeline's own camera stream. A second camera session was the
-     * obvious shape and the wrong one: Android hands a camera to one client at a time, so opening one
-     * here would have taken the road away from the driving pipeline.
-     *
-     * <p>Print the board with {@code scripts/tools/make_chessboard.py} — 9×6 inner corners. Hold it
-     * flat, fill a good part of the frame, and move it between shots: tilted, near, far, off to each
-     * corner. Views too close to one already collected are rejected on purpose, and the counter will
-     * sit still until the board actually moves.
-     */
+    /** Keep a converged calibration across restarts. */
+    /** Start or stop measuring the lens against a printed chessboard. */
     private void toggleLensCalibration() {
         if (intrinsicsCalibrator != null) {
             stopLensCalibration("Lens calibration cancelled");
@@ -758,12 +747,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Hold the outcome on screen for a few seconds before the overlay goes back to the road.
-     *
-     * <p>The result is the one thing the driver came here for, and a toast that appears while they are
-     * still lowering the board is not an answer they will read.
-     */
+    /** Hold the outcome on screen for a few seconds before the overlay goes back to the road. */
     private void showCalibrationResult(String message) {
         if (laneOverlay != null) {
             laneOverlay.setCalibrationProgress(adas.app.vision.IntrinsicsCalibrator.TARGET_VIEWS,
@@ -807,14 +791,7 @@ public class MainActivity extends AppCompatActivity {
                 && Math.abs(params.yawDeg - savedYawDeg) < CALIB_SAVE_MIN_DELTA_DEG) {
             return;
         }
-        // Do not save a calibration learned blind. Online calibration leans on lane lines, and out
-        // of focus there are none: the values come out not "imprecise" but arbitrary — and they
-        // survive a restart, displacing what was learned on the road.
-        //
-        // That is exactly what happened on 2026-08-16: the config holding the learned calibration was
-        // deleted, the app spent a quarter of an hour on a desk, saved a yaw of +0.03° instead of the
-        // road's −1.40°, and the drive went out with it. It could not correct itself on the move —
-        // the camera was out of focus and there were no lane lines.
+        // Do not save a calibration learned blind.
         if (visionPipeline != null && !visionPipeline.seesRoad()) {
             return;
         }
@@ -986,6 +963,11 @@ public class MainActivity extends AppCompatActivity {
             cameraHandler.stop();
         }
         cameraStarted = false;
+        // Off the road: no camera, no vision, so nothing left that could clear an alert. A tone that
+        // keeps sounding after the pipeline stopped is the same lie as a frozen overlay.
+        if (laneOverlay != null) {
+            laneOverlay.stopSounds();
+        }
     }
 
     @Override

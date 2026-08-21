@@ -14,18 +14,7 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief The control law and nothing else.
- *
- * \details Three services divide the lateral loop: the planner produces a plan in curvature, this
- * controller turns it into a command, and the platform carries the command onto the bus. Nothing here
- * knows about CAN — not an address, not a signal, not a frame counter. The controller sees the chassis,
- * the plan and the panda's report, and emits an intent: torque, whether steering is engaged, the HUD
- * pictograms, and the wish to press a cruise button. How that reaches the bus is the platform's problem.
- *
- * With no hardware in the picture, the controller is testable against a recording: feed it a chassis
- * frame and a plan, and compare its command with a reference log.
- */
+/** The control law and nothing else. */
 class Control : public adas::middleware::Service {
 public:
   struct Config {
@@ -48,7 +37,7 @@ public:
      *
      *  The solver calls this `mpc_Lf`; the wheelbase goes into the slip model instead. The two numbers
      *  differ, and substituting one for the other means driving at the wrong angle. */
-    double lf_m = 2.67;
+    double lf_m = 2.67;  ///< Lever arm for curvature-to-angle [m]; mpc_Lf, not the wheelbase.
     /// Torque at full command [cNm]. Must not exceed what the panda's safety model allows, or the command
     /// is clipped somewhere that does not record having clipped it.
     double max_torque_cnm = 300.0;
@@ -60,20 +49,19 @@ public:
         0.5;  ///< A panda report older than this counts as unknown [s]: silence is not permission.
   };
 
+  /// \param[in] config Control law settings; see Config fields.
   explicit Control(Config config);
 
   void configure() override;
   /**
    * \brief Override the PID gains at runtime.
-   *
    * \param[in] kp Proportional gain on the steering-angle error.
    * \param[in] ki Integral gain; a run with `ki = 0` is the only way to compare the instant response,
-   * which is why the offline tools need this entry point.
    * \param[in] kf Feedforward gain, applied to `swa * (v^2 + v0^2)`.
    */
-  void setPidGains(double kp, double ki, double kf) { ctl_.setPidGains(kp, ki, kf); }
   void reset() override {}
   std::string_view getName() const override { return "control"; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
 
 private:

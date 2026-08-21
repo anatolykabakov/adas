@@ -82,7 +82,7 @@ not only at low ones; that part of the diagnosis was a surprise and is the large
 
 ### What could not be verified before driving, and why
 
-`bag/bag_feedforward_ab.py` replays the inner loop over the recorded drive, but **open loop**: the recorded
+The (since retired) `bag_feedforward_ab.py` replayed the inner loop over the recorded drive, but **open loop**: the recorded
 actual SWA is what the car did under the *old*, insufficient torque. With more torque it would have turned
 further and the error would have been smaller, so the replay **over-estimates** the new command. Its
 ceiling-occupancy numbers (49 → 72 % on 83–167 m) are an upper bound, not a prediction, and the harness
@@ -316,7 +316,7 @@ straights.
 |---|---|
 | `config.json` | none — it is the one guaranteed way to get the new config, stronger than the `run-as rm` below |
 | the `.dbc` | none, re-copied |
-| extracted `supercombo.onnx` / `traffic_yolo.onnx` | ~250 MB unpacked again, so the first launch is slow |
+| extracted `supercombo.onnx` | ~150 MB unpacked again, so the first launch is slow (traffic_yolo is no longer packaged — THIRD_PARTY.md) |
 | granted permissions (camera, storage, USB) | **must be re-granted by hand** |
 
 Bags are **not** affected: they are written to `Environment.getExternalStorageDirectory()/adas_logs`, outside
@@ -415,6 +415,49 @@ GRADLE_USER_HOME=/path/to/writable/gradle_home \
 
 ---
 
+## If the phone sleeps mid-drive
+
+The panda dies with the USB handle when the phone sleeps, and the app now takes it back by itself. The
+watchdog looks at the health stream — `Platform::stateCallback` publishes at 10 Hz — and acts after three
+seconds of silence, no sooner than twelve seconds after the last start and no oftener than every five.
+What it does depends on what it finds:
+
+```
+panda silent 3400 ms — reopening the descriptor (attempt 1)
+panda reopened, fd=42 — seated into the running native side (reconnect #1, seat 1/2)
+Platform: panda seated on fd=42 (reseat #1) — car state, filters and learners kept
+Panda supervisor: board state forgotten, next tick re-inits
+Panda alt_exp=17 set before VW safety (disengage_on_gas=1 alka=1)
+```
+
+That is the good path: **only** the panda driver learns about the new descriptor. The planner, the
+controller, the pose estimator and paramsd keep the state they built during the drive — worth insisting
+on, because a restart resets the learners and on the 13:42 bag `learned_params_valid` was true for only
+41 % of the first 95 seconds, i.e. a minute and a half back on default lateral parameters.
+
+Two other outcomes are normal and say what they mean:
+
+```
+panda silent 4100 ms and not in the device list — waiting for attach
+panda silent 3800 ms but permission is gone — asking again
+```
+
+And the fallback, after two seatings that did not bring the board back:
+
+```
+panda reopened, fd=44 — seating it twice did not bring the board back, restarting native (reconnect #3)
+```
+
+Then the whole native side does restart, as before, and the learners start over. Seeing this line twice
+in one drive means the fault is not the descriptor — look at the harness and the power, not at the app.
+
+The re-seated board goes through the same init the first one did: power saving off, alternative
+experience before the VW safety model, then the model itself. Check `alt=17` in the read-back line above
+after a reconnect exactly as at startup — the bit lives on the board, and a board we have never
+configured does not have it.
+
+---
+
 ## What the route must contain
 
 Two questions, two requirements, and they are compatible.
@@ -451,41 +494,26 @@ python3 tools/latency.py $NEW
 python3 bag/bag_topdown_video.py $NEW --list-assist
 python3 bag/bag_override_episodes.py $NEW      # HCA_01.HCA_Active from the bus, independent of our own flags
 
-# 2. Steering quality restricted to frames that were actually actuated — the comparison that was never
-#    honest before. Same script on both bags; on the old one it will cover far fewer frames, which is
-#    itself the result.
-python3 bag/bag_controller_ab.py $NEW
-python3 bag/bag_controller_ab.py $OLD
+# 2. The whole drive in one pass: rate, setpoint step, torque ceiling, lane confidence, pose, voice notes.
+python3 bag/bag_report.py $NEW $OLD
 
 # 3. Arc offset, at the shipped window. Read it as this drive's baseline rather than as a comparison:
 #    with the assist present in frames that used to be excluded, it is not measuring the same population.
 python3 bag/bag_arc_offset.py $NEW --std-range 20 --blend 0.6 --std-good 0.3 --std-bad 1.5 \
     --center-force 0.0 --weight-by-std --cache /tmp/new20.npz
-
-# 4. Perception σ — unaffected by actuation, so this one *is* comparable across drives.
-python3 bag/bag_lane_sigma_ab.py $NEW $OLD
-
-# 5. The observer: what did it learn live, and does it agree with the offline replay?
-python3 bag/bag_params_learner.py $NEW
 ```
 
 Step 1 carries the weight, and it is the one step where a negative answer ends the analysis: if the panda was
 blocking frames, the rest of the bag describes the old behaviour with extra logging.
 
-Steps 2 and 3 are deliberately not framed as before/after. The assist gate changes *which frames exist* in the
-actuated population, so a drive-to-drive delta mixes "steers better" with "steers more often". The clean
-comparison is within this bag: actuated frames at 5–12 m/s against actuated frames at 16–22 m/s, where the old
-drive already had 87 % presence and therefore a trustworthy number.
-
-`bag/bag_arc_offset.py --std-range` matters here even though the window is not the variable this time: it used to
+`bag/bag_arc_offset.py --std-range` matters even when the window is not the variable this time: it used to
 take the median σ over the *whole* lane line, which is a different number from the one the controller gates on,
 and an analysis that disagrees with the running code cannot be used to judge that code. Pass 20 to match what
 ships.
 
-Step 5 has two halves worth keeping apart. `bag/bag_params_learner.py` replays the *Python mirror* of the filter;
-the bag also carries what the *C++* filter published live, in
-`localization/pose.learned_stiffness_factor`. They should agree closely — if they do not, one of the two
-transcriptions is wrong and that is a finding in itself.
+The development-era A/B stands that used to be steps 2/4/5 here (`bag_controller_ab`, `bag_lane_sigma_ab`,
+`bag_params_learner`) were retired on 2026-08-20 with the rest of the tuning tooling; they live in git history
+should a controller comparison be needed again.
 
 ---
 

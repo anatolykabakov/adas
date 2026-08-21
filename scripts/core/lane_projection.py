@@ -160,20 +160,6 @@ class CameraGeometry:
             **kwargs,
         )
 
-    def set_pitch_down_deg(self, pitch_down_deg: float) -> None:
-        """UI helper: positive = looking down."""
-        self.__init__(
-            height=self.height,
-            yaw_deg=self.yaw_deg,
-            pitch_deg=-abs(float(pitch_down_deg)),
-            roll_deg=self.roll_deg,
-            cam_x=self.cam_x,
-            cam_y_left=self.cam_y_left,
-            image_width=self.image_width,
-            image_height=self.image_height,
-            intrinsic_matrix=self.intrinsic_matrix,
-        )
-
 
 def iso_to_road_points(
     X_fwd: np.ndarray,

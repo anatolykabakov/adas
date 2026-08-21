@@ -30,21 +30,11 @@ inline const std::vector<std::string> kZmqOutboundTopics = {
     "control/long_plan",
     "safety/warn",
     "traffic/state",
-    "map/local",
     "vision/path",
 };
 
 namespace services {
-/**
- * \brief The only place the internal bus meets the outside world.
- *
- * \details Inbound: ZMQ frames are parsed into schema messages and published on the internal bus.
- * Outbound: schema messages are wrapped into a `ZMQMessage` envelope and pushed out. The envelope exists
- * nowhere else — services exchange schema messages, which are the ones a recorded drive contains.
- *
- * This is what lets the phone application, the offline harness and a bag replay all speak to the same
- * services without any of them knowing about a socket.
- */
+/** The only place the internal bus meets the outside world. */
 class ZmqBridge : public adas::middleware::Service {
 public:
   struct Config {
@@ -52,22 +42,19 @@ public:
     std::string endpoint_out = kZmqEndpointOut;  ///< Where outbound messages are published to.
   };
 
+  /// Constructs with the default config.
   ZmqBridge() : ZmqBridge(Config{}) {}
+  /// \param[in] config Socket endpoints.
   explicit ZmqBridge(Config config);
 
   void configure() override;
   void reset() override;
   std::string_view getName() const override { return "zmq_bridge"; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
 
 protected:
-  /** Timestamp the bridge stamps on the envelope.
-   *
-   *  Every schema message carries `timestamp`, except `SteerCommand`, which has four clocks and would
-   *  make `timestamp` ambiguous — the envelope wants the moment it left us, so `publish_ts_ms`. Handled
-   *  by overload rather than at the call site: an exception spelled out sixteen times is an exception
-   *  that gets copied wrong.
-   */
+  /** Timestamp the bridge stamps on the envelope. */
   template <typename Payload>
   static int64_t envelopeTimestamp(const Payload& payload)
   {
@@ -106,7 +93,8 @@ private:
   bool recvEnvelope(std::string& topic, adas::proto::ZMQMessage& message);
   /// Envelope → the payload it carries, on the internal bus.
   void publishPayload(const std::string& topic, const adas::proto::ZMQMessage& message);
-  void processInbound();
+  /** Receives and republishes one envelope. False when the socket had nothing left. */
+  bool processInbound();
   void onInternalMessage(const std::string& topic_name, const adas::proto::ZMQMessage& msg);
 
   Config config_;

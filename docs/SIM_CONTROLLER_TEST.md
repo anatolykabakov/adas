@@ -168,8 +168,46 @@ Therefore:
 
 * closed loop runs only on `--lanes gt` — control-law test;
 * `--lanes supercombo` useful to visually inspect model output parsing and overlay;
-* full pipeline test is on recordings (`bag/bag_controller_ab.py`, `bag/bag_config_sweep.py`), not in
+* full pipeline test is on recordings (`bag/bag_config_sweep.py`), not in
   simulator.
+
+#### 2026-08-19: the model path runs again, and what it measures now
+
+When the phone moved to supercombo 0.9.7 the simulator's runner stayed on the 0.8.x input set — four
+inputs, no wide picture — so `--lanes supercombo` and `--draw-supercombo` did not degrade, they threw
+`ValueError: Required inputs (['lateral_control_params', 'prev_desired_curv', 'features_buffer'])`
+and killed the run. Both the simulator and the auto-labeller now go through one runtime,
+`core/supercombo_097.py`, which mirrors `SupercomboOnnxRunner.java` input for input and checks itself
+against the zero-input signature in the shipped config before the first frame
+(`-1.2458 / 3.2808` against `-1.2455 / 3.2799`).
+
+What it says on `straight`, 60 frames at 25 m/s: host lines are found confidently
+(`p = 0.86 / 0.95`), but driven on, the car settles **~1.7 m off centre**, half a lane, while the
+controller reports `e_y = 0`. Identical with `--pp-on plan` and `--pp-on lanes`, so it is not the
+plan-versus-lanes choice. Two separate things were behind it.
+
+**The camera height was wrong by 0.5–0.6 m, and that was ours.** `CameraParams.refresh_pose` took the
+mount offset `(0, 0.8, 1.5)` as the height above the road, but MetaDrive measures it from
+`agent.origin`, and that node sits at the chassis reference — `agent.origin.getPos()[2] ≈ 0.51 m` at
+rest, ~0.59 m rolling. The true height is ~2.1 m, so every ground-plane projection compressed distance
+by a third: a point drawn at 10 m was really at 13.4 m, and the lane edges at ±1.75 m landed a metre
+outside the painted ones. Measured on the render (`straight`, `CTE = 0.000`, single 3.5 m lane): at
+`h = 1.51` the paint reads `+1.05 / −3.15` — asymmetric and 4.2 m apart, which is what first looked
+like "the model is displaced"; at the corrected `h = 2.10` the projected ±1.75 lines land on the paint.
+The model input never depended on it (`ModelCalibWarp` is a rotation, no height), but the overlay, the
+BEV patch on the trajectory plot and every comparison of model output against simulator ground truth
+did. Note also that the earlier "both projectors agree with the simulator's own extrinsics to 0.4 px"
+check proved self-consistency only: those extrinsics carried the same error.
+
+**The remaining ~1 m is the network on this render, and it is not a frame bug.** With the geometry
+right, the car centred and the paint symmetric, the model still puts the lane centre 0.89 m to the
+left. Mirror the camera image and it puts it 1.00 m to the right — so the bias follows the *content*,
+not our pipeline: the model shifts its lane away from the barrier that MetaDrive builds hard against
+the right edge. Its lateral gain is also weak here — it recovers roughly half of a real offset
+(`CTE +0.66` read as `−0.47` against a truth of `−1.71`) — and a closed loop divides bias by gain:
+`0.9 / 0.5 ≈ 1.8 m`, which is the 1.7 m measured. So "half a lane" is the network's wall-avoidance
+bias amplified by its weak lateral gain, on a domain it was not trained for. The conclusion above
+stands: score control on `--lanes gt`, use `--lanes supercombo` to look at parsing and overlay.
 
 ## Bag replay run: fixes 2026-08-03
 
@@ -204,7 +242,7 @@ Until 2026-08-02 this was unnoticed: anchor-selection branch was enabled only fo
 
 ## Found and fixed: `mpc` did not hold lane with old config.json
 
-With old settings (`mpc_epsi_gain=0`, `mpc_cte_gain_base=0`, `mpc_cte_gain_floor=0`) VisionPilot MPC seed was
+With old settings (`mpc_epsi_gain=0`, `mpc_cte_gain_base=0`, `mpc_cte_gain_floor=0`) VisionPilot MPC (стратегия удалена 2026-08-21, история в git) seed was
 pure feedforward: no feedback on offset or heading. In closed loop controller left the road in 9 seconds though selected in the parameter panel.
 
 July tuning gains (`epsi 0.3`, `cte_gain_base 0.6`, `cte_gain_floor 0.02`) restored in

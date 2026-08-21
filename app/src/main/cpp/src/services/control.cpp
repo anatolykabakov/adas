@@ -43,8 +43,7 @@ void Control::configure()
   ctl_.setSlewConfig(config_.slew);
   registerParameters();
 
-  scheduleTimer(
-      10, [this] { latTick(); }, "control");
+  scheduleTimer(10, [this] { latTick(); }, "control");
 
   LOGI("Control: %s + %s → %s (cruise buttons %s)", topics::kVehicleState, topics::kLatPlan, topics::kSteerCommand,
        config_.cruise_buttons_enabled ? "on" : "off");
@@ -86,6 +85,27 @@ void Control::registerParameters()
         ctl_.setSlewConfig(config_.slew);
       },
       [this] { return config_.slew.limit_deg; });
+  registerParameter<double>(
+      "pid_kp",
+      [this](const double& v) {
+        config_.ctl.pid_kp = v;
+        ctl_.setPidGains(config_.ctl.pid_kp, config_.ctl.pid_ki, config_.ctl.pid_kf);
+      },
+      [this] { return config_.ctl.pid_kp; });
+  registerParameter<double>(
+      "pid_ki",
+      [this](const double& v) {
+        config_.ctl.pid_ki = v;
+        ctl_.setPidGains(config_.ctl.pid_kp, config_.ctl.pid_ki, config_.ctl.pid_kf);
+      },
+      [this] { return config_.ctl.pid_ki; });
+  registerParameter<double>(
+      "pid_kf",
+      [this](const double& v) {
+        config_.ctl.pid_kf = v;
+        ctl_.setPidGains(config_.ctl.pid_kp, config_.ctl.pid_ki, config_.ctl.pid_kf);
+      },
+      [this] { return config_.ctl.pid_kf; });
   registerParameter<double>("lane_max_age_s", config_.lane_max_age_s);
   registerParameter<double>("lka_blinker_resume_delay_s", config_.lka_blinker_resume_delay_s);
   registerParameter<double>("assist_max_age_s", config_.assist_max_age_s);

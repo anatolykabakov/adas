@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -12,40 +13,43 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief The panda driver and nothing more: bytes both ways plus the safety supervisor.
- *
- * \details The boundary follows CAN frames, as upstream draws it: `boardd` carries `can` and `sendcan`
- * while decoding lives above it, in the car's own implementation. What stays here is only what needs
- * the hardware — receive, send, poll the health, and the supervisor tick that feeds the panda its
- * heartbeat and safety mode.
- *
- * Which car is behind the bus is decided once, by `vehicle.name`, and reached only through
- * `platform::CarPlatform`. This service names no brand: adding a car does not change a line of it.
- */
+/** The panda driver and nothing more: bytes both ways plus the safety supervisor. */
 class Platform : public adas::middleware::Service {
 public:
   struct Config {
-    int usb_fd = -1;  ///< Panda file descriptor, opened by the host; -1 means no hardware.
-    std::string dbc_path;
+    int usb_fd = -1;                           ///< Panda file descriptor, opened by the host; -1 means no hardware.
+    std::string dbc_path;                      ///< CAN database the decoder parses.
     std::string car_name = "vw_golf_7_mqb";    ///< Which car is on the bus; `vehicle.name` in the config.
     bool cruise_buttons_enabled = false;       ///< Send cruise-button frames at all.
     int cruise_tip_cooldown_ms = 200;          ///< Minimum gap between button presses [ms].
     adas::SpeedFilter::Config speed_filter{};  ///< Wheel-speed filter settings.
   };
 
+  /// \param[in] config Panda descriptor, DBC path and car name.
   explicit Platform(Config config);
   ~Platform();
 
   void configure() override;
   void reset() override {}
   std::string_view getName() const override { return "platform"; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
+
+  /**
+   * \brief Hand the service a freshly opened panda descriptor.
+   * \param[in] usb_fd Descriptor of an already opened panda; negative is ignored.
+   */
+  void reseatPanda(int usb_fd);
+
+  /// How many times a descriptor was actually swapped in. Diagnostics only.
+  int pandaReseats() const { return reseats_.load(std::memory_order_relaxed); }
 
 private:
   void rxCallback();
   void stateCallback();
   void txCallback();
+  /// Swap in a queued descriptor. Runs on this service's thread only.
+  void applyPendingPanda();
 
   Config config_;
   std::shared_ptr<::Panda> panda_;
@@ -56,6 +60,10 @@ private:
 
   /// The controller's last command — the intent this service turns into frames.
   adas::proto::SteerCommand cmd_{};
+
+  /// A descriptor waiting to be seated, or -1. Written by any thread, consumed by ours.
+  std::atomic<int> pending_fd_{-1};
+  std::atomic<int> reseats_{0};
 };
 
 }  // namespace services

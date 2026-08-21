@@ -39,6 +39,7 @@ private:
   uint32_t current_message_id = 0;
 
 public:
+  /// Parse a DBC file; throws when it cannot be read.
   DBSParser(const std::string& filename)
   {
     if (!loadDBC(filename)) {
@@ -46,6 +47,7 @@ public:
     }
   }
 
+  /// \return Message layout for the CAN id, or nothing.
   std::optional<Message> getMessage(uint32_t message_id)
   {
     auto it = messages.find(message_id);
@@ -55,8 +57,10 @@ public:
     return std::nullopt;
   }
 
+  /// \return Every message in the DBC.
   const std::map<uint32_t, Message>& getAllMessages() const { return messages; }
 
+  /// Decode one signal from a frame. \return Physical value, or nothing when absent.
   std::optional<double> extractSignal(const can_frame& frame, const std::string& signal_name);
 
 private:

@@ -63,11 +63,6 @@
             android:exported="true"
             android:screenOrientation="landscape"
             android:label="Supercombo bench" />
-        <activity
-            android:name="adas.app.ui.TrafficYoloBenchActivity"
-            android:exported="true"
-            android:screenOrientation="landscape"
-            android:label="Traffic YOLO Bench" />
         <service android:name="adas.app.AdasAppHandler"></service>
         <service android:name="adas.app.bridge.ZMQBridgeService"></service>
     </application>

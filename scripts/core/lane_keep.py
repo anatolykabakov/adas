@@ -173,10 +173,10 @@ def format_lane_keep_status(lk: LaneKeepResult) -> str:
 class LaneKeepController:
     """Sim/viz glue: publish inputs → AdasApp.step → pop_messages(LaneKeepOutput)."""
 
-    MODES = ("straight", "pure_pursuit", "mpc", "fp")
+    MODES = ("straight", "pure_pursuit", "fp")
 
     # Sim/viz mode → C++ LaneKeepService controller key.
-    _CONTROLLER = {"straight": "pp", "pure_pursuit": "pp", "mpc": "mpc", "fp": "fp"}
+    _CONTROLLER = {"straight": "pp", "pure_pursuit": "pp", "fp": "fp"}
 
     def __init__(
         self,
@@ -245,15 +245,6 @@ class LaneKeepController:
             self.pp_shift,
         )
         app.set_lane_keep_pp_ld_curv_gain(float(get("pp_ld_curv_gain", 0.0)))
-        app.set_lane_keep_mpc_kappa_yaw_blend(
-            float(get("mpc_kappa_yaw_blend", 0.0)),
-            float(get("mpc_kappa_yaw_min_speed", 3.0)),
-        )
-        app.set_lane_keep_mpc_ema_alphas(
-            float(get("mpc_kappa_ema_alpha", 1.0)),
-            float(get("mpc_epsi_ema_alpha", 1.0)),
-            float(get("mpc_cte_ema_alpha", 1.0)),
-        )
         app.set_lane_keep_steer_slew_limit_deg(float(get("steer_slew_limit_deg", 8.0)))
         app.set_lane_keep_vehicle_model(
             bool(get("lat_use_vehicle_model", True)),
@@ -264,21 +255,6 @@ class LaneKeepController:
             float(get("fp_steering_rate_weight", 400.0))
         )
 
-        # Веса и затравка решателя `mpc`. Раньше это были модульные `pyadas.set_mpc_*` над
-        # глобалами; глобалы стали полями экземпляра, и знобы ходят через реестр параметров —
-        # то есть тем же путём, что steer_ratio и настройки разбора разметки.
-        for name, default in (
-            ("mpc_epsi_gain", 0.5),
-            ("mpc_ff_scale", 2.0),
-            ("mpc_cte_weight_base", 20.0),
-            ("mpc_cte_quartic_scale", 5.0),
-            ("mpc_cte_gain_base", 0.6),
-            ("mpc_cte_gain_floor", 0.0),
-        ):
-            if not self._app.set_param(name, float(get(name, default))):
-                raise RuntimeError(
-                    f"неизвестный параметр {name!r}: конфигурация не применена"
-                )
 
     def set_cam_y_left_m(self, m: float) -> None:
         self.cam_y_left_m = float(m)
@@ -308,8 +284,7 @@ class LaneKeepController:
         self._app.set_lane_keep_pp(
             float(pp_k_dd), float(pp_ld_min), float(pp_ld_max), float(pp_shift)
         )
-        if self.mode != "mpc":
-            self._app.set_lane_keep_max_steer_deg(float(max_steer_deg))
+        self._app.set_lane_keep_max_steer_deg(float(max_steer_deg))
 
     @property
     def waypoint_shift(self) -> float:
@@ -329,7 +304,7 @@ class LaneKeepController:
 
     def _active_max_steer_rad(self) -> float:
         """Mirrors C++ LaneKeepService::activeMaxSteerRad (mpc family capped at 25°)."""
-        if self.mode in ("mpc", "fp"):
+        if self.mode == "fp":
             return min(self.mpc_max_steer_rad, float(np.deg2rad(25.0)))
         return self.max_steer_rad
 
@@ -447,10 +422,3 @@ class LaneKeepController:
             return self.compute_from_polyline(speed_mps, None)
         poly = build_centerline_polyline(lanes.get("left_road"), lanes.get("right_road"))
         return self.compute_from_polyline(speed_mps, poly)
-
-    def get_control(
-        self, speed_mps: float, lanes: Optional[Dict[str, Any]] = None
-    ) -> list[float]:
-        """Returns [steer_norm, throttle, brake] in **device** frame (right+)."""
-        result = self.compute(speed_mps, lanes)
-        return [result.steer_norm, result.throttle, result.brake]

@@ -17,6 +17,10 @@
     <string name="params_model_runner">Model</string>
     <string name="params_model_onnx">ONNX</string>
     <string name="params_model_thneed">THNEED</string>
+    <string name="params_camera_fps">Camera</string>
+    <string name="params_camera_fps_20">20 Hz</string>
+    <string name="params_camera_fps_30">30 Hz</string>
+    <!-- A second network. Off costs nothing: no task, no frame copy, not even loaded. -->
     <string name="params_record_images">Write camera frames to bag</string>
     <string name="params_lk_pp">PP</string>
     <string name="params_lk_mpc">MPC</string>

@@ -4,14 +4,7 @@
 #include <variant>
 
 #include "adas/adas_app.h"
-#include "adas/mapmatch/fit.h"
-#include "adas/mapmatch/geo.h"
 #include "adas/mapmatch/road_map.h"
-#include "adas/mapmatch/road_route.h"
-#include "adas/mapmatch/search.h"
-#include "adas/mapmatch/track.h"
-#include "adas/mapmatch/window_search.h"
-#include "adas/lateral/visionpilot_mpc.h"
 #include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/values.h"
 
@@ -27,121 +20,6 @@ PYBIND11_MODULE(core, m)
   m.attr("STEER_STEP") = volkswagen::CarControllerParams::STEER_STEP;
 
   py::module_ mm = m.def_submodule("mapmatch");
-
-  py::class_<adas::mapmatch::WindowSearchConfig>(mm, "WindowSearchConfig")
-      .def(py::init<>())
-      .def_readwrite("window_m", &adas::mapmatch::WindowSearchConfig::window_m)
-      .def_readwrite("tol_deg", &adas::mapmatch::WindowSearchConfig::tol_deg)
-      .def_readwrite("clip_deg", &adas::mapmatch::WindowSearchConfig::clip_deg)
-      .def_readwrite("beam", &adas::mapmatch::WindowSearchConfig::beam)
-      .def_readwrite("per_edge", &adas::mapmatch::WindowSearchConfig::per_edge)
-      .def_readwrite("cell_m", &adas::mapmatch::WindowSearchConfig::cell_m)
-      .def_readwrite("per_cell", &adas::mapmatch::WindowSearchConfig::per_cell)
-      .def_readwrite("defer_deg", &adas::mapmatch::WindowSearchConfig::defer_deg)
-      .def_readwrite("defer_beam", &adas::mapmatch::WindowSearchConfig::defer_beam)
-      .def_readwrite("max_expand", &adas::mapmatch::WindowSearchConfig::max_expand)
-      .def_readwrite("verbose", &adas::mapmatch::WindowSearchConfig::verbose);
-
-  py::class_<adas::mapmatch::WindowRoute>(mm, "WindowRoute")
-      .def_readonly("dir_edges", &adas::mapmatch::WindowRoute::dir_edges)
-      .def_readonly("cost", &adas::mapmatch::WindowRoute::cost);
-
-  mm.def("search_by_windows", &adas::mapmatch::searchByWindows, py::arg("road_map"), py::arg("window_deg"),
-         py::arg("config") = adas::mapmatch::WindowSearchConfig{});
-
-  py::class_<adas::mapmatch::LocalFrame>(mm, "LocalFrame")
-      .def(py::init([](double lat0, double lon0) {
-             return adas::mapmatch::LocalFrame{lat0, lon0};
-           }),
-           py::arg("lat0_deg") = 55.7539, py::arg("lon0_deg") = 37.6208)
-      .def_readonly("lat0_deg", &adas::mapmatch::LocalFrame::lat0_deg)
-      .def_readonly("lon0_deg", &adas::mapmatch::LocalFrame::lon0_deg)
-      .def("to_local", &adas::mapmatch::LocalFrame::toLocal, py::arg("lat_deg"), py::arg("lon_deg"))
-      .def("to_geo", &adas::mapmatch::LocalFrame::toGeo, py::arg("east_m"), py::arg("north_m"))
-      .def(
-          "to_local_many",
-          [](const adas::mapmatch::LocalFrame& self, const std::vector<double>& lat, const std::vector<double>& lon) {
-            std::vector<double> e, n;
-            self.toLocalMany(lat, lon, e, n);
-            return std::make_pair(std::move(e), std::move(n));
-          },
-          py::arg("lat_deg"), py::arg("lon_deg"));
-
-  py::class_<adas::mapmatch::TrackConfig> track_cfg(mm, "TrackConfig");
-  py::enum_<adas::mapmatch::TrackConfig::YawSource>(track_cfg, "YawSource")
-      .value("Chassis", adas::mapmatch::TrackConfig::YawSource::Chassis)
-      .value("Imu", adas::mapmatch::TrackConfig::YawSource::Imu)
-      .value("Blend", adas::mapmatch::TrackConfig::YawSource::Blend);
-  track_cfg.def(py::init<>())
-      .def_readwrite("yaw_source", &adas::mapmatch::TrackConfig::yaw_source)
-      .def_readwrite("rezero_yaw_at_stops", &adas::mapmatch::TrackConfig::rezero_yaw_at_stops)
-      .def_readwrite("stop_speed_mps", &adas::mapmatch::TrackConfig::stop_speed_mps)
-      .def_readwrite("stop_min_s", &adas::mapmatch::TrackConfig::stop_min_s)
-      .def_readwrite("blend_imu_hf", &adas::mapmatch::TrackConfig::blend_imu_hf)
-      .def_readwrite("min_speed_mps", &adas::mapmatch::TrackConfig::min_speed_mps)
-      .def_readwrite("resample_m", &adas::mapmatch::TrackConfig::resample_m)
-      .def_readwrite("speed_scale", &adas::mapmatch::TrackConfig::speed_scale)
-      .def_readwrite("yaw_rate_scale", &adas::mapmatch::TrackConfig::yaw_rate_scale);
-
-  py::class_<adas::mapmatch::SegmentConfig>(mm, "SegmentConfig")
-      .def(py::init<>())
-      .def_readwrite("turn_radius_m", &adas::mapmatch::SegmentConfig::turn_radius_m)
-      .def_readwrite("min_turn_deg", &adas::mapmatch::SegmentConfig::min_turn_deg)
-      .def_readwrite("merge_gap_m", &adas::mapmatch::SegmentConfig::merge_gap_m)
-      .def_readwrite("smooth_m", &adas::mapmatch::SegmentConfig::smooth_m)
-      .def_readwrite("min_straight_m", &adas::mapmatch::SegmentConfig::min_straight_m);
-
-  py::class_<adas::mapmatch::Maneuver> maneuver(mm, "Maneuver");
-  py::enum_<adas::mapmatch::Maneuver::Kind>(maneuver, "Kind")
-      .value("Straight", adas::mapmatch::Maneuver::Kind::Straight)
-      .value("Turn", adas::mapmatch::Maneuver::Kind::Turn);
-  maneuver.def_readonly("kind", &adas::mapmatch::Maneuver::kind)
-      .def_readonly("length_m", &adas::mapmatch::Maneuver::length_m)
-      .def_readonly("angle_deg", &adas::mapmatch::Maneuver::angle_deg)
-      .def_readonly("s_start_m", &adas::mapmatch::Maneuver::s_start_m)
-      .def_readonly("s_end_m", &adas::mapmatch::Maneuver::s_end_m)
-      .def_readonly("radius_m", &adas::mapmatch::Maneuver::radius_m)
-      .def_property_readonly("is_turn", &adas::mapmatch::Maneuver::isTurn)
-      .def_property_readonly("is_left", &adas::mapmatch::Maneuver::isLeft);
-
-  py::class_<adas::mapmatch::Track>(mm, "Track")
-      .def_readonly("s_m", &adas::mapmatch::Track::s_m)
-      .def_readonly("x_m", &adas::mapmatch::Track::x_m)
-      .def_readonly("y_m", &adas::mapmatch::Track::y_m)
-      .def_readonly("theta_rad", &adas::mapmatch::Track::theta_rad)
-      .def_readonly("maneuvers", &adas::mapmatch::Track::maneuvers)
-      .def_property_readonly("length_m", &adas::mapmatch::Track::lengthM)
-      .def_property_readonly("total_turn_deg", &adas::mapmatch::Track::totalTurnDeg)
-      .def("describe", &adas::mapmatch::Track::describe);
-
-  py::class_<adas::mapmatch::ImuSamples>(mm, "ImuSamples")
-      .def(py::init<>())
-      .def_readwrite("t_s", &adas::mapmatch::ImuSamples::t_s)
-      .def_readwrite("gyro_x", &adas::mapmatch::ImuSamples::gyro_x)
-      .def_readwrite("gyro_y", &adas::mapmatch::ImuSamples::gyro_y)
-      .def_readwrite("gyro_z", &adas::mapmatch::ImuSamples::gyro_z)
-      .def_readwrite("accel_x", &adas::mapmatch::ImuSamples::accel_x)
-      .def_readwrite("accel_y", &adas::mapmatch::ImuSamples::accel_y)
-      .def_readwrite("accel_z", &adas::mapmatch::ImuSamples::accel_z);
-
-  py::class_<adas::mapmatch::YawDiagnostics>(mm, "YawDiagnostics")
-      .def_readonly("has_imu", &adas::mapmatch::YawDiagnostics::has_imu)
-      .def_readonly("bias_chassis_deg_s", &adas::mapmatch::YawDiagnostics::bias_chassis_deg_s)
-      .def_readonly("bias_imu_deg_s", &adas::mapmatch::YawDiagnostics::bias_imu_deg_s)
-      .def_readonly("corr_chassis_imu", &adas::mapmatch::YawDiagnostics::corr_chassis_imu)
-      .def_readonly("scale_chassis_imu", &adas::mapmatch::YawDiagnostics::scale_chassis_imu)
-      .def_readonly("n_stops", &adas::mapmatch::YawDiagnostics::n_stops)
-      .def_readonly("total_turn_chassis_deg", &adas::mapmatch::YawDiagnostics::total_turn_chassis_deg)
-      .def_readonly("total_turn_imu_deg", &adas::mapmatch::YawDiagnostics::total_turn_imu_deg);
-
-  mm.def("analyze_yaw", &adas::mapmatch::analyzeYaw, py::arg("t_s"), py::arg("speed_mps"), py::arg("yaw_rate_rps"),
-         py::arg("imu") = adas::mapmatch::ImuSamples{}, py::arg("config") = adas::mapmatch::TrackConfig{});
-
-  mm.def("build_track", &adas::mapmatch::buildTrack, py::arg("t_s"), py::arg("speed_mps"), py::arg("yaw_rate_rps"),
-         py::arg("config") = adas::mapmatch::TrackConfig{}, py::arg("segment") = adas::mapmatch::SegmentConfig{},
-         py::arg("imu") = adas::mapmatch::ImuSamples{});
-  mm.def("segment_maneuvers", &adas::mapmatch::segmentManeuvers, py::arg("track"),
-         py::arg("config") = adas::mapmatch::SegmentConfig{});
 
   py::class_<adas::mapmatch::RoadEdge>(mm, "RoadEdge")
       .def_readonly("node_a", &adas::mapmatch::RoadEdge::node_a)
@@ -191,136 +69,12 @@ PYBIND11_MODULE(core, m)
           },
           py::arg("x"), py::arg("y"), py::arg("search_m") = 200.0);
 
-  py::class_<adas::mapmatch::RouteConfig>(mm, "RouteConfig")
-      .def(py::init<>())
-      .def_readwrite("horizon_m", &adas::mapmatch::RouteConfig::horizon_m)
-      .def_readwrite("match_search_m", &adas::mapmatch::RouteConfig::match_search_m)
-      .def_readwrite("max_match_dist_m", &adas::mapmatch::RouteConfig::max_match_dist_m)
-      .def_readwrite("max_match_heading_deg", &adas::mapmatch::RouteConfig::max_match_heading_deg)
-      .def_readwrite("heading_weight_m_per_rad", &adas::mapmatch::RouteConfig::heading_weight_m_per_rad)
-      .def_readwrite("step_m", &adas::mapmatch::RouteConfig::step_m)
-      .def_readwrite("window_m", &adas::mapmatch::RouteConfig::window_m)
-      .def_readwrite("turn_kappa", &adas::mapmatch::RouteConfig::turn_kappa)
-      .def_readwrite("max_lat_acc", &adas::mapmatch::RouteConfig::max_lat_acc)
-      .def_readwrite("min_section_m", &adas::mapmatch::RouteConfig::min_section_m)
-      .def_readwrite("max_curv_deviation", &adas::mapmatch::RouteConfig::max_curv_deviation)
-      .def_readwrite("max_curv_split_arc_deg", &adas::mapmatch::RouteConfig::max_curv_split_arc_deg)
-      .def_readwrite("straight_max_deg", &adas::mapmatch::RouteConfig::straight_max_deg);
-
-  py::class_<adas::mapmatch::TurnSection>(mm, "TurnSection")
-      .def_readonly("start_m", &adas::mapmatch::TurnSection::start_m)
-      .def_readonly("end_m", &adas::mapmatch::TurnSection::end_m)
-      .def_readonly("kappa", &adas::mapmatch::TurnSection::kappa)
-      .def_readonly("speed_mps", &adas::mapmatch::TurnSection::speed_mps)
-      .def_readonly("sign", &adas::mapmatch::TurnSection::sign)
-      .def("__repr__", [](const adas::mapmatch::TurnSection& t) {
-        return "<TurnSection " + std::to_string(static_cast<int>(t.start_m)) + ".." +
-               std::to_string(static_cast<int>(t.end_m)) +
-               " m, R=" + std::to_string(static_cast<int>(t.kappa > 1e-9 ? 1.0 / t.kappa : 0.0)) +
-               " m, v=" + std::to_string(static_cast<int>(t.speed_mps * 3.6)) + " km/h, " +
-               (t.sign > 0 ? "left>" : "right>");
-      });
-
-  py::class_<adas::mapmatch::RouteAhead>(mm, "RouteAhead")
-      .def_readonly("matched", &adas::mapmatch::RouteAhead::matched)
-      .def_readonly("match_dist_m", &adas::mapmatch::RouteAhead::match_dist_m)
-      .def_readonly("heading_delta_rad", &adas::mapmatch::RouteAhead::heading_delta_rad)
-      .def_readonly("road_name", &adas::mapmatch::RouteAhead::road_name)
-      .def_readonly("x_m", &adas::mapmatch::RouteAhead::x_m)
-      .def_readonly("y_m", &adas::mapmatch::RouteAhead::y_m)
-      .def_readonly("dir_edges", &adas::mapmatch::RouteAhead::dir_edges)
-      .def_readonly("s_m", &adas::mapmatch::RouteAhead::s_m)
-      .def_readonly("x", &adas::mapmatch::RouteAhead::x_m_pts)
-      .def_readonly("y", &adas::mapmatch::RouteAhead::y_m_pts)
-      .def_readonly("kappa", &adas::mapmatch::RouteAhead::kappa)
-      .def_readonly("turns", &adas::mapmatch::RouteAhead::turns)
-      .def_readonly("length_m", &adas::mapmatch::RouteAhead::length_m)
-      .def_readonly("node_spacing_m", &adas::mapmatch::RouteAhead::node_spacing_m);
-
-  mm.def("build_route_ahead", &adas::mapmatch::buildRouteAhead, py::arg("map"), py::arg("x"), py::arg("y"),
-         py::arg("yaw_rad"), py::arg("cfg") = adas::mapmatch::RouteConfig{});
-
-  mm.def(
-      "curvature_along",
-      [](const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& query_s,
-         double window_m) { return adas::mapmatch::curvatureAlong(x, y, query_s, window_m); },
-      py::arg("x"), py::arg("y"), py::arg("query_s"), py::arg("window_m") = 25.0);
-
-  py::class_<adas::mapmatch::FitConfig>(mm, "FitConfig")
-      .def(py::init<>())
-      .def_readwrite("sample_m", &adas::mapmatch::FitConfig::sample_m)
-      .def_readwrite("sigma_road_m", &adas::mapmatch::FitConfig::sigma_road_m)
-      .def_readwrite("sigma_speed_scale", &adas::mapmatch::FitConfig::sigma_speed_scale)
-      .def_readwrite("sigma_yaw_scale", &adas::mapmatch::FitConfig::sigma_yaw_scale)
-      .def_readwrite("sigma_turn_deg", &adas::mapmatch::FitConfig::sigma_turn_deg)
-      .def_readwrite("sigma_straight_rel", &adas::mapmatch::FitConfig::sigma_straight_rel)
-      .def_readwrite("drift_block_m", &adas::mapmatch::FitConfig::drift_block_m)
-      .def_readwrite("sigma_drift_deg_per_100m", &adas::mapmatch::FitConfig::sigma_drift_deg_per_100m)
-      .def_readwrite("max_residual_m", &adas::mapmatch::FitConfig::max_residual_m)
-      .def_readwrite("iterations", &adas::mapmatch::FitConfig::iterations)
-      .def_readwrite("anneal_steps", &adas::mapmatch::FitConfig::anneal_steps)
-      .def_readwrite("anneal_start_scale", &adas::mapmatch::FitConfig::anneal_start_scale);
-
-  py::class_<adas::mapmatch::FitResult>(mm, "FitResult")
-      .def_readonly("ok", &adas::mapmatch::FitResult::ok)
-      .def_readonly("x0_m", &adas::mapmatch::FitResult::x0_m)
-      .def_readonly("y0_m", &adas::mapmatch::FitResult::y0_m)
-      .def_readonly("heading_rad", &adas::mapmatch::FitResult::heading_rad)
-      .def_readonly("speed_scale", &adas::mapmatch::FitResult::speed_scale)
-      .def_readonly("yaw_rate_scale", &adas::mapmatch::FitResult::yaw_rate_scale)
-      .def_readonly("turn_corr_deg", &adas::mapmatch::FitResult::turn_corr_deg)
-      .def_readonly("straight_corr", &adas::mapmatch::FitResult::straight_corr)
-      .def_readonly("drift_deg_per_100m", &adas::mapmatch::FitResult::drift_deg_per_100m)
-      .def_readonly("x_m", &adas::mapmatch::FitResult::x_m)
-      .def_readonly("y_m", &adas::mapmatch::FitResult::y_m)
-      .def_readonly("rms_m", &adas::mapmatch::FitResult::rms_m)
-      .def_readonly("median_m", &adas::mapmatch::FitResult::median_m)
-      .def_readonly("p95_m", &adas::mapmatch::FitResult::p95_m)
-      .def_readonly("deform_cost", &adas::mapmatch::FitResult::deform_cost)
-      .def_readonly("score", &adas::mapmatch::FitResult::score)
-      .def_readonly("iterations", &adas::mapmatch::FitResult::iterations);
-
-  py::class_<adas::mapmatch::SearchConfig>(mm, "SearchConfig")
-      .def(py::init<>())
-      .def_readwrite("turn_tol_deg", &adas::mapmatch::SearchConfig::turn_tol_deg)
-      .def_readwrite("dist_tol_rel", &adas::mapmatch::SearchConfig::dist_tol_rel)
-      .def_readwrite("dist_tol_abs_m", &adas::mapmatch::SearchConfig::dist_tol_abs_m)
-      .def_readwrite("straight_max_deg", &adas::mapmatch::SearchConfig::straight_max_deg)
-      .def_readwrite("beam_width", &adas::mapmatch::SearchConfig::beam_width)
-      .def_readwrite("max_candidates", &adas::mapmatch::SearchConfig::max_candidates)
-      .def_readwrite("min_seed_edge_m", &adas::mapmatch::SearchConfig::min_seed_edge_m)
-      .def_readwrite("max_overshoot_rel", &adas::mapmatch::SearchConfig::max_overshoot_rel)
-      .def_readwrite("dist_tol_min_m", &adas::mapmatch::SearchConfig::dist_tol_min_m)
-      .def_readwrite("check_first_straight", &adas::mapmatch::SearchConfig::check_first_straight)
-      .def_readwrite("turn_max_len_m", &adas::mapmatch::SearchConfig::turn_max_len_m)
-      .def_readwrite("turn_start_min_deg", &adas::mapmatch::SearchConfig::turn_start_min_deg)
-      .def_readwrite("verbose", &adas::mapmatch::SearchConfig::verbose);
-
-  py::class_<adas::mapmatch::RouteCandidate>(mm, "RouteCandidate")
-      .def_readonly("dir_edges", &adas::mapmatch::RouteCandidate::dir_edges)
-      .def_readonly("cost", &adas::mapmatch::RouteCandidate::cost)
-      .def_readonly("length_m", &adas::mapmatch::RouteCandidate::length_m)
-      .def_readonly("start_x_m", &adas::mapmatch::RouteCandidate::start_x_m)
-      .def_readonly("start_y_m", &adas::mapmatch::RouteCandidate::start_y_m)
-      .def_readonly("start_heading_rad", &adas::mapmatch::RouteCandidate::start_heading_rad)
-      .def_readonly("matched_turns", &adas::mapmatch::RouteCandidate::matched_turns);
-
-  mm.def("search_routes", &adas::mapmatch::searchRoutes, py::arg("road_map"), py::arg("track"),
-         py::arg("config") = adas::mapmatch::SearchConfig{});
-
-  mm.def("fit_track", &adas::mapmatch::fitTrack, py::arg("road_map"), py::arg("track"), py::arg("x0_m"),
-         py::arg("y0_m"), py::arg("heading_rad"), py::arg("config") = adas::mapmatch::FitConfig{});
-
-  mm.def("fit_track_to_route", &adas::mapmatch::fitTrackToRoute, py::arg("road_map"), py::arg("track"),
-         py::arg("dir_edges"), py::arg("config") = adas::mapmatch::FitConfig{});
-
   py::class_<adas::Vec2>(m, "Vec2")
       .def(py::init<>())
       .def(py::init<double, double>(), py::arg("x"), py::arg("y"))
       .def_property(
           "x", [](const adas::Vec2& v) { return v.x(); }, [](adas::Vec2& v, double val) { v.x() = val; })
-      .def_property(
-          "y", [](const adas::Vec2& v) { return v.y(); }, [](adas::Vec2& v, double val) { v.y() = val; });
+      .def_property("y", [](const adas::Vec2& v) { return v.y(); }, [](adas::Vec2& v, double val) { v.y() = val; });
 
   py::class_<adas::ChassisSample>(m, "ChassisSample")
       .def(py::init<>())
@@ -472,23 +226,56 @@ PYBIND11_MODULE(core, m)
       .def("set_camera_estimate", &AdasApp::setCameraEstimate, py::arg("pitch_deg"), py::arg("yaw_deg"))
       .def("set_camera_height", &AdasApp::setCameraHeight, py::arg("height_m"))
       .def("reset_camera_calib", &AdasApp::resetCameraCalib)
-      .def("set_lane_keep_pp", &AdasApp::setLaneKeepPp, py::arg("k_dd"), py::arg("ld_min"), py::arg("ld_max"),
-           py::arg("shift"))
-      .def("set_lane_keep_pp_ld_curv_gain", &AdasApp::setLaneKeepPpLdCurvGain, py::arg("gain"))
-      .def("set_lane_keep_max_steer_deg", &AdasApp::setLaneKeepMaxSteerDeg, py::arg("max_steer_deg"))
-      .def("set_lane_keep_controller", &AdasApp::setLaneKeepController, py::arg("controller"))
-      .def("set_lane_keep_mpc_kappa_yaw_blend", &AdasApp::setLaneKeepMpcKappaYawBlend, py::arg("alpha"),
-           py::arg("min_speed") = 3.0)
-      .def("set_lane_keep_mpc_ema_alphas", &AdasApp::setLaneKeepMpcEmaAlphas, py::arg("kappa_alpha"),
-           py::arg("epsi_alpha"), py::arg("cte_alpha"))
-      .def("set_lane_keep_steer_slew_limit_deg", &AdasApp::setLaneKeepSteerSlewLimitDeg, py::arg("deg"))
-      .def("set_lane_keep_tire_stiffness", &AdasApp::setLaneKeepTireStiffness, py::arg("tire_stiffness_factor"))
-      .def("set_lane_keep_vehicle_model", &AdasApp::setLaneKeepVehicleModel, py::arg("use_vehicle_model"),
-           py::arg("tire_stiffness_factor"))
-      .def("set_lane_keep_fp_steer_delay_s", &AdasApp::setLaneKeepFpSteerDelayS, py::arg("seconds"))
-      .def("set_lane_keep_fp_steering_rate_weight", &AdasApp::setLaneKeepFpSteeringRateWeight, py::arg("weight"))
-      .def("set_lane_keep_cam_y_left_m", &AdasApp::setLaneKeepCamYLeftM, py::arg("m"))
-      .def("set_lane_keep_pid_gains", &AdasApp::setLaneKeepPidGains, py::arg("kp"), py::arg("ki"), py::arg("kf"))
+      .def(
+          "set_lane_keep_pp",
+          [](AdasApp& a, double k_dd, double ld_min, double ld_max, double shift) {
+            a.setParam("pp_k_dd", k_dd);
+            a.setParam("pp_ld_min", ld_min);
+            a.setParam("pp_ld_max", ld_max);
+            a.setParam("pp_shift", shift);
+          },
+          py::arg("k_dd"), py::arg("ld_min"), py::arg("ld_max"), py::arg("shift"))
+      // Single-knob names map straight onto the parameter registry: the Python API keeps its named,
+      // discoverable methods, and C++ keeps one entry point (setParam) instead of a wrapper per knob.
+      .def(
+          "set_lane_keep_pp_ld_curv_gain", [](AdasApp& a, double gain) { a.setParam("pp_ld_curv_gain", gain); },
+          py::arg("gain"))
+      .def(
+          "set_lane_keep_max_steer_deg", [](AdasApp& a, double deg) { a.setParam("max_steer_deg", deg); },
+          py::arg("max_steer_deg"))
+      .def(
+          "set_lane_keep_controller",
+          [](AdasApp& a, const std::string& controller) { a.setParam("lane_keep_controller", controller); },
+          py::arg("controller"))
+      .def(
+          "set_lane_keep_steer_slew_limit_deg", [](AdasApp& a, double deg) { a.setParam("steer_slew_limit_deg", deg); },
+          py::arg("deg"))
+      .def(
+          "set_lane_keep_tire_stiffness", [](AdasApp& a, double f) { a.setParam("tire_stiffness_factor", f); },
+          py::arg("tire_stiffness_factor"))
+      .def(
+          "set_lane_keep_vehicle_model",
+          [](AdasApp& a, bool use, double f) {
+            a.setParam("lat_use_vehicle_model", use);
+            a.setParam("tire_stiffness_factor", f);
+          },
+          py::arg("use_vehicle_model"), py::arg("tire_stiffness_factor"))
+      .def(
+          "set_lane_keep_fp_steer_delay_s", [](AdasApp& a, double s) { a.setParam("fp_steer_delay_s", s); },
+          py::arg("seconds"))
+      .def(
+          "set_lane_keep_fp_steering_rate_weight",
+          [](AdasApp& a, double w) { a.setParam("fp_steering_rate_weight", w); }, py::arg("weight"))
+      .def(
+          "set_lane_keep_cam_y_left_m", [](AdasApp& a, double m) { a.setParam("cam_y_left_m", m); }, py::arg("m"))
+      .def(
+          "set_lane_keep_pid_gains",
+          [](AdasApp& a, double kp, double ki, double kf) {
+            a.setParam("pid_kp", kp);
+            a.setParam("pid_ki", ki);
+            a.setParam("pid_kf", kf);
+          },
+          py::arg("kp"), py::arg("ki"), py::arg("kf"))
       .def("set_param", static_cast<bool (AdasApp::*)(const std::string&, double)>(&AdasApp::setParam), py::arg("name"),
            py::arg("value"))
       .def("set_param_str", static_cast<bool (AdasApp::*)(const std::string&, const std::string&)>(&AdasApp::setParam),
@@ -506,7 +293,8 @@ PYBIND11_MODULE(core, m)
             c.yaw_rate = yaw_rate;
             c.steering_angle_deg = steering_angle_deg;
             c.steering_pressed = steering_pressed;
-            self.publishChassis(c);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kVehicleState, adas::carStateFromChassis(c));
           },
           py::arg("timestamp_us"), py::arg("speed_mps"), py::arg("steer_rad") = 0.0, py::arg("yaw_rate") = 0.0,
           py::arg("steering_angle_deg") = 0.0, py::arg("steering_pressed") = false)
@@ -527,7 +315,8 @@ PYBIND11_MODULE(core, m)
               msg.plan_poly.push_back({p.first, p.second});
             msg.plan_yaw = plan_yaw;
             msg.plan_yaw_rate = plan_yaw_rate;
-            self.publishLanes(msg);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kVisionPathIn, adas::createLanePath(msg));
           },
           py::arg("timestamp_us"), py::arg("polyline_ego"), py::arg("frame_id") = 0,
           py::arg("plan_poly") = std::vector<std::pair<double, double>>{}, py::arg("plan_yaw") = std::vector<double>{},
@@ -539,7 +328,8 @@ PYBIND11_MODULE(core, m)
             const std::string data = serialized;
             if (!ll.ParseFromString(data))
               throw std::invalid_argument("publish_lane_lines: not a LaneLines message");
-            self.publishLaneLines(ll);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kVisionLanes, ll);
           },
           py::arg("lane_lines_bytes"))
       .def(
@@ -554,7 +344,8 @@ PYBIND11_MODULE(core, m)
               msg.left_uv.push_back({p.first, p.second});
             for (const auto& p : right)
               msg.right_uv.push_back({p.first, p.second});
-            self.publishLaneUv(msg);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kCalibLaneUv, msg);
           },
           py::arg("timestamp_us"), py::arg("left_uv"), py::arg("right_uv"))
       .def(
@@ -577,7 +368,8 @@ PYBIND11_MODULE(core, m)
             g.accuracy_m = accuracy_m;
             g.satellites = satellites;
             g.valid = valid;
-            self.publishGps(g);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kGpsLocation, g);
           },
           py::arg("timestamp_us"), py::arg("x"), py::arg("y"), py::arg("speed_mps") = 0.0, py::arg("bearing_deg") = 0.0,
           py::arg("yaw_enu") = 0.0, py::arg("vx") = 0.0, py::arg("vy") = 0.0, py::arg("course_valid") = false,
@@ -589,7 +381,8 @@ PYBIND11_MODULE(core, m)
             imu.timestamp_us = timestamp_us;
             imu.yaw_rate = yaw_rate;
             imu.valid = valid;
-            self.publishImu(imu);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kImuYaw, imu);
           },
           py::arg("timestamp_us"), py::arg("yaw_rate"), py::arg("valid") = true)
       .def(
@@ -602,7 +395,8 @@ PYBIND11_MODULE(core, m)
             const std::string data = serialized;
             if (!gps.ParseFromString(data))
               throw std::invalid_argument("publish_gps_location: not a GPSLocation message");
-            self.publishGpsLocation(gps);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kGpsLocation, gps);
           },
           py::arg("gps_bytes"))
       .def(
@@ -614,7 +408,8 @@ PYBIND11_MODULE(core, m)
             const std::string data = serialized;
             if (!imu.ParseFromString(data))
               throw std::invalid_argument("publish_imu_data: not an IMUData message");
-            self.publishImuData(imu);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kImu, imu);
           },
           py::arg("imu_bytes"))
       .def("pop_messages", [](AdasApp& self) {

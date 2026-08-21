@@ -46,6 +46,7 @@ inline void expire(State& s, int64_t now_ms, const Config& cfg)
   }
 }
 
+/// Apply the hold times to the fused state. \return What the HUD should show now.
 inline Assessment assess(const State& s, double speed_mps, bool have_speed, int64_t now_ms, const Config& cfg)
 {
   Assessment a;

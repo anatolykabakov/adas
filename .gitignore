@@ -86,3 +86,13 @@ out.png
 
 app/src/main/cpp/third_party/*
 app/src/main/cpp/clang_errors.txt
+
+# Generated at build time from the root NOTICE (app/build.gradle: syncNotice)
+app/src/main/assets/NOTICE.txt
+
+# Recording archives pulled from the phone by hand — same rule as adas_logs/
+/REC_*.tar.gz
+
+# YOLO weights are Ultralytics AGPL derivatives — never committed (THIRD_PARTY.md); pushed to the
+# device or synced from models/ at build time instead.
+app/src/main/assets/traffic_yolo.onnx

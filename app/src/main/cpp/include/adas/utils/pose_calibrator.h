@@ -11,13 +11,7 @@
 #include "adas/utils/math_utils.h"
 
 namespace adas {
-/**
- * \brief Camera pitch and yaw from the direction the camera-odometry translation points.
- *
- * \details When the car drives straight, the translation vector points along the optical axis of a
- * perfectly aligned camera; whatever angle it makes instead is the mounting error. Independent of lane
- * markings, which is why it is kept alongside the vanishing-point estimate rather than instead of it.
- */
+/** Camera pitch and yaw from the direction the camera-odometry translation points. */
 class PoseCalibrator {
 public:
   enum Status { Uncalibrated = 0, Calibrated = 1, Invalid = 2, Recalibrating = 3 };
@@ -39,15 +33,14 @@ public:
     const char* reject_reason = "";
   };
 
+  /// \param[in] pitch0_deg / yaw0_deg Mount prior [deg]; \p height_m camera height [m].
   explicit PoseCalibrator(double pitch0_deg = 0.0, double yaw0_deg = 0.0, double height_m = 1.22);
 
   /**
    * \brief Restart the estimate from a seed.
-   *
    * \param[in] pitch0_deg Seed pitch [deg], negative looking down.
    * \param[in] yaw0_deg Seed yaw [deg], positive to the left.
    * \param[in] valid_blocks How much of the seed to trust: 0 starts from nothing, the full count treats
-   * the seed as converged, which is how a saved calibration survives a restart.
    */
   void reset(double pitch0_deg, double yaw0_deg, int valid_blocks = 0);
   /// \param[in] v_ego_mps Ego speed [m/s]; samples below the working range are ignored.
@@ -57,7 +50,6 @@ public:
 
   /**
    * \brief Feed one camera-odometry sample.
-   *
    * \param[in] odom Translation, rotation and their standard deviations.
    * \return True when the sample entered the estimate; false when it was too noisy or too slow.
    */
@@ -65,10 +57,15 @@ public:
 
   /// Current estimate [deg]: pitch negative looking down, yaw positive to the left.
   double pitchDeg() const;
+  /// \return Calibrated yaw [deg].
   double yawDeg() const;
+  /// \return Roll [deg]; this calibrator does not estimate it.
   double rollDeg() const { return 0.0; }
+  /// \return Camera height [m].
   double heightM() const { return height_m_; }
+  /// \return Uncalibrated / calibrating / calibrated / invalid.
   Status status() const { return status_; }
+  /// \return Accepted 5-second blocks so far.
   int validBlocks() const { return valid_blocks_; }
   /// Convergence, 0 to 100, as shown to the driver.
   int calPercent() const;
@@ -77,13 +74,20 @@ public:
 
   /// Roll, pitch, yaw [rad] after smoothing — what a consumer should project with.
   Vec3 smoothRpy() const;
+  /// \return Spread of block estimates [rad], the convergence measure.
   Vec3 calibSpread() const { return calib_spread_; }
+  /// \return Weight of the previous estimate in the last blend.
   double oldRpyWeight() const { return old_rpy_weight_; }
+  /// \return Index of the block being filled.
   int blockIdx() const { return block_idx_; }
+  /// \return Samples in the current block.
   int sampleInBlock() const { return idx_; }
+  /// \return Speed used for the gating [m/s].
   double vEgo() const { return v_ego_; }
+  /// \return Why the last sample was accepted or rejected.
   const LastSampleDebug& lastSample() const { return last_sample_; }
 
+  /// \return Status as text for logs.
   static const char* statusName(Status s);
 
 private:

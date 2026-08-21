@@ -21,8 +21,7 @@ message LocalizationPose {
   // understeering car without this, and upstream's version falls back to "zero with a 10 deg std" when its
   // localizer cannot supply it — so a consumer must gate on `road_roll_std_deg`, not on presence.
   // Measured accuracy: 2.2 deg per sample, 0.65 deg after ten seconds of averaging, which is where it
-  // stops improving because the residual is the road's own camber changing. See utils/road_roll_estimator.h
-  // and scripts/bag/bag_road_roll.py.
+  // stops improving because the residual is the road's own camber changing. See utils/road_roll_estimator.h.
   double road_roll_deg = 11;
   double road_roll_std_deg = 12;
   bool road_roll_valid = 13;

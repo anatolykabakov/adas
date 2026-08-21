@@ -1,0 +1,40 @@
+# Assets the APK packages, and where each one comes from.
+#
+# `models/` and `maps/` are gitignored on purpose: gradle copies from there into `assets/`, so the heavy
+# files can live outside the repository. Keeping them out means we distribute nothing we did not make —
+# see THIRD_PARTY.md for why that matters for the vision model in particular.
+#
+# Columns, whitespace-separated:
+#   destination            sha256 (or -)   kind      source
+#
+# kind:
+#   url      direct download
+#   derive   produced locally by the command in `source` (needs tooling, so it is printed, not run)
+#   unknown  provenance not established — fetch_models.sh refuses and says what is missing
+#
+# sha256 `-` means no hash has been recorded yet. Run `./scripts/fetch_models.sh --record` on a machine
+# where the file is known-good and paste the line it prints.
+
+# --- vision model -----------------------------------------------------------------------------------
+# supercombo 0.9.7, straight from the openpilot v0.9.7 tag. Provenance established 2026-08-18 by
+# comparing the two files, not by assumption: identical model ids in the ONNX metadata
+# (vision_model 6e252e9c-4a37-44f2-a989-ab3a2b99fc7b/500, policy_model 86d23b15-5c26-464d-9fb5-e857f025462c/700),
+# the same 595 nodes in the same order, the same 313 weight tensors — and all 313 bit-for-bit equal once
+# the upstream fp16 values are widened to fp32.
+#
+# Upstream ships fp16 (51 MB). We drive on fp32 (103 MB) because onnxruntime computes the fp16 graph
+# wrongly on ARM — see docs/THNEED.md. So the download is the fp16 file and the fp32 one is derived here.
+models/supercombo_097_fp16.onnx  b31b504bc0b440d3bc72967507a00eb4f112285626fbfb3135011500325ee6d6  url     https://github.com/commaai/openpilot/raw/v0.9.7/selfdrive/modeld/models/supercombo.onnx
+models/supercombo_097_fp32.onnx  d2d83a46abff21faa56e576d8d04489130f3e0bca41acc37fb3513638e2ac687  derive  cd scripts && python3 -m tools.onnx_widen_fp32 ../models/supercombo_097_fp16.onnx ../models/supercombo_097_fp32.onnx
+
+# --- traffic sign / light detector ------------------------------------------------------------------
+# Ultralytics YOLOv8n, then exported to ONNX by us. Ultralytics ships YOLOv8 under AGPL-3.0 (or a paid
+# commercial licence) — that is a copyleft licence, and shipping a derived network inside an APK is
+# distribution. See THIRD_PARTY.md before this goes anywhere near a product.
+models/yolov8n.pt                f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36  url     https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8n.pt
+models/yolov8n_traffic_320.onnx  -  derive  ./scripts/export_traffic_yolo.sh models/yolov8n.pt
+
+# --- road map ---------------------------------------------------------------------------------------
+# OSM extract from Geofabrik (ODbL), then compiled into our own compact graph.
+maps/Moscow.osm.pbf              -  derive  cd scripts && python3 -m mapmatch.fetch_map
+maps/Moscow.osm.admap            -  derive  cd scripts && python3 -m mapmatch.osm_graph maps/Moscow.osm.pbf

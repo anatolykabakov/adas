@@ -19,15 +19,10 @@ inline double lerp(double a, double b, double t) { return a + (b - a) * t; }
 
 /**
  * \brief Locate an arc length on a polyline: the segment it falls in, and how far along it sits.
- *
- * \details Every reference here is sampled the same way — walk the cumulative lengths, then blend the
- * two endpoints. Only the quantity being blended differs, so the search lives in one place: two copies
- * of it would let the epsilon or the clamp drift apart between the position reference and the yaw one.
- *
  * \param[in] s Cumulative arc length, non-decreasing, at least two entries.
  * \param[in] dist Arc length to locate [m]; clamped to the polyline.
- * \return Index of the segment end, and the fraction in [0, 1] from its start. A degenerate segment
- *         gives fraction 0, which pins the result to the segment start instead of dividing by zero.
+ * \return Index of the segment end, and the fraction in [0, 1] from its start. A degenerate segment gives fraction 0,
+ * which pins the result to the segment start instead of dividing by zero.
  */
 std::pair<std::size_t, double> arcLengthAt(const std::vector<double>& s, double dist)
 {

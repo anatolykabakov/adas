@@ -24,26 +24,11 @@ public final class RuntimeParams {
     public float camX = 1.50f;
     public float camY = 0f;
 
-    /**
-
-     * Take the focal length from the camera itself and keep {@code intrinsics_prior} as a fallback.
-
-     *
-
-     * <p>Worth turning off where the prior came from a chessboard calibration on this same phone:
-
-     * what was measured beats the factory value from the camera characteristics.
-
-     */
+    /** Take the focal length from the camera itself and keep {@code intrinsics_prior} as a fallback. */
 
     public boolean intrinsicsFromDevice = true;
 
-    /**
-     * The phone model {@code intrinsics_prior} was taken on, from the {@code device} field inside it.
-     *
-     * <p>Without it, "ours, calibrated" and "foreign, inherited from a previous phone" are
-     * indistinguishable — and the numbers look equally plausible either way.
-     */
+    /** The phone model {@code intrinsics_prior} was taken on, from the {@code device} field inside it. */
     public String intrinsicsPriorDevice = "";
 
 
@@ -72,8 +57,20 @@ public final class RuntimeParams {
      */
     public String modelRunner = "onnx";
 
+    /** Camera rate, and with it the spacing of the frame pair the model reads: 20 or 30 fps. */
+    public int cameraFps = adas.app.sensors.CameraHandler.FPS_MODEL;
+
     public static String normalizeModelRunner(String v) {
         return "thneed".equalsIgnoreCase(v) ? "thneed" : "onnx";
+    }
+
+    /** Sign recognition by a second network, switched from the params panel. */
+
+    /** Only the two offered rates; anything else falls back to the model's own. */
+    public static int normalizeCameraFps(int fps) {
+        return fps == adas.app.sensors.CameraHandler.FPS_FAST
+                ? adas.app.sensors.CameraHandler.FPS_FAST
+                : adas.app.sensors.CameraHandler.FPS_MODEL;
     }
 
     public static String normalizeController(String ctrl) {
@@ -119,6 +116,7 @@ public final class RuntimeParams {
             JSONObject vision = root.optJSONObject("vision");
             if (vision != null) {
                 p.modelRunner = normalizeModelRunner(vision.optString("model_runner", p.modelRunner));
+                p.cameraFps = normalizeCameraFps(vision.optInt("camera_fps", p.cameraFps));
             }
             JSONObject cam = root.optJSONObject("calibration");
             if (cam != null) {
@@ -156,12 +154,7 @@ public final class RuntimeParams {
         return p;
     }
 
-    /**
-     * Replace the config in filesDir atomically.
-     *
-     * <p>Through a temporary file and a rename: the config is read by both the app and the native
-     * side, and an interrupted write would leave half a JSON that nothing starts from.
-     */
+    /** Replace the config in filesDir atomically. */
     private static void writeConfig(Context context, JSONObject root) throws Exception {
         File out = configFile(context);
         File tmp = new File(out.getParentFile(), out.getName() + ".tmp");
@@ -185,11 +178,6 @@ public final class RuntimeParams {
 
     /**
      * Write the selected car into `vehicle.name` without touching the rest of the config.
-     *
-     * <p>Separate from {@link #save}: that one writes the whole parameter set from memory, while the
-     * make is changed in the panel before those parameters belong to the new car. A targeted edit of
-     * one field.
-     *
      * @param context Application context.
      * @param carName A name from {@link AdasConfig#CARS}.
      */
@@ -240,6 +228,7 @@ public final class RuntimeParams {
             root.put("vision", vision);
         }
         vision.put("model_runner", normalizeModelRunner(modelRunner));
+        vision.put("camera_fps", normalizeCameraFps(cameraFps));
 
         JSONObject calib = root.optJSONObject("calibration");
         if (calib == null) {

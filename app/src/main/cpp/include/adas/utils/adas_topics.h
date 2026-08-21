@@ -11,13 +11,7 @@ namespace topics {
 inline constexpr const char* kVehicleChassis = "vehicle/chassis";
 inline constexpr const char* kVisionLanes = "vision/lanes";
 inline constexpr const char* kVisionPath = "vision/path";
-/** \brief A ready-made reference path as input, bypassing lane-line parsing.
- *
- *  `kVisionPath` is published by the Planner now, so feeding a path in on the same topic would close a
- *  loop. The harnesses need this: replaying a foreign log and running the simulator both yield a path
- *  already computed rather than lane lines, and `LaneLines` cannot express it — it has neither
- *  `lane_anchored` nor separate `polyline` and `plan_poly`. Empty in the car, where the Planner builds
- *  the path itself. */
+/** \brief A ready-made reference path as input, bypassing lane-line parsing. */
 inline constexpr const char* kVisionPathIn = "vision/path_in";
 inline constexpr const char* kGpsLocation = "sensors/gps/location";
 inline constexpr const char* kGpsData = "sensors/gps/data";
@@ -49,7 +43,6 @@ inline constexpr const char* kCanRx = "can/rx";
  *  be logged, since the chassis arrives as its own message and no service above reads frames itself. */
 inline constexpr const char* kPandaHealth = "panda/health";
 inline constexpr const char* kMiddlewareStats = "middleware/stats";
-inline constexpr const char* kMapLocal = "map/local";
 }  // namespace topics
 
 struct ChassisSample {

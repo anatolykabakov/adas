@@ -4,27 +4,24 @@
 
 namespace adas {
 namespace lateral {
-/**
- * \brief Interface every lateral planner implements: lane lines in, steering plan out.
- *
- * \details Three planners sit behind it — pure pursuit, visionpilot and flowpilot — and the choice is a
- * runtime parameter, so the service that drives them never names one. `available()` exists because a
- * planner can be compiled out or depend on a solver missing from the build; asking rather than assuming
- * is what lets the configuration fall back instead of crashing.
- */
+/** Interface every lateral planner implements: lane lines in, steering plan out. */
 class IPlanner {
 public:
   virtual ~IPlanner() = default;
 
+  /// Planner name as written to the bag: "pp", "vp" or "fp".
   virtual const char* name() const = 0;
 
   /** Which numerical method computes the curvature. Empty when the planner has no choice. */
   virtual const char* solverName() const { return ""; }
 
+  /// \return False when the backing solver cannot run (missing library).
   virtual bool available() const { return true; }
 
+  /// Drop accumulated state between runs.
   virtual void reset() {}
 
+  /// One planning tick. \param[in] in Speed and reference path. \return Curvature plan and diagnostics.
   virtual Output update(const Input& in) = 0;
 };
 

@@ -16,8 +16,7 @@ void ZmqBridge::configure()
   try {
     zmq_context_ = std::make_unique<zmq::context_t>(1);
     initSockets();
-    scheduleTimer(
-        10, [this]() { zmqPollTimerCallback(); }, "poll");
+    scheduleTimer(10, [this]() { zmqPollTimerCallback(); }, "poll");
     LOGI("ZMQ bridge ready: SUB bind %s | PUB bind %s (%zu outbound topics)", endpoint_in_.c_str(),
          endpoint_out_.c_str(), kZmqOutboundTopics.size());
   } catch (const std::exception& e) {
@@ -58,7 +57,6 @@ void ZmqBridge::initSockets()
   forwardOutbound<adas::proto::SafetyWarnState>(topics::kSafetyWarn, &Zmq::mutable_safety_warn);
   forwardOutbound<adas::proto::TrafficVisionState>(topics::kTrafficVision, &Zmq::mutable_traffic_vision);
   forwardOutbound<adas::proto::LanePath>(topics::kVisionPath, &Zmq::mutable_lane_path);
-  forwardOutbound<adas::proto::MapLocalState>(topics::kMapLocal, &Zmq::mutable_map_local);
 }
 
 void ZmqBridge::zmqPollTimerCallback()
@@ -67,16 +65,23 @@ void ZmqBridge::zmqPollTimerCallback()
     return;
   const auto n = zmq::poll(poll_items_.data(), poll_items_.size(), std::chrono::milliseconds(1));
   if (n > 0 && (poll_items_[0].revents & ZMQ_POLLIN)) {
-    processInbound();
+    // Drain the socket, do not take one message per tick.
+    constexpr int kMaxPerTick = 32;
+    for (int i = 0; i < kMaxPerTick; ++i) {
+      if (!processInbound())
+        break;
+    }
   }
 }
 
-void ZmqBridge::processInbound()
+bool ZmqBridge::processInbound()
 {
   std::string topic;
   adas::proto::ZMQMessage message;
-  if (recvEnvelope(topic, message))
-    publishPayload(topic, message);
+  if (!recvEnvelope(topic, message))
+    return false;
+  publishPayload(topic, message);
+  return true;
 }
 
 bool ZmqBridge::recvEnvelope(std::string& topic, adas::proto::ZMQMessage& message)
@@ -198,8 +203,6 @@ void ZmqBridge::publishPayload(const std::string& topic, const adas::proto::ZMQM
     case Msg::kPhoneStats:
       publish(topic, message.phone_stats());
       break;
-    case Msg::kMapLocal:
-      publish(topic, message.map_local());
       break;
     case Msg::kLanePath:
       publish(topic, message.lane_path());

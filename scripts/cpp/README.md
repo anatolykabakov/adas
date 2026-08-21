@@ -143,4 +143,4 @@ clang-tidy и десяток строк в отчёте — это не прот
 ## Артефакты
 
 `tidy_errors.yml` и `clang_errors.txt` — результаты прогона, в git они не нужны. Последний разбор
-лежит в `docs/CLANG_TIDY_2026_08_15.md`.
+лежит в `docs/archive/CLANG_TIDY_2026_08_15.md`.

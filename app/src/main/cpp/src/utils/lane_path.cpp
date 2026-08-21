@@ -4,23 +4,25 @@
 #include <cmath>
 #include <vector>
 
-#include "adas/utils/logger.h"
-#include "adas/utils/math_utils.h"
-
 namespace adas {
 namespace {
-constexpr double kWidthFilterAlpha = 0.01;
+// comma `common.realtime.DT_MDL` and `FirstOrderFilter` rc on LanePlanner.
+constexpr double kDtMdl = 0.05;
+constexpr double kWidthEstRc = 9.95;
+constexpr double kWidthCertRc = 0.95;
+constexpr double kWidthEstAlpha = kDtMdl / (kWidthEstRc + kDtMdl);    // 0.005
+constexpr double kWidthCertAlpha = kDtMdl / (kWidthCertRc + kDtMdl);  // 0.05
 
-constexpr double kCenterFitXMaxM = 30.0;
-
-constexpr double kTurnDeadbandKappa = 5e-4;
-
-double softLaneProb(float p, float min_p)
+double lerp(double x, double x0, double x1, double y0, double y1)
 {
-  if (!(p >= min_p))
-    return 0.0;
-  const double span = std::max(1e-3, 1.0 - static_cast<double>(min_p));
-  return std::min(1.0, (static_cast<double>(p) - min_p) / span);
+  if (x1 <= x0)
+    return y0;
+  if (x <= x0)
+    return y0;
+  if (x >= x1)
+    return y1;
+  const double t = (x - x0) / (x1 - x0);
+  return y0 + t * (y1 - y0);
 }
 
 double interpY(double x, const std::vector<double>& xs, const std::vector<double>& ys)
@@ -52,87 +54,20 @@ void applyCameraOffset(LanePathMsg& msg, double camera_offset_m)
     p.y() += camera_offset_m;
 }
 
-double medianLaneStd(const adas::proto::LanePolyline& lane, const adas::proto::LaneLines& ll, double range_m)
+double lineStd0(const adas::proto::LanePolyline& lane)
 {
-  std::vector<double> stds;
-  const int n = std::min(lane.y_std_size(), ll.x_size());
-  const double x_max = std::max(range_m, 10.0);
-  for (int i = 0; i < n; ++i) {
-    const double x = ll.x(i);
-    if (x < 5.0 || x > x_max)
-      continue;
-    const double s = lane.y_std(i);
-    if (s > 0.0 && std::isfinite(s))
-      stds.push_back(s);
-  }
-  if (stds.empty())
-    return -1.0;
-  std::sort(stds.begin(), stds.end());
-  return stds[stds.size() / 2];
-}
-
-double stdConfidence(double median_std, double good_m, double bad_m)
-{
-  if (median_std < 0.0 || bad_m <= good_m)
-    return 1.0;
-  if (median_std <= good_m)
-    return 1.0;
-  if (median_std >= bad_m)
+  if (lane.y_std_size() <= 0)
     return 0.0;
-  return (bad_m - median_std) / (bad_m - good_m);
+  const double s = lane.y_std(0);
+  return (s > 0.0 && std::isfinite(s)) ? s : 0.0;
 }
 
-double ramp(double x, double x0, double x1, double y0, double y1)
-{
-  if (x1 <= x0)
-    return y0;
-  const double t = std::clamp((x - x0) / (x1 - x0), 0.0, 1.0);
-  return y0 + t * (y1 - y0);
-}
-
-struct QuadFit {
-  bool ok = false;
-  double y0 = 0.0;
-  double kappa = 0.0;
-};
-
-QuadFit fitAtZero(const std::vector<double>& xs, const std::vector<double>& ys, double x_max)
-{
-  QuadFit out;
-  double s0 = 0, s1 = 0, s2 = 0, s3 = 0, s4 = 0, t0 = 0, t1 = 0, t2 = 0;
-  int n = 0;
-  for (size_t i = 0; i < xs.size() && i < ys.size(); ++i) {
-    const double x = xs[i];
-    if (x < 0.0 || x > x_max || !std::isfinite(ys[i]))
-      continue;
-    const double x2 = x * x;
-    s0 += 1.0;
-    s1 += x;
-    s2 += x2;
-    s3 += x2 * x;
-    s4 += x2 * x2;
-    t0 += ys[i];
-    t1 += x * ys[i];
-    t2 += x2 * ys[i];
-    ++n;
-  }
-  if (n < 4)
-    return out;
-
-  const double d = s4 * (s2 * s0 - s1 * s1) - s3 * (s3 * s0 - s1 * s2) + s2 * (s3 * s1 - s2 * s2);
-  if (std::abs(d) < 1e-12)
-    return out;
-  const double da = t2 * (s2 * s0 - s1 * s1) - s3 * (t1 * s0 - t0 * s1) + s2 * (t1 * s1 - t0 * s2);
-  const double dc = s4 * (s2 * t0 - s1 * t1) - s3 * (s3 * t0 - s1 * t2) + s2 * (s3 * t1 - s2 * t2);
-  out.ok = true;
-  out.y0 = dc / d;
-  out.kappa = 2.0 * (da / d);
-  return out;
-}
+void foUpdate(double& x, double alpha, double z) { x = (1.0 - alpha) * x + alpha * z; }
 
 }  // namespace
 
-LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConfig& cfg, LaneFusionState* state)
+LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConfig& cfg, LaneFusionState* state,
+                            double v_ego)
 {
   LanePathMsg out;
   const int64_t capture_ms = ll.capture_ts_ms() > 0 ? ll.capture_ts_ms() : ll.timestamp();
@@ -164,141 +99,89 @@ LanePathMsg laneLinesToPath(const adas::proto::LaneLines& ll, const LanePathConf
     }
   }
 
-  const double blend_scale = std::clamp(cfg.lane_blend_scale, 0.0, 1.0);
-  const bool blend_off = blend_scale <= 1e-9 && out.polyline.size() >= 2;
-
-  const int nx = ll.x_size();
-  const bool geom_ok = nx >= 2;
-  const bool have_l = geom_ok && ll.lanes_size() > 1 && ll.lanes(1).y_size() == nx;
-  const bool have_r = geom_ok && ll.lanes_size() > 2 && ll.lanes(2).y_size() == nx;
-
-  double l_prob = 0.0;
-  double r_prob = 0.0;
-  bool width_ok = false;
-  double w_used = 0.0;
-  if (have_l && have_r) {
-    l_prob = softLaneProb(ll.lanes(1).prob(), cfg.min_lane_prob);
-    r_prob = softLaneProb(ll.lanes(2).prob(), cfg.min_lane_prob);
-
-    l_prob *=
-        stdConfidence(medianLaneStd(ll.lanes(1), ll, cfg.lane_std_range_m), cfg.lane_std_good_m, cfg.lane_std_bad_m);
-    r_prob *=
-        stdConfidence(medianLaneStd(ll.lanes(2), ll, cfg.lane_std_range_m), cfg.lane_std_good_m, cfg.lane_std_bad_m);
-
-    double w_sum = 0.0;
-    int w_n = 0;
-    for (int i = 0; i < nx; ++i) {
-      const double x = ll.x(i);
-      if (x < 5.0 || x > 40.0)
-        continue;
-
-      w_sum += std::abs(ll.lanes(2).y(i) - ll.lanes(1).y(i));
-      ++w_n;
-    }
-    const double w_med = w_n > 0 ? w_sum / w_n : 0.0;
-
-    w_used = w_med;
-    if (state && w_med > 0.0) {
-      if (!state->inited) {
-        state->lane_width_m = w_med;
-        state->inited = true;
-      } else {
-        state->lane_width_m += kWidthFilterAlpha * (w_med - state->lane_width_m);
-      }
-      w_used = state->lane_width_m;
-    }
-    width_ok = w_used > cfg.lane_width_min_m && w_used < cfg.lane_width_max_m;
-    out.lane_width_m = w_used;
-  }
-
-  const bool anchored = l_prob > 0.0 && r_prob > 0.0 && width_ok;
-  out.lane_anchored = anchored;
-
-  std::vector<double> xs;
-  std::vector<double> lane_ys;
-  if (anchored) {
-    xs.reserve(static_cast<size_t>(nx));
-    lane_ys.reserve(static_cast<size_t>(nx));
-    for (int i = 0; i < nx; ++i) {
-      const double x = ll.x(i);
-      const double yl = ll.lanes(1).y(i);
-      const double yr = ll.lanes(2).y(i);
-
-      const double w = std::clamp(std::abs(yl - yr), cfg.lane_width_min_m, cfg.lane_width_max_m);
-      const double from_l = yl + 0.5 * w;
-      const double from_r = yr - 0.5 * w;
-      const double lane_y = (l_prob * from_l + r_prob * from_r) / (l_prob + r_prob + 1e-6);
-      xs.push_back(x);
-      lane_ys.push_back(lane_y);
-    }
-  }
-
-  out.p_lane_blend_scale = blend_scale;
+  out.p_lane_blend_scale = cfg.lane_blend_scale;
   out.p_camera_offset_m = cfg.camera_offset_m;
   out.p_center_force_gain = cfg.center_force_gain;
 
-  double center = 0.0;
-  if (anchored) {
-    const QuadFit fit = fitAtZero(xs, lane_ys, kCenterFitXMaxM);
-
-    if (fit.ok)
-      out.lane_offset_m = fit.y0 - cfg.cam_y_left_m;
-    if (fit.ok && cfg.center_force_gain > 0.0) {
-      const double offset = out.lane_offset_m;
-      const double w = std::max(w_used, 1e-3);
-      double cf = cfg.center_force_gain * (cfg.center_force_typical_width_m / w) * offset;
-      cf *= ramp(w, 2.6, 2.8, 0.0, 1.0);
-      cf *= ramp(w, 4.0, 6.0, 1.0, 0.0);
-      if (std::abs(fit.kappa) > kTurnDeadbandKappa && cf * fit.kappa > 0.0)
-        cf *= cfg.center_force_turn_scale;
-      center = std::clamp(cf, -cfg.center_force_max_m, cfg.center_force_max_m);
-      out.center_force_m = center;
-    }
-  }
-  const double shift = cfg.camera_offset_m + center;
-
-  if (blend_off) {
-    applyCameraOffset(out, shift);
+  const int nx = ll.x_size();
+  const bool have_l = nx >= 2 && ll.lanes_size() > 1 && ll.lanes(1).y_size() == nx;
+  const bool have_r = nx >= 2 && ll.lanes_size() > 2 && ll.lanes(2).y_size() == nx;
+  if (!have_l && !have_r) {
+    applyCameraOffset(out, cfg.camera_offset_m);
     return out;
   }
-  // Hysteresis on the "follow the lane lines / follow the model plan" switch: without it the flag would
-  // chatter at the confidence boundary, and the reference path would chatter with it.
-  const double raw_l = ll.lanes_size() > 1 ? ll.lanes(1).prob() : 0.0;
-  const double raw_r = ll.lanes_size() > 2 ? ll.lanes(2).prob() : 0.0;
-  bool lanelines_active = state ? state->lanelines_active : true;
-  if (raw_l < cfg.lane_mode_off_prob && raw_r < cfg.lane_mode_off_prob)
-    lanelines_active = false;
-  else if (raw_l > cfg.lane_mode_on_prob || raw_r > cfg.lane_mode_on_prob)
-    lanelines_active = true;
-  if (state)
-    state->lanelines_active = lanelines_active;
-  out.lanelines_active = lanelines_active;
 
-  const double d_prob = (anchored && lanelines_active) ? (l_prob + r_prob - l_prob * r_prob) * blend_scale : 0.0;
-
-  if (d_prob <= 1e-6 && out.polyline.size() >= 2) {
-    applyCameraOffset(out, shift);
-    return out;
+  std::vector<double> ll_x(static_cast<size_t>(nx));
+  std::vector<double> lll_y(static_cast<size_t>(nx), 0.0);
+  std::vector<double> rll_y(static_cast<size_t>(nx), 0.0);
+  for (int i = 0; i < nx; ++i) {
+    ll_x[static_cast<size_t>(i)] = ll.x(i);
+    if (have_l)
+      lll_y[static_cast<size_t>(i)] = ll.lanes(1).y(i);
+    if (have_r)
+      rll_y[static_cast<size_t>(i)] = ll.lanes(2).y(i);
   }
+
+  // parse_model: raw host probs and the model's scalar std (here y_std[0], comma laneLineStds[i]).
+  double l_prob = have_l ? static_cast<double>(ll.lanes(1).prob()) : 0.0;
+  double r_prob = have_r ? static_cast<double>(ll.lanes(2).prob()) : 0.0;
+  const double l_std = have_l ? lineStd0(ll.lanes(1)) : 0.0;
+  const double r_std = have_r ? lineStd0(ll.lanes(2)) : 0.0;
+
+  // Reduce reliance on lanelines that are too far apart or will be in a few seconds.
+  std::vector<double> width_pts(static_cast<size_t>(nx));
+  for (int i = 0; i < nx; ++i)
+    width_pts[static_cast<size_t>(i)] = rll_y[static_cast<size_t>(i)] - lll_y[static_cast<size_t>(i)];
+  double mod = 1.0;
+  for (double t_check : {0.0, 1.5, 3.0}) {
+    const double width_at_t = interpY(t_check * (v_ego + 7.0), ll_x, width_pts);
+    mod = std::min(mod, lerp(width_at_t, 4.0, 5.0, 1.0, 0.0));
+  }
+  l_prob *= mod;
+  r_prob *= mod;
+
+  // Reduce reliance on uncertain lanelines.
+  l_prob *= lerp(l_std, 0.15, 0.3, 1.0, 0.0);
+  r_prob *= lerp(r_std, 0.15, 0.3, 1.0, 0.0);
+
+  LaneFusionState local;
+  LaneFusionState* st = state ? state : &local;
+  foUpdate(st->width_certainty, kWidthCertAlpha, l_prob * r_prob);
+  const double current_lane_width = std::abs(rll_y.front() - lll_y.front());
+  foUpdate(st->width_est_m, kWidthEstAlpha, current_lane_width);
+  const double speed_lane_width = lerp(v_ego, 0.0, 31.0, 2.8, 3.5);
+  st->lane_width_m = st->width_certainty * st->width_est_m + (1.0 - st->width_certainty) * speed_lane_width;
+  out.lane_width_m = st->lane_width_m;
+
+  const double clipped_lane_width = std::min(4.0, st->lane_width_m);
+  std::vector<double> lane_path_y(static_cast<size_t>(nx));
+  const double inv = 1.0 / (l_prob + r_prob + 0.0001);
+  for (int i = 0; i < nx; ++i) {
+    const double from_l = lll_y[static_cast<size_t>(i)] + clipped_lane_width / 2.0;
+    const double from_r = rll_y[static_cast<size_t>(i)] - clipped_lane_width / 2.0;
+    lane_path_y[static_cast<size_t>(i)] = (l_prob * from_l + r_prob * from_r) * inv;
+  }
+
+  const double d_prob = l_prob + r_prob - l_prob * r_prob;
+  out.lane_anchored = d_prob > 1e-6;
+  out.lanelines_active = out.lane_anchored;
+  out.lane_offset_m = 0.5 * (lll_y.front() + rll_y.front());
 
   if (d_prob > 1e-6 && out.polyline.size() >= 2) {
     for (auto& pt : out.polyline) {
-      const double y_lane = interpY(pt.x(), xs, lane_ys);
+      const double y_lane = interpY(pt.x(), ll_x, lane_path_y);
       pt.y() = d_prob * y_lane + (1.0 - d_prob) * pt.y();
     }
-    applyCameraOffset(out, shift);
-    return out;
-  }
-
-  if (d_prob > 1e-6 && !xs.empty()) {
+  } else if (d_prob > 1e-6 && out.polyline.size() < 2) {
     out.polyline.clear();
-    out.polyline.reserve(xs.size());
-    for (size_t i = 0; i < xs.size(); ++i) {
-      if (xs[i] >= 1.0)
-        out.polyline.push_back({xs[i], lane_ys[i]});
+    out.polyline.reserve(static_cast<size_t>(nx));
+    for (int i = 0; i < nx; ++i) {
+      if (ll_x[static_cast<size_t>(i)] >= 1.0)
+        out.polyline.push_back({ll_x[static_cast<size_t>(i)], lane_path_y[static_cast<size_t>(i)]});
     }
   }
-  applyCameraOffset(out, shift);
+
+  applyCameraOffset(out, cfg.camera_offset_m);
   return out;
 }
 

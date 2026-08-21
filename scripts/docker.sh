@@ -11,7 +11,7 @@
 #   ./scripts/docker.sh run <command>    run arbitrary command inside
 #
 # Examples:
-#   ./scripts/docker.sh run python3 scripts/bag/bag_controller_ab.py \
+#   ./scripts/docker.sh run python3 scripts/bag/bag_report.py \
 #                              adas_logs/<session> --controllers fp,mpc
 #   ./scripts/docker.sh run ./scripts/run_bag_vis.sh adas_logs/<session>
 #

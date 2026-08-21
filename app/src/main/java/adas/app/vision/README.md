@@ -36,7 +36,7 @@ Android params **Roll/Pitch/Yaw** (and `intrinsics_prior` from `config.json`) re
   `Rt = V·R·V⁻¹` after remap `(Y,Z,X)`. Do **not** use LibGDX
   `setFromEulerAnglesRad(-pitch,-yaw,-roll)` here — it swaps pitch/yaw vs the warp.
 - Path lift **+1.28 m** on camera-up (after remap), like flowpilot `OnRoadScreen`.
-- C++ `laneLinesToPath` uses flowpilot `lane_planner` mid-lane (`lll+w/2`, `rll-w/2`).
+- C++ `laneLinesToPath` is comma stock `LanePlanner.get_d_path` (mid-lane `lll+w/2`, `rll-w/2`).
 
 ## Output parse (important)
 

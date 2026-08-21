@@ -300,24 +300,8 @@ class RpyPpControlBar:
         if notify and self._on_rpy is not None:
             self._on_rpy(self.params())
 
-    def set_pp_status(self, text: str) -> None:
-        self.pp_status.config(text=text)
-
-    def set_lane_keep_controls_enabled(self, enabled: bool) -> None:
-        """Enable PP/MPC tuning widgets (Live); disable in Bag playback."""
-        state = tk.NORMAL if enabled else tk.DISABLED
-        for w in getattr(self, "_lk_widgets", []):
-            try:
-                w.configure(state=state)
-            except tk.TclError:
-                pass
-
     def controller_mode(self) -> str:
         return str(self.controller_var.get())
-
-    def set_controller_mode(self, mode: str) -> None:
-        if mode in ("pure_pursuit", "mpc"):
-            self.controller_var.set(mode)
 
     def reset_rpy(self) -> None:
         d = self._rpy_defaults
@@ -345,40 +329,6 @@ class RpyPpControlBar:
             self._suppress = False
         if self._on_pp is not None:
             self._on_pp(self.params())
-
-    def set_rpy_defaults_from_current(self) -> None:
-        p = self.params()
-        self._rpy_defaults = OverlayUiParams(
-            roll_deg=p.roll_deg,
-            pitch_deg=p.pitch_deg,
-            yaw_deg=p.yaw_deg,
-            height_m=p.height_m,
-            cam_x=p.cam_x,
-            cam_y_left=p.cam_y_left,
-        )
-
-    def set_rpy_defaults(self, defaults: OverlayUiParams) -> None:
-        """Replace Reset-RPY baseline (e.g. after loading session calib_rpy.json)."""
-        self._rpy_defaults = OverlayUiParams(
-            roll_deg=defaults.roll_deg,
-            pitch_deg=defaults.pitch_deg,
-            yaw_deg=defaults.yaw_deg,
-            height_m=defaults.height_m,
-            cam_x=defaults.cam_x,
-            cam_y_left=defaults.cam_y_left,
-        )
-
-    def update_rpy_defaults(self, **kwargs: float) -> None:
-        """Patch Reset-RPY baseline fields (e.g. pitch/yaw after VP commit)."""
-        d = self._rpy_defaults
-        self._rpy_defaults = OverlayUiParams(
-            roll_deg=float(kwargs.get("roll_deg", d.roll_deg)),
-            pitch_deg=float(kwargs.get("pitch_deg", d.pitch_deg)),
-            yaw_deg=float(kwargs.get("yaw_deg", d.yaw_deg)),
-            height_m=float(kwargs.get("height_m", d.height_m)),
-            cam_x=float(kwargs.get("cam_x", d.cam_x)),
-            cam_y_left=float(kwargs.get("cam_y_left", d.cam_y_left)),
-        )
 
     def _refresh_rpy_labels(self) -> None:
         self.roll_label.config(text=f"{float(self.roll_var.get()):.1f}°")

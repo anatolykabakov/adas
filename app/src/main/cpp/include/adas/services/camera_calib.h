@@ -10,18 +10,7 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief Learns the camera mounting from what the road looks like while driving.
- *
- * \details Pitch and yaw of a phone on a windshield mount are never known in advance, and a degree of
- * yaw moves a point 50 m ahead by nearly a metre — so the overlay, the lane offset and every projection
- * downstream depend on this estimate. Two independent measurements feed it: the vanishing point of the
- * lane lines (`sensors/lane_uv`) and the camera-odometry translation direction, which points along the
- * car's motion when the car is going straight.
- *
- * Publishes `calibration/camera` continuously, including while unconverged, so a bag always records the
- * geometry the run actually used.
- */
+/** Learns the camera mounting from what the road looks like while driving. */
 class CameraCalib : public adas::middleware::Service {
 public:
   struct Config {
@@ -36,7 +25,9 @@ public:
     double steer_ratio = 15.7;  ///< Steering ratio, to tell a straight road from a turn.
   };
 
+  /// Constructs with the default config.
   CameraCalib() : CameraCalib(Config{}) {}
+  /// \param[in] config Mount priors and calibration settings.
   explicit CameraCalib(Config config);
 
   void configure() override;
@@ -44,14 +35,10 @@ public:
 
   /**
    * \brief Camera intrinsics of the frames being fed in.
-   *
    * \param[in] fx Focal length along x [px], for the frame size actually delivered.
    * \param[in] fy Focal length along y [px].
    * \param[in] cx Principal point x [px].
    * \param[in] cy Principal point y [px].
-   *
-   * \note These must match the frames, not the sensor: a 1280x720 calibration applied to a 640x360 stream
-   * is off by a factor of two, and every projection made with it lands beside the road.
    */
   void setIntrinsics(double fx, double fy, double cx, double cy);
 
@@ -60,8 +47,7 @@ public:
   /// \param[in] height_m Camera height above the road [m].
   void setHeight(double height_m);
   /**
-   * \brief Seed the estimate, e.g. from a previous session.
-   *
+   * \brief Seed the estimate, e.g.
    * \param[in] pitch_deg Pitch [deg], negative looking down.
    * \param[in] yaw_deg Yaw [deg], positive to the left.
    */
@@ -71,7 +57,6 @@ public:
 
   /**
    * \brief Update from camera odometry: on a straight road the translation points along the optical axis.
-   *
    * \param[in] odom One camera-odometry sample, including its per-axis standard deviations.
    * \param[in] v_ego_mps Ego speed [m/s]; negative reuses the value from \ref setVEgo.
    * \return True when the sample was accepted into the estimate.
@@ -80,7 +65,6 @@ public:
 
   /**
    * \brief Update from the vanishing point of the lane lines.
-   *
    * \param[in] left_uv Left lane line in image pixels.
    * \param[in] right_uv Right lane line in image pixels.
    * \param[in] timestamp_us Frame timestamp [us]; 0 means unknown and only bypasses the rate limit.
@@ -88,11 +72,17 @@ public:
    */
   bool updateFromUv(const std::vector<Vec2>& left_uv, const std::vector<Vec2>& right_uv, int64_t timestamp_us = 0);
 
+  /// \return The calibration last published.
   const CameraCalibrationState& last() const { return last_; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
+  /// \return The pose-based calibrator, for tests and offline tools.
   PoseCalibrator& poseCalibrator() { return pose_calib_; }
+  /// \return The vanishing-point calibrator, for tests and offline tools.
   VanishingPointCalibrator& calibrator() { return vp_calib_; }
+  /// \return Frames collected toward the next vanishing-point estimate.
   int historyPending() const { return vp_calib_.historySize(); }
+  /// \return Pose-calibration progress [0..100].
   int calPercent() const { return pose_calib_.calPercent(); }
 
 private:

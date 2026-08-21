@@ -11,17 +11,7 @@
 
 namespace adas {
 namespace services {
-/**
- * \brief Forward-collision and lane-departure warnings, latched for the HUD.
- *
- * \details Warnings are computed from the lead the model reports and the lateral state of the path, then
- * each is latched separately: a warning that flickers at tick rate is invisible on a display and useless
- * in a bag. Driver intent suppresses lane-departure warnings — a blinker means the departure is
- * deliberate.
- *
- * The service warns and never actuates. Braking on its own decision would need a different safety
- * argument than a light and a chime.
- */
+/** Forward-collision and lane-departure warnings, latched for the HUD. */
 class SafetyWarn : public middleware::Service {
 public:
   struct Config {
@@ -33,12 +23,15 @@ public:
     double steer_ratio = 15.7;   ///< Steering ratio, for turning the wheel angle into a road-wheel angle.
   };
 
+  /// Constructs with the default config.
   SafetyWarn() : SafetyWarn(Config{}) {}
+  /// \param[in] config Thresholds and latch times.
   explicit SafetyWarn(Config config) : config_(std::move(config)) { rebuildLatches(); }
 
   void configure() override;
   void reset() override;
   std::string_view getName() const override { return "safety_warn"; }
+  /// \return The config in force.
   const Config& config() const { return config_; }
 
 private:

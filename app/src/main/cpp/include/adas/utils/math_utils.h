@@ -11,6 +11,7 @@
 #endif
 
 namespace adas {
+/// \return Angle wrapped to (-pi, pi].
 inline double normalizeAngle(double angle)
 {
   while (angle > M_PI)
@@ -20,6 +21,7 @@ inline double normalizeAngle(double angle)
   return angle;
 }
 
+/// \return ENU yaw [rad] from a compass bearing [deg].
 inline double yawEnuFromBearingDeg(double bearing_deg)
 {
   return normalizeAngle(M_PI / 2.0 - bearing_deg * (M_PI / 180.0));

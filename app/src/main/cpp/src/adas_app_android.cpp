@@ -24,11 +24,10 @@ static std::string jstringToStd(JNIEnv* env, jstring value)
 
 extern "C" {
 JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStart(JNIEnv* env, jclass, jint fd, jstring dbcPath,
-                                                                jstring configPath, jstring mapPath)
+                                                                jstring configPath)
 {
   const std::string dbc_path = jstringToStd(env, dbcPath);
   const std::string config_path = jstringToStd(env, configPath);
-  const std::string map_path = jstringToStd(env, mapPath);
 
   bool cfg_ok = false;
   AdasApp::Config cfg = AdasApp::Config::loadFromFile(config_path, &cfg_ok);
@@ -36,13 +35,8 @@ JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStart(JNIEnv* env, jcl
     LOGW("JNI nativeStart: config load failed (%s), continuing with defaults", config_path.c_str());
   }
 
-  if (!map_path.empty()) {
-    cfg.map_data.map_path = map_path;
-  }
-
-  LOGI("JNI nativeStart fd=%d dbc=%s config=%s map=%s lane_keep=%d loc=%d map_data=%d", fd, dbc_path.c_str(),
-       config_path.c_str(), cfg.map_data.map_path.c_str(), cfg.feature_flags.enable_lane_keep ? 1 : 0,
-       cfg.feature_flags.enable_localization ? 1 : 0, cfg.feature_flags.enable_map_data ? 1 : 0);
+  LOGI("JNI nativeStart fd=%d dbc=%s config=%s lane_keep=%d loc=%d", fd, dbc_path.c_str(), config_path.c_str(),
+       cfg.feature_flags.enable_lane_keep ? 1 : 0, cfg.feature_flags.enable_localization ? 1 : 0);
   try {
     if (!adas_app) {
       adas_app = std::make_unique<AdasApp>(fd, dbc_path, cfg);
@@ -62,6 +56,27 @@ JNIEXPORT void JNICALL Java_adas_app_AdasAppHandler_nativeStop(JNIEnv*, jclass)
   if (adas_app) {
     adas_app->stop();
     adas_app.reset();
+  }
+}
+
+JNIEXPORT jboolean JNICALL Java_adas_app_AdasAppHandler_nativeReseatPanda(JNIEnv*, jclass, jint fd)
+{
+  if (!adas_app) {
+    LOGW("JNI nativeReseatPanda(fd=%d): native side is not running", fd);
+    return JNI_FALSE;
+  }
+  if (fd < 0) {
+    LOGW("JNI nativeReseatPanda: fd=%d is not a descriptor", fd);
+    return JNI_FALSE;
+  }
+  try {
+    return adas_app->reseatPanda(fd) ? JNI_TRUE : JNI_FALSE;
+  } catch (const std::exception& e) {
+    LOGE("Exception in JNI nativeReseatPanda: %s", e.what());
+    return JNI_FALSE;
+  } catch (...) {
+    LOGE("Unknown exception in JNI nativeReseatPanda");
+    return JNI_FALSE;
   }
 }
 

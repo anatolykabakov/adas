@@ -392,14 +392,6 @@ def check(summary: Dict[str, Dict[str, float]]) -> List[str]:
 SEG_ORDER = ["straight", "arc R>=400", "arc R 200-400", "arc R 100-200", "arc R<100"]
 
 
-def perception_gap_m(result: RunResult) -> float:
-    """|estimate − truth| for CTE. With a perfect-perception polyline this must stay near zero;
-    anything else means the sim feeds the controller a different world than it scores it on."""
-    if not result.samples:
-        return 0.0
-    return float(np.median([abs(s.ctrl_cte_m - s.cte_m) for s in result.samples]))
-
-
 def print_report(
     result: RunResult, summary: Dict[str, Dict[str, float]], failures: List[str]
 ) -> None:
@@ -514,7 +506,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--controllers",
         default="fp",
-        help="comma-separated: fp, mpc, pure_pursuit, straight",
+        help="comma-separated: fp, pure_pursuit, straight",
     )
     p.add_argument("--track", default="highway", help=f"one of: {', '.join(TRACKS)}")
     p.add_argument("--list-tracks", action="store_true", help="list tracks and exit")

@@ -16,7 +16,7 @@ enum class Warning : std::uint8_t {
 };
 
 struct LongitudinalConfig {
-  double speed_limit_ms = 27.778;
+  double speed_limit_ms = 27.778;      ///< Cruise ceiling [m/s].
   double max_accel_ms2 = 1.5;          ///< Acceleration the model assumes for a free road [m/s^2].
   double comfortable_decel_ms2 = 3.0;  ///< Deceleration the model treats as comfortable [m/s^2].
   double time_headway_s = 1.5;         ///< Desired time gap to the lead [s].
@@ -27,7 +27,7 @@ struct LongitudinalConfig {
 };
 
 struct SafetyPlannerConfig {
-  double speed_limit_ms = 27.778;
+  double speed_limit_ms = 27.778;   ///< Cruise ceiling [m/s].
   double free_road_gap_m = 9999.0;  ///< Gap reported when there is no lead [m].
   /// Distance from the camera to the bumper [m]; the model reports range to itself.
   double front_bumper_offset_m = 1.5;
@@ -39,14 +39,14 @@ struct SafetyPlannerConfig {
   double warn_min_speed_ms = 8.0;     ///< Below this speed no warning is raised [m/s]: town traffic would cry wolf.
   double min_closing_speed_ms = 0.5;  ///< Closing speed below which there is no collision to warn about [m/s].
   double lead_prob_thresh = 0.5;      ///< Model confidence needed before a lead is believed.
-  double lead_max_offset_m = 2.0;
-  double standstill_gap_m = 2.0;
+  double lead_max_offset_m = 2.0;     ///< Lead further aside than this is not in our path [m].
+  double standstill_gap_m = 2.0;      ///< Gap kept at standstill [m].
 
-  double cte_ldw_threshold_m = 0.5;
-  double cte_ldw_hard_m = 0.8;
-  double ldw_min_speed_ms = 12.5;
-  double ldw_min_outward_rate_ms = 0.05;
-  bool ldw_require_lane_lines = true;
+  double cte_ldw_threshold_m = 0.5;       ///< Cross-track error where LDW arms [m].
+  double cte_ldw_hard_m = 0.8;            ///< Cross-track error treated as a departure [m].
+  double ldw_min_speed_ms = 12.5;         ///< Below this LDW stays silent [m/s].
+  double ldw_min_outward_rate_ms = 0.05;  ///< Must be drifting outward at least this fast [m/s].
+  bool ldw_require_lane_lines = true;     ///< No departure warning without confident lines.
 
   LongitudinalConfig longitudinal{};
 };
@@ -90,6 +90,7 @@ struct SafetyPlan {
   std::vector<Warning> warnings{};
 };
 
+/// \return IDM acceleration request [m/s^2] for the gap, speed and curvature.
 inline double computeIdmAccel(const LongitudinalConfig& cfg, double kappa, double ego_speed_ms, bool has_cipo,
                               double cipo_speed_ms, double cipo_gap_m)
 {
@@ -110,6 +111,7 @@ inline double computeIdmAccel(const LongitudinalConfig& cfg, double kappa, doubl
   return cfg.max_accel_ms2 * (1.0 - free_road_term - interaction_term);
 }
 
+/// \return True when the lead's lateral offset lies within our predicted path.
 inline bool leadInPath(const SafetyPlannerConfig& cfg, const LateralState& lateral, double gap_m, double lead_offset_m)
 {
   const double d = std::max(0.0, gap_m);
@@ -117,6 +119,7 @@ inline bool leadInPath(const SafetyPlannerConfig& cfg, const LateralState& later
   return std::abs(lead_offset_m - path_y) <= cfg.lead_max_offset_m;
 }
 
+/// \return TTC-based threat classification for the current lead.
 inline ThreatState computeThreat(const SafetyPlannerConfig& cfg, const PlannerInput& input)
 {
   ThreatState t;
@@ -137,6 +140,7 @@ inline ThreatState computeThreat(const SafetyPlannerConfig& cfg, const PlannerIn
   return t;
 }
 
+/// \return FCW/AEB/LDW verdicts for this tick, before latching.
 inline SafetyPlan computeSafetyPlan(const SafetyPlannerConfig& cfg, const PlannerInput& input)
 {
   LongitudinalConfig long_cfg = cfg.longitudinal;
@@ -179,16 +183,13 @@ inline SafetyPlan computeSafetyPlan(const SafetyPlannerConfig& cfg, const Planne
   return plan;
 }
 
-/**
- * \brief Holds a warning on for a minimum time once raised.
- *
- * \details A warning that follows the tick rate is invisible on a display and unreadable in a bag. The
- * latch is per warning, since a forward-collision alert and a lane departure have different lifetimes.
- */
+/** Holds a warning on for a minimum time once raised. */
 class WarningLatch {
 public:
+  /// \param[in] set_frames Frames to arm; \p hold_frames frames held after clear.
   WarningLatch(int set_frames = 3, int hold_frames = 10) : set_frames_(set_frames), hold_frames_(hold_frames) {}
 
+  /// Feed the raw verdict. \return The latched one.
   bool update(bool raw)
   {
     if (raw) {
@@ -203,8 +204,10 @@ public:
     return active_;
   }
 
+  /// \return Latched state.
   bool active() const { return active_; }
 
+  /// Drop the latch.
   void reset()
   {
     asked_ = 0;

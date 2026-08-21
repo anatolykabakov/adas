@@ -18,6 +18,13 @@ PP_Y_SIGN = 1.0
 # project_iso_xyz: device Y-right → ISO Y-left for drawing.
 DRAW_Y_SIGN = -1.0
 
+# Angles have a sign convention too, and it caught us once. `calibration/camera` publishes RPY in the
+# device convention `ModelCalibWarp` / `warp_matrix_deg` use; AAD's `CameraGeometry` runs **pitch and
+# yaw the other way** (roll agrees). `make_overlay_geometry` converts, so pass it the calibration as
+# published — do not pre-negate. Building a `CameraGeometry` by hand from calibration angles tilts the
+# overlay by twice the angle and lifts it off the road; `PhoneRtGeometry` needs no conversion, being
+# the inverse of the warp itself. With the conversion the two projectors agree to 0 px.
+
 # MetaDrive action steer from device-frame PP δ (right+ → left+ actuator).
 METADRIVE_STEER_FROM_DEVICE = -1.0
 

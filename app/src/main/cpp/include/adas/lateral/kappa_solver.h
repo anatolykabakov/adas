@@ -16,25 +16,29 @@ struct KappaSolverConfig {
   double steer_delay_s = 0.2;         ///< Actuator delay compensated for [s].
 };
 
-/**
- * \brief Numerical method producing the desired curvature from the plan ahead.
- *
- * The swappable part of the fp planner: the methods solve one problem and differ only in cost and
- * accuracy.
- */
+/** Numerical method producing the desired curvature from the plan ahead. */
 class KappaSolver {
 public:
   virtual ~KappaSolver() = default;
 
+  /// Solver name for logs: "grad" or "acados".
   virtual const char* name() const = 0;
 
   /// acados may be absent from the build.
   virtual bool available() const { return true; }
 
+  /// Drop warm-start state.
   virtual void reset() {}
 
+  /// Replace the solver config.
   virtual void setConfig(const KappaSolverConfig& cfg) { cfg_ = cfg; }
 
+  /**
+   * \brief Solve one horizon.
+   * \param[in] in Speed and state; \p poly reference path [m]; \p yaw heading error [rad]; \p Lf lever arm [m].
+   * \param[out] kappa Commanded curvature [1/m].
+   * \return False when the solver failed; the caller keeps the previous command.
+   */
   virtual bool solve(const Input& in, const std::vector<Vec2>& poly, double yaw, double Lf, double& kappa,
                      double& kappa_rate) = 0;
 

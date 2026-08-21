@@ -19,8 +19,7 @@ void SafetyWarn::configure()
                                         [this](const adas::proto::ModelLongPlan& m) { onModelLong(m); });
   subscribe<adas::proto::SteerCommand>(topics::kSteerCommand,
                                        [this](const adas::proto::SteerCommand& m) { onSteer(m); });
-  scheduleTimer(
-      50, [this] { tick(); }, "tick");
+  scheduleTimer(50, [this] { tick(); }, "tick");
   LOGI("SafetyWarn: path + model_long + chassis → %s (FCW/AEB/LDW, no actuation)", topics::kSafetyWarn);
 }
 

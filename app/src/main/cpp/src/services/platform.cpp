@@ -31,15 +31,68 @@ void Platform::configure()
   subscribe<adas::proto::SteerCommand>(topics::kSteerCommand,
                                        [this](const adas::proto::SteerCommand& cmd) { cmd_ = cmd; });
 
-  scheduleTimer(
-      10, [this] { rxCallback(); }, "rx");
-  scheduleTimer(
-      10, [this] { txCallback(); }, "tx");
-  scheduleTimer(
-      100, [this] { stateCallback(); }, "state");
+  scheduleTimer(10, [this] { rxCallback(); }, "rx");
+  scheduleTimer(10, [this] { txCallback(); }, "tx");
+  scheduleTimer(100, [this] { stateCallback(); }, "state");
 
   LOGI("Platform: car=%s panda fd=%d, %s → %s / %s / %s", car_->name(), config_.usb_fd, topics::kSteerCommand,
        topics::kVehicleState, topics::kCanRx, topics::kPandaHealth);
+}
+
+void Platform::reseatPanda(int usb_fd)
+{
+  if (usb_fd < 0) {
+    LOGW("Platform: reseat asked with fd=%d — ignored", usb_fd);
+    return;
+  }
+  const int replaced = pending_fd_.exchange(usb_fd, std::memory_order_release);
+  if (replaced >= 0 && replaced != usb_fd)
+    LOGW("Platform: reseat fd=%d arrived before fd=%d was seated — the older one is dropped", usb_fd, replaced);
+  LOGI("Platform: panda reseat queued, fd=%d", usb_fd);
+}
+
+void Platform::applyPendingPanda()
+{
+  const int fd = pending_fd_.exchange(-1, std::memory_order_acquire);
+  if (fd < 0)
+    return;
+  if (!car_) {
+    LOGE("Platform: reseat fd=%d ignored — there is no car platform to drive", fd);
+    return;
+  }
+
+  // The old handle is dropped first, and without a safe-mode write: it speaks through a descriptor the
+  // host has already closed, so the write would fail, and its failure must not cost us the reseat.
+  // Dropping it before building the new one also keeps the two libusb contexts from overlapping.
+  const int64_t started_ms = nowMs();
+  panda_.reset();
+  try {
+    // This blocks: the constructor asks the board its type and health version, and each control
+    // transfer retries five times with a 100 ms timeout. A board that answers nothing can hold this
+    // thread for a second or so — acceptable, because the alternative is a board we cannot use at all.
+    auto fresh = std::make_shared<::Panda>(fd, 0);
+    if (!fresh->connected()) {
+      LOGE("Platform: reseat fd=%d did not connect — staying without a panda", fd);
+      return;
+    }
+    panda_ = std::move(fresh);
+  } catch (const std::exception& e) {
+    LOGE("Platform: reseat fd=%d threw (%s) — staying without a panda", fd, e.what());
+    return;
+  } catch (...) {
+    LOGE("Platform: reseat fd=%d threw something unknown — staying without a panda", fd);
+    return;
+  }
+
+  // A board we have never configured: power saving, alternative experience and safety model have to be
+  // set again, and only the supervisor knows the order they need. The car's decode is untouched — that
+  // is the whole reason for going this way instead of restarting.
+  car_->resetPandaState();
+  car_->configureSafety();
+  config_.usb_fd = fd;
+  const int count = reseats_.fetch_add(1, std::memory_order_relaxed) + 1;
+  LOGI("Platform: panda seated on fd=%d in %lld ms (reseat #%d) — car state, filters and learners kept", fd,
+       static_cast<long long>(nowMs() - started_ms), count);
 }
 
 void Platform::rxCallback()
@@ -72,6 +125,9 @@ void Platform::rxCallback()
 
 void Platform::stateCallback()
 {
+  // Before the guards below, not after: the reseat exists for the case where `panda_` is dead or gone,
+  // and a check that returns early would never let the new descriptor in.
+  applyPendingPanda();
   if (!car_ || !panda_ || !panda_->connected())
     return;
   try {

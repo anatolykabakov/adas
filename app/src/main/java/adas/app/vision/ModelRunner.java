@@ -1,13 +1,6 @@
 package adas.app.vision;
 
-/**
- * What the pipeline knows about the vision model. Two implementations exist: supercombo 0.8.12 via
- * ONNX Runtime, and the flowpilot 0.9.x model on the GPU via thneed. Selected by
- * {@code vision.model_runner}.
- *
- * <p>Inference timing is part of the contract, not a side log: implementations are only comparable
- * through the same measurement. It goes into {@link LaneLines#inferDurationMs} and into the bag.
- */
+/** What the pipeline knows about the vision model. */
 public interface ModelRunner {
 
     /** @return parsed output, or null when skipped: both implementations need a previous frame. */

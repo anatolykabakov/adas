@@ -15,6 +15,7 @@ struct LocalFrame {
   static constexpr double kF = 1.0 / 298.257223563;
   static constexpr double kE2 = kF * (2.0 - kF);
 
+  /// \return (east, north) [m] of the fix in this frame.
   std::pair<double, double> toLocal(double lat_deg, double lon_deg) const
   {
     double x, y, z, x0, y0, z0;
@@ -32,6 +33,7 @@ struct LocalFrame {
     return {east, north};
   }
 
+  /// Batch toLocal(). \param[out] east / north Filled to the input size.
   void toLocalMany(const std::vector<double>& lat_deg, const std::vector<double>& lon_deg, std::vector<double>& east,
                    std::vector<double>& north) const
   {
@@ -45,6 +47,7 @@ struct LocalFrame {
     }
   }
 
+  /// \return (lat, lon) [deg] of a local point.
   std::pair<double, double> toGeo(double east, double north) const
   {
     double lat = lat0_deg, lon = lon0_deg;

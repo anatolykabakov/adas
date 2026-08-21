@@ -69,10 +69,8 @@ public:
 
   void configure() override
   {
-    scheduleTimer(
-        10, [this] { ++ticks_; }, "fast");
-    scheduleTimer(
-        50, [this] { ++slow_ticks_; }, "slow");
+    scheduleTimer(10, [this] { ++ticks_; }, "fast");
+    scheduleTimer(50, [this] { ++slow_ticks_; }, "slow");
   }
 
   int ticks() const { return ticks_.load(); }
@@ -215,8 +213,7 @@ TEST(MiddlewareTest, BoundedSubscriptionDropsOldest)
   public:
     void configure() override
     {
-      subscribe<Ping>(
-          "test/ping", [this](const Ping& m) { ids_.push_back(m.id); }, 2);
+      subscribe<Ping>("test/ping", [this](const Ping& m) { ids_.push_back(m.id); }, 2);
     }
     std::vector<int> ids_;
   };
@@ -341,8 +338,7 @@ public:
     registerParameter<bool>("on", on);
     registerParameter<double>(
         "clamped", [this](const double& v) { clamped = std::clamp(v, 0.0, 1.0); }, [this] { return clamped; });
-    scheduleTimer(
-        5, [this] { ticks.fetch_add(1); }, "tick");
+    scheduleTimer(5, [this] { ticks.fetch_add(1); }, "tick");
   }
 
   double gain = 1.0;

@@ -294,7 +294,7 @@ TEST(TopicConvert, CameraOffsetShiftsPathRight)
   EXPECT_NEAR(fused.polyline[0].y() - fused_plain.polyline[0].y(), 0.08, 1e-9);
 }
 
-TEST(TopicConvert, LaneBlendRequiresBothHostLines)
+TEST(LanePlanner, OneConfidentLineStillPullsThePath)
 {
   auto make = [](bool left_ok, bool right_ok, double width) {
     adas::proto::LaneLines ll;
@@ -318,24 +318,20 @@ TEST(TopicConvert, LaneBlendRequiresBothHostLines)
     }
     return ll;
   };
-  const double blend = 1.0, off = 0.0;
   const double plan_y = 1.0;
-
-  const auto both = adas::laneLinesToPath(make(true, true, 3.2), pathCfg(blend, off));
+  const auto both = adas::laneLinesToPath(make(true, true, 3.2), pathCfg(1.0, 0.0));
   ASSERT_GE(both.polyline.size(), 2u);
   EXPECT_LT(both.polyline[1].y(), plan_y - 0.3);
 
   for (auto ll : {make(true, false, 3.2), make(false, true, 3.2)}) {
-    const auto one = adas::laneLinesToPath(ll, pathCfg(blend, off));
+    const auto one = adas::laneLinesToPath(ll, pathCfg(1.0, 0.0));
     ASSERT_GE(one.polyline.size(), 2u);
-    EXPECT_NEAR(one.polyline[1].y(), plan_y, 1e-9);
+    EXPECT_LT(one.polyline[1].y(), plan_y - 0.3) << "comma mixes from one live host line";
   }
 
-  for (double w : {2.0, 5.0}) {
-    const auto bad = adas::laneLinesToPath(make(true, true, w), pathCfg(blend, off));
-    ASSERT_GE(bad.polyline.size(), 2u);
-    EXPECT_NEAR(bad.polyline[1].y(), plan_y, 1e-9);
-  }
+  const auto split = adas::laneLinesToPath(make(true, true, 5.0), pathCfg(1.0, 0.0));
+  ASSERT_GE(split.polyline.size(), 2u);
+  EXPECT_NEAR(split.polyline[1].y(), plan_y, 1e-9) << "width ≥ 5 m at 0/1.5/3 s zeros lane weight";
 }
 
 namespace {
@@ -389,19 +385,18 @@ TEST(LaneBlend, UnsureLinesAreIgnored)
 
 TEST(LaneBlend, MiddlingSigmaBlendsPartially)
 {
-  const auto path = adas::laneLinesToPath(twoLineFrame(1.0f), pathCfg(1.0, 0.0));
+  const auto path = adas::laneLinesToPath(twoLineFrame(0.225f), pathCfg(1.0, 0.0));
   const double y = pathYAt10m(path);
   EXPECT_GT(y, 0.05);
   EXPECT_LT(y, 0.35);
 }
 
-TEST(LaneBlend, ArcGradeSigmaStillAnchors)
+TEST(LaneBlend, CommaStdKillsTheLineByThreeTenths)
 {
-  for (float sigma : {0.6f, 0.95f}) {
+  for (float sigma : {0.3f, 0.6f, 0.95f}) {
     const auto path = adas::laneLinesToPath(twoLineFrame(sigma), pathCfg(1.0, 0.0));
-    EXPECT_TRUE(path.lane_anchored) << "sigma " << sigma;
-
-    EXPECT_LT(pathYAt10m(path), 0.3) << "sigma " << sigma;
+    EXPECT_FALSE(path.lane_anchored) << "sigma " << sigma;
+    EXPECT_NEAR(pathYAt10m(path), 0.4, 0.05) << "sigma " << sigma;
   }
 }
 
@@ -433,98 +428,46 @@ adas::proto::LaneLines offsetLaneFrame(double centre_y, double kappa = 0.0, doub
   return ll;
 }
 
-adas::LanePathConfig centringCfg(double gain = 0.7)
-{
-  adas::LanePathConfig cfg;
-  cfg.lane_blend_scale = 1.0;
-  cfg.center_force_gain = gain;
-  return cfg;
-}
-
 }  // namespace
 
-TEST(CenterForce, ShiftsTheReferenceTowardTheLaneCentre)
+TEST(LanePlanner, StockHasNoCenterForce)
 {
-  const auto off = adas::laneLinesToPath(offsetLaneFrame(0.5), centringCfg(0.0));
-  const auto on = adas::laneLinesToPath(offsetLaneFrame(0.5), centringCfg(0.7));
-  ASSERT_TRUE(on.lane_anchored);
-  EXPECT_NEAR(0.5, on.lane_offset_m, 0.02);
-  EXPECT_GT(on.center_force_m, 0.0);
-  EXPECT_NEAR(0.0, off.center_force_m, 1e-12);
-
-  EXPECT_NEAR(0.36, on.center_force_m, 0.03);
-  for (size_t i = 0; i < on.polyline.size(); ++i)
-    EXPECT_NEAR(on.polyline[i].y() - off.polyline[i].y(), on.center_force_m, 1e-9);
-}
-
-TEST(CenterForce, MirrorsForTheOtherSideAndVanishesWhenCentred)
-{
-  const auto right = adas::laneLinesToPath(offsetLaneFrame(-0.5), centringCfg());
-  EXPECT_LT(right.center_force_m, 0.0);
-  const auto centred = adas::laneLinesToPath(offsetLaneFrame(0.0), centringCfg());
-  EXPECT_NEAR(0.0, centred.center_force_m, 0.01);
-}
-
-TEST(CenterForce, IsClampedLikeUpstream)
-{
-  adas::LanePathConfig cfg = centringCfg(0.7);
-  cfg.center_force_max_m = 0.8;
-  const auto path = adas::laneLinesToPath(offsetLaneFrame(3.0), cfg);
-  EXPECT_NEAR(0.8, path.center_force_m, 1e-9);
-}
-
-TEST(CenterForce, DampedWhenItPushesIntoTheTurn)
-{
-  const auto same = adas::laneLinesToPath(offsetLaneFrame(0.5, +0.005), centringCfg());
-  const auto opposite = adas::laneLinesToPath(offsetLaneFrame(0.5, -0.005), centringCfg());
-  ASSERT_GT(opposite.center_force_m, 0.0);
-  EXPECT_NEAR(0.7, same.center_force_m / opposite.center_force_m, 0.05);
-}
-
-TEST(CenterForce, OffWithoutPaintToMeasureAgainst)
-{
-  auto ll = offsetLaneFrame(0.5);
-  ll.mutable_lanes(2)->set_prob(0.05f);
-  const auto path = adas::laneLinesToPath(ll, centringCfg());
-  EXPECT_FALSE(path.lane_anchored);
+  const auto path = adas::laneLinesToPath(offsetLaneFrame(0.5), pathCfg(1.0, 0.0));
   EXPECT_NEAR(0.0, path.center_force_m, 1e-12);
+  EXPECT_NEAR(0.5, path.lane_offset_m, 0.02);
 }
 
-TEST(CenterForce, ReadsTheOffsetAtTheCarNotAhead)
+TEST(LanePlanner, WideLaneAheadZerosTheMix)
 {
-  const double kappa = 0.006;
-  const auto path = adas::laneLinesToPath(offsetLaneFrame(0.0, kappa), centringCfg());
-  ASSERT_TRUE(path.lane_anchored);
-
-  EXPECT_NEAR(0.0, path.lane_offset_m, 0.02);
-  EXPECT_NEAR(0.0, path.center_force_m, 0.02);
-}
-
-TEST(LaneWidthFilter, SingleWideFrameDoesNotDropTheAnchor)
-{
-  adas::LanePathConfig cfg = pathCfg(1.0, 0.0);
-  adas::LaneFusionState state;
-  for (int i = 0; i < 20; ++i) {
-    const auto path = adas::laneLinesToPath(offsetLaneFrame(0.0, 0.0, 3.9), cfg, &state);
-    ASSERT_TRUE(path.lane_anchored) << "settling frame " << i;
+  adas::proto::LaneLines ll;
+  ll.add_lanes();
+  auto* l = ll.add_lanes();
+  auto* r = ll.add_lanes();
+  l->set_prob(0.99f);
+  r->set_prob(0.99f);
+  for (int i = 0; i < 33; ++i) {
+    const double x = i * 3.0;
+    const double w = x < 10.0 ? 3.2 : 6.0;
+    ll.add_x(x);
+    ll.add_plan_x(x);
+    ll.add_plan_y(0.8);
+    l->add_y(-0.5 * w);
+    r->add_y(+0.5 * w);
   }
-  const auto spike = adas::laneLinesToPath(offsetLaneFrame(0.0, 0.0, 6.0), cfg, &state);
-  EXPECT_TRUE(spike.lane_anchored);
-  EXPECT_NEAR(3.9, spike.lane_width_m, 0.05);
-
-  const auto unfiltered = adas::laneLinesToPath(offsetLaneFrame(0.0, 0.0, 6.0), cfg);
-  EXPECT_FALSE(unfiltered.lane_anchored);
+  const auto path = adas::laneLinesToPath(ll, pathCfg(1.0, 0.0), nullptr, 10.0);
+  ASSERT_GE(path.polyline.size(), 2u);
+  EXPECT_NEAR(pathYAt10m(path), 0.8, 0.05);
 }
 
-TEST(LaneWidthFilter, FollowsARealWidthChange)
+TEST(LaneWidthFilter, TracksTowardTheMeasuredWidth)
 {
   adas::LanePathConfig cfg = pathCfg(1.0, 0.0);
   adas::LaneFusionState state;
   adas::laneLinesToPath(offsetLaneFrame(0.0, 0.0, 3.0), cfg, &state);
-  EXPECT_NEAR(3.0, state.lane_width_m, 1e-6);
-  for (int i = 0; i < 400; ++i)
+  EXPECT_NEAR(3.7, state.width_est_m, 0.02) << "comma starts the estimate at 3.7 m";
+  for (int i = 0; i < 2000; ++i)
     adas::laneLinesToPath(offsetLaneFrame(0.0, 0.0, 3.6), cfg, &state);
-  EXPECT_NEAR(3.6, state.lane_width_m, 0.05);
+  EXPECT_NEAR(3.6, state.width_est_m, 0.05);
 }
 
 TEST(AdasConfigFile, ShippedJsonReachesTheLanePathKnobs)
@@ -576,11 +519,7 @@ TEST(LaneBlendRuntimeKnob, TakesEffectAndIsClamped)
   EXPECT_DOUBLE_EQ(cfg.center_force_gain, 0.0) << "negative centring would push away from the centre";
 }
 
-namespace {
-constexpr double kStdRangePlanY = 1.0;
-
-/** Straight lane centred on 0, plan offset by `kStdRangePlanY`, σ growing with range. */
-adas::proto::LaneLines laneFrameWithStd(double std_near, double std_far, double split_x = 20.0)
+TEST(LanePlanner, UsesTheFirstStdSampleNotARangeMedian)
 {
   adas::proto::LaneLines ll;
   for (int lane = 0; lane < 4; ++lane) {
@@ -591,67 +530,24 @@ adas::proto::LaneLines laneFrameWithStd(double std_near, double std_far, double 
     const double x = i * 1.5;
     ll.add_x(x);
     ll.add_plan_x(x);
-    ll.add_plan_y(kStdRangePlanY);
-    const double sigma = x <= split_x ? std_near : std_far;
+    ll.add_plan_y(1.0);
     for (int lane = 0; lane < 4; ++lane) {
       auto* l = ll.mutable_lanes(lane);
-      const double half = 1.65;
-      l->add_y(lane == 1 ? -half : (lane == 2 ? half : (lane == 0 ? -3.3 : 3.3)));
-      l->add_y_std(sigma);
+      l->add_y(lane == 1 ? -1.65 : (lane == 2 ? 1.65 : (lane == 0 ? -3.3 : 3.3)));
+      l->add_y_std(i == 0 ? 0.1f : 2.5f);
     }
   }
-  return ll;
+  const auto path = adas::laneLinesToPath(ll, pathCfg(1.0, 0.0));
+  EXPECT_TRUE(path.lane_anchored);
+  EXPECT_NEAR(path.polyline.size() >= 2 ? path.polyline[1].y() : 1.0, 0.0, 0.1);
 }
 
-adas::LanePathConfig stdRangeCfg(double range_m)
-{
-  adas::LanePathConfig cfg = pathCfg(1.0, 0.0);
-  cfg.lane_std_good_m = 0.3;
-  cfg.lane_std_bad_m = 1.5;
-  cfg.lane_std_range_m = range_m;
-  return cfg;
-}
-
-double referenceY(const adas::proto::LaneLines& ll, const adas::LanePathConfig& cfg)
-{
-  const auto out = adas::laneLinesToPath(ll, cfg);
-  return out.polyline.size() >= 2 ? out.polyline[1].y() : std::nan("");
-}
-
-}  // namespace
-
-TEST(LaneStdRange, NearWindowKeepsALineWhoseFarHalfIsUnobserved)
-{
-  const auto ll = laneFrameWithStd(0.3, 2.5);
-
-  const double near_y = referenceY(ll, stdRangeCfg(20.0));
-  const double far_y = referenceY(ll, stdRangeCfg(40.0));
-
-  EXPECT_LT(near_y, 0.5 * kStdRangePlanY) << "near window should trust the observed half";
-  EXPECT_NEAR(far_y, kStdRangePlanY, 0.05) << "old window let unobserved range veto the line";
-}
-
-TEST(LaneStdRange, ABadNearHalfIsStillRejected)
-{
-  const auto ll = laneFrameWithStd(2.0, 2.0);
-  EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), kStdRangePlanY, 0.05);
-}
-
-TEST(LaneStdRange, AGoodLineIsUnaffectedByTheWindow)
-{
-  const auto ll = laneFrameWithStd(0.15, 0.2);
-  EXPECT_NEAR(referenceY(ll, stdRangeCfg(20.0)), referenceY(ll, stdRangeCfg(40.0)), 1e-9);
-}
-
-TEST(ShippedConfig, LaneStdRangeIsTheNearField)
+TEST(ShippedConfig, LaneStdRangeKeyStillLoads)
 {
   bool ok = false;
   const AdasApp::Config cfg = AdasApp::Config::loadFromFile(ADAS_SHIPPED_CONFIG_JSON, &ok);
   ASSERT_TRUE(ok);
-  EXPECT_GT(cfg.lane_keep.lane_path.lane_std_range_m, 5.0);
-  EXPECT_LE(cfg.lane_keep.lane_path.lane_std_range_m, 25.0) << "past ~25 m sigma is dominated by extrapolation, see "
-                                                               "the "
-                                                               "measured table";
+  EXPECT_GT(cfg.lane_keep.lane_path.lane_std_range_m, 0.0);
 }
 
 namespace {
@@ -665,35 +561,15 @@ adas::proto::LaneLines frameWithProbs(float lp, float rp)
 
 }  // namespace
 
-TEST(DpParity, LanelessHysteresisFollowsUpstreamThresholds)
+TEST(LanePlanner, MixesWithRawProbsWithoutAFloor)
 {
   adas::LanePathConfig cfg;
   adas::LaneFusionState state;
-  auto run = [&](float lp, float rp) {
-    auto ll = frameWithProbs(lp, rp);
-    return adas::laneLinesToPath(ll, cfg, &state).lanelines_active;
-  };
-
-  EXPECT_TRUE(run(0.9f, 0.9f)) << "both confident — lane mode";
-  EXPECT_TRUE(run(0.35f, 0.35f)) << "between 0.3 and 0.5 the hysteresis keeps the previous mode";
-  EXPECT_FALSE(run(0.2f, 0.2f)) << "both below 0.3 — fall back to the model plan alone";
-  EXPECT_FALSE(run(0.45f, 0.45f)) << "coming back takes more than being above 0.3";
-  EXPECT_TRUE(run(0.55f, 0.1f)) << "one above 0.5 is enough: theirs is an OR, not an AND";
-}
-
-TEST(DpParity, LanelessModeStopsTheBlendEntirely)
-{
-  adas::LanePathConfig cfg;
-  cfg.camera_offset_m = 0.0;
-  adas::LaneFusionState state;
-
-  auto confident = frameWithProbs(0.9f, 0.9f);
-  const double with_lines = pathYAt10m(adas::laneLinesToPath(confident, cfg, &state));
-  auto weak = frameWithProbs(0.1f, 0.1f);
-  const double laneless = pathYAt10m(adas::laneLinesToPath(weak, cfg, &state));
-
-  EXPECT_NEAR(laneless, 0.4, 1e-6) << "laneless is exactly the model plan, with no trace of the lines";
-  EXPECT_NE(with_lines, laneless);
+  const double strong = pathYAt10m(adas::laneLinesToPath(frameWithProbs(0.9f, 0.9f), cfg, &state));
+  const double weak = pathYAt10m(adas::laneLinesToPath(frameWithProbs(0.2f, 0.2f), cfg, &state));
+  EXPECT_NEAR(strong, 0.0, 0.05);
+  EXPECT_GT(weak, 0.05);
+  EXPECT_LT(weak, 0.35) << "comma has no 0.3 probability floor";
 }
 TEST(DpParity, RollCompensationMatchesUpstreamFormula)
 {
