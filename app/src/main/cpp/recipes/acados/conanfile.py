@@ -3,8 +3,9 @@
 Версия 0.1.8 обязательна: сгенерированный решатель в src/lateral/acados_lat_ocp взят у
 dragonpilot и совместим только с ней (в v0.1.9 переименован ocp_nlp_dynamics_dims_get_from_attr).
 
-Зеркало по умолчанию — нексус, github идёт вторым адресом:
-    conan install ... -c user.acados:mirror=https://github.com
+Источники берутся с github. Внутреннее зеркало (или любой прокси) задаётся конфигом, и тогда
+github остаётся вторым адресом на случай, если зеркало не ответит:
+    conan install ... -c user.acados:mirror=https://nexus.example.internal/repository/github-proxy
 """
 
 import os
@@ -33,7 +34,8 @@ SUBMODULES = {
 }
 ACADOS_SHA256 = "aa43680f9dc626a77bfc56664f1454cb1926464499b6fb02ac780533c438525d"
 GITHUB = "https://github.com"
-DEFAULT_MIRROR = "https://github.com"
+#: Where sources come from unless `user.acados:mirror` says otherwise.
+DEFAULT_MIRROR = GITHUB
 
 
 class AcadosConan(ConanFile):

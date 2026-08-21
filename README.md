@@ -1,39 +1,55 @@
 # ADAS — phone-based LKA / AEB / FCW / LDW / ACC (Android + C++)
 
-Phone-based ADAS for VW Golf 7 (MQB): camera → supercombo on the GPU → lateral MPC (LKA) and
-longitudinal/safety functions (ACC, FCW, AEB, LDW) → HCA / related CAN via Panda. Plus bag
-recording, offline analysis tools, and MetaDrive sim.
+> **Research code that steers a car.** Not a product, not certified, no warranty. The driver keeps
+> hands on the wheel and supervises at all times; complying with local law is on whoever runs it.
+> What the assistant can and cannot do is written down —
+> [`docs/CONTROLLER_LIMITS.md`](docs/CONTROLLER_LIMITS.md). Tight bends are outside it today.
 
-**All algorithms are in C++** (services inside `AdasApp`). Java handles the camera, inference, UI, and
+Phone-based ADAS for VW Golf 7 (MQB): camera → supercombo 0.9.7 on the phone GPU → lateral MPC (LKA)
+and longitudinal/safety functions (ACC, FCW, AEB, LDW) → HCA / related CAN through a panda. Plus bag
+recording, offline analysis tools, and a MetaDrive sim. No comma hardware beyond the panda.
+
+**All algorithms are in C++** (services inside `AdasApp`). Java handles the camera, inference, UI and
 logging; Python is offline only: bag visualizer, simulator, analysis (`publish → step →
 pop_messages` via `pyadas`).
 
-**Status:** MVP drives on the highway. Vision runs at the full camera rate — **30.0 Hz** published on
-the road, 0 frames dropped in 52 690, frame interval median 33.0 ms. Inference is **17.6 ms** on the
-GPU and frame preparation 4.6 ms, so capture → model output is **22 ms**; capture → plan is 31 ms and
-capture → steering command **52 ms** (p95 69), with the panda's own 10 ms transmit timer after that.
+**Status: MVP, drives on the highway.** Latest drive 2026-08-21, 25.7 minutes on a Xiaomi 14 — every
+number here is measured on the road, not estimated:
 
-Latest run 2026-08-16 — 29.3 minutes: lane-centre offset **−0.001 m** median on straights (R > 500 m)
-and +0.142 m on gentle arcs (R 167–500 m), angle tracking error **0.32°** and 1.08° on the same two,
-line probabilities 0.84 / 0.81. The middleware lost nothing: 0 drops across 10 services, no timer lag
-in any snapshot.
+| | |
+|---|---|
+| supercombo inference | **9.7 ms** median, p95 17.1 (17.6 ms on a OnePlus 7T) |
+| capture → plan | **22 ms** median, p95 53 |
+| vision rate | 23.8 Hz at the camera's pinned rate, 0 messages lost across 9 services |
+| lane-centre offset, straights (R > 500 m) | **+0.036 m** median, angle tracking error **0.32°** |
+| gentle arcs (R 167–500 m) | +0.083 m median, 0.74° |
 
-Three caveats those numbers do not carry. The offset is measured only where the lane was recognised —
-**40.0%** of controlled ticks — and on 17.5% of frames both of our lines sit below 0.3 confidence
-without the system saying so ([task #40](docs/BACKLOG.md)). Torque reaches the 300 cNm panda ceiling
-on 17.5% of ticks overall: 8% on straights but **45% on gentle arcs and 67–93% on tight ones**, which
-is where the tracking error grows to 2.4–10.1°; tight bends are outside what this assistant does
-today. And the model's own pose still reads short by a constant factor of 0.679 against the wheels,
-with the yaw sign inverted ([task #37](docs/BACKLOG.md)) — which is why localisation does not use
-it.
+**Three caveats those numbers do not carry.** The offset is measured only where the lane was
+recognised — **51 %** of controlled ticks — and on 21.8 % of frames both lines sit below 0.3
+confidence without the system saying so ([task #40](docs/BACKLOG.md)). Torque reaches the panda's
+300 cNm ceiling on 6.7 % of ticks overall, but **28 % on gentle arcs and 82 % on medium ones**
+(R 83–167 m), where the tracking error grows to 2.9° — that is the honest edge of this assistant.
+And this phone's lens calibration disagrees with the datasheet by 11 %, which is the leading suspect
+behind lane-line σ of 0.37 / 0.51 ([task #51](docs/BACKLOG.md)).
+
+**Frame spacing is the thing to know about supercombo.** Every velocity it reports — the lead, the
+pose — lives in the interval between its two input frames, and it is trained at comma's 50 ms. At a
+33 ms pairing lead velocity reads 0.59× true and pose 0.64×; at 66 ms, 1.22×. The correction is
+`50/dt`, applied in `ModelLongParse`, and it is what explains a pose scale that had looked like a
+mystery constant: this drive paired at 42 ms and the pose slope came out 0.825, against 42/50 = 0.84.
+The yaw sign is still inverted ([task #37](docs/BACKLOG.md)), which is why localisation does not use
+the model's pose.
 
 Which question the next drive asks, and what would count as an answer, is written down before it
-happens — [`docs/PREDRIVE.md`](docs/PREDRIVE.md). Applicability limits and what the system cannot do —
-[`docs/CONTROLLER_LIMITS.md`](docs/CONTROLLER_LIMITS.md).
+happens — [`docs/PREDRIVE.md`](docs/PREDRIVE.md).
 
 **Links:** [Course book (GitHub Pages)](https://anatolykabakov.github.io/adas/) ·
 [Latest APK](https://github.com/anatolykabakov/adas/releases/latest/download/app-debug.apk)
 ([Releases](https://github.com/anatolykabakov/adas/releases))
+
+**License:** code Apache-2.0, book and docs CC BY 4.0 — [`LICENSE`](LICENSE),
+[`LICENSE.md`](LICENSE.md) for what it does not cover (the shipped model and DBCs are comma's, MIT).
+Reviews and pull requests are welcome.
 
 ---
 

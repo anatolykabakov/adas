@@ -1,8 +1,8 @@
 # Warnings: FCW / AEB / LDW
 
-Service `safety_warn` — warnings only, no braking or steering assist. Port of
-`an earlier FCW` SafetyPlanner, reworked 2026-08-02: previous rules triggered
-warnings where there was no danger.
+Service `safety_warn` — warnings only, no braking or steering assist. Written from scratch on
+2026-08-02 after watching an FCW that warned where there was no danger: the rules below are the
+answer to those false triggers, and the table names each one.
 
 ## What was wrong
 

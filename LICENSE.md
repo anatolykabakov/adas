@@ -1,22 +1,20 @@
 # License
 
-## Status: the project license has not been chosen yet
+## Code: Apache-2.0. Book and documentation: CC BY 4.0
 
-This file was empty until now. An empty `LICENSE.md` does not mean "free to use" — it means **all rights
-reserved**: without an explicit grant nobody may use, modify or redistribute this code, even though the
-repository is public, the book is published on GitHub Pages and the APK sits in Releases. That needs closing
-by a decision, not by silence.
+The code in this repository is licensed under the **Apache License 2.0** — the full text is in
+[`LICENSE`](LICENSE), and the notices that license requires travel in [`NOTICE`](NOTICE). Apache was
+chosen over MIT for two things it adds: an explicit patent grant, and the `NOTICE` mechanism — both
+matter for code that may end up in an ECU.
 
-Nothing blocks the choice: no incoming dependency imposes copyleft on our own code (the analysis is in
-[`THIRD_PARTY.md`](THIRD_PARTY.md)). Recommendation: **Apache-2.0 for the code** — unlike MIT it carries an
-explicit patent grant and a `NOTICE` mechanism, which matters for code that may end up in an ECU — and
-**CC BY 4.0 for the book and the documentation**, because some figures are derived from
-[Algorithms for Automated Driving](https://github.com/thomasfermi/Algorithms-for-Automated-Driving) under
-that same license. MIT is a reasonable alternative if maximum symmetry with openpilot and minimum text are
-what you want.
+The course book under [`docs/book/`](docs/book/) and [`docs/book_ru/`](docs/book_ru/), together with the
+documentation in `docs/`, is licensed under **CC BY 4.0**. That is not a free choice: some figures are
+derived from [Algorithms for Automated Driving](https://github.com/thomasfermi/Algorithms-for-Automated-Driving),
+which is CC BY 4.0 itself, so the derived work carries the same terms. Attribution per chapter is in
+[`docs/book/ATTRIBUTION.md`](docs/book/ATTRIBUTION.md).
 
-Once the decision is made, the text of the chosen license replaces this section. The sections below hold
-whichever way it goes.
+Contributions are accepted under the same terms as the file being changed — Apache-2.0 for code, CC BY 4.0
+for the book — which is what Apache-2.0 §5 already says by default. No separate CLA.
 
 ## What the project license does not cover
 
