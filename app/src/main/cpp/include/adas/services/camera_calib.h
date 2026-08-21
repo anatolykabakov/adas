@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 #include "camera_intrinsics.pb.h"
 
 #include "adas/middleware/manager.hpp"
@@ -32,6 +34,7 @@ public:
 
   void configure() override;
   void reset() override;
+  std::string_view getName() const override { return "camera_calib"; }
 
   /**
    * \brief Camera intrinsics of the frames being fed in.

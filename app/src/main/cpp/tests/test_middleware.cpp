@@ -11,6 +11,12 @@
 
 #include "messages.pb.h"
 #include "adas/middleware/manager.hpp"
+#include "adas/services/camera_calib.h"
+#include "adas/services/localization.h"
+#include "adas/services/middleware_stats.h"
+#include "adas/services/planner.h"
+#include "adas/services/safety_warn.h"
+#include "adas/services/traffic_sign.h"
 #include "adas/services/zmq_bridge.h"
 #include "adas/utils/logger.h"
 
@@ -507,4 +513,33 @@ TEST(MiddlewareTest, ZmqBridgeSplitsInboundEnvelopeIntoDomainMessages)
   EXPECT_GT(sink->model_long, 0) << "vision/model_long was not delivered";
   EXPECT_GT(sink->traffic, 0) << "the detections were not delivered";
   EXPECT_GT(sink->calib, 0) << "the camera calibration was not delivered";
+}
+
+/**
+ * \brief Every service names itself.
+ *
+ * `Service::getName` defaults to "service", and a service that forgets to override it appears in
+ * `middleware/stats` and in the shutdown log under that placeholder — as CameraCalib did until
+ * 2026-08-22, which makes a whole row of a drive's diagnostics anonymous. One assertion here is
+ * cheaper than noticing it again in a bag.
+ */
+TEST(ServiceNames, NoServiceKeepsThePlaceholder)
+{
+  adas::services::Planner planner;
+  adas::services::CameraCalib camera_calib;
+  adas::services::SafetyWarn safety_warn;
+  adas::services::TrafficSign traffic_sign;
+  adas::services::ZmqBridge zmq_bridge;
+  adas::services::Localization localization;
+  adas::services::MiddlewareStats mw_stats;
+
+  const std::vector<std::pair<const char*, adas::middleware::Service*>> services{
+      {"planner", &planner},         {"camera_calib", &camera_calib}, {"safety_warn", &safety_warn},
+      {"traffic_sign", &traffic_sign}, {"zmq_bridge", &zmq_bridge},   {"localization", &localization},
+      {"mw_stats", &mw_stats},
+  };
+  for (const auto& [expected, svc] : services) {
+    EXPECT_EQ(svc->getName(), expected) << "a service that does not name itself is anonymous in the stats";
+    EXPECT_NE(svc->getName(), "service") << expected << " fell back to the base-class placeholder";
+  }
 }

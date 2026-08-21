@@ -69,6 +69,7 @@ On the host:
 
 ```bash
 ./scripts/install_dependencies.sh        # SDK/NDK/Conan/Python — if needed
+./scripts/install_dependencies.sh --local-properties-only   # already have an SDK? just point at it
 ./scripts/build_project.sh               # debug APK + native arm64
 ./scripts/build_project.sh --cpp-only    # libadas_app_android.so only
 
@@ -91,7 +92,10 @@ C++ builds land in `app/src/main/cpp/build/<target>/<BuildType>` — one root, s
 **Gradle does not build the native library.** It is copied from `app/libs/`, so `assembleDebug`
 finishes in three seconds and will happily package a stale one; `scripts/prepare_drive.sh` refuses to
 install when the C++ sources are newer and compares the sha1 inside the APK against the built one.
-Requires `ANDROID_HOME` / NDK (`local.properties`), Java 17+, Conan 2. The host build puts
+Requires `ANDROID_HOME` / NDK, Java 17+, Conan 2. The SDK path lives in `local.properties`, which is
+gitignored — a fresh clone has none, and gradle then reaches for the system SDK and fails with
+`SDK directory is not writable`. `./scripts/install_dependencies.sh --local-properties-only` writes it
+without touching anything else; that failure is the first thing a new clone hits. The host build puts
 `pyadas/core*.so` into `scripts/`, which every offline tool runs on.
 
 ## Project layout
