@@ -16,6 +16,7 @@ BUILD_TYPE="debug"
 CLEAN_BUILD=false
 BUILD_CPP_ONLY=false
 FETCH_ASSETS=true
+FETCH_FLAGS=""
 VERBOSE=false
 
 print_status()  { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -80,7 +81,7 @@ prepare_assets() {
     fi
 
     print_status "Models: fetching and deriving what the APK packages"
-    if ! "$PROJECT_DIR/scripts/fetch_models.sh"; then
+    if ! "$PROJECT_DIR/scripts/fetch_models.sh" $FETCH_FLAGS; then
         print_error "Model preparation failed — see the list above"
         print_error "Build anyway with --no-fetch if you know the assets are already in place"
         exit 1
@@ -112,6 +113,10 @@ parse_arguments() {
                 ;;
             --cpp-only)
                 BUILD_CPP_ONLY=true
+                shift
+                ;;
+            --fetch-best-effort)
+                FETCH_FLAGS="--best-effort"
                 shift
                 ;;
             --no-fetch)

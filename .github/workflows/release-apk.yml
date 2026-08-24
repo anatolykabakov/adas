@@ -36,12 +36,15 @@ jobs:
         run: |
           pipx install "conan>=2.0,<3"
           conan profile detect --force
+          # for fetch_models' fp32 widen, so the release APK carries the model
+          # (the .thneed derive needs a real GPU and is skipped by --fetch-best-effort)
+          pip install --quiet numpy onnx
           sdkmanager --install "ndk;26.1.10909125" >/dev/null
 
       - name: build APK
         env:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
-        run: ./scripts/build_project.sh
+        run: ./scripts/build_project.sh --fetch-best-effort
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2

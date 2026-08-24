@@ -13,6 +13,8 @@
 #   ./scripts/fetch_models.sh --record     # print manifest lines with the hashes of what is on disk
 #   ./scripts/fetch_models.sh --force      # re-download even if the hash matches
 #   ./scripts/fetch_models.sh --with-optional  # also the assets marked -opt in the manifest
+#   ./scripts/fetch_models.sh --best-effort    # a failed derive is SKIPPED, not fatal — for CI runners
+#                                              # without onnx/tinygrad/GPU; downloads stay verified
 #
 # Exit codes: 0 everything present and verified, 1 something is missing or does not match.
 
@@ -26,6 +28,7 @@ CHECK_ONLY=false
 RECORD=false
 FORCE=false
 WITH_OPTIONAL=false
+BEST_EFFORT=false
 
 for arg in "$@"; do
     case "$arg" in
@@ -33,6 +36,7 @@ for arg in "$@"; do
         --record) RECORD=true ;;
         --force)  FORCE=true ;;
         --with-optional) WITH_OPTIONAL=true ;;
+        --best-effort) BEST_EFFORT=true ;;
         -h|--help)
             sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
@@ -156,10 +160,11 @@ while read -r dest want kind source; do
                 else
                     derived=$((derived + 1))
                 fi
-            elif [ "$kind" = "derive-opt" ]; then
-                # Optional by design: this one needs tooling we do not ship, and the feature that
-                # consumes it is off in the default config. A build must not die for it.
-                echo "SKIPPED  $dest — the command above failed and this asset is optional" >&2
+            elif [ "$kind" = "derive-opt" ] || [ "$BEST_EFFORT" = true ]; then
+                # derive-opt is optional by design; --best-effort extends the same mercy to every
+                # derive, for runners without the tooling (CI has no tinygrad and no OpenCL GPU).
+                # gradle's sync tasks tolerate a missing model, so the APK just ships without it.
+                echo "SKIPPED  $dest — derive failed and this run is allowed to go on without it" >&2
                 skipped=$((skipped + 1))
             else
                 echo "FAILED   $dest — the command above did not produce it" >&2

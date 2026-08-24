@@ -145,7 +145,7 @@ jobs:
       - name: build APK
         env:
           ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
-        run: ./scripts/build_project.sh
+        run: ./scripts/build_project.sh --fetch-best-effort
       - uses: actions/upload-artifact@v4
         with:
           name: app-debug
