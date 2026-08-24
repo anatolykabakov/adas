@@ -146,7 +146,16 @@ while read -r dest want kind source; do
             [ "$want" = "-" ] && echo "         sha256 $got  (record it in the manifest)"
             fetched=$((fetched + 1))
             ;;
-        derive|derive-opt)
+        derive|derive-opt|derive-url)
+            # derive-url carries two sources split by ' ||| ': the command, then a URL holding the
+            # same artifact. The derive is bit-for-bit reproducible, so the download verifies against
+            # the same pinned sha256 — a fallback for machines that cannot derive (CI has no GPU for
+            # the thneed), not a different provenance.
+            fallback_url=""
+            if [ "$kind" = "derive-url" ]; then
+                fallback_url="${source#* ||| }"
+                source="${source%% ||| *}"
+            fi
             echo "derive   $dest"
             echo "         $source"
             # The exit status is not enough: a tool that writes its output under a name of its own
@@ -159,6 +168,27 @@ while read -r dest want kind source; do
                     problems=$((problems + 1))
                 else
                     derived=$((derived + 1))
+                fi
+            elif [ -n "$fallback_url" ]; then
+                echo "         derive failed — fetching the same artifact instead" >&2
+                echo "         from $fallback_url"
+                if curl -fL -C - -o "$path" "$fallback_url"; then
+                    got="$(sha_of "$path")"
+                    if [ "$want" != "-" ] && [ "$got" != "$want" ]; then
+                        echo "MISMATCH $dest downloaded as $got, manifest says $want" >&2
+                        rm -f "$path"
+                        problems=$((problems + 1))
+                    else
+                        fetched=$((fetched + 1))
+                    fi
+                elif [ "$BEST_EFFORT" = true ]; then
+                    rm -f "$path"
+                    echo "SKIPPED  $dest — derive and download both failed" >&2
+                    skipped=$((skipped + 1))
+                else
+                    rm -f "$path"
+                    echo "FAILED   $dest — derive and download both failed" >&2
+                    problems=$((problems + 1))
                 fi
             elif [ "$kind" = "derive-opt" ] || [ "$BEST_EFFORT" = true ]; then
                 # derive-opt is optional by design; --best-effort extends the same mercy to every
