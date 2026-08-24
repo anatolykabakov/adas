@@ -134,11 +134,11 @@ then recovery. `pp` with perfect perception barely errs.
 ## What this run does NOT prove
 
 * **This tests the control law, not the system.** Anchor is ideal centerline from map: no model
-  noise, no 88 ms vision delay, no calibration errors. On road those cause Pure Pursuit yawing,
+  noise, no vision delay (42 ms on the road), no calibration errors. On road those cause Pure Pursuit yawing,
   which made `fp` the default. PP's ideal simulator result directly
   contradicts its behavior on recordings — and that is expected.
-* **Absolute numbers are not comparable to road** (0.16 m median on highway): different car, different
-  grip, different anchor.
+* **Absolute numbers are not comparable to road** (|offset| 0.063 m median on straights, 2026-08-21):
+  different car, different grip, different anchor.
 * What is comparable — *relative* behavior on curvature step, return-to-center speed,
   steering saturation, and command jitter.
 

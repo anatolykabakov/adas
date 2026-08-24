@@ -8,6 +8,37 @@ Everything here is verified against the artefact that actually goes to the car, 
 
 ---
 
+## What the 2026-08-21 drive measured (answers to the question below)
+
+Full tables in [`CONTROLLER_LIMITS.md`](CONTROLLER_LIMITS.md); this is only what bears on the
+feedforward question asked on 08-09. Run `2026_08_21_14_49_52`, 25.7 min, 35 118 control ticks.
+
+* **ceiling occupancy above 23 km/h: 6.7 %**, against 11.7 % before — it *fell*, where the criterion
+  below expected it to rise. By segment: straight 4.2 %, gentle 167–500 m 27.6 %, medium 83–167 m
+  81.8 %;
+* **lateral acceleration while saturated: 0.20 m/s² median** (p95 0.98), against 0.58 / 1.27. The
+  diagnosis holds and holds harder: the torque goes into turning the rack, not into holding the arc;
+* **|angle error| median**: straight 0.32°, gentle 0.74°, medium 2.86°. This is *not* comparable to
+  the 1.13° the replay produced — different roads, and the medium class here is 99 ticks;
+* **no voice notes in this run**, so the primary criterion — the driver's own complaint — was not
+  exercised at all;
+* R < 83 m never occurred, so the sharpest class has no measurement.
+
+**Why occupancy fell instead of rising: the change was not switched on.** `lat_pid_ff_floor_mps` is
+`0.0` in `assets/config.json`, so the feedforward kept its old `swa · v²` shape. Recovered from the
+bag's `pid_f`, the implied `k_f` is 5.63e-05 against the configured 6e-05 — the arithmetic of a zero
+floor — and the term contributes 1.3 cNm below 8 m/s, 3.2 at 8–15, 4.3 at 15–24, out of 300. The
+criterion below was therefore never exercised, and setting the floor (code default 9.8 m/s) is what
+the next drive should ask about.
+
+Two things also changed between the question and this drive, which is why it would not have been a
+clean A/B anyway: the model
+became supercombo 0.9.7 on the GPU and the phone became a Xiaomi 14 (vision 23.8 Hz at 42 ms, frame →
+plan 22 ms). The feedforward question therefore remains **partly answered**: the mechanism is
+confirmed, the magnitude on tight arcs is not.
+
+---
+
 ## This drive (prepared 2026-08-09 — lateral feedforward)
 
 ### The question
