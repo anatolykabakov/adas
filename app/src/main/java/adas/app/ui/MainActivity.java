@@ -644,6 +644,11 @@ public class MainActivity extends AppCompatActivity {
         if (paramsOpen) {
             setParamsOpen(false);
         }
+        // The button is the only way a user reaches chessboard capture: it restarts the camera with
+        // autofocus (locked once settled) and the streams pinned to the physical main module. Point
+        // the phone at the board from the working distance before pressing, so the focus locks on
+        // the board and not on whatever else was in front of the lens.
+        cameraHandler.setChessboardCaptureMode(true);
         cameraHandler.setFrameTap(new CameraHandler.FrameTap() {
             @Override
             public boolean wantsFrame() {
@@ -727,6 +732,8 @@ public class MainActivity extends AppCompatActivity {
                     params.cy = (float) r.cy;
                     params.calibWidth = r.width;
                     params.calibHeight = r.height;
+                    // Measured on this very phone — stamp it, or the prior reads as foreign next start.
+                    params.intrinsicsPriorDevice = android.os.Build.MODEL;
                     try {
                         params.save(getApplicationContext());
                     } catch (Exception e) {
@@ -760,6 +767,8 @@ public class MainActivity extends AppCompatActivity {
     private void stopLensCalibration(String message) {
         if (cameraHandler != null) {
             cameraHandler.setFrameTap(null);
+            // Back to the driving focus policy (infinity, no AF) the moment calibration ends.
+            cameraHandler.setChessboardCaptureMode(false);
         }
         if (laneOverlay != null) {
             laneOverlay.setCalibrationActive(false);

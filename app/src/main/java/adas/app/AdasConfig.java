@@ -145,21 +145,6 @@ public final class AdasConfig {
         }
     }
 
-    public static boolean chessboardCapture(Context context) {
-        try {
-            org.json.JSONObject calib = root(context).optJSONObject("calibration");
-            org.json.JSONObject cam = calib == null ? null : calib.optJSONObject("camera");
-            boolean on = cam != null && cam.optBoolean("chessboard_capture", false);
-            if (on) {
-                Log.w(TAG, "camera.chessboard_capture=true: autofocus enabled (calibration only)");
-            }
-            return on;
-        } catch (Exception e) {
-            Log.w(TAG, "chessboardCapture read failed", e);
-            return false;
-        }
-    }
-
     public static boolean phoneStatsEnabled(Context context) {
         return nodeBool(context, "phone_stats", true);
     }

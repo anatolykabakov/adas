@@ -86,6 +86,11 @@ public class CameraHandler {
 
     private static final int JPEG_QUALITY = 70;
     private boolean chessboardCaptureMode;
+    /**
+     * Chessboard mode: physical module the streams are routed to, so the vendor's logical-camera
+     * pipeline (whose OIS/EIS the HAL may refuse to disable) is bypassed. Null routes as usual.
+     */
+    private String chessPhysicalCameraId;
     /** Chessboard mode: whether continuous AF has been frozen into a fixed focus distance. */
     private volatile boolean chessFocusLocked;
     private int chessAfSettledFrames;
@@ -172,7 +177,6 @@ public class CameraHandler {
 
     public CameraHandler(Context context, TextureView preview) {
         this.context = context;
-        this.chessboardCaptureMode = AdasConfig.chessboardCapture(context);
         final String priorDevice = AdasConfig.intrinsicsPriorDevice(context);
         this.ownPrior = !priorDevice.isEmpty() && priorDevice.equalsIgnoreCase(android.os.Build.MODEL);
         Log.i(TAG, "intrinsics_prior was taken on '" + priorDevice + "', this is '" + android.os.Build.MODEL
@@ -352,6 +356,25 @@ public class CameraHandler {
         return cameraDevice != null && sessionAlive;
     }
 
+    /**
+     * Switch chessboard capture on or off at runtime — the calibration button, not a config asset,
+     * is how a user reaches this mode. Restarts the camera when it is already running, because the
+     * physical-module routing and the focus policy are both decided while the session is built.
+     */
+    public void setChessboardCaptureMode(boolean on) {
+        if (chessboardCaptureMode == on) {
+            return;
+        }
+        chessboardCaptureMode = on;
+        chessFocusLocked = false;
+        chessAfSettledFrames = 0;
+        Log.i(TAG, "Chessboard capture mode " + (on ? "on" : "off")
+                + (cameraDevice != null ? " — restarting the camera" : ""));
+        if (cameraDevice != null) {
+            start();
+        }
+    }
+
     public void start() {
         startBackgroundThread();
         if (cameraDevice != null || reader != null || captureSession != null) {
@@ -377,6 +400,12 @@ public class CameraHandler {
             lensFacingFront = facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT;
             Log.i(TAG, "Camera characteristics: sensorOrientation=" + sensorOrientation
                     + " front=" + lensFacingFront);
+
+            chessPhysicalCameraId = null;
+            if (chessboardCaptureMode
+                    && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                chessPhysicalCameraId = pickMainPhysicalId(manager, cameraId, cameraCharacteristics);
+            }
 
             if (ActivityCompat.checkSelfPermission(context,
                     Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -421,6 +450,58 @@ public class CameraHandler {
         } catch (CameraAccessException e) {
             Log.w(TAG, "Error getting camera configuration.", e);
             notifyFailed("CameraAccessException: " + e.getMessage());
+        }
+    }
+
+    /**
+     * The physical module behind a logical multi-camera whose lens matches the logical one — in
+     * practice the main wide module. The board is calibrated against the module itself because the
+     * logical stream may keep stabilising (moving the principal point view to view) no matter what
+     * the capture request asks.
+     */
+    private static String pickMainPhysicalId(android.hardware.camera2.CameraManager manager,
+            String logicalId, CameraCharacteristics logical) {
+        try {
+            java.util.Set<String> ids = logical.getPhysicalCameraIds();
+            if (ids.isEmpty()) {
+                Log.i(TAG, "Camera " + logicalId + " is not a logical multi-camera — nothing to bypass");
+                return null;
+            }
+            float[] logicalFocals = logical.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+            float logicalFocal = logicalFocals != null && logicalFocals.length > 0
+                    ? logicalFocals[0] : Float.NaN;
+            Integer logicalFacing = logical.get(CameraCharacteristics.LENS_FACING);
+            String best = null;
+            double bestScore = Double.MAX_VALUE;
+            for (String id : ids) {
+                CameraCharacteristics c = manager.getCameraCharacteristics(id);
+                Integer facing = c.get(CameraCharacteristics.LENS_FACING);
+                if (logicalFacing != null && facing != null && !facing.equals(logicalFacing)) {
+                    continue;
+                }
+                float[] focals = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+                android.util.SizeF sensor = c.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+                double focal = focals != null && focals.length > 0 ? focals[0] : Double.NaN;
+                double area = sensor == null ? 0.0 : sensor.getWidth() * sensor.getHeight();
+                // Closest focal length to the logical camera's own; the largest sensor breaks ties
+                // toward the main module rather than a macro sharing the same lens.
+                double score = (Double.isNaN(logicalFocal) || Double.isNaN(focal)
+                        ? 0.0 : Math.abs(focal - logicalFocal)) * 1000.0 - area;
+                Log.i(TAG, String.format("physical camera %s: focal=%.2f mm, sensor %.1f mm²",
+                        id, focal, area));
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = id;
+                }
+            }
+            if (best != null) {
+                Log.i(TAG, "Chessboard capture: routing streams to physical camera " + best
+                        + " behind logical " + logicalId);
+            }
+            return best;
+        } catch (Throwable t) {
+            Log.w(TAG, "Physical camera enumeration failed — staying on the logical camera", t);
+            return null;
         }
     }
 
@@ -618,7 +699,12 @@ public class CameraHandler {
         try {
             List<OutputConfiguration> confs = new ArrayList<>();
             for (Surface surface : list) {
-                confs.add(new OutputConfiguration(surface));
+                OutputConfiguration conf = new OutputConfiguration(surface);
+                if (chessPhysicalCameraId != null
+                        && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    conf.setPhysicalCameraId(chessPhysicalCameraId);
+                }
+                confs.add(conf);
             }
 
             cameraDevice.createCaptureSession(
@@ -637,6 +723,15 @@ public class CameraHandler {
                                 @Override
                                 public void onConfigureFailed(CameraCaptureSession session) {
                                     sessionAlive = false;
+                                    if (chessPhysicalCameraId != null) {
+                                        // Not every device lets an app pin streams to a physical
+                                        // module; the logical route is degraded, not broken.
+                                        Log.w(TAG, "Session on physical camera " + chessPhysicalCameraId
+                                                + " refused — retrying on the logical camera");
+                                        chessPhysicalCameraId = null;
+                                        startCamera();
+                                        return;
+                                    }
                                     Log.e(TAG, "Capture session configuration failed");
                                     closeCaptureResourcesOnly();
                                     if (cameraDevice != null) {
@@ -772,15 +867,53 @@ public class CameraHandler {
         return best;
     }
 
+    /**
+     * What the HAL actually applied on the first frame — the capture request is only a wish, and a
+     * 5 px reprojection error that survives a perfect procedure is usually a wish being ignored.
+     */
+    private void logAppliedModes(TotalCaptureResult result) {
+        Integer ois = result.get(TotalCaptureResult.LENS_OPTICAL_STABILIZATION_MODE);
+        Integer eis = result.get(TotalCaptureResult.CONTROL_VIDEO_STABILIZATION_MODE);
+        Integer dc = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            dc = result.get(TotalCaptureResult.DISTORTION_CORRECTION_MODE);
+        }
+        Log.i(TAG, "HAL applied: OIS=" + ois + " EIS=" + eis + " distortion_correction=" + dc
+                + " (0 = off; null = the HAL does not report it)");
+        if (chessPhysicalCameraId != null
+                && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            try {
+                android.hardware.camera2.CaptureResult phys =
+                        result.getPhysicalCameraResults().get(chessPhysicalCameraId);
+                if (phys != null) {
+                    Log.i(TAG, "HAL applied on physical " + chessPhysicalCameraId
+                            + ": OIS=" + phys.get(android.hardware.camera2.CaptureResult.LENS_OPTICAL_STABILIZATION_MODE)
+                            + " EIS=" + phys.get(android.hardware.camera2.CaptureResult.CONTROL_VIDEO_STABILIZATION_MODE));
+                } else {
+                    Log.w(TAG, "No per-physical capture result for camera " + chessPhysicalCameraId
+                            + " — cannot confirm what the module itself applied");
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Per-physical capture result unavailable", t);
+            }
+        }
+    }
+
     private void startSession() {
         // Exposure and actual frame duration every ~5 s: if exposure falls and frame duration settles on
         // 1/fps after the metering region is set, the rate was being dropped by auto-exposure.
         CameraCaptureSession.CaptureCallback listener = new CameraCaptureSession.CaptureCallback() {
             private long lastLogNs = 0;
+            private boolean appliedModesLogged = false;
 
             public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                     TotalCaptureResult result) {
                 super.onCaptureCompleted(session, request, result);
+
+                if (!appliedModesLogged) {
+                    appliedModesLogged = true;
+                    logAppliedModes(result);
+                }
 
                 if (chessboardCaptureMode && !chessFocusLocked) {
                     Integer afState = result.get(TotalCaptureResult.CONTROL_AF_STATE);

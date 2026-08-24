@@ -263,6 +263,9 @@ public final class RuntimeParams {
             intr = new JSONObject();
             cam.put("intrinsics_prior", intr);
         }
+        // The device label travels with the numbers: a prior without its phone model would be
+        // treated as foreign on the next start and silently lose to the camera's factory value.
+        intr.put("device", intrinsicsPriorDevice);
         intr.put("fx", fx);
         intr.put("fy", fy);
         intr.put("cx", cx);

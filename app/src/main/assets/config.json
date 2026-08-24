@@ -96,7 +96,6 @@
   },
   "calibration": {
     "camera": {
-      "chessboard_capture": false,
       "frame": "iso_vehicle",
       "position_m": {
         "x_forward": 1.5,

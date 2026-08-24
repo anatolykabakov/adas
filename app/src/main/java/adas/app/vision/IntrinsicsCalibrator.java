@@ -189,20 +189,36 @@ public final class IntrinsicsCalibrator {
         }
         Mat cameraMatrix = new Mat();
         Mat distortion = new Mat();
+        Mat stdIntrinsics = new Mat();
+        Mat stdExtrinsics = new Mat();
+        Mat perViewMat = new Mat();
         List<Mat> rvecs = new ArrayList<>();
         List<Mat> tvecs = new ArrayList<>();
         int dropped = 0;
         try {
-            double rms = Calib3d.calibrateCamera(objectPoints, views, new Size(width, height),
-                    cameraMatrix, distortion, rvecs, tvecs);
+            double rms = Calib3d.calibrateCameraExtended(objectPoints, views, new Size(width, height),
+                    cameraMatrix, distortion, rvecs, tvecs, stdIntrinsics, stdExtrinsics, perViewMat);
+
+            // Median against worst separates the two failure families in one line: outliers (a few
+            // views far above the median — pruning below will help) from a systematic cause like
+            // stabilisation or focus drift (every view equally bad — pruning cannot help). The
+            // per-view numbers come from the solver itself, in the same units as its global RMS.
+            double[] perView = new double[(int) perViewMat.total()];
+            perViewMat.get(0, 0, perView);
+            double median = median(perView);
+            double worst = 0.0;
+            for (double e : perView) {
+                worst = Math.max(worst, e);
+            }
+            Log.i(TAG, String.format(Locale.US,
+                    "per-view error over %d views: median %.2f px, worst %.2f px",
+                    views.size(), median, worst));
 
             // One motion-blurred or bent-board view can carry the whole RMS. If the global fit is bad
             // and there are views to spare, drop the ones whose own error is far above the median and
             // solve once more — a rescue, not a licence: the per-view cut is against the *median*, so a
             // session that is bad everywhere still fails.
             if (rms > MAX_REPROJECTION_PX && views.size() > MIN_SOLVE_VIEWS) {
-                double[] perView = perViewErrors(objectPoints, views, rvecs, tvecs, cameraMatrix, distortion);
-                double median = median(perView);
                 double cut = Math.max(2.0 * median, MAX_REPROJECTION_PX);
                 List<Mat> keptViews = new ArrayList<>();
                 for (int i = 0; i < views.size(); i++) {
@@ -269,35 +285,11 @@ public final class IntrinsicsCalibrator {
             }
             cameraMatrix.release();
             distortion.release();
+            stdIntrinsics.release();
+            stdExtrinsics.release();
+            perViewMat.release();
             clear();
         }
-    }
-
-    /** Per-view RMS reprojection error [px], from the pose the joint solve assigned to each view. */
-    private static double[] perViewErrors(List<Mat> objectPoints, List<Mat> views,
-            List<Mat> rvecs, List<Mat> tvecs, Mat cameraMatrix, Mat distortion) {
-        final double[] errs = new double[views.size()];
-        final org.opencv.core.MatOfDouble dist = new org.opencv.core.MatOfDouble(distortion);
-        for (int i = 0; i < views.size(); i++) {
-            MatOfPoint2f projected = new MatOfPoint2f();
-            try {
-                Calib3d.projectPoints(new MatOfPoint3f(objectPoints.get(i)), rvecs.get(i), tvecs.get(i),
-                        cameraMatrix, dist, projected);
-                final Point[] p = projected.toArray();
-                final Point[] m = new MatOfPoint2f(views.get(i)).toArray();
-                double sum = 0.0;
-                for (int j = 0; j < p.length; j++) {
-                    final double dx = p[j].x - m[j].x;
-                    final double dy = p[j].y - m[j].y;
-                    sum += dx * dx + dy * dy;
-                }
-                errs[i] = Math.sqrt(sum / p.length);
-            } finally {
-                projected.release();
-            }
-        }
-        dist.release();
-        return errs;
     }
 
     private static double median(double[] values) {
