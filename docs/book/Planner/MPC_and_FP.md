@@ -5,20 +5,22 @@ Pure Pursuit picks **one** $\delta$ that hits a look-ahead point.
 
 | `lane_keep_controller` | role |
 |---|---|
-| `mpc` | VisionPilot path-MPC (best for learning cost / $\kappa$) |
 | `fp` | stock-like time-domain MPC (**road default**) |
+| `pp` | geometric baseline, and the fallback |
 
-Appendix with real-arc forensics: `docs/MPC_EXPLAINED.md`.
+This chapter teaches MPC twice: first as a **path-domain toy you can hold in your head** (the seven
+steps below — this design shipped as the `vp` / VisionPilot controller until 2026-08-21, when `fp`
+displaced it on the road and it was deleted; the code lives in git history), then as the **time-domain
+`fp`** that actually drives.
 
-The three live behind one interface, `IPlanner`, and the `Planner` service holds exactly one of them:
+The planners live behind one interface, `IPlanner`, and the `Planner` service holds exactly one of them:
 
 * pure pursuit `pp`: `lateral/pp_planner.cpp`.
-* VisionPilot `mpc`: `lateral/vp_planner.cpp` + `visionpilot_mpc.cpp` ($N{=}20$, path-domain $ds$).
 * flowpilot `fp`: `lateral/fp_planner.cpp` + `flowpilot_mpc.cpp` ($N{=}16$, time grid → 2.5 s), with a
   swappable numerical method — `kappa_solver_grad` or `kappa_solver_acados`.
 * Path fusion (lanes↔plan): `laneLinesToPath` in `utils/lane_path.cpp` / `core/path_fusion.py`.
 
-All three emit **curvature**, never an angle. That is what lets them be swapped at runtime and compared on
+All of them emit **curvature**, never an angle. That is what lets them be swapped at runtime and compared on
 the same bag: the conversion to steering happens once, downstream, in `Control`.
 
 ## State symbols
@@ -29,7 +31,7 @@ the same bag: the conversion to steering happens once, downstream, in `Control`.
 | epsi | heading error vs path tangent [rad] |
 | $\kappa$ | path curvature [1/m] |
 | $\delta$ | front wheel angle [rad] |
-| $L$ | wheelbase (~2.64–2.67 m) |
+| $L$ | wheelbase, 2.636 m (config; examples round to 2.64) |
 
 **Straight:** CTE, epsi, $\kappa\approx 0$ → **feedback** dominates.
 **Arc:** feed-forward from $\kappa$ dominates. Bad/delayed $\kappa$ → outward drift.
@@ -43,7 +45,7 @@ When planner $\kappa$ lags yaw-derived curvature, SWA undershoots and CTE grows.
 
 ---
 
-## Seven steps (VisionPilot mental model)
+## Seven steps (a path-domain MPC, as a toy)
 
 Shared toy constants for every snippet below:
 
@@ -54,7 +56,7 @@ import numpy as np
 L = 2.64          # wheelbase [m]
 N = 20            # horizon steps
 DS = 0.5          # path step [m] (~1 s preview at ~10 m/s)
-K_US = 0.0015     # understeer-ish term in VisionPilot ff
+K_US = 0.0015     # understeer-ish term in the toy ff
 FF_SCALE = 2.0
 W_DELTA = 45000.0 # pin δ to δ_ff
 W_DDELTA = 15000.0
@@ -90,7 +92,7 @@ You should recover CTE ≈ 0.3 m and $\kappa$ near 0.02. On a real bag, compare 
 
 ### 2. Predict trajectories for trial $\delta$
 
-VisionPilot rolls **along path length**, not clock time. For a candidate wheel angle $\delta$:
+The toy rolls **along path length**, not clock time. For a candidate wheel angle $\delta$:
 
 $$
 \begin{aligned}
@@ -125,7 +127,16 @@ Wrong $\delta$ lets CTE grow; geometric $\delta$ holds better. This is only the 
 
 ### 3. Score with $J$
 
-Lower is better. VisionPilot-style terms (simplified):
+```{figure} figures/mpc_cost.png
+---
+width: 75%
+---
+The cost against a trial angle: the huge δ-pin weight pulls the minimum onto the feed-forward, so descent
+barely moves the seed.
+```
+
+
+Lower is better. The terms, simplified (these are VisionPilot's, which is where the toy comes from):
 
 $$
 J = \sum_s \Big(
@@ -197,6 +208,14 @@ for kappa in (0.0, 0.01, 0.02, 0.03):
 
 Seed, then finite-difference / gradient steps on the $\delta$ sequence (C++: ~80 iters). In practice on road bags the descent barely moves the seed — **seed quality ≈ output quality**.
 
+```{admonition} The toy collapses the horizon; the real solver does not
+:class: warning
+To keep the demo readable the block below optimises **one shared $\delta$** for all $N$ nodes — a scalar
+line search, not a real MPC. It is enough to show that the descent barely leaves a good seed. The shipped
+solver moves the whole *sequence* $\delta_0\ldots\delta_{N-1}$; do not read this block as how many
+variables an MPC actually has.
+```
+
 $$
 \delta_{\mathrm{seed}} = \delta_{\mathrm{ff}} + \underbrace{k_{\mathrm{cte}}\mathrm{CTE} + k_{\mathrm{epsi}}\mathrm{epsi}}_{\text{feedback clamp ~±0.25 rad}}.
 $$
@@ -251,7 +270,7 @@ Take a command slightly ahead in the horizon (delay), then clamp:
 STEER_RATIO = 15.7
 
 def apply_limits(delta_cmd, delta_prev, v, max_slew_deg=8.0):
-    # soft VisionPilot-ish angle cap [deg]
+    # soft speed-growing angle cap [deg]
     cap = math.radians(max(8.0, min(25.0, 8.0 + v)))
     d = max(-cap, min(cap, delta_cmd))
     slew = math.radians(max_slew_deg)
@@ -266,11 +285,11 @@ print(f"wheel {math.degrees(d_out):.2f}°  SWA {math.degrees(swa):.1f}°  "
       f"(PID→torque happens in Control, CAN framing in Platform)")
 ```
 
-Saturation at ±300 cNm means the **plant** cannot follow — not that the cost wanted more. Debug flag / UI: steering-limit indication.
+Saturation at ±300 cNm means the **plant** cannot follow — not that the cost wanted more. Debug flag / UI: steering-limit indication. The whole δ → torque half of this step has its own chapter: [Angle control](../Control/AngleControl.md).
 
 ### 7. Repeat next frame
 
-New `vision/lanes` (~80–90 ms median on phone) → new CTE/epsi/$\kappa$ → back to step 1.
+New `vision/lanes` (~42 ms median on the current phone) → new CTE/epsi/$\kappa$ → back to step 1.
 MPC does **not** open-loop the whole second: only the first command is applied, then the plan is thrown away and rebuilt from the **measured** state.
 
 ```python
@@ -301,114 +320,21 @@ Only the first command is applied; the rest of the horizon is thrown away. If ev
 
 ---
 
-## Before the controller: lane / plan blending
+## Before the controller: the reference is a fusion
 
-Both `fp` and `mpc` / `pp` track a **reference polyline** on topic `vision/path`.
-That polyline is **not** raw paint and **not** raw Supercombo plan — it is a fusion in
-`laneLinesToPath` (`utils/lane_path.cpp` / Python mirror `core/path_fusion.py`).
-
-### Why fuse?
-
-| source | strength | failure mode |
-|---|---|---|
-| **Lane lines** (near L/R) | geometric center of the lane you are in | disappears, σ blows up in arcs / rain |
-| **Model plan** (`plan_x/y`) | always present, smooth | systematically **cuts inside** arcs (setpoint offset) |
-
-Upstream (comma-two) trusts paint when confident (`d_prob≈1`). We expose the mix as
-`path_lane_blend_scale` (shipped **0.6**): even with perfect lines, 40 % of the plan offset remains.
-
-### Formula (device frame, $y$ right+)
-
-1. Soft probabilities from near left/right (`lanes[1]`, `lanes[2]`), then × σ-confidence
-   (median `y_std` over 5–40 m: full weight if $\sigma\le$ `lane_std_good_m` 0.3,
-   zero if $\sigma\ge$ `lane_std_bad_m` 1.5).
-2. Require both lines and median width $\in[2.6, 4.6]$ m → **anchored**.
-3. Lane mid at each $x$:
-
-$$
-y_{\mathrm{lane}} = \frac{p_L(y_L + w/2) + p_R(y_R - w/2)}{p_L + p_R},\quad
-w=\mathrm{clip}(|y_L-y_R|).
-$$
-
-4. Blend weight (flowpilot-style OR of probs, then scale):
-
-$$
-d_{\mathrm{prob}} = (p_L + p_R - p_L p_R)\cdot\texttt{path\_lane\_blend\_scale}.
-$$
-
-5. Fuse onto plan points:
-
-$$
-y = d_{\mathrm{prob}}\, y_{\mathrm{lane}} + (1 - d_{\mathrm{prob}})\, y_{\mathrm{plan}}.
-$$
-
-If not anchored or `blend_scale=0` → **plan only**.
-
-```python
-import numpy as np
-
-def soft_prob(p, min_p=0.3):
-    if p < min_p:
-        return 0.0
-    return min(1.0, (p - min_p) / max(1e-3, 1.0 - min_p))
-
-def std_conf(median_std, good=0.3, bad=1.5):
-    if median_std < 0:
-        return 1.0
-    if median_std <= good:
-        return 1.0
-    if median_std >= bad:
-        return 0.0
-    return (bad - median_std) / (bad - good)
-
-def blend_reference(x, y_plan, y_L, y_R, p_L, p_R,
-                    std_L=0.2, std_R=0.2, blend_scale=0.6,
-                    w_min=2.6, w_max=4.6):
-    """Return fused y(x). All arrays same length; device y right+."""
-    p_L = soft_prob(p_L) * std_conf(std_L)
-    p_R = soft_prob(p_R) * std_conf(std_R)
-    sel = (x >= 5.0) & (x <= 40.0)
-    w_med = float(np.mean(np.abs(y_R[sel] - y_L[sel]))) if sel.any() else 0.0
-    anchored = (w_min < w_med < w_max) and p_L > 0 and p_R > 0
-    d_prob = (p_L + p_R - p_L * p_R) * blend_scale if anchored else 0.0
-
-    w = np.clip(np.abs(y_L - y_R), w_min, w_max)
-    y_lane = (p_L * (y_L + 0.5 * w) + p_R * (y_R - 0.5 * w)) / (p_L + p_R + 1e-6)
-    y = d_prob * y_lane + (1.0 - d_prob) * y_plan
-    return y, d_prob, anchored
-
-# Toy: plan cuts 40 cm inside; paint is centered
-x = np.linspace(0, 40, 21)
-y_plan = -0.40 * (x / 40.0)          # drifts to −0.4 m at 40 m
-y_L = -1.75 * np.ones_like(x)
-y_R = +1.75 * np.ones_like(x)
-
-for scale in (0.0, 0.6, 1.0):
-    y, d, ok = blend_reference(x, y_plan, y_L, y_R, 0.95, 0.95, blend_scale=scale)
-    print(f"blend={scale:.1f} anchored={ok} d_prob={d:.2f}  "
-          f"y(0)={y[0]:+.3f}  y(40)={y[-1]:+.3f}")
-```
-
-Expect: `blend=0` follows the cutting plan; `blend=1` sits on lane mid ($≈0$);
-`blend=0.6` is in between — shipped phone default.
-
-```{admonition} Knobs
-:class: tip
-`path_lane_blend_scale`, `lane_std_good_m` / `lane_std_bad_m`, `path_camera_offset_m`
-(constant shift after fusion). Raising blend toward 1.0 helps arcs **only if** σ stays in the
-"good" band — otherwise $d_{\mathrm{prob}}\to 0$ and you silently ride the plan again.
-```
-
----
+Both `fp` and `pp` track the polyline on `vision/path`, and that polyline is **not** raw paint or raw
+model plan — it is the σ-weighted fusion of both, built in `laneLinesToPath`. That fusion, the two
+failure modes it survives, and why it is where half the arc offset lives, is its own chapter:
+[Lane path](./LanePath.md). This chapter assumes the reference already exists.
 
 ## `fp` model (flowpilot time-domain MPC)
 
 Road default (`lane_keep_controller=fp`). Code: `lateral/fp_planner.cpp` and `lateral/flowpilot_mpc.cpp`,
 selected by `Planner` through `makeKappaSolver`.
 
-Opposite of VisionPilot's **path-domain** $\delta$-MPC:
+Opposite of the path-domain $\delta$-MPC above:
 
-| | VisionPilot `mpc` | flowpilot `fp` |
+| | path-domain toy (above) | flowpilot `fp` |
 |---|---|---|
 | decision variable | wheel angle $\delta$ along $s$ | yaw-rate rate $u=\dot r$ in **time** |
 | horizon | $N{=}20$, $ds\sim 0.5$ m | $N{=}16$, $t_i=10(i/32)^2$ → **$T_f=2.5$ s** |
@@ -487,7 +413,7 @@ def forward_fp(u, v, r0=0.0, R_rot=1.32):
 
 ### fp-3. Cost
 
-With $v_{\mathrm{off}}=v+\texttt{speed\_offset}$ (default +10):
+With $v_{\mathrm{off}}=v+\mathrm{speed\_offset}$ (default +10):
 
 $$
 J = \sum_i \Big(
@@ -530,7 +456,7 @@ $u{=}0.01$ cuts path cost and ends near the 0.25 m ref; full $J$ still rises fro
 ### fp-4. Solve
 
 Warm-start previous $u$; ~50 FD-GD iterations with line search (`gd_step=0.1`).
-Same spirit as VisionPilot: good warm start matters; horizon is short.
+Same spirit as the toy above: good warm start matters; horizon is short.
 
 ### fp-5. Lag-adjusted curvature (the delay trick)
 
@@ -542,7 +468,7 @@ $$
 \kappa^\star = 2\kappa_{\mathrm{avg}} - \kappa_0,
 $$
 
-with $t_d=\texttt{fp\_steer\_delay\_s}$ (shipped **0.35** s), then rate-limit $\kappa^\star$ by
+with $t_d=\mathrm{fp\_steer\_delay\_s}$ (shipped **0.35** s), then rate-limit $\kappa^\star$ by
 `max_lateral_jerk / v²`. This is the port of openpilot `get_lag_adjusted_curvature`:
 command the curvature you need **when the rack will actually move**.
 
@@ -572,12 +498,12 @@ print("steady turn κ*:", round(lag_adjusted_kappa(psi, r, v=15.0), 5))
 ```
 
 Sign: device $y$ right+; service publishes `steer_rad = -steerFromCurvature(...)`.
-Details of understeer scaling: [Vehicle model](./VehicleModel.md).
+Details of understeer scaling: [Vehicle model](../Control/VehicleModel.md).
 
 ### fp-7. Next vision frame
 
 Re-solve with measured `frame_dt` (not fixed 0.05). Angle-PID on the phone runs off
-`vehicle/state` (~100 Hz after CAN RX 10 ms); planner rate stays vision-limited (~12.5 Hz).
+`vehicle/state` (~100 Hz after CAN RX 10 ms); planner rate stays vision-limited (~24 Hz).
 
 ---
 
@@ -601,6 +527,14 @@ for i in (0, 1, 2, 3, 4, 6, 8, 12, 16):
     # How far sideways can the car physically move by then, at a generous 3 m/s^2 of lateral accel?
     reach = 0.5 * 3.0 * t * t
     print(f"{i:>5} {t:>7.3f} {d:>12.2f} {reach:>17.3f}")
+```
+
+```{figure} figures/mpc_timegrid.png
+---
+width: 80%
+---
+The quadratic time grid samples the near field densely, but in the first few nodes the car physically
+cannot move sideways — so a steady offset there is nearly free in the cost.
 ```
 
 Read the reach column. Over the first four nodes the car cannot move sideways by more than a few
@@ -675,24 +609,53 @@ sweeping weights.
 2. `fp_steering_rate_weight` — smoothness of $u$.
 3. Measured `frame_dt` from stamps.
 
-**`mpc` (VisionPilot)**
-
-`ff_scale`, `epsi_gain`, `cte_gain_*`, `mpc_kappa_yaw_blend`.
-
 ## Fair comparison
 
 One bag window, vision $\gtrsim 9$ Hz: |CTE| med/p95, |$\Delta$SWA|, straight vs arc separately.
 Tool: `bag/bag_config_sweep.py --vision-latency ...` (also sweeps `--blend`).
 
+## Close the loop in a simulator
+
+Everything in this part can be driven closed-loop in MetaDrive before any car is involved (host build +
+install: [Setup](../Appendix/Setup.md)):
+
+```bash
+cd scripts
+python3 -m sim.eval --track highway --controllers fp,pure_pursuit --seeds 7
+python3 -m sim.eval --list-tracks
+```
+
+`highway` is built from the working region of `docs/CONTROLLER_LIMITS.md` (radii 250–700 m);
+`serpentine` is deliberately outside it. The harness accepts anything that implements one call — your
+own controller included:
+
+```python
+# not-runnable — the sketch of the adapter; MetaDrive and the harness live outside the book build
+class MyPurePursuit:
+    """Duck-typed like core/lane_keep.py results: steer_norm in [-1, 1]."""
+    def __init__(self, wheelbase=2.636, ld=8.0):
+        self.L, self.ld = wheelbase, ld
+
+    def step(self, path_xy, v_mps, max_steer_rad):
+        delta, _ = pure_pursuit(path_xy, 0.0, 0.0, 0.0, self.ld, 0)   # ego frame: x,y,psi = 0
+        return max(-1.0, min(1.0, delta / max_steer_rad))
+```
+
+Two things change silently: the path arrives in the **ego frame** every tick, and the output is
+**normalised steering** — the harness owns the actuator limits, exactly as `Control` owns them on the
+phone. And remember what the simulator flatters: perception is perfect — no σ, no dropouts, no 42 ms of
+latency. A controller that wins here and loses on a bag is the expected order of events
+(`docs/SIM_CONTROLLER_TEST.md`).
+
 ## Exercise
 
-1. VisionPilot steps 2–3: which $\delta$ wins on the arc? Zero the $\delta$-pin weight — does the winner move?
+1. Toy MPC steps 2–3: which $\delta$ wins on the arc? Zero the $\delta$-pin weight — does the winner move?
 2. Blending snippet: at `y(40)`, how much of the −0.4 m plan cut remains at `blend=0.6`?
 3. Drop lane $\sigma$ to 1.6 m in the blend toy — what is $d_{\mathrm{prob}}$?
 4. fp: change `delay_s` from 0.1 to 0.35 on a rising-$r$ trajectory; how does $\kappa^\star$ move?
-5. Bag: `pp` vs `fp` vs `mpc`; disable VM once on an arc; sweep blend 0.3 / 0.6 / 1.0.
+5. Bag: `pp` vs `fp`; disable VM once on an arc; sweep blend 0.3 / 0.6 / 1.0.
 
 <!-- next-chapter -->
 ---
 
-**Next:** [FCW / AEB / LDW](../Safety/Warnings.md)
+**Next:** [Vehicle model (understeer)](../Control/VehicleModel.md)

@@ -196,6 +196,14 @@ for i in range(80):  # 4 s
 print(f"after 4 s: y={y:.3f} m (should be near 0), yaw={math.degrees(th):.1f} deg")
 ```
 
+```{figure} figures/pp_tradeoff.png
+---
+width: 85%
+---
+|CTE| along a 60 m arc for three look-aheads: the long one is smooth on the straight but settles metres
+inside the bend.
+```
+
 ## Where one point stops being enough
 
 Pure Pursuit reduces the whole path to a single point. That is its charm and its ceiling, and the ceiling
@@ -255,7 +263,7 @@ will cut it. There is no look-ahead that reads both, because there is only one n
 This is the argument for a horizon, and it is a different argument from the understeer one. Understeer is
 a *modelling* error you can correct with a better model of the same one-step law. This is an
 *information* limit of the law itself. [MPC](./MPC_and_FP.md) answers it by optimising over many points at
-once; the [vehicle model](./VehicleModel.md) chapter answers the other one first, because a horizon built
+once; the [vehicle model](../Control/VehicleModel.md) chapter answers the other one first, because a horizon built
 on wrong kinematics just makes a confident wrong plan.
 
 ```{admonition} Why Pure Pursuit is still in the tree
@@ -266,6 +274,106 @@ you whether the problem is in the controller or upstream of it. In offline repla
 better than `fp` at every degradation level tried — while on the road the opposite is true, which is a
 finding about the replay, not about the controllers.
 ```
+
+## Measure the trade-off yourself
+
+The toy loop above used the x-axis. From here the road is a **polyline** — the same shape `vision/path`
+has on the phone — and the controller may only look points up, exactly like the real one:
+
+```python
+import math
+import numpy as np
+
+DT, L, V = 0.05, 2.636, 10.0
+MAX_STEER = math.radians(25.0)
+
+def sine_path(a=1.75, lam=120.0, length=400.0):
+    x = np.arange(0.0, length, 0.5)
+    return np.stack([x, a * np.sin(2 * np.pi * x / lam)], axis=1)
+
+def arc_path(radius=60.0, length=180.0):
+    """Straight 40 m, then a constant left arc — the corner-cut detector."""
+    s = np.arange(0.0, length, 0.5)
+    pts = []
+    for si in s:
+        if si < 40.0:
+            pts.append((si, 0.0))
+        else:
+            t = (si - 40.0) / radius
+            pts.append((40.0 + radius * math.sin(t), radius * (1 - math.cos(t))))
+    return np.array(pts)
+```
+
+```python
+def pure_pursuit(path, x, y, psi, ld, near_idx):
+    """Return (delta, updated near_idx). Walks forward only, like the real tracker."""
+    d = np.hypot(path[near_idx:, 0] - x, path[near_idx:, 1] - y)
+    near_idx += int(np.argmin(d[: max(1, int(4 * ld))]))
+    target = None
+    for i in range(near_idx, len(path)):
+        if math.hypot(path[i, 0] - x, path[i, 1] - y) >= ld:
+            target = path[i]
+            break
+    if target is None:
+        return 0.0, near_idx
+    alpha = math.atan2(target[1] - y, target[0] - x) - psi
+    delta = math.atan2(2.0 * L * math.sin(alpha), ld)
+    return float(np.clip(delta, -MAX_STEER, MAX_STEER)), near_idx
+
+def drive(path, ld, t_end=45.0):
+    """Return |CTE| samples and mean per-tick steering change [deg]."""
+    x, y, psi = path[0, 0], path[0, 1] + 1.0, 0.0
+    near, prev_delta = 0, 0.0
+    ctes, dsteps = [], []
+    for _ in range(int(t_end / DT)):
+        delta, near = pure_pursuit(path, x, y, psi, ld, near)
+        x += V * math.cos(psi) * DT
+        y += V * math.sin(psi) * DT
+        psi += V * math.tan(delta) / L * DT
+        d = np.hypot(path[:, 0] - x, path[:, 1] - y)
+        ctes.append(float(d.min()))
+        dsteps.append(abs(math.degrees(delta - prev_delta)))
+        prev_delta = delta
+        if near >= len(path) - 3:
+            break
+    return np.array(ctes), float(np.mean(dsteps))
+```
+
+Now sweep the one parameter this controller has:
+
+```python
+sine, arc = sine_path(), arc_path()
+print(f"{'Ld':>4} | sine |CTE| p95 | arc settled | steer jitter °/tick")
+results = {}
+for ld in (3.0, 8.0, 20.0):
+    c_sine, jit = drive(sine, ld)
+    c_arc, _ = drive(arc, ld)
+    sine_p95 = np.percentile(c_sine[len(c_sine) // 3:], 95)
+    arc_settled = np.percentile(c_arc[3 * len(c_arc) // 4:], 95)
+    results[ld] = (sine_p95, arc_settled, jit)
+    print(f"{ld:4.0f} | {sine_p95:13.3f} | {arc_settled:11.3f} | {jit:.3f}")
+```
+
+Read the three columns against each other. The undamped wobble of the previous chapter is gone at
+**every** look-ahead — but two new facts appear. A short look-ahead saws at the wheel (five times the
+per-tick steering change of a long one). A long one does not just smooth the command, it **settles
+metres inside the bend**: chasing a point 20 m ahead on a 60 m arc means steering the chord, and the
+chord runs inside. And even at the friendly $L_d$ the sine carries a persistent ~0.24 m of chord lag —
+Pure Pursuit never quite drives the curve it is given.
+
+```python
+assert all(r[0] < 0.40 for r in results.values()), \
+    "acceptance: bounded error at every Ld, no per-road gains — the oscillation is gone"
+assert results[20.0][1] > 10.0 * results[3.0][1], \
+    "acceptance: the long look-ahead must settle an order of magnitude deeper inside the arc"
+assert results[3.0][2] > 4.0 * results[20.0][2], "acceptance: short Ld must be the jitteriest"
+print(f"acceptance passed: arc offset {results[3.0][1]:.2f} → {results[20.0][1]:.2f} m "
+      f"as Ld goes 3 → 20; jitter moves the other way")
+```
+
+One point cannot represent a path whose curvature changes *inside* the look-ahead — the numbers above
+are that sentence, measured. The speed-scaled $L_d$ moves the compromise around; it cannot remove it.
+Reading the whole path instead of one point is what [an MPC does](./MPC_and_FP.md).
 
 ## Integration
 
@@ -292,10 +400,14 @@ vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID �
 3. Bag sweep: `bag/bag_config_sweep.py` Pareto |CTE| vs |$\Delta$SWA|.
 4. In the look-ahead sweep above, find the distance that minimises the spread across the three paths.
    Then explain why that distance is the *worst* choice rather than the best one.
-5. Add the understeer correction from the [vehicle model](./VehicleModel.md) to `pp_delta` and re-run the
+5. Add the understeer correction from the [vehicle model](../Control/VehicleModel.md) to `pp_delta` and re-run the
    sweep at 22 m/s. Does it change the information limit, or only the magnitudes?
+
+Every controller so far has *assumed a path*. But the two lane lines are noisy and the model plan cuts
+arcs — so where does the single polyline they track come from? That is the next chapter, and it is where
+half the measured arc offset is decided.
 
 <!-- next-chapter -->
 ---
 
-**Next:** [Vehicle model (understeer)](./VehicleModel.md)
+**Next:** [Lane path](./LanePath.md)

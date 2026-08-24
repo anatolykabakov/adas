@@ -1,19 +1,32 @@
-# Control — how the four chapters build on each other
+# The lateral loop — planner, control, platform
 
 **Longitudinal** control sets speed, **lateral** control sets steering. This course is about lateral
 control: on an MQB Golf without radar, longitudinal stays stock cruise and our HCA path is a supervised
-lateral actuator (`docs/CRUISE_BUTTONS.md` has the longitudinal story and why it is
-so limited).
+lateral actuator (the longitudinal story — stock cruise buttons only — lives in git history;
+`docs/CONTROLLER_LIMITS.md` has the curvature-ahead speed cap that remains).
 
-The four chapters that follow are not four alternatives to choose between. Each one exists because the
-previous one fails at something measurable, and the failure is the interesting part.
+The native code splits the lateral loop into three services, on purpose, and the book's parts follow
+that split: **Planner** decides *what shape to drive* (a curvature plan), **Control** decides *what
+command produces it* (a torque), **Platform** puts that command on the bus and is the only place that
+knows the car is a Volkswagen. This part is the Planner; the two that follow are Control and
+[Platform](../Platform/Overview.md).
 
-| chapter | the idea | where it breaks |
-|---|---|---|
-| [Bicycle model](./BicycleModel.md) | $\kappa = \tan\delta / L$ — pure geometry | assumes the tyres go exactly where they point. Measured on this car, the real curvature is **0.54** of the geometric one at 22 m/s |
-| [Pure Pursuit](./PurePursuit.md) | steer at one look-ahead point | one point cannot represent a path whose curvature changes inside the look-ahead, and the look-ahead distance becomes a tuning parameter with no right value |
-| [Vehicle model and delay](./VehicleModel.md) | add tyre slip and actuation delay | the slip coefficient is not a constant — it varies with speed, 0.97 at 6–9 m/s down to 0.54 at 21–26 |
-| [MPC and fp](./MPC_and_FP.md) | optimise a short future trajectory | the horizon costs money, the plan it optimises has its own bias, and on tight arcs the actuator saturates so feedback stops existing |
+Longitudinal control is out of scope: on an MQB Golf without radar it stays stock cruise, and our HCA
+path is a supervised lateral actuator (the stock-cruise-button story lives in git history;
+`docs/CONTROLLER_LIMITS.md` has the curvature-ahead speed cap that remains).
+
+The chapters build on each other — each exists because the previous one fails at something measurable,
+and the failure is the interesting part:
+
+| chapter | part | the idea | where it breaks |
+|---|---|---|---|
+| [Bicycle model](./BicycleModel.md) | Planner | $\kappa = \tan\delta / L$ — pure geometry | the tyres do not go exactly where they point: real curvature is **0.54** of geometric at 22 m/s |
+| [Pure Pursuit](./PurePursuit.md) | Planner | steer at one look-ahead point | one point cannot represent a path whose curvature changes inside the look-ahead |
+| [Lane path](./LanePath.md) | Planner | fuse two lane lines and the model plan into one reference | lines lie when they vanish; the plan cuts arcs; σ decides which you get |
+| [MPC and fp](./MPC_and_FP.md) | Planner | optimise a short future trajectory | the horizon costs money, the plan has a bias, and on tight arcs the actuator saturates |
+| [Vehicle model](../Control/VehicleModel.md) | Control | κ → δ through tyre slip and delay | the slip coefficient varies with speed, 0.97 → 0.54 |
+| [Angle control](../Control/AngleControl.md) | Control | δ → torque against the rack | friction eats P, the panda rate limiter winds the integrator, feedforward is single-digit cNm |
+| [Platform](../Platform/Overview.md) | Platform | torque → a legal HCA_01, if the panda allows | counter, checksum secret, safety mode, ignition debounce |
 
 ## What goes in, what comes out
 
@@ -24,10 +37,13 @@ normalised torque for `HCA_01` → EPS.
 | `vehicle.lane_keep_controller` | role in the course |
 |---|---|
 | `pp` | geometric baseline — closest to the classical Pure Pursuit |
-| `mpc` | path-domain MPC — best for reading the cost and $\kappa$ stories |
 | `fp` | **default on road** — time domain, delay compensation, vehicle model |
 
-## Why one number is worth carrying through all four chapters
+A third, path-domain MPC (`vp`, VisionPilot) was the middle step between the two and was deleted on
+2026-08-21 once `fp` had displaced it on the road; [MPC and fp](./MPC_and_FP.md) still builds its
+seven-step mental model, because it is the clearest way to learn what any MPC does.
+
+## Why one number is worth carrying through the whole loop
 
 Everything in this part can be checked against a single measured quantity: the ratio of the curvature the
 car actually achieves to the curvature the geometry predicts. Steady arcs on this car give
@@ -37,6 +53,13 @@ car actually achieves to the curvature the geometry predicts. Steady arcs on thi
 | 6–9 m/s | 0.97 | 0.96 |
 | 12–15 m/s | 0.80 | 0.87 |
 | 21–26 m/s | 0.54 | 0.69 |
+
+```{figure} figures/understeer_bars.png
+---
+width: 75%
+---
+Curvature achieved vs commanded, by speed — measured below even the textbook expectation at every bin.
+```
 
 Read the first row and the bicycle model is excellent. Read the last and it over-commands by a factor of
 two. That single table is the reason the remaining three chapters exist, and the reason a constant
@@ -74,7 +97,7 @@ for v, ratio in MEASURED.items():
 
 Run it: at 7.5 m/s the geometric command lands within a few percent, and at 23.5 m/s it delivers barely
 half the curvature asked for. On a 200 m arc that shortfall is what pushes the car to the outside of the
-turn — the exact symptom the [Vehicle model](./VehicleModel.md) chapter sets out to fix.
+turn — the exact symptom the [Vehicle model](../Control/VehicleModel.md) chapter sets out to fix.
 
 ## And what the compensation costs
 
@@ -123,9 +146,11 @@ perception work begins.
 
 1. [Bicycle model](./BicycleModel.md) — $\delta$, the instantaneous centre of rotation, $\kappa = \tan\delta/L$.
 2. [Pure Pursuit](./PurePursuit.md) — the one-step geometric law, and what the look-ahead hides.
-3. [Vehicle model and delay](./VehicleModel.md) — why kinematics lies above 15 m/s, and what 89 ms of
-   actuation delay does at 22 m/s.
+3. [Lane path](./LanePath.md) — where the reference the controllers track actually comes from.
 4. [MPC and fp](./MPC_and_FP.md) — horizon optimisation, cost weights, and the road defaults.
+
+Then the **Control** part turns that plan into torque: [Vehicle model](../Control/VehicleModel.md)
+(why kinematics lies above 15 m/s) and [Angle control](../Control/AngleControl.md) (the inner PID).
 
 ```{tip}
 The one diagnostic rule worth memorising: **bad vision rate or bad calibration is not a reason to raise

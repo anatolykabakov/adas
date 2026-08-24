@@ -12,6 +12,54 @@ adas_logs/<session>/
 
 `/` в имени топика → `__` на диске.
 
+## Стройка: формат в сорок строк
+
+Бег — это каталоги топиков с записями, у каждой впереди длина. Это вся идея; остальное — protobuf.
+Напишите игрушечную версию, чтобы в настоящей не осталось загадок:
+
+```python
+import json
+import struct
+import tempfile
+from pathlib import Path
+
+def topic_dir(root, topic):
+    return Path(root) / topic.replace("/", "__")     # '/' would nest; '__' keeps one level
+
+def write_bag(root, topic, records):
+    d = topic_dir(root, topic)
+    d.mkdir(parents=True, exist_ok=True)
+    with open(d / "000.bin", "wb") as f:
+        for r in records:
+            blob = json.dumps(r).encode()
+            f.write(struct.pack("<I", len(blob)))    # length prefix: records survive a truncated tail
+            f.write(blob)
+
+def read_bag(root, topic):
+    out = []
+    for part in sorted(topic_dir(root, topic).glob("*.bin")):
+        data = part.read_bytes()
+        i = 0
+        while i + 4 <= len(data):
+            (n,) = struct.unpack_from("<I", data, i)
+            if i + 4 + n > len(data):
+                break                                # the app was killed mid-record; keep what is whole
+            out.append(json.loads(data[i + 4 : i + 4 + n]))
+            i += 4 + n
+    return out
+
+root = tempfile.mkdtemp()
+recs = [{"ts": 1000 + 42 * k, "y_l": -1.7, "y_r": 1.8} for k in range(100)]
+write_bag(root, "vision/lanes", recs)
+back = read_bag(root, "vision/lanes")
+print(f"wrote 100, read {len(back)}, first ts {back[0]['ts']}, dir {topic_dir(root, 'vision/lanes').name}")
+assert back == recs, "acceptance: a bag must survive the round trip byte-exactly"
+```
+
+Настоящий формат отличается двумя вещами: записи — protobuf `ZMQMessage` (ровно те байты, что пересекли
+мост, — логгирование это *отвод*, а не перекодировка), и файлы ротируются по размеру. Пишет
+`Logger.java`, читает `scripts/vis/bag_io.py`; правило `'/'→'__'` выше взято оттуда дословно.
+
 ## Команды
 
 ```bash
@@ -142,6 +190,54 @@ print("flat across bands -> a constant to calibrate; sloping -> something physic
 выравниванием. Говорите, сколько выжило. «Масштаб 1.012» по восьми отсчётам и по 798 — это разные
 утверждения, и первое здесь уже однажды оказывалось неверным.
 ```
+
+## Запишите собственный бег и прогоните по нему собственный код
+
+Для первого бега машина не нужна: лучше всего телефон на лобовом пассажиром, годится и прогулка вдоль
+дороги с окрашенными краями. Соберите (`./scripts/build_project.sh`), поставьте, включите логгирование
+из UI, подвигайтесь 3–5 минут, заберите сессию (`./scripts/pull_bags.sh`), откройте в визуализаторе.
+Чего в вашем беге не может быть — `vehicle/state`, `can/rx`, момента — это достоинство: всё, что
+контроллер на нём выдаёт, непроверяемо, так что ошибаться можно сколько угодно, бесплатно.
+
+Затем скормите его коду, который вы построили в [Зрении](../Vision/Overview.md) и
+[Pure Pursuit](../Planner/PurePursuit.md):
+
+```python
+# not-runnable — needs your session directory and generated protobufs
+from pathlib import Path
+import numpy as np
+from vis.bag_io import load_topic_messages
+
+session = Path("../adas_logs/<your-session>")
+lanes = load_topic_messages(session, "vision/lanes")
+print(len(lanes), "lane frames")
+
+for ts, msg, _raw in lanes[:3]:
+    left, right = msg.lanes[1], msg.lanes[2]      # near-left and near-right host lines
+    print(ts, len(left.points), "pts  prob", round(left.prob, 2), round(right.prob, 2))
+```
+
+```python
+# not-runnable — sketch of the analysis loop
+deltas, gaps, sigmas = [], [], []
+for ts, msg, _ in lanes:
+    left, right = msg.lanes[1], msg.lanes[2]
+    if left.prob < 0.5 or right.prob < 0.5:
+        gaps.append(ts)                             # the frames your toy never had
+        continue
+    path = fuse_from_proto(left, right)             # your step-3 code, adapted to proto points
+    delta, _ = pure_pursuit(path, 0.0, 0.0, 0.0, 8.0, 0)
+    deltas.append(delta)
+    sigmas.append((median_std(left), median_std(right)))
+
+print("frames:", len(lanes), " usable:", len(deltas), " dropped:", len(gaps))
+print("|delta| p95 [deg]:", np.degrees(np.percentile(np.abs(deltas), 95)))
+```
+
+Ждите форму, если не числа: σ ничем не похожа на синтетические 5 см (медианы 0.37/0.51 м на заездах
+проекта, обе линии уверены одновременно в ~22 % кадров); целые нефлагуемые отрезки без обеих линий;
+шаг кадров 42 мс с дрожанием. Запишите три худших момента — пропуск, вспышку σ, скачок шага кадров, по
+метке времени и предложению на каждый. Эти три метки — ваш личный тестовый набор с этого дня.
 
 ## Шаблон отчёта
 

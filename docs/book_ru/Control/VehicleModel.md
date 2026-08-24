@@ -28,6 +28,15 @@ $$
 
 ## Простая формула недокрута
 
+```{figure} figures/understeer_command.png
+---
+width: 75%
+---
+Чтобы держать тот же радиус, модель командует больший угол с ростом скорости — и сильнее при меньшем
+факторе жёсткости.
+```
+
+
 Однопараметрическая модель, используемая в стеках вроде openpilot (и наш `tire_stiffness_factor`), выглядит так:
 
 $$
@@ -51,11 +60,120 @@ $$
 Модель машины **масштабирует команду вверх**, чтобы умственный велосипед совпал с настоящим Golf.
 ```
 
+## Сначала прочувствуйте оба дефекта на игрушке
+
+Прежде чем измерять настоящую машину, испортите игрушечный объект теми двумя дефектами, о которых эта
+глава: колёса больше не едут туда, куда смотрят, а команды приходят через 0.35 с. Три опорные точки
+$G(v)$ — измерение этой машины (таблица ниже); задержка — `fp_steer_delay_s`:
+
+```python
+import math
+from collections import deque
+import numpy as np
+
+DT, L = 0.05, 2.636
+MAX_STEER = math.radians(25.0)
+
+def G_of_v(v):
+    """Achieved / kinematic curvature, measured on the Golf at 8, 13.5, 23.5 m/s."""
+    return float(np.interp(v, [8.0, 13.5, 23.5], [0.97, 0.80, 0.54]))
+
+def make_plant(v, delay_s=0.0):
+    """Returns step(delta_cmd) -> (x, y, psi). The queue is the delay."""
+    state = {"x": 0.0, "y": 0.0, "psi": 0.0}
+    q = deque([0.0] * max(0, round(delay_s / DT)))
+    def step(delta_cmd):
+        q.append(float(np.clip(delta_cmd, -MAX_STEER, MAX_STEER)))
+        delta = q.popleft()
+        state["x"] += v * math.cos(state["psi"]) * DT
+        state["y"] += v * math.sin(state["psi"]) * DT
+        state["psi"] += v * G_of_v(v) * math.tan(delta) / L * DT
+        return state["x"], state["y"], state["psi"]
+    return step, q
+```
+
+**Дефект 1 — дуга, которая убегает.** Подайте упреждение на дугу R = 210 м на 23.5 м/с ровно так, как
+велит велосипедная модель, и смотрите:
+
+```python
+KAPPA = 1.0 / 210.0
+V = 23.5
+
+def drift_on_arc(compensate, t_end=5.0):
+    """Signed offset from the arc after t_end seconds (positive = outside)."""
+    step, _ = make_plant(V)
+    delta = math.atan(L * KAPPA / (G_of_v(V) if compensate else 1.0))
+    for _ in range(int(t_end / DT)):
+        x, y, psi = step(delta)
+    return math.hypot(x, y - 1.0 / KAPPA) - 1.0 / KAPPA
+
+raw = drift_on_arc(False)
+fixed = drift_on_arc(True)
+print(f"kinematic feed-forward: {raw:+.1f} m outside the arc after 5 s")
+print(f"divided by G(v):        {fixed:+.2f} m   (open loop — the residue is Euler drift)")
+assert raw > 5.0, "uncompensated understeer must leave the arc by metres"
+assert abs(fixed) < 0.5, "acceptance: dividing the curvature by G(v) holds the arc"
+```
+
+Одно деление чинит всё — *если вы знаете $G$*. Остаток главы — про то, как его знать: из физической
+модели, а не по таблице, потому что таблица с сухого асфальта неверна на мокром.
+
+**Дефект 2 — задержка, превращающая хороший регулятор в осциллятор.** Прямая дорога, регулятор
+«курс + смещение», державший 7 см на синусоиде, — и 0.35 с задержки:
+
+```python
+def drive_straight(delay_s, predict, kp=2.0, t_end=12.0, v=23.5):
+    """Straight road, start 1 m off centre; returns (settled |CTE| p95, worst |CTE|)."""
+    sx, sy, spsi = 0.0, 1.0, 0.0
+    queue = deque([0.0] * max(0, round(delay_s / DT)))
+    ctes = []
+    for _ in range(int(t_end / DT)):
+        ex, ey, epsi = sx, sy, spsi
+        if predict:
+            # dead-reckon through every command still in flight
+            for d in queue:
+                ex += v * math.cos(epsi) * DT
+                ey += v * math.sin(epsi) * DT
+                epsi += v * G_of_v(v) * math.tan(d) / L * DT
+        delta_cmd = float(np.clip(-epsi - math.atan2(kp * ey, v), -MAX_STEER, MAX_STEER))
+        queue.append(delta_cmd)
+        d = queue.popleft()
+        sx += v * math.cos(spsi) * DT
+        sy += v * math.sin(spsi) * DT
+        spsi += v * G_of_v(v) * math.tan(d) / L * DT
+        ctes.append(abs(sy))
+    ctes = np.array(ctes)
+    return float(np.percentile(ctes[len(ctes) // 2:], 95)), float(ctes.max())
+
+p95_no_delay, _ = drive_straight(0.0, predict=False)
+p95_delayed, worst = drive_straight(0.35, predict=False)
+p95_predicted, _ = drive_straight(0.35, predict=True)
+print(f"no delay:            settled p95 {p95_no_delay:.3f} m")
+print(f"0.35 s delay:        settled p95 {p95_delayed:.3f} m, worst {worst:.2f} m")
+print(f"delay + prediction:  settled p95 {p95_predicted:.3f} m")
+assert p95_no_delay < 0.05
+assert p95_delayed > 1.0, "the same gains with 0.35 s of delay must oscillate out of the lane"
+assert p95_predicted < 0.05, "acceptance: predicting through the in-flight commands restores the loop"
+```
+
+```{figure} figures/slip_delay.png
+---
+width: 95%
+---
+Слева: нескомпенсированный недокрут выносит из дуги; деление кривизны на G(v) держит её. Справа: 0.35 с
+задержки раскачивают контур, а досчёт сквозь команды в полёте его возвращает.
+```
+
+Лекарство — не меньший коэффициент (попробуйте: раскачка уменьшится, и отклик умрёт с ней). Лекарство —
+**управлять тем состоянием, которое команда встретит, а не тем, которое вы измерили**: досчитать через
+каждую команду в полёте и только потом решать. Боевой `lagAdjustedCurvature` — ровно этот цикл в
+пространстве кривизны ([MPC и fp](../Planner/MPC_and_FP.md), *fp-5*).
+
 ## Рецепт измерения (по бегу)
 
 На кадрах, где рулит **водитель** (или при любом известном SWA):
 
-1. $\delta = \mathrm{SWA} / (\texttt{steer\_sign}\cdot\texttt{steer\_ratio})$.
+1. $\delta = \mathrm{SWA} / (\mathrm{steer\_sign}\cdot\mathrm{steer\_ratio})$.
 2. $\kappa_{\mathrm{kin}} = \tan\delta / L$.
 3. $\kappa_{\mathrm{fact}} = \dot\psi / v$ (нужно, чтобы $v$ не была крошечной).
 4. Разбить по диапазонам $v$, сообщить медианное отношение $\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}$.
@@ -120,7 +238,7 @@ print(f"|SWA| kin={abs(math.degrees(delta_kin)*STEER_RATIO):.1f} deg, "
 
 * C++ `vehicle_model.h`, Python `scripts/core/vehicle_model.py`
 * `vehicle.lat_use_vehicle_model = true`
-* `tire_stiffness_factor` — **поставляется 0.50**, и остальная часть главы о том, как это значение получилось,
+* `tire_stiffness_factor` — **поставляется 0.64** (дефолт в коде, оверрайда в конфиге нет); остальная часть главы
   потому что путь к нему полезнее самого значения.
 
 ## Калибровка одного коэффициента и обнаружение, что одним он быть не может
@@ -208,9 +326,11 @@ for radius, v in ((231.0, 13.6), (150.0, 13.8), (134.0, 11.8), (123.0, 13.8)):
 
 Структурный ответ — перестать подгонять константу и оценивать параметры непрерывно, с зависимостью от $v^2$ в
 модели наблюдения, а не запечённой в число. Именно это делает `paramsd` у upstream — фильтр из девяти
-состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги, — и он есть в списке этого
-проекта. Предпосылка, которая ему нужна и которой у нас пока нет, — оценка **крена дороги**: поперечный уклон
-даёт ту же поперечную подпись, что и недокручивающая машина, и никакая точность рыска их не разделит.
+состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги. В этом проекте порт
+**существует, измерен и поставляется отключённым**: [Локализация](../Localization/Overview.md), шаг 6 —
+это измерение того, почему. Крен дороги (поперечный уклон даёт ту же поперечную подпись, что и
+недокручивающая машина) теперь оценивается (шаг 5), но остаётся вырождение жёсткость↔передаточное, которое
+данные не разделяют, — оно и держит фичу выключенной.
 
 ## Задержка конвейера и почему компенсация больше измерения
 
@@ -257,4 +377,4 @@ print("heading, which is why the lookahead is a feedforward input and not a tuni
 <!-- next-chapter -->
 ---
 
-**Дальше:** [MPC и fp](./MPC_and_FP.md)
+**Дальше:** [Угловой контур](./AngleControl.md)

@@ -28,6 +28,15 @@ If feed-forward uses $\kappa_{\mathrm{kin}}$ only, it **under-orders** SWA in ar
 
 ## Simple understeer formula
 
+```{figure} figures/understeer_command.png
+---
+width: 75%
+---
+To hold the same radius the model must command a larger angle as speed rises — and more so at the lower
+stiffness factor.
+```
+
+
 A one-parameter model used in openpilot-style stacks (and our `tire_stiffness_factor`) looks like
 
 $$
@@ -51,24 +60,134 @@ Tires make the car "longer" in curvature space: same $\delta$, smaller $\kappa$.
 The vehicle model **scales the command up** so the mental bicycle matches the real Golf.
 ```
 
+## Feel both defects on a toy first
+
+Before measuring the real car, sabotage a toy plant with the two defects this chapter and the next are
+about: the wheels no longer go where they point, and commands take 0.35 s to arrive. The three anchor
+points of $G(v)$ are this car's measurement (the table below); the delay is `fp_steer_delay_s`:
+
+```python
+import math
+from collections import deque
+import numpy as np
+
+DT, L = 0.05, 2.636
+MAX_STEER = math.radians(25.0)
+
+def G_of_v(v):
+    """Achieved / kinematic curvature, measured on the Golf at 8, 13.5, 23.5 m/s."""
+    return float(np.interp(v, [8.0, 13.5, 23.5], [0.97, 0.80, 0.54]))
+
+def make_plant(v, delay_s=0.0):
+    """Returns step(delta_cmd) -> (x, y, psi). The queue is the delay."""
+    state = {"x": 0.0, "y": 0.0, "psi": 0.0}
+    q = deque([0.0] * max(0, round(delay_s / DT)))
+    def step(delta_cmd):
+        q.append(float(np.clip(delta_cmd, -MAX_STEER, MAX_STEER)))
+        delta = q.popleft()
+        state["x"] += v * math.cos(state["psi"]) * DT
+        state["y"] += v * math.sin(state["psi"]) * DT
+        state["psi"] += v * G_of_v(v) * math.tan(delta) / L * DT
+        return state["x"], state["y"], state["psi"]
+    return step, q
+```
+
+**Defect 1 — the arc that runs away.** Feed-forward an R = 210 m arc at 23.5 m/s exactly as the
+bicycle model says, and watch:
+
+```python
+KAPPA = 1.0 / 210.0
+V = 23.5
+
+def drift_on_arc(compensate, t_end=5.0):
+    """Signed offset from the arc after t_end seconds (positive = outside)."""
+    step, _ = make_plant(V)
+    delta = math.atan(L * KAPPA / (G_of_v(V) if compensate else 1.0))
+    for _ in range(int(t_end / DT)):
+        x, y, psi = step(delta)
+    return math.hypot(x, y - 1.0 / KAPPA) - 1.0 / KAPPA
+
+raw = drift_on_arc(False)
+fixed = drift_on_arc(True)
+print(f"kinematic feed-forward: {raw:+.1f} m outside the arc after 5 s")
+print(f"divided by G(v):        {fixed:+.2f} m   (open loop — the residue is Euler drift)")
+assert raw > 5.0, "uncompensated understeer must leave the arc by metres"
+assert abs(fixed) < 0.5, "acceptance: dividing the curvature by G(v) holds the arc"
+```
+
+One division fixes it — *if you know $G$*. The rest of this chapter is about knowing it: from a
+physical model rather than a lookup, because a lookup measured on dry asphalt is wrong on wet.
+
+**Defect 2 — the delay that turns a good controller into an oscillator.** The straight road, the
+heading-plus-offset controller that held 7 cm on the sine — and 0.35 s of delay:
+
+```python
+def drive_straight(delay_s, predict, kp=2.0, t_end=12.0, v=23.5):
+    """Straight road, start 1 m off centre; returns (settled |CTE| p95, worst |CTE|)."""
+    sx, sy, spsi = 0.0, 1.0, 0.0
+    queue = deque([0.0] * max(0, round(delay_s / DT)))
+    ctes = []
+    for _ in range(int(t_end / DT)):
+        ex, ey, epsi = sx, sy, spsi
+        if predict:
+            # dead-reckon through every command still in flight
+            for d in queue:
+                ex += v * math.cos(epsi) * DT
+                ey += v * math.sin(epsi) * DT
+                epsi += v * G_of_v(v) * math.tan(d) / L * DT
+        delta_cmd = float(np.clip(-epsi - math.atan2(kp * ey, v), -MAX_STEER, MAX_STEER))
+        queue.append(delta_cmd)
+        d = queue.popleft()
+        sx += v * math.cos(spsi) * DT
+        sy += v * math.sin(spsi) * DT
+        spsi += v * G_of_v(v) * math.tan(d) / L * DT
+        ctes.append(abs(sy))
+    ctes = np.array(ctes)
+    return float(np.percentile(ctes[len(ctes) // 2:], 95)), float(ctes.max())
+
+p95_no_delay, _ = drive_straight(0.0, predict=False)
+p95_delayed, worst = drive_straight(0.35, predict=False)
+p95_predicted, _ = drive_straight(0.35, predict=True)
+print(f"no delay:            settled p95 {p95_no_delay:.3f} m")
+print(f"0.35 s delay:        settled p95 {p95_delayed:.3f} m, worst {worst:.2f} m")
+print(f"delay + prediction:  settled p95 {p95_predicted:.3f} m")
+assert p95_no_delay < 0.05
+assert p95_delayed > 1.0, "the same gains with 0.35 s of delay must oscillate out of the lane"
+assert p95_predicted < 0.05, "acceptance: predicting through the in-flight commands restores the loop"
+```
+
+```{figure} figures/slip_delay.png
+---
+width: 95%
+---
+Left: uncompensated understeer leaves the arc; dividing curvature by G(v) holds it. Right: 0.35 s of delay
+oscillates the loop, and predicting through the in-flight commands restores it.
+```
+
+The fix is not a smaller gain (try it — the oscillation shrinks and the response dies with it). The fix
+is to **control the state the command will meet, not the state you measured**: dead-reckon through
+every command still in flight, then decide. The shipped `lagAdjustedCurvature` is this exact loop in
+curvature space ([MPC and fp](../Planner/MPC_and_FP.md), *fp-5*).
+
 ## Measurement recipe (bag)
 
 On frames where the **driver** steers (or any known SWA):
 
-1. $\delta = \mathrm{SWA} / (\texttt{steer\_sign}\cdot\texttt{steer\_ratio})$.
+1. $\delta = \mathrm{SWA} / (\mathrm{steer\_sign}\cdot\mathrm{steer\_ratio})$.
 2. $\kappa_{\mathrm{kin}} = \tan\delta / L$.
 3. $\kappa_{\mathrm{fact}} = \dot\psi / v$ (need $v$ not tiny).
 4. Bin by $v$, report median ratio $\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}$.
 
-Reference table from our Golf:
+Reference table from our Golf — the canonical figures the rest of the book carries
+([Bicycle model](../Planner/BicycleModel.md)):
 
 | $v$, m/s | $\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}$ |
 |---|---:|
-| 4–8 | ~0.99 |
-| 12–16 | ~0.85 |
-| 20–26 | **~0.61** |
+| 6–9 | 0.97 |
+| 12–15 | 0.80 |
+| 21–26 | 0.54 |
 
-At ~80 km/h kinematics overstates curvature by ~$1/0.61 \approx 1.6\times$.
+At ~80 km/h kinematics overstates curvature by ~$1/0.54 \approx 1.85\times$.
 
 ```python
 import math
@@ -122,8 +241,9 @@ print(f"|SWA| kin={abs(math.degrees(delta_kin)*STEER_RATIO):.1f} deg, "
 
 * C++ `vehicle_model.h`, Python `scripts/core/vehicle_model.py`
 * `vehicle.lat_use_vehicle_model = true`
-* `tire_stiffness_factor` — **0.50 shipped**, and the rest of this chapter is about how that number was
-  arrived at, because the route to it is more useful than the value.
+* `tire_stiffness_factor` — **0.64 shipped** (the code default; no config override). The rest of this
+  chapter re-tunes it to 0.50 and shows why even that does not settle the question — the route is more
+  useful than any single value.
 
 ## Calibrating one coefficient, and finding out it cannot be one coefficient
 
@@ -217,10 +337,11 @@ carrying two jobs.
 
 The structural answer is to stop fitting a constant and estimate the parameters continuously, with the
 $v^2$ dependence in the observation model rather than baked into a number. That is what upstream's
-`paramsd` does — a nine-state filter over stiffness, steer ratio, two steering biases and road grade —
-and it is on this project's list. The prerequisite it needs, and we do not yet have, is an estimate of
-**road roll**: a banked road produces the same lateral signature as an understeering car, and no amount of
-yaw-rate accuracy separates them.
+`paramsd` does — a nine-state filter over stiffness, steer ratio, two steering biases and road grade. On
+this project the port **exists, is measured, and ships disabled**: [Localization](../Localization/Overview.md)
+step 6 is the measurement of why. Road roll — a banked road produces the same lateral signature as an
+understeering car — is now estimated (step 5), but a stiffness↔ratio degeneracy the data cannot separate
+is what keeps it off.
 
 ## Pipeline delay, and why the compensation exceeds the measurement
 
@@ -268,4 +389,4 @@ Order: (1) vehicle model on; (2) vision Hz / e2e OK; (3) only then CTE / epsi we
 <!-- next-chapter -->
 ---
 
-**Next:** [MPC and fp](./MPC_and_FP.md)
+**Next:** [Angle control](./AngleControl.md)

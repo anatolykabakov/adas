@@ -7,6 +7,153 @@
 Источник истины: `app/src/main/cpp/include/adas/middleware/manager.hpp`.
 Тесты, которые читаются как учебник: `app/src/main/cpp/tests/test_middleware.cpp`.
 
+## Сначала постройте свою: шина в шестьдесят строк
+
+Быстрее всего читается та шина, маленькую версию которой вы уже написали. Свойств, которые важны, три,
+и они помещаются на один экран: **топики** отвязывают говорящего от слушающих; **доставка
+детерминирована** — опубликованное во время тика доставляется на следующем, так что прогон
+воспроизводим; и **очередь наблюдаема**, потому что очередь, которую не видно, — то место, где системы
+умирают:
+
+```python
+class Bus:
+    """Topics, deferred delivery, a visible queue. The real one adds threads and timers."""
+    def __init__(self):
+        self.subs = {}
+        self.queue = []
+        self.max_backlog = 0
+
+    def subscribe(self, topic, fn):
+        self.subs.setdefault(topic, []).append(fn)
+
+    def publish(self, topic, msg):
+        self.queue.append((topic, msg))
+
+    def step(self):
+        """Deliver everything queued so far; what handlers publish waits for the next step."""
+        batch, self.queue = self.queue, []
+        self.max_backlog = max(self.max_backlog, len(batch))
+        for topic, msg in batch:
+            for fn in self.subs.get(topic, []):
+                fn(msg)
+        return len(batch)
+```
+
+Сервис владеет состоянием, подписывается, публикует — никто никого не вызывает. Здесь на шину переезжают
+игрушечный планировщик (слияние линий обратной дисперсией) и игрушечный контроллер (pure pursuit в
+связанной системе):
+
+```python
+import math
+import numpy as np
+
+L, HALF = 2.636, 1.75
+
+class PlannerService:
+    """lanes -> path: the step-3 fusion, one message at a time."""
+    def __init__(self, bus):
+        self.bus = bus
+        bus.subscribe("vision/lanes", self.on_lanes)
+
+    def on_lanes(self, m):
+        w_l, w_r = 1.0 / m["sig_l"] ** 2, 1.0 / m["sig_r"] ** 2
+        centre = (w_l * (m["y_l"] - HALF) + w_r * (m["y_r"] + HALF)) / (w_l + w_r)
+        self.bus.publish("vision/path", {"x": m["x"], "y": centre})
+
+class ControlService:
+    """path + chassis -> steer: the step-2 pursuit, ego frame."""
+    def __init__(self, bus, ld=8.0):
+        self.bus, self.ld = bus, ld
+        self.path = None
+        bus.subscribe("vision/path", lambda m: setattr(self, "path", m))
+        bus.subscribe("vehicle/state", self.on_chassis)
+
+    def on_chassis(self, m):
+        if self.path is None:
+            return
+        x, y = self.path["x"], self.path["y"]
+        i = int(np.argmax(np.hypot(x, y) >= self.ld))
+        alpha = math.atan2(y[i], x[i])
+        delta = math.atan2(2.0 * L * math.sin(alpha), self.ld)
+        self.bus.publish("controls/steer", {"delta": delta})
+```
+
+Приёмка архитектурного шага — *равенство*: сервисы на шине обязаны воспроизвести прямые вызовы бит в
+бит:
+
+```python
+rng = np.random.default_rng(0)
+x_grid = np.arange(0.0, 60.0, 2.0)
+sig = 0.05 + 0.01 * x_grid
+
+def one_frame():
+    c = 0.5 * 0.004 * x_grid**2
+    return {"x": x_grid, "y_l": c + HALF + rng.normal(0, sig), "sig_l": sig,
+            "y_r": c - HALF + rng.normal(0, sig), "sig_r": sig}
+
+bus = Bus()
+PlannerService(bus)
+ControlService(bus)
+got = []
+bus.subscribe("controls/steer", lambda m: got.append(m["delta"]))
+
+frames = [one_frame() for _ in range(50)]
+for f in frames:
+    bus.publish("vision/lanes", f)
+    bus.step()                            # deliver lanes -> planner publishes path
+    bus.publish("vehicle/state", {"v": 10.0})
+    bus.step()                            # deliver path and the chassis tick
+    bus.step()                            # deliver steer
+# Publish the chassis before the path has been delivered and every steer command quietly
+# computes on the PREVIOUS frame's path — off by one frame, no error raised. On the phone the
+# two arrive on independent threads, which is why every plan carries capture_ts and Control
+# gates on its age instead of trusting arrival order.
+
+# the same math, called directly
+def direct(f, ld=8.0):
+    w_l, w_r = 1.0 / f["sig_l"] ** 2, 1.0 / f["sig_r"] ** 2
+    centre = (w_l * (f["y_l"] - HALF) + w_r * (f["y_r"] + HALF)) / (w_l + w_r)
+    i = int(np.argmax(np.hypot(f["x"], centre) >= ld))
+    alpha = math.atan2(centre[i], f["x"][i])
+    return math.atan2(2.0 * L * math.sin(alpha), ld)
+
+ref = [direct(f) for f in frames]
+worst = max(abs(a - b) for a, b in zip(got, ref))
+print(f"{len(got)} commands, worst |bus - direct| = {worst:.2e} rad, "
+      f"max backlog {bus.max_backlog}")
+assert len(got) == len(frames) and worst == 0.0, "acceptance: the bus must change nothing"
+```
+
+Теперь посмотрите, как это умирает по-настоящему. Мост ZMQ на телефоне когда-то вычерпывал **одно
+сообщение за 10-мс тик** — потолок 100 сообщений/с. Третий топик на 28 Гц вытолкнул вход за потолок,
+очередь росла, план старел, и гейт свежести молча снимал поперечное управление через минуту каждого
+заезда. Воспроизведите:
+
+```python
+bus2 = Bus()
+delivered = {"n": 0}
+bus2.subscribe("t", lambda m: delivered.__setitem__("n", delivered["n"] + 1))
+
+backlog = []
+for tick in range(200):
+    for _ in range(3):                      # 3 messages arrive per tick...
+        bus2.publish("t", tick)
+    batch, bus2.queue = bus2.queue[:1], bus2.queue[1:]   # ...but we deliver only 1
+    for topic, msg in batch:
+        for fn in bus2.subs[topic]:
+            fn(msg)
+    backlog.append(len(bus2.queue))
+
+print(f"inflow 3/tick, drain 1/tick: backlog after 200 ticks = {backlog[-1]}")
+print(f"age of the message being delivered now ≈ {backlog[-1] // 3} ticks")
+assert backlog[-1] == 400, "a fixed drain below inflow does not lag — it diverges"
+```
+
+Очередь не стабилизируется на каком-то отставании — она **расходится линейно**, и возраст того, на что
+вы реагируете, расходится с ней. Лекарство (вычерпывать досуха, с разумной границей) — здесь одна
+строка, на телефоне — одна константа, `kMaxPerTick = 32`. Всё ниже — эта игрушка, повзрослевшая:
+потоки, таймеры, параметры и `middleware/stats` — ваш `max_backlog` в мундире.
+
 ## Мысленная модель
 
 ```text

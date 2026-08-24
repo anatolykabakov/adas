@@ -211,6 +211,13 @@ for i in range(80):  # 4 s
 print(f"after 4 s: y={y:.3f} m (should be near 0), yaw={math.degrees(th):.1f} deg")
 ```
 
+```{figure} figures/pp_tradeoff.png
+---
+width: 85%
+---
+|CTE| вдоль дуги R=60 м для трёх взглядов: длинный гладок на прямой, но оседает метрами внутри поворота.
+```
+
 ## Где одной точки перестаёт хватать
 
 Pure Pursuit сводит весь путь к одной точке. В этом его прелесть и его потолок, и потолок легко показать: у
@@ -270,7 +277,7 @@ for ld in (8.0, 12.0, 15.0, 20.0, 25.0):
 Это аргумент в пользу горизонта, и он отличается от аргумента про недокрут. Недокрут — это ошибка
 *модели*, её можно исправить лучшей моделью того же одношагового закона. А здесь предел *информационный*, он
 у самого закона. [MPC](./MPC_and_FP.md) отвечает на него, оптимизируя сразу по многим точкам; глава про
-[модель машины](./VehicleModel.md) отвечает сначала на другой, потому что горизонт, построенный на неверной
+[модель машины](../Control/VehicleModel.md) отвечает сначала на другой, потому что горизонт, построенный на неверной
 кинематике, просто даёт уверенный неверный план.
 
 ```{admonition} Почему Pure Pursuit всё ещё в дереве
@@ -281,6 +288,106 @@ for ld in (8.0, 12.0, 15.0, 20.0, 25.0):
 при любом испробованном уровне деградации — а на дороге наоборот, и это находка про реплей, а не про
 контроллеры.
 ```
+
+## Измерьте компромисс сами
+
+Игрушечный контур выше пользовался осью x. Отсюда дорога — **полилиния**, той же формы, что
+`vision/path` на телефоне, и регулятору можно только искать по точкам, ровно как настоящему:
+
+```python
+import math
+import numpy as np
+
+DT, L, V = 0.05, 2.636, 10.0
+MAX_STEER = math.radians(25.0)
+
+def sine_path(a=1.75, lam=120.0, length=400.0):
+    x = np.arange(0.0, length, 0.5)
+    return np.stack([x, a * np.sin(2 * np.pi * x / lam)], axis=1)
+
+def arc_path(radius=60.0, length=180.0):
+    """Straight 40 m, then a constant left arc — the corner-cut detector."""
+    s = np.arange(0.0, length, 0.5)
+    pts = []
+    for si in s:
+        if si < 40.0:
+            pts.append((si, 0.0))
+        else:
+            t = (si - 40.0) / radius
+            pts.append((40.0 + radius * math.sin(t), radius * (1 - math.cos(t))))
+    return np.array(pts)
+```
+
+```python
+def pure_pursuit(path, x, y, psi, ld, near_idx):
+    """Return (delta, updated near_idx). Walks forward only, like the real tracker."""
+    d = np.hypot(path[near_idx:, 0] - x, path[near_idx:, 1] - y)
+    near_idx += int(np.argmin(d[: max(1, int(4 * ld))]))
+    target = None
+    for i in range(near_idx, len(path)):
+        if math.hypot(path[i, 0] - x, path[i, 1] - y) >= ld:
+            target = path[i]
+            break
+    if target is None:
+        return 0.0, near_idx
+    alpha = math.atan2(target[1] - y, target[0] - x) - psi
+    delta = math.atan2(2.0 * L * math.sin(alpha), ld)
+    return float(np.clip(delta, -MAX_STEER, MAX_STEER)), near_idx
+
+def drive(path, ld, t_end=45.0):
+    """Return |CTE| samples and mean per-tick steering change [deg]."""
+    x, y, psi = path[0, 0], path[0, 1] + 1.0, 0.0
+    near, prev_delta = 0, 0.0
+    ctes, dsteps = [], []
+    for _ in range(int(t_end / DT)):
+        delta, near = pure_pursuit(path, x, y, psi, ld, near)
+        x += V * math.cos(psi) * DT
+        y += V * math.sin(psi) * DT
+        psi += V * math.tan(delta) / L * DT
+        d = np.hypot(path[:, 0] - x, path[:, 1] - y)
+        ctes.append(float(d.min()))
+        dsteps.append(abs(math.degrees(delta - prev_delta)))
+        prev_delta = delta
+        if near >= len(path) - 3:
+            break
+    return np.array(ctes), float(np.mean(dsteps))
+```
+
+Теперь переберите единственный параметр этого регулятора:
+
+```python
+sine, arc = sine_path(), arc_path()
+print(f"{'Ld':>4} | sine |CTE| p95 | arc settled | steer jitter °/tick")
+results = {}
+for ld in (3.0, 8.0, 20.0):
+    c_sine, jit = drive(sine, ld)
+    c_arc, _ = drive(arc, ld)
+    sine_p95 = np.percentile(c_sine[len(c_sine) // 3:], 95)
+    arc_settled = np.percentile(c_arc[3 * len(c_arc) // 4:], 95)
+    results[ld] = (sine_p95, arc_settled, jit)
+    print(f"{ld:4.0f} | {sine_p95:13.3f} | {arc_settled:11.3f} | {jit:.3f}")
+```
+
+Читайте три колонки друг против друга. Незатухающее виляние прошлой главы ушло на **любом** взгляде —
+но появились два новых факта. Короткий взгляд пилит руль (в пять раз больший шаг руля за тик, чем у
+длинного). Длинный не просто сглаживает команду — он **оседает метрами внутри поворота**: гнаться за
+точкой в 20 м впереди на дуге радиусом 60 м значит рулить по хорде, а хорда проходит изнутри. И даже
+на дружелюбном $L_d$ синусоида несёт постоянное хордовое отставание ~0.24 м — Pure Pursuit никогда не
+едет ровно ту кривую, которую ему дали.
+
+```python
+assert all(r[0] < 0.40 for r in results.values()), \
+    "acceptance: bounded error at every Ld, no per-road gains — the oscillation is gone"
+assert results[20.0][1] > 10.0 * results[3.0][1], \
+    "acceptance: the long look-ahead must settle an order of magnitude deeper inside the arc"
+assert results[3.0][2] > 4.0 * results[20.0][2], "acceptance: short Ld must be the jitteriest"
+print(f"acceptance passed: arc offset {results[3.0][1]:.2f} → {results[20.0][1]:.2f} m "
+      f"as Ld goes 3 → 20; jitter moves the other way")
+```
+
+Одна точка не может представить путь, чья кривизна меняется *внутри* взгляда, — числа выше и есть эта
+фраза, измеренная. Масштабирование $L_d$ по скорости двигает компромисс; убрать его оно не может.
+Читать весь путь вместо одной точки — это то, [что делает MPC](./MPC_and_FP.md).
 
 ## Интеграция
 
@@ -307,10 +414,14 @@ vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID �
 3. Перебор по бегу: `bag/bag_config_sweep.py`, парето |CTE| против |$\Delta$SWA|.
 4. В прогоне по дальности взгляда выше найдите дальность, минимизирующую разброс между тремя путями.
    Затем объясните, почему эта дальность — *худший* выбор, а не лучший.
-5. Добавьте поправку на недокрут из главы [про модель машины](./VehicleModel.md) в `pp_delta` и повторите
+5. Добавьте поправку на недокрут из главы [про модель машины](../Control/VehicleModel.md) в `pp_delta` и повторите
    прогон при 22 м/с. Меняет ли это информационный предел или только величины?
+
+Каждый контроллер до сих пор *полагал путь заданным*. Но две линии разметки шумны, а план модели режет
+дуги — так откуда берётся единственная полилиния, которую они отслеживают? Это следующая глава, и именно
+там решается половина измеренного смещения на дуге.
 
 <!-- next-chapter -->
 ---
 
-**Дальше:** [Модель машины (недокрут)](./VehicleModel.md)
+**Дальше:** [Путь разметки](./LanePath.md)

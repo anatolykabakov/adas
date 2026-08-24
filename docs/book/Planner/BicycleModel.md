@@ -15,10 +15,10 @@ Lateral control = choose $\delta$ (then SWA on the bus) so that arc matches the 
 They are related by a nearly constant gear ratio and a sign convention:
 
 $$
-\mathrm{SWA} = \texttt{steer\_sign} \cdot \delta \cdot \texttt{steer\_ratio}.
+\mathrm{SWA} = \mathrm{steer\_sign} \cdot \delta \cdot \mathrm{steer\_ratio}.
 $$
 
-Golf MQB numbers in `config.json`: $L \approx 2.636$ m, `steer_ratio ≈ 15.7`, `steer_sign = -1`.
+Golf MQB numbers in `config.json`: $L \approx 2.636$ m, `steer_ratio ≈ 15.7`, `steer_sign = -1`. The hand-worked examples below round $L$ to 2.64 m for legibility; the runnable toy-control blocks use the exact 2.636.
 
 ```{admonition} Tiny numerical example
 :class: tip
@@ -182,6 +182,108 @@ $$
 
 Highway kinematics **overstate** curvature — next chapter.
 
+## Try to control it — and watch the obvious controller fail
+
+The model is now a plant you can drive. Give it a road and the most obvious controller there is —
+steer against the offset — and the chapter earns its next one. Everything below is numpy only:
+
+```python
+import math
+import numpy as np
+
+DT = 0.05     # control tick [s] — 20 Hz, the HCA frame rate on the real car
+L = 2.636     # wheelbase [m] — the Golf's, straight from config.json
+V = 10.0      # speed [m/s], constant in this tier
+
+def step(x, y, psi, delta, v=V, dt=DT):
+    """One tick of the kinematic bicycle."""
+    x += v * math.cos(psi) * dt
+    y += v * math.sin(psi) * dt
+    psi += v * math.tan(delta) / L * dt
+    return x, y, psi
+```
+
+The road is a sine: peak curvature $A(2\pi/\lambda)^2 \approx 0.0048$ 1/m, a radius of about 210 m —
+the "gentle arc" class from `docs/CONTROLLER_LIMITS.md`:
+
+```python
+A, LAM = 1.75, 120.0
+
+def y_ref(x):
+    return A * math.sin(2 * math.pi * x / LAM)
+
+def psi_ref(x):
+    return math.atan(A * 2 * math.pi / LAM * math.cos(2 * math.pi * x / LAM))
+```
+
+Offset to the left → steer right, proportionally. One gain, one line:
+
+```python
+MAX_STEER = math.radians(25.0)   # the same ceiling the phone enforces
+
+def p_controller(cte, kp=0.10):
+    return float(np.clip(-kp * cte, -MAX_STEER, MAX_STEER))
+
+def simulate(controller, t_end=60.0):
+    """Drive the sine; return arrays of time and cross-track error."""
+    x, y, psi = 0.0, 1.0, 0.0          # start 1 m off the road
+    ts, ctes = [], []
+    for k in range(int(t_end / DT)):
+        cte = y - y_ref(x)
+        delta = controller(x, y, psi, cte)
+        x, y, psi = step(x, y, psi, delta)
+        ts.append(k * DT)
+        ctes.append(cte)
+    return np.array(ts), np.array(ctes)
+
+t, cte_p = simulate(lambda x, y, psi, cte: p_controller(cte))
+first = np.max(np.abs(cte_p[t < 10]))
+last = np.max(np.abs(cte_p[t > 50]))
+crossings = int(np.sum(np.diff(np.sign(cte_p)) != 0))
+print(f"P only: |CTE| max first 10 s {first:.2f} m, last 10 s {last:.2f} m, "
+      f"{crossings} zero crossings in 60 s")
+```
+
+Plot `cte_p` against `t` and look at it: the car crosses the road again and again and **the swings do
+not shrink**. That is not a tuning problem. Steering sets the *curvature* of the trajectory, curvature
+integrates into heading, heading integrates into offset — so P-on-offset is a spring with no damper, an
+undamped oscillator. Any `kp` changes the frequency, none adds damping. (Forward-Euler integration
+actually pumps energy in, so the swings slowly grow.)
+
+Damping comes from the state you were ignoring: heading. This is the **Stanley controller**: steer to
+cancel the heading error $\psi_{\text{ref}}-\psi$ (the nose-vs-road angle), plus a term that folds the
+offset in as an *angle*. The offset term is $\arctan(k\,\text{CTE}/v)$ — an angle because that is what a
+steering command is, and divided by $v$ so the same offset asks for a gentler correction at speed (a hard
+yank at 100 km/h is a crash). Heading is the damping the pure-offset spring lacked:
+
+```python
+def heading_controller(x, y, psi, cte, kp=2.0):
+    # Stanley: cancel heading error, and steer the offset in as a speed-scaled angle.
+    err = (psi_ref(x) - psi) - math.atan2(kp * cte, V)
+    return float(np.clip(err, -MAX_STEER, MAX_STEER))
+
+t, cte_h = simulate(heading_controller)
+settled = np.abs(cte_h[t > 20])
+print(f"heading+offset: |CTE| p95 after settling {np.percentile(settled, 95):.3f} m, "
+      f"max {settled.max():.3f} m")
+assert np.percentile(settled, 95) < 0.15, "acceptance: the car must hold the sine within 15 cm"
+assert last > 0.8 * first, "P-only must NOT settle — that is the lesson"
+print("acceptance passed: damped follower holds the gentle road within 15 cm")
+```
+
+```{figure} figures/toycar_control.png
+---
+width: 85%
+---
+The same plant under both controllers: P-on-offset swings without decay; heading + offset settles.
+```
+
+Two things to carry out of this build: the working controller holds the sine within 15 cm — and it has
+two hand-tuned gains whose right values change with speed and road. A controller whose geometry
+*derives* the steering from the path, with no gains for the nominal case, is the
+[next chapter](./PurePursuit.md). And the real stack's inner loop is exactly this "heading + offset"
+shape: an angle-PID around the rack.
+
 ## Does it hold on the real car? Measure before believing
 
 The model is a page of geometry with no free parameters, which makes it both trustworthy and easy to
@@ -212,10 +314,18 @@ asked for.
 And notice that the measured ratio is **below the textbook expectation at every speed** — 0.54 against
 0.69 at 23.5 m/s. So the slip is not just present, it is worse than a standard understeer gradient
 predicts. That gap is not a rounding error to absorb into a coefficient; it is the reason
-[the vehicle model chapter](./VehicleModel.md) exists and the reason a learned parameter estimator is on
+[the vehicle model chapter](../Control/VehicleModel.md) exists and the reason a learned parameter estimator is on
 this project's list rather than a hand-tuned constant.
 
 ### What the shortfall costs, in metres
+
+```{figure} figures/understeer_drift.png
+---
+width: 70%
+---
+Open-loop, the un-compensated shortfall drifts the car outward as the square of arc length.
+```
+
 
 An abstract ratio is easy to shrug at, so convert it. If the model asks for curvature $\kappa$ and the car
 delivers $r\kappa$, the car turns on a larger radius than intended and drifts to the **outside** of the
@@ -251,7 +361,7 @@ for the road.
 ## Summary
 
 1. $\kappa = \tan\delta / L$, $R = 1/\kappa$.
-2. $\mathrm{SWA} = \texttt{steer\_sign}\cdot\delta\cdot\texttt{steer\_ratio}$.
+2. $\mathrm{SWA} = \mathrm{steer\_sign}\cdot\delta\cdot\mathrm{steer\_ratio}$.
 3. ICR explains the geometry; slip breaks the no-slip assumption at speed.
 4. **Verified against the car**: exact below 9 m/s, 0.80 at 12–15, 0.54 at 21–26 — and worse than a
    textbook understeer gradient at every speed. Believe the model where it was checked, not everywhere.

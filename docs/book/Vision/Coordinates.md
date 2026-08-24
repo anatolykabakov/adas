@@ -60,8 +60,8 @@ print(f"wrong center if signs mixed: {y_center_wrong:.3f} m")
 ## SWA sign on MQB
 
 $$
-\mathrm{SWA} = \texttt{steer\_sign}\cdot \delta \cdot \texttt{steer\_ratio},
-\qquad \texttt{steer\_sign}=-1.
+\mathrm{SWA} = \mathrm{steer\_sign}\cdot \delta \cdot \mathrm{steer\_ratio},
+\qquad \mathrm{steer\_sign}=-1.
 $$
 
 ```python

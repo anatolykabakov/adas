@@ -12,6 +12,54 @@ adas_logs/<session>/
 
 `/` in topic name → `__` on disk.
 
+## Build: the format in forty lines
+
+A bag is topic directories of length-prefixed records. That is the whole idea; everything else is
+protobuf. Write the toy version so the real one holds no mystery:
+
+```python
+import json
+import struct
+import tempfile
+from pathlib import Path
+
+def topic_dir(root, topic):
+    return Path(root) / topic.replace("/", "__")     # '/' would nest; '__' keeps one level
+
+def write_bag(root, topic, records):
+    d = topic_dir(root, topic)
+    d.mkdir(parents=True, exist_ok=True)
+    with open(d / "000.bin", "wb") as f:
+        for r in records:
+            blob = json.dumps(r).encode()
+            f.write(struct.pack("<I", len(blob)))    # length prefix: records survive a truncated tail
+            f.write(blob)
+
+def read_bag(root, topic):
+    out = []
+    for part in sorted(topic_dir(root, topic).glob("*.bin")):
+        data = part.read_bytes()
+        i = 0
+        while i + 4 <= len(data):
+            (n,) = struct.unpack_from("<I", data, i)
+            if i + 4 + n > len(data):
+                break                                # the app was killed mid-record; keep what is whole
+            out.append(json.loads(data[i + 4 : i + 4 + n]))
+            i += 4 + n
+    return out
+
+root = tempfile.mkdtemp()
+recs = [{"ts": 1000 + 42 * k, "y_l": -1.7, "y_r": 1.8} for k in range(100)]
+write_bag(root, "vision/lanes", recs)
+back = read_bag(root, "vision/lanes")
+print(f"wrote 100, read {len(back)}, first ts {back[0]['ts']}, dir {topic_dir(root, 'vision/lanes').name}")
+assert back == recs, "acceptance: a bag must survive the round trip byte-exactly"
+```
+
+The real format differs in two ways only: records are protobuf `ZMQMessage` (the exact bytes that
+crossed the bridge — logging is a *tap*, not a re-encoding), and files rotate by size. `Logger.java`
+writes it; `scripts/vis/bag_io.py` reads it; the `'/'→'__'` rule above is lifted from there verbatim.
+
 ## Commands
 
 ```bash
@@ -142,6 +190,55 @@ Every measurement above throws samples away — slow, transient, bad fix, stale 
 survived. "Scale is 1.012" over eight samples and over 798 are different claims, and the first one has
 been wrong here before.
 ```
+
+## Record your own bag, and run your own code on it
+
+No car is needed for a first bag: a phone on the windshield as a passenger is best, a walk along a road
+with painted edges works too. Build (`./scripts/build_project.sh`), install, start logging from the UI,
+move for 3–5 minutes, pull the session (`./scripts/pull_bags.sh`), open it in the visualizer. What your
+bag cannot contain — `vehicle/state`, `can/rx`, torque — is a feature: everything a controller outputs
+on it is unverifiable, so you can be as wrong as you like, for free.
+
+Then feed it to the code you built in [Vision](../Vision/Overview.md) and
+[Pure Pursuit](../Planner/PurePursuit.md):
+
+```python
+# not-runnable — needs your session directory and generated protobufs
+from pathlib import Path
+import numpy as np
+from vis.bag_io import load_topic_messages
+
+session = Path("../adas_logs/<your-session>")
+lanes = load_topic_messages(session, "vision/lanes")
+print(len(lanes), "lane frames")
+
+for ts, msg, _raw in lanes[:3]:
+    left, right = msg.lanes[1], msg.lanes[2]      # near-left and near-right host lines
+    print(ts, len(left.points), "pts  prob", round(left.prob, 2), round(right.prob, 2))
+```
+
+```python
+# not-runnable — sketch of the analysis loop
+deltas, gaps, sigmas = [], [], []
+for ts, msg, _ in lanes:
+    left, right = msg.lanes[1], msg.lanes[2]
+    if left.prob < 0.5 or right.prob < 0.5:
+        gaps.append(ts)                             # the frames your toy never had
+        continue
+    path = fuse_from_proto(left, right)             # your step-3 code, adapted to proto points
+    delta, _ = pure_pursuit(path, 0.0, 0.0, 0.0, 8.0, 0)
+    deltas.append(delta)
+    sigmas.append((median_std(left), median_std(right)))
+
+print("frames:", len(lanes), " usable:", len(deltas), " dropped:", len(gaps))
+print("|delta| p95 [deg]:", np.degrees(np.percentile(np.abs(deltas), 95)))
+```
+
+Expect the shape, if not the numbers: σ nothing like a synthetic 5 cm (medians 0.37/0.51 m on this
+project's drives, both lines confident at once in ~22 % of frames); whole unflagged stretches with
+neither line; a 42 ms frame step with jitter. Write down the three worst moments — a gap, a σ blow-up,
+a frame-step spike, one timestamp and one sentence each. Those three timestamps are your personal test
+set from now on.
 
 ## Report template
 

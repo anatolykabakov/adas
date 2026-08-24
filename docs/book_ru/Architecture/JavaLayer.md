@@ -17,7 +17,7 @@
 
 | Остаётся в **Java** | Живёт в **C++** |
 |---|---|
-| Camera2 / IMU / GPS | удержание полосы (`pp` / `mpc` / `fp`) |
+| Camera2 / IMU / GPS | удержание полосы (`pp` / `fp`) |
 | Supercombo (thneed или ORT) и опциональный YOLO | SafetyWarn, продольный план, `proto_convert` |
 | `Logger` / `BagLogger` (беги сессии) | приём и передача CAN панды, HCA |
 | Превью и наложение (`LaneOverlayView`) | шина Middleware и таймеры |

@@ -15,10 +15,10 @@
 Связаны почти постоянным передаточным отношением и договорённостью о знаке:
 
 $$
-\mathrm{SWA} = \texttt{steer\_sign} \cdot \delta \cdot \texttt{steer\_ratio}.
+\mathrm{SWA} = \mathrm{steer\_sign} \cdot \delta \cdot \mathrm{steer\_ratio}.
 $$
 
-Числа для Golf MQB в `config.json`: $L \approx 2.636$ м, `steer_ratio ≈ 15.7`, `steer_sign = -1`.
+Числа для Golf MQB в `config.json`: $L \approx 2.636$ м, `steer_ratio ≈ 15.7`, `steer_sign = -1`. В ручных примерах ниже $L$ округлён до 2.64 м для читаемости; исполняемые блоки управления используют точное 2.636.
 
 ```{admonition} Крошечный числовой пример
 :class: tip
@@ -181,6 +181,108 @@ $$
 
 На шоссе кинематика **завышает** кривизну — об этом следующая глава.
 
+## Попробуйте им порулить — и посмотрите, как проваливается очевидный регулятор
+
+Модель теперь — объект, которым можно ехать. Дайте ей дорогу и самый очевидный регулятор на свете —
+рулить против смещения, — и глава заработает себе следующую. Ниже только numpy:
+
+```python
+import math
+import numpy as np
+
+DT = 0.05     # control tick [s] — 20 Hz, the HCA frame rate on the real car
+L = 2.636     # wheelbase [m] — the Golf's, straight from config.json
+V = 10.0      # speed [m/s], constant in this tier
+
+def step(x, y, psi, delta, v=V, dt=DT):
+    """One tick of the kinematic bicycle."""
+    x += v * math.cos(psi) * dt
+    y += v * math.sin(psi) * dt
+    psi += v * math.tan(delta) / L * dt
+    return x, y, psi
+```
+
+Дорога — синусоида: пиковая кривизна $A(2\pi/\lambda)^2 \approx 0.0048$ 1/м — радиус около 210 м,
+класс «пологая дуга» из `docs/CONTROLLER_LIMITS.md`:
+
+```python
+A, LAM = 1.75, 120.0
+
+def y_ref(x):
+    return A * math.sin(2 * math.pi * x / LAM)
+
+def psi_ref(x):
+    return math.atan(A * 2 * math.pi / LAM * math.cos(2 * math.pi * x / LAM))
+```
+
+Смещение влево → руль вправо, пропорционально. Один коэффициент, одна строка:
+
+```python
+MAX_STEER = math.radians(25.0)   # the same ceiling the phone enforces
+
+def p_controller(cte, kp=0.10):
+    return float(np.clip(-kp * cte, -MAX_STEER, MAX_STEER))
+
+def simulate(controller, t_end=60.0):
+    """Drive the sine; return arrays of time and cross-track error."""
+    x, y, psi = 0.0, 1.0, 0.0          # start 1 m off the road
+    ts, ctes = [], []
+    for k in range(int(t_end / DT)):
+        cte = y - y_ref(x)
+        delta = controller(x, y, psi, cte)
+        x, y, psi = step(x, y, psi, delta)
+        ts.append(k * DT)
+        ctes.append(cte)
+    return np.array(ts), np.array(ctes)
+
+t, cte_p = simulate(lambda x, y, psi, cte: p_controller(cte))
+first = np.max(np.abs(cte_p[t < 10]))
+last = np.max(np.abs(cte_p[t > 50]))
+crossings = int(np.sum(np.diff(np.sign(cte_p)) != 0))
+print(f"P only: |CTE| max first 10 s {first:.2f} m, last 10 s {last:.2f} m, "
+      f"{crossings} zero crossings in 60 s")
+```
+
+Постройте `cte_p` против `t` и посмотрите: машина пересекает дорогу снова и снова, и **размах не
+уменьшается**. Это не проблема настройки. Руль задаёт *кривизну* траектории, кривизна интегрируется в
+курс, курс — в смещение, так что P-по-смещению — пружина без демпфера, незатухающий осциллятор. Любой
+`kp` меняет частоту, ни один не добавляет затухания. (Прямой Эйлер вдобавок подкачивает энергию, и
+размах медленно растёт.)
+
+Затухание приходит из состояния, которое вы игнорировали, — из курса. Это **контроллер Stanley**:
+рулить так, чтобы погасить ошибку курса $\psi_{\text{ref}}-\psi$ (угол носа против дороги), плюс член,
+вносящий смещение как *угол*. Член смещения — $\arctan(k\,\text{CTE}/v)$: угол, потому что команда руля
+и есть угол, и делённый на $v$, чтобы то же смещение просило более мягкой поправки на скорости (резкий
+рывок на 100 км/ч — это авария). Курс и есть то затухание, которого не хватало пружине по смещению:
+
+```python
+def heading_controller(x, y, psi, cte, kp=2.0):
+    # Stanley: cancel heading error, and steer the offset in as a speed-scaled angle.
+    err = (psi_ref(x) - psi) - math.atan2(kp * cte, V)
+    return float(np.clip(err, -MAX_STEER, MAX_STEER))
+
+t, cte_h = simulate(heading_controller)
+settled = np.abs(cte_h[t > 20])
+print(f"heading+offset: |CTE| p95 after settling {np.percentile(settled, 95):.3f} m, "
+      f"max {settled.max():.3f} m")
+assert np.percentile(settled, 95) < 0.15, "acceptance: the car must hold the sine within 15 cm"
+assert last > 0.8 * first, "P-only must NOT settle — that is the lesson"
+print("acceptance passed: damped follower holds the gentle road within 15 cm")
+```
+
+```{figure} figures/toycar_control.png
+---
+width: 85%
+---
+Один объект под двумя регуляторами: P-по-смещению качается без затухания; курс + смещение устаканивает.
+```
+
+Из этой стройки стоит унести два факта: рабочий регулятор держит синусоиду в 15 см — и у него два
+подобранных руками коэффициента, правильные значения которых меняются со скоростью и дорогой.
+Регулятор, у которого руль *выводится* из геометрии пути, без коэффициентов для номинального случая, —
+[следующая глава](./PurePursuit.md). А внутренний контур настоящего стека — ровно эта форма
+«курс + смещение»: угловой PID вокруг рейки.
+
 ## Держится ли это на настоящей машине? Измерьте, прежде чем верить
 
 Модель — страница геометрии без свободных параметров, что делает её и надёжной, и легко переоцениваемой.
@@ -210,10 +312,18 @@ for v, ratio, expected in MEASURED:
 И заметьте, что измеренное отношение **ниже книжного ожидания на каждой скорости** — 0.54 против 0.69 при
 23.5 м/с. То есть скольжение не просто присутствует, оно сильнее, чем предсказывает стандартный градиент
 недокрута. Этот зазор — не погрешность, которую можно впитать в коэффициент; это причина, по которой
-существует [глава про модель машины](./VehicleModel.md), и причина, по которой в списке этого проекта стоит
+существует [глава про модель машины](../Control/VehicleModel.md), и причина, по которой в списке этого проекта стоит
 обучаемый оценщик параметров, а не подобранная руками константа.
 
 ### Чего стоит недобор, в метрах
+
+```{figure} figures/understeer_drift.png
+---
+width: 70%
+---
+В разомкнутом контуре нескомпенсированный недобор выносит машину наружу как квадрат длины дуги.
+```
+
 
 Абстрактным отношением легко пренебречь, поэтому переведём его. Если модель просит кривизну $\kappa$, а машина
 выдаёт $r\kappa$, то она поворачивает по большему радиусу, чем задумано, и уходит **наружу** поворота. На дуге
@@ -247,7 +357,7 @@ print("\nThose are open-loop numbers — feedback removes most of them. What sur
 ## Итог
 
 1. $\kappa = \tan\delta / L$, $R = 1/\kappa$.
-2. $\mathrm{SWA} = \texttt{steer\_sign}\cdot\delta\cdot\texttt{steer\_ratio}$.
+2. $\mathrm{SWA} = \mathrm{steer\_sign}\cdot\delta\cdot\mathrm{steer\_ratio}$.
 3. МЦВ объясняет геометрию; скольжение ломает допущение об отсутствии скольжения на скорости.
 4. **Проверено об машину**: точно ниже 9 м/с, 0.80 при 12–15, 0.54 при 21–26 — и хуже книжного градиента
    недокрута на каждой скорости. Верьте модели там, где её проверяли, а не везде.

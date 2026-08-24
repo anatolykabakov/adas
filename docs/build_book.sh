@@ -47,6 +47,9 @@ fi
 python3 "$DOCS/book/check_snippets.py"
 # Then structure: the Russian tree must have the same pages with the same code in them.
 python3 "$DOCS/book/sync_translation.py"
+# Then references: every repository file the book names must still exist — the project deletes
+# aggressively, and a mention of a deleted doc teaches the reader to distrust the whole book.
+python3 "$DOCS/book/check_repo_links.py"
 
 if $check_only; then
   exit 0

@@ -15,13 +15,20 @@ parts:
 - caption: Localization
   chapters:
   - file: Localization/Overview.md
+- caption: Planner
+  chapters:
+  - file: Planner/Overview.md
+  - file: Planner/BicycleModel.md
+  - file: Planner/PurePursuit.md
+  - file: Planner/LanePath.md
+  - file: Planner/MPC_and_FP.md
 - caption: Control
   chapters:
-  - file: Control/Overview.md
-  - file: Control/BicycleModel.md
-  - file: Control/PurePursuit.md
   - file: Control/VehicleModel.md
-  - file: Control/MPC_and_FP.md
+  - file: Control/AngleControl.md
+- caption: Platform
+  chapters:
+  - file: Platform/Overview.md
 - caption: Safety
   chapters:
   - file: Safety/Warnings.md
@@ -36,4 +43,5 @@ parts:
   - file: Exercises/StudentProjects.md
   - file: Appendix/Setup.md
   - file: Appendix/ReadingList.md
+  - file: Appendix/Glossary.md
   - file: ATTRIBUTION.md

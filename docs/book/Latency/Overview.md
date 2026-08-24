@@ -63,6 +63,14 @@ $$
 f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 $$
 
+```{figure} figures/ceiling.png
+---
+width: 80%
+---
+Achieved rate is a staircase in the per-frame work: 1 ms saved inside a step buys nothing, crossing a
+multiple of the period costs a third of the rate.
+```
+
 That ceiling function is the whole story. It means shaving 1 ms off the work can buy nothing at all, and
 crossing a multiple of $T$ can buy a third of your rate at once.
 
