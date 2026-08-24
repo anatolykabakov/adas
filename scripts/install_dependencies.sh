@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NDK_VERSION="27.0.12077973"
 # Prefer existing env / buildozer NDK; otherwise install under $HOME/Android/Sdk
 DEFAULT_SDK_HOME="${ANDROID_HOME:-/usr/lib/android-sdk}"
@@ -21,6 +21,35 @@ print_status()  { echo -e "${BLUE}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# The platform gradle's compileSdk needs. Read from the build file so the two cannot drift.
+compile_sdk() {
+    sed -n 's/^[[:space:]]*compileSdk[[:space:]]\+\([0-9]\+\).*/\1/p' \
+        "${PROJECT_DIR}/app/build.gradle" | head -1
+}
+
+# Which SDK to point gradle at. ANDROID_HOME is not enough on its own: a distro-packaged SDK is
+# root-owned and carries an old platform, so gradle tries to install the missing one, cannot write,
+# and fails with "SDK directory is not writable" — the failure looks like a missing path but is not.
+# So an SDK that already has the platform wins over one gradle would have to install into.
+resolve_sdk() {
+    local want="$1" c
+    local candidates=(
+        "${ANDROID_SDK_ROOT:-}" "${ANDROID_HOME:-}"
+        "${HOME}/Android/Sdk" "${HOME}/Library/Android/sdk"
+        "/opt/android-sdk" "/usr/lib/android-sdk"
+    )
+    for c in "${candidates[@]}"; do
+        [ -n "$c" ] && [ -d "$c/platforms/android-${want}" ] && { echo "$c"; return; }
+    done
+    for c in "${candidates[@]}"; do
+        [ -n "$c" ] && [ -d "$c" ] && [ -w "$c" ] && { echo "$c"; return; }
+    done
+    for c in "${candidates[@]}"; do
+        [ -n "$c" ] && [ -d "$c" ] && { echo "$c"; return; }
+    done
+    echo ""
+}
 
 resolve_ndk() {
     if [ -n "${ANDROID_NDK_ROOT:-}" ] && [ -d "$ANDROID_NDK_ROOT" ]; then
@@ -152,8 +181,24 @@ install_tools() {
 create_local_properties() {
     print_status "Creating local.properties..."
 
-    local sdk_dir="${ANDROID_HOME:-$DEFAULT_SDK_HOME}"
-    local ndk_dir
+    local want sdk_dir ndk_dir
+    want="$(compile_sdk)"
+    want="${want:-34}"
+    sdk_dir="$(resolve_sdk "$want")"
+    if [ -z "$sdk_dir" ]; then
+        print_error "No Android SDK found — set ANDROID_HOME, or run this script without --local-properties-only"
+        return 1
+    fi
+    if [ ! -d "$sdk_dir/platforms/android-${want}" ]; then
+        if [ -w "$sdk_dir" ]; then
+            print_warning "$sdk_dir has no platform android-${want} — gradle will download it"
+        else
+            print_warning "$sdk_dir has no platform android-${want} and is not writable:"
+            print_warning "  gradle will try to install it and fail. Build with"
+            print_warning "  ANDROID_HOME=/path/to/sdk ./scripts/build_project.sh, or install the"
+            print_warning "  platform into an SDK you own."
+        fi
+    fi
     ndk_dir="$(resolve_ndk)"
     if [ -z "$ndk_dir" ]; then
         ndk_dir="${ANDROID_NDK_ROOT:-$DEFAULT_NDK_HOME}"

@@ -1,6 +1,6 @@
 """Lane keeping for bag/sim visualizers via Simulated ``pyadas.AdasApp``.
 
-``pure_pursuit`` / ``mpc`` / ``fp`` / ``straight`` — publish chassis/lanes, ``step``, read state.
+``pure_pursuit`` / ``fp`` / ``straight`` — publish chassis/lanes, ``step``, read state.
 """
 
 from __future__ import annotations

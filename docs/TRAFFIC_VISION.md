@@ -14,7 +14,10 @@ bench-активность, `export_traffic_yolo.sh`) удалена: рабоч
 
 * `adb push <ваш>.onnx /sdcard/adas_models/traffic_yolo.onnx` — без пересборки, раннер смотрит туда
   первым;
-* положить в `models/` и пересобрать — `syncTrafficYoloModel` упакует.
+* положить в `models/` и пересобрать — `syncTrafficYoloModel` упакует;
+* `./scripts/fetch_models.sh --with-optional` выведет её из `yolov8n.pt` (нужен `ultralytics`).
+  Обычная сборка эти строки манифеста пропускает: веса AGPL, и упаковать их в APK — это
+  распространение, поэтому простой чекаут к нему не приводит.
 
 Экспорт из `yolov8n.pt` (COCO): `pip install ultralytics onnx onnxsim`, далее командой из истории
 git (`export_traffic_yolo.sh`) или напрямую `yolo export format=onnx imgsz=256 opset=12`.

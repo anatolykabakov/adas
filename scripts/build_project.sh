@@ -15,6 +15,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_TYPE="debug"
 CLEAN_BUILD=false
 BUILD_CPP_ONLY=false
+FETCH_ASSETS=true
 VERBOSE=false
 
 print_status()  { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -64,6 +65,28 @@ resolve_java_home() {
     done
 }
 
+prepare_assets() {
+    # One command has to be enough for a fresh clone, so the two things a clone cannot have are done
+    # here: the SDK path (local.properties is gitignored) and the vision model (not in the repository
+    # at all — see scripts/models.manifest and THIRD_PARTY.md).
+    if [ "$FETCH_ASSETS" = false ]; then
+        print_status "Skipping asset preparation (--no-fetch)"
+        return
+    fi
+
+    if [ "$BUILD_CPP_ONLY" = false ] && [ ! -f "$PROJECT_DIR/local.properties" ]; then
+        print_status "local.properties is missing — writing it"
+        "$PROJECT_DIR/scripts/install_dependencies.sh" --local-properties-only
+    fi
+
+    print_status "Models: fetching and deriving what the APK packages"
+    if ! "$PROJECT_DIR/scripts/fetch_models.sh"; then
+        print_error "Model preparation failed — see the list above"
+        print_error "Build anyway with --no-fetch if you know the assets are already in place"
+        exit 1
+    fi
+}
+
 show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo
@@ -71,6 +94,7 @@ show_help() {
     echo "  -t, --type TYPE        Build type (debug|release) [default: debug]"
     echo "  -c, --clean            Clean before build"
     echo "  --cpp-only             Build C++ part only"
+    echo "  --no-fetch             Skip the model fetch/derive step"
     echo "  -v, --verbose          Verbose output"
     echo "  -h, --help             Show this help"
 }
@@ -88,6 +112,10 @@ parse_arguments() {
                 ;;
             --cpp-only)
                 BUILD_CPP_ONLY=true
+                shift
+                ;;
+            --no-fetch)
+                FETCH_ASSETS=false
                 shift
                 ;;
             -v|--verbose)
@@ -226,6 +254,7 @@ main() {
     show_build_info
 
     check_dependencies
+    prepare_assets
     setup_environment
     clean_project
     build_cpp

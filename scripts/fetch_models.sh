@@ -12,6 +12,7 @@
 #   ./scripts/fetch_models.sh --check      # verify only, download nothing
 #   ./scripts/fetch_models.sh --record     # print manifest lines with the hashes of what is on disk
 #   ./scripts/fetch_models.sh --force      # re-download even if the hash matches
+#   ./scripts/fetch_models.sh --with-optional  # also the assets marked -opt in the manifest
 #
 # Exit codes: 0 everything present and verified, 1 something is missing or does not match.
 
@@ -24,12 +25,14 @@ MANIFEST="$SCRIPT_DIR/models.manifest"
 CHECK_ONLY=false
 RECORD=false
 FORCE=false
+WITH_OPTIONAL=false
 
 for arg in "$@"; do
     case "$arg" in
         --check)  CHECK_ONLY=true ;;
         --record) RECORD=true ;;
         --force)  FORCE=true ;;
+        --with-optional) WITH_OPTIONAL=true ;;
         -h|--help)
             sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
             exit 0
@@ -51,6 +54,8 @@ sha_of() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
 problems=0
 present=0
 fetched=0
+derived=0
+skipped=0
 
 while read -r dest want kind source; do
     # skip comments and blank lines
@@ -58,6 +63,19 @@ while read -r dest want kind source; do
     [ -n "${source:-}" ] || { echo "malformed manifest line for $dest" >&2; problems=$((problems + 1)); continue; }
 
     path="$REPO_ROOT/$dest"
+
+    # An asset marked -opt is not part of a default build: the traffic detector is derived from
+    # AGPL-licensed weights and putting it in the APK is distribution, so a plain checkout must not
+    # end up with it in models/ where gradle would package it (THIRD_PARTY.md).
+    case "$kind" in
+        *-opt)
+            if [ "$WITH_OPTIONAL" = false ]; then
+                echo "skip     $dest  (optional; --with-optional to build it)"
+                skipped=$((skipped + 1))
+                continue
+            fi
+            ;;
+    esac
 
     if $RECORD; then
         if [ -f "$path" ]; then
@@ -99,14 +117,20 @@ while read -r dest want kind source; do
     fi
 
     case "$kind" in
-        url)
+        url|url-opt)
             mkdir -p "$(dirname "$path")"
             echo "fetch    $dest"
             echo "         from $source"
             # -C - resumes a partial file, -f fails on HTTP errors instead of saving the error page.
             if ! curl -fL -C - -o "$path" "$source"; then
-                echo "         download failed" >&2
-                problems=$((problems + 1))
+                rm -f "$path"
+                if [ "$kind" = "url-opt" ]; then
+                    echo "SKIPPED  $dest — download failed and this asset is optional" >&2
+                    skipped=$((skipped + 1))
+                else
+                    echo "         download failed" >&2
+                    problems=$((problems + 1))
+                fi
                 continue
             fi
             got="$(sha_of "$path")"
@@ -118,10 +142,29 @@ while read -r dest want kind source; do
             [ "$want" = "-" ] && echo "         sha256 $got  (record it in the manifest)"
             fetched=$((fetched + 1))
             ;;
-        derive)
-            echo "MISSING  $dest — produced locally, not downloaded" >&2
-            echo "         run: $source" >&2
-            problems=$((problems + 1))
+        derive|derive-opt)
+            echo "derive   $dest"
+            echo "         $source"
+            # The exit status is not enough: a tool that writes its output under a name of its own
+            # choosing exits 0 and leaves the declared destination missing. Without this the line
+            # would report success and gradle would package whatever was in assets/ from before.
+            if ( cd "$REPO_ROOT" && bash -c "$source" ) && [ -f "$path" ]; then
+                got="$(sha_of "$path")"
+                if [ "$want" != "-" ] && [ "$got" != "$want" ]; then
+                    echo "MISMATCH $dest derived to $got, manifest says $want" >&2
+                    problems=$((problems + 1))
+                else
+                    derived=$((derived + 1))
+                fi
+            elif [ "$kind" = "derive-opt" ]; then
+                # Optional by design: this one needs tooling we do not ship, and the feature that
+                # consumes it is off in the default config. A build must not die for it.
+                echo "SKIPPED  $dest — the command above failed and this asset is optional" >&2
+                skipped=$((skipped + 1))
+            else
+                echo "FAILED   $dest — the command above did not produce it" >&2
+                problems=$((problems + 1))
+            fi
             ;;
         unknown)
             echo "MISSING  $dest — provenance not established" >&2
@@ -143,7 +186,7 @@ done < "$MANIFEST"
 $RECORD && exit 0
 
 echo
-echo "verified $present, fetched $fetched, unresolved $problems"
+echo "verified $present, fetched $fetched, derived $derived, skipped $skipped, unresolved $problems"
 if [ "$problems" -gt 0 ]; then
     echo "gradle will keep whatever is already in app/src/main/assets/ for anything missing here —" >&2
     echo "which is how a stale or pointer file ends up in an APK without a word. Resolve the list above." >&2

@@ -65,21 +65,27 @@ No host install — use the container (docker only):
 ./scripts/docker.sh sim --track highway --controllers fp    # controller run on track
 ```
 
-On the host:
+On the host, a fresh clone needs one command:
 
 ```bash
-./scripts/install_dependencies.sh        # SDK/NDK/Conan/Python — if needed
-./scripts/install_dependencies.sh --local-properties-only   # already have an SDK? just point at it
 ./scripts/build_project.sh               # debug APK + native arm64
+```
+
+It writes `local.properties` if it is missing and runs `fetch_models.sh` before building, so the
+first build of a clone with an empty `models/` needs nothing else. The rest, when you need it:
+
+```bash
+./scripts/install_dependencies.sh        # SDK/NDK/Conan/Python — on a machine that has none
 ./scripts/build_project.sh --cpp-only    # libadas_app_android.so only
+./scripts/build_project.sh --no-fetch    # skip the asset step; the models are already in place
 
 # offline stack: host build, pyadas, and unit tests in one command
 ./app/src/main/cpp/build_cpp.sh -t linux --test
 pip install -r scripts/sim/requirements.txt   # + MetaDrive
 ```
 
-**The repository carries no model.** `./scripts/fetch_models.sh` brings it into `models/` (gitignored)
-from the place entitled to distribute it — comma's own release — and checks sha256 against
+**The repository carries no model.** `./scripts/fetch_models.sh` — which the build runs for you —
+brings it into `models/` (gitignored) from the place entitled to distribute it — comma's own release — and checks sha256 against
 [`scripts/models.manifest`](scripts/models.manifest), which also records the two derivation steps: fp16 →
 fp32 (onnxruntime computes the fp16 graph incorrectly on ARM) and ONNX → thneed for the phone GPU. Gradle
 packages whatever is in `models/` into the APK. So we distribute nothing we did not make, and a clone is
@@ -93,10 +99,10 @@ C++ builds land in `app/src/main/cpp/build/<target>/<BuildType>` — one root, s
 finishes in three seconds and will happily package a stale one; `scripts/prepare_drive.sh` refuses to
 install when the C++ sources are newer and compares the sha1 inside the APK against the built one.
 Requires `ANDROID_HOME` / NDK, Java 17+, Conan 2. The SDK path lives in `local.properties`, which is
-gitignored — a fresh clone has none, and gradle then reaches for the system SDK and fails with
-`SDK directory is not writable`. `./scripts/install_dependencies.sh --local-properties-only` writes it
-without touching anything else; that failure is the first thing a new clone hits. The host build puts
-`pyadas/core*.so` into `scripts/`, which every offline tool runs on.
+gitignored, so a fresh clone has none and gradle reaches for the system SDK and fails with
+`SDK directory is not writable`; `build_project.sh` writes the file before it gets that far, and
+`./scripts/install_dependencies.sh --local-properties-only` writes it alone if you build by hand. The
+host build puts `pyadas/core*.so` into `scripts/`, which every offline tool runs on.
 
 ## Project layout
 
@@ -113,7 +119,7 @@ app/src/main/
 │   ├── tests/              gtest: 230 cases
 │   └── src/
 │       ├── services/       planner, control, platform, localization, camera_calib, map_data, …
-│       ├── lateral/        the three lateral strategies behind IPlanner: fp, vp, pp, plus the solvers
+│       ├── lateral/        the two lateral strategies behind IPlanner: fp and pp, plus the solvers
 │       ├── platform/       the car behind CarPlatform: volkswagen/
 │       ├── mapmatch/       OSM road graph: localization, curvature ahead
 │       ├── panda/          USB driver and CAN framing

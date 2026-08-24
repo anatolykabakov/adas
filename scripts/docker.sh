@@ -6,7 +6,7 @@
 #   ./scripts/docker.sh shell            interactive shell in container
 #   ./scripts/docker.sh host             build C++ host part and pyadas
 #   ./scripts/docker.sh tests            build and run unit tests
-#   ./scripts/docker.sh apk              build APK (needs android image)
+#   ./scripts/docker.sh apk              build APK (needs android image; models are derived on the host)
 #   ./scripts/docker.sh sim              controller run on track (sim.eval)
 #   ./scripts/docker.sh run <command>    run arbitrary command inside
 #
@@ -73,10 +73,14 @@ case "$cmd" in
 
   apk)
     export ADAS_TARGET=android
+    # Assets are prepared on the host, not inside: capturing the thneed needs a real OpenCL device
+    # with cl_khr_fp16, and the container has no GPU. The repository is mounted, so what lands in
+    # models/ here is what gradle packages there.
+    "$ROOT/scripts/fetch_models.sh"
     # Separate build tree and gradle cache: host and container have different absolute paths inside
     # cmake/conan caches, and the gradle daemon from .tools/gradle-home on the host will not run in the container.
     run_in "$BUILD_ENV GRADLE_USER_HOME=/home/dev/.gradle \
-            GRADLE_OPTS=-Dorg.gradle.daemon=false ./scripts/build_project.sh ${*:-}"
+            GRADLE_OPTS=-Dorg.gradle.daemon=false ./scripts/build_project.sh --no-fetch ${*:-}"
     ;;
 
   sim)
