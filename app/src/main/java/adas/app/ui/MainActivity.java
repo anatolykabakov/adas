@@ -289,9 +289,7 @@ public class MainActivity extends AppCompatActivity {
             if (suppressControllerUi) {
                 return;
             }
-            if (checkedId == R.id.laneKeepMpc) {
-                params.laneKeepController = "mpc";
-            } else if (checkedId == R.id.laneKeepFlowpilot) {
+            if (checkedId == R.id.laneKeepFlowpilot) {
                 params.laneKeepController = "fp";
             } else {
                 params.laneKeepController = "pp";
@@ -437,12 +435,8 @@ public class MainActivity extends AppCompatActivity {
         if (laneKeepControllerGroup != null) {
             String c = RuntimeParams.normalizeController(params.laneKeepController);
             suppressControllerUi = true;
-            int id = R.id.laneKeepPp;
-            if ("mpc".equals(c)) {
-                id = R.id.laneKeepMpc;
-            } else if ("fp".equals(c)) {
-                id = R.id.laneKeepFlowpilot;
-            }
+            // "mpc" stays reachable through the config; the panel offers the two that get road time.
+            int id = "fp".equals(c) ? R.id.laneKeepFlowpilot : R.id.laneKeepPp;
             laneKeepControllerGroup.check(id);
             suppressControllerUi = false;
         }

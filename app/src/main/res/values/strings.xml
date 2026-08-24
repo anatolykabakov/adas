@@ -9,7 +9,6 @@
     <string name="params_toggle">Parameters</string>
     <string name="params_title">Parameters</string>
     <string name="params_hint">Car and model apply on the next service start. Calibrate lens measures the optics of this phone against a printed chessboard.</string>
-    <string name="params_section_camera">Lines: rpy + X Y H (live)</string>
     <string name="params_section_pp">Lane keep</string>
     <string name="params_lk_controller">Controller</string>
     <string name="params_section_logging">Logging</string>
@@ -23,7 +22,6 @@
     <!-- A second network. Off costs nothing: no task, no frame copy, not even loaded. -->
     <string name="params_record_images">Write camera frames to bag</string>
     <string name="params_lk_pp">PP</string>
-    <string name="params_lk_mpc">MPC</string>
     <string name="params_lk_flowpilot">FP</string>
     <string name="params_reset">Reset</string>
     <string name="params_save">Save</string>

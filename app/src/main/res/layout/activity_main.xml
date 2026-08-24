@@ -137,11 +137,6 @@
                 android:textColor="#99FFFFFF"
                 android:textSize="11sp" />
 
-            <!-- Camera RPY / mount -->
-            <TextView
-                style="@style/ParamsSection"
-                android:text="@string/params_section_camera" />
-
             <TextView
                 style="@style/ParamsSection"
                 android:text="@string/params_section_vision" />
@@ -295,14 +290,6 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/params_lk_pp"
-                        android:textColor="#FFFFFF" />
-
-                    <RadioButton
-                        android:id="@+id/laneKeepMpc"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="@string/params_lk_mpc"
                         android:textColor="#FFFFFF" />
 
                     <RadioButton
