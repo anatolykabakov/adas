@@ -146,15 +146,34 @@ while read -r dest want kind source; do
             [ "$want" = "-" ] && echo "         sha256 $got  (record it in the manifest)"
             fetched=$((fetched + 1))
             ;;
-        derive|derive-opt|derive-url)
-            # derive-url carries two sources split by ' ||| ': the command, then a URL holding the
-            # same artifact. The derive is bit-for-bit reproducible, so the download verifies against
-            # the same pinned sha256 — a fallback for machines that cannot derive (CI has no GPU for
-            # the thneed), not a different provenance.
+        derive|derive-opt|derive-url|url-derive)
+            # derive-url and url-derive carry two sources split by ' ||| ': the command, then a URL
+            # holding the same artifact. The derive is bit-for-bit reproducible, so the download
+            # verifies against the same pinned sha256 — same provenance either way. url-derive tries
+            # the download FIRST (any machine, no GPU or extra tooling), and derives only when the
+            # shelf is unreachable; derive-url is the same pair in the opposite order.
             fallback_url=""
-            if [ "$kind" = "derive-url" ]; then
+            case "$kind" in derive-url|url-derive)
                 fallback_url="${source#* ||| }"
                 source="${source%% ||| *}"
+            ;; esac
+            if [ "$kind" = "url-derive" ] && [ -n "$fallback_url" ]; then
+                mkdir -p "$(dirname "$path")"
+                echo "fetch    $dest"
+                echo "         from $fallback_url  (derive is the fallback)"
+                if curl -fL -C - -o "$path" "$fallback_url"; then
+                    got="$(sha_of "$path")"
+                    if [ "$want" != "-" ] && [ "$got" = "$want" ]; then
+                        fetched=$((fetched + 1))
+                        continue
+                    fi
+                    echo "         hash mismatch ($got) — falling back to deriving" >&2
+                    rm -f "$path"
+                else
+                    echo "         download failed — falling back to deriving" >&2
+                    rm -f "$path"
+                fi
+                fallback_url=""   # the URL had its chance; below is a plain derive
             fi
             echo "derive   $dest"
             echo "         $source"
