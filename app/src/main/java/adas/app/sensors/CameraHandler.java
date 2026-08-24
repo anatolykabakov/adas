@@ -86,6 +86,9 @@ public class CameraHandler {
 
     private static final int JPEG_QUALITY = 70;
     private boolean chessboardCaptureMode;
+    /** Chessboard mode: whether continuous AF has been frozen into a fixed focus distance. */
+    private volatile boolean chessFocusLocked;
+    private int chessAfSettledFrames;
     /** Whether `intrinsics_prior` was taken on this very phone. */
     private boolean ownPrior;
     private static volatile boolean recordCameraImages = true;
@@ -534,8 +537,14 @@ public class CameraHandler {
             captureRequest.addTarget(previewSurface);
 
             if (chessboardCaptureMode) {
+                // Continuous AF only until it settles: the session then freezes the focus distance.
+                // Refocusing between views changes the effective focal length (focus breathing), and a
+                // single-fx solve over 30 views taken at different focus positions cannot fit — that is
+                // how a flat, sharp board still comes back with a 5 px reprojection error.
                 captureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                Log.w(TAG, "Chessboard capture: autofocus enabled");
+                chessFocusLocked = false;
+                chessAfSettledFrames = 0;
+                Log.i(TAG, "Chessboard capture: AF on until settled, then locked for the whole session");
             } else {
                 captureRequest.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
             }
@@ -772,6 +781,40 @@ public class CameraHandler {
             public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request,
                     TotalCaptureResult result) {
                 super.onCaptureCompleted(session, request, result);
+
+                if (chessboardCaptureMode && !chessFocusLocked) {
+                    Integer afState = result.get(TotalCaptureResult.CONTROL_AF_STATE);
+                    Float diopters = result.get(TotalCaptureResult.LENS_FOCUS_DISTANCE);
+                    final boolean settled = afState != null
+                            && (afState == TotalCaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED
+                                    || afState == TotalCaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED);
+                    if (settled) {
+                        // A handful of consecutive settled frames, so a single lucky one does not lock
+                        // a focus the lens is still leaving.
+                        if (++chessAfSettledFrames >= 8) {
+                            chessFocusLocked = true;
+                            if (diopters != null) {
+                                try {
+                                    captureRequest.set(CaptureRequest.CONTROL_AF_MODE,
+                                            CaptureRequest.CONTROL_AF_MODE_OFF);
+                                    captureRequest.set(CaptureRequest.LENS_FOCUS_DISTANCE, diopters);
+                                    session.setRepeatingRequest(captureRequest.build(), this, backgroundHandler);
+                                    Log.i(TAG, String.format("Chessboard: focus locked at %.2f dpt (~%.2f m)"
+                                            + " — keep the board near this distance, vary only the tilt",
+                                            diopters, diopters > 0.01f ? 1.0f / diopters : Float.POSITIVE_INFINITY));
+                                } catch (Exception e) {
+                                    Log.e(TAG, "Chessboard focus lock failed — AF stays continuous", e);
+                                }
+                            } else {
+                                Log.w(TAG, "Chessboard: device reports no focus distance — AF stays"
+                                        + " continuous; expect a higher reprojection error");
+                            }
+                        }
+                    } else {
+                        chessAfSettledFrames = 0;
+                    }
+                }
+
                 Long exp = result.get(TotalCaptureResult.SENSOR_EXPOSURE_TIME);
                 Long dur = result.get(TotalCaptureResult.SENSOR_FRAME_DURATION);
                 Integer iso = result.get(TotalCaptureResult.SENSOR_SENSITIVITY);

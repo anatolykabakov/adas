@@ -37,6 +37,9 @@ public final class IntrinsicsCalibrator {
     /** Above this the board was blurred, bent or half out of frame; the fit is not worth keeping. */
     private static final double MAX_REPROJECTION_PX = 1.0;
 
+    /** Never prune below this many views: the focal length goes loose long before the solver complains. */
+    private static final int MIN_SOLVE_VIEWS = 15;
+
     /** What the last frame produced, for the overlay to draw. */
     public static final class Detection {
         public final float[] corners;  ///< Flat x,y pairs in image pixels; null when nothing was found.
@@ -179,29 +182,78 @@ public final class IntrinsicsCalibrator {
             return new Result(false, 0, 0, 0, 0, 0, width, height, "no views collected");
         }
 
-        List<Mat> objectPoints = new ArrayList<>(kept.size());
-        for (int i = 0; i < kept.size(); i++) {
+        List<Mat> views = new ArrayList<>(kept);
+        List<Mat> objectPoints = new ArrayList<>(views.size());
+        for (int i = 0; i < views.size(); i++) {
             objectPoints.add(boardPoints());
         }
         Mat cameraMatrix = new Mat();
         Mat distortion = new Mat();
         List<Mat> rvecs = new ArrayList<>();
         List<Mat> tvecs = new ArrayList<>();
+        int dropped = 0;
         try {
-            double rms = Calib3d.calibrateCamera(objectPoints, kept, new Size(width, height),
+            double rms = Calib3d.calibrateCamera(objectPoints, views, new Size(width, height),
                     cameraMatrix, distortion, rvecs, tvecs);
+
+            // One motion-blurred or bent-board view can carry the whole RMS. If the global fit is bad
+            // and there are views to spare, drop the ones whose own error is far above the median and
+            // solve once more — a rescue, not a licence: the per-view cut is against the *median*, so a
+            // session that is bad everywhere still fails.
+            if (rms > MAX_REPROJECTION_PX && views.size() > MIN_SOLVE_VIEWS) {
+                double[] perView = perViewErrors(objectPoints, views, rvecs, tvecs, cameraMatrix, distortion);
+                double median = median(perView);
+                double cut = Math.max(2.0 * median, MAX_REPROJECTION_PX);
+                List<Mat> keptViews = new ArrayList<>();
+                for (int i = 0; i < views.size(); i++) {
+                    if (perView[i] <= cut) {
+                        keptViews.add(views.get(i));
+                    } else {
+                        Log.w(TAG, String.format(Locale.US, "dropping view %d: %.2f px (median %.2f)",
+                                i, perView[i], median));
+                    }
+                }
+                dropped = views.size() - keptViews.size();
+                if (dropped > 0 && keptViews.size() >= MIN_SOLVE_VIEWS) {
+                    views = keptViews;
+                    for (Mat m : objectPoints) {
+                        m.release();
+                    }
+                    objectPoints.clear();
+                    for (int i = 0; i < views.size(); i++) {
+                        objectPoints.add(boardPoints());
+                    }
+                    for (Mat m : rvecs) {
+                        m.release();
+                    }
+                    for (Mat m : tvecs) {
+                        m.release();
+                    }
+                    rvecs = new ArrayList<>();
+                    tvecs = new ArrayList<>();
+                    rms = Calib3d.calibrateCamera(objectPoints, views, new Size(width, height),
+                            cameraMatrix, distortion, rvecs, tvecs);
+                }
+            }
+
             double fx = cameraMatrix.get(0, 0)[0];
             double fy = cameraMatrix.get(1, 1)[0];
             double cx = cameraMatrix.get(0, 2)[0];
             double cy = cameraMatrix.get(1, 2)[0];
-            Log.i(TAG, String.format(Locale.US, "fx=%.1f fy=%.1f cx=%.1f cy=%.1f rms=%.3f px from %d views",
-                    fx, fy, cx, cy, rms, kept.size()));
+            Log.i(TAG, String.format(Locale.US,
+                    "fx=%.1f fy=%.1f cx=%.1f cy=%.1f rms=%.3f px from %d views (%d dropped)",
+                    fx, fy, cx, cy, rms, views.size(), dropped));
 
             if (rms > MAX_REPROJECTION_PX || !(fx > 1.0) || !(fy > 1.0)) {
+                // A uniformly bad session is almost never the board: it is focus moving between views
+                // or the board moving during a view. Say that instead of blaming flatness.
                 return new Result(false, fx, fy, cx, cy, rms, width, height,
-                        String.format(Locale.US, "reprojection %.2f px — flatten the board and retry", rms));
+                        String.format(Locale.US, "reprojection %.2f px after dropping %d view(s) — "
+                                + "keep the distance to the board fixed, change only the tilt, "
+                                + "and hold still for each view", rms, dropped));
             }
-            return new Result(true, fx, fy, cx, cy, rms, width, height, "ok");
+            return new Result(true, fx, fy, cx, cy, rms, width, height,
+                    dropped == 0 ? "ok" : String.format(Locale.US, "ok (%d bad view(s) dropped)", dropped));
         } catch (Exception e) {
             Log.e(TAG, "calibrateCamera failed", e);
             return new Result(false, 0, 0, 0, 0, 0, width, height, String.valueOf(e.getMessage()));
@@ -219,6 +271,40 @@ public final class IntrinsicsCalibrator {
             distortion.release();
             clear();
         }
+    }
+
+    /** Per-view RMS reprojection error [px], from the pose the joint solve assigned to each view. */
+    private static double[] perViewErrors(List<Mat> objectPoints, List<Mat> views,
+            List<Mat> rvecs, List<Mat> tvecs, Mat cameraMatrix, Mat distortion) {
+        final double[] errs = new double[views.size()];
+        final org.opencv.core.MatOfDouble dist = new org.opencv.core.MatOfDouble(distortion);
+        for (int i = 0; i < views.size(); i++) {
+            MatOfPoint2f projected = new MatOfPoint2f();
+            try {
+                Calib3d.projectPoints(new MatOfPoint3f(objectPoints.get(i)), rvecs.get(i), tvecs.get(i),
+                        cameraMatrix, dist, projected);
+                final Point[] p = projected.toArray();
+                final Point[] m = new MatOfPoint2f(views.get(i)).toArray();
+                double sum = 0.0;
+                for (int j = 0; j < p.length; j++) {
+                    final double dx = p[j].x - m[j].x;
+                    final double dy = p[j].y - m[j].y;
+                    sum += dx * dx + dy * dy;
+                }
+                errs[i] = Math.sqrt(sum / p.length);
+            } finally {
+                projected.release();
+            }
+        }
+        dist.release();
+        return errs;
+    }
+
+    private static double median(double[] values) {
+        final double[] sorted = values.clone();
+        java.util.Arrays.sort(sorted);
+        final int n = sorted.length;
+        return n % 2 == 1 ? sorted[n / 2] : 0.5 * (sorted[n / 2 - 1] + sorted[n / 2]);
     }
 
     /** The board in its own coordinates, one unit per square: only ratios reach the intrinsics. */
