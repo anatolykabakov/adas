@@ -1,0 +1,617 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Глоссарий &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Appendix/Glossary';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Атрибуция" href="../ATTRIBUTION.html" />
+    <link rel="prev" title="Что читать дальше и внутренние документы" href="ReadingList.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Appendix/Glossary.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Глоссарий</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Машина и шина</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Геометрия и управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Локализация</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Зрение и рантайм</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Родословная</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Глоссарий<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Термины, которые главы используют как известные. Каждый определяется там, где впервые идёт в дело; здесь —
+единственное место, где их можно посмотреть все сразу.</p>
+<section id="id2">
+<h2>Машина и шина<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>MQB</strong> — платформа Volkswagen (здесь Golf 7). Задаёт колёсную базу, передаточное отношение, раскладку CAN.</p></li>
+<li><p><strong>CAN</strong> — внутренняя шина сообщений машины; каждый кадр сенсора и актуатора идёт по ней.</p></li>
+<li><p><strong>DBC</strong> — текстовая база, говорящая, какие биты какого кадра CAN — какой физический сигнал.</p></li>
+<li><p><strong>panda</strong> — USB-интерфейс CAN от <a class="reference external" href="http://comma.ai">comma.ai</a> между телефоном и машиной, с моделью безопасности на плате.</p></li>
+<li><p><strong>EPS</strong> — электроусилитель руля: мотор рейки, реально поворачивающий колёса.</p></li>
+<li><p><strong>HCA / HCA_01</strong> — кадр CAN (адрес <code class="docutils literal notranslate"><span class="pre">0x126</span></code>), запрашивающий у EPS момент ассиста.</p></li>
+<li><p><strong>cNm</strong> — сантиньютон-метр, 1/100 Н·м; единица команды момента. ±300 cNm = ±3 Н·м.</p></li>
+</ul>
+</section>
+<section id="id3">
+<h2>Геометрия и управление<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>SWA</strong> — угол рулевого колеса, как его сообщает колонка на CAN.</p></li>
+<li><p><strong>δ (delta)</strong> — угол колеса. SWA = <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">·</span> <span class="pre">δ</span> <span class="pre">·</span> <span class="pre">steer_ratio</span></code>.</p></li>
+<li><p><strong>steer_ratio</strong> — градусов на руле на градус на колесе (~15.7 здесь).</p></li>
+<li><p><strong>κ (kappa)</strong> — кривизна пути, 1/радиус. Планировщик выдаёт её, а не угол.</p></li>
+<li><p><strong>CTE</strong> — поперечное смещение машины от центра пути.</p></li>
+<li><p><strong>epsi</strong> — ошибка курса: угол между носом машины и касательной пути.</p></li>
+<li><p><strong>PID</strong> — регулятор, складывающий пропорциональный, интегральный и упреждающий члены ошибки (см.
+<a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a>).</p></li>
+<li><p><strong>недокрут / tire_stiffness_factor</strong> — колёса поворачивают меньше, чем предсказывает геометрия; фактор
+масштабирует эталонную жёсткость (см. <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a>).</p></li>
+</ul>
+</section>
+<section id="id4">
+<h2>Локализация<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>ENU</strong> — East-North-Up, локальный метрический кадр, в который проецируется GPS.</p></li>
+<li><p><strong>RPY</strong> — крен, тангаж, рыскание: углы установки камеры (и затравка установки IMU телефона).</p></li>
+<li><p><strong>EKF</strong> — расширенный фильтр Калмана: оцениватель «предсказание→обновление» (см.
+<a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a>).</p></li>
+<li><p><strong>paramsd</strong> — онлайн-оцениватель параметров машины (жёсткость, передаточное, смещения); построен и
+поставляется отключённым.</p></li>
+</ul>
+</section>
+<section id="id5">
+<h2>Зрение и рантайм<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>Supercombo</strong> — сеть вождения comma: от кадров камеры к линиям разметки и плану.</p></li>
+<li><p><strong>thneed</strong> — записанный прогон Supercombo на GPU, переигрываемый на GPU телефона (см.
+<a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>).</p></li>
+<li><p><strong>ONNX / ONNX Runtime</strong> — переносимый формат модели и его CPU/NNAPI-рантайм, запасной путь.</p></li>
+<li><p><strong>ZMQ</strong> — библиотека сообщений, соединяющая Java-сторону сенсоров с нативной C++.</p></li>
+<li><p><strong>protobuf</strong> — двоичный формат, в котором закодировано каждое логируемое сообщение и запись бега.</p></li>
+</ul>
+</section>
+<section id="id6">
+<h2>Родословная<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>comma / comma-two</strong> — <a class="reference external" href="http://comma.ai">comma.ai</a> и её устройство comma-two; линия openpilot, форк которой этот стек.</p></li>
+<li><p><strong>openpilot / flowpilot</strong> — стек вождения comma и его порт на Android; <code class="docutils literal notranslate"><span class="pre">fp</span></code> назван по flowpilot.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> / <code class="docutils literal notranslate"><span class="pre">vp</span></code></strong> — поперечные стратегии: pure pursuit, MPC flowpilot (по умолчанию на дороге) и
+удалённый MPC VisionPilot (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, преподаётся только как игрушка).</p></li>
+<li><p><strong>acados</strong> — встраиваемый солвер оптимального управления, который может использовать <code class="docutils literal notranslate"><span class="pre">fp</span></code> для своего MPC.</p></li>
+</ul>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Appendix"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="ReadingList.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Что читать дальше и внутренние документы</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../ATTRIBUTION.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Атрибуция</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Машина и шина</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Геометрия и управление</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Локализация</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Зрение и рантайм</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Родословная</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

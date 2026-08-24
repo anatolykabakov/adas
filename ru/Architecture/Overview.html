@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -518,6 +528,12 @@ Volkswagen. Появление второй марки (Toyota TSS2) не изм
 </tbody>
 </table>
 </div>
+<p>Пройденная с инструктором, эта же таблица — безопасный порядок подъёма для нового телефона, машины или
+студента: каждая стадия добавляет одну необратимую вещь, и у каждой есть проверка <em>до</em> следующей.
+Стадия 2 хочет стабильных оверлеев и разумной задержки (<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>), стадия 3 — чистой
+<code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> на дорожных темпах, стадия 4 — правдоподобного <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> против приборки, а
+стадия 5 — одна строка здесь и целый документ на практике: <code class="docutils literal notranslate"><span class="pre">docs/PREDRIVE.md</span></code>, фиксирующий единственный
+вопрос заезда <em>до</em> взгляда на данные. Дорожная работа — только под присмотром.</p>
 <p>Шестой этап — там, где курс обычно заканчивается, и там, где этот проект проводит большую часть времени.
 Две иллюстрации почему, обе из настоящих заездов:</p>
 <ul class="simple">
@@ -584,7 +600,7 @@ Volkswagen. Появление второй марки (Toyota TSS2) не изм
 <td><p>какой <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code> создаётся</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span></code></p></td>
 <td><p><span class="math notranslate nohighlight">\(\kappa\to\)</span> SWA через модель недокрута</p></td>

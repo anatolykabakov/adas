@@ -18,7 +18,7 @@ Package root: `app/src/main/java/adas/app/`, split by what a class talks to:
 
 | Stays in **Java** | Lives in **C++** |
 |---|---|
-| Camera2 / IMU / GPS | planning (`pp` / `mpc` / `fp`) and the control law |
+| Camera2 / IMU / GPS | planning (`pp` / `fp`) and the control law |
 | Supercombo (thneed or ORT) + optional YOLO | SafetyWarn, long plan, `proto_convert` |
 | `Logger` / `BagLogger` (session bags) | CAN TX/RX and HCA, behind `CarPlatform` |
 | Preview HUD (`LaneOverlayView`) | Middleware bus + timers |

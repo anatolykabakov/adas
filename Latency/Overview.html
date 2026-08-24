@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -429,7 +439,7 @@ At <span class="math notranslate nohighlight">\(v = 22\)</span> m/s a delay of <
 <a class="reference internal image-reference" href="../_images/latency_chain.png"><img alt="../_images/latency_chain.png" src="../_images/latency_chain.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 9 </span><span class="caption-text">Break the e2e path into measurable segments — then compare sessions fairly.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+<p><span class="caption-number">Fig. 33 </span><span class="caption-text">Break the e2e path into measurable segments — then compare sessions fairly.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <section id="metrics">
@@ -512,7 +522,7 @@ the ones you will meet, and because the jump between the rows is the subject of 
 <a class="reference internal image-reference" href="../_images/60_run0801_straights.png"><img alt="../_images/60_run0801_straights.png" src="../_images/60_run0801_straights.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 10 </span><span class="caption-text">Only interpret controller quality on windows where vision stayed healthy.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+<p><span class="caption-number">Fig. 34 </span><span class="caption-text">Only interpret controller quality on windows where vision stayed healthy.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -527,6 +537,14 @@ when a frame is there, so it takes <span class="math notranslate nohighlight">\(
 \[
 f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 \]</div>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../_images/ceiling.png"><img alt="../_images/ceiling.png" src="../_images/ceiling.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 35 </span><span class="caption-text">Achieved rate is a staircase in the per-frame work: 1 ms saved inside a step buys nothing, crossing a
+multiple of the period costs a third of the rate.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 <p>That ceiling function is the whole story. It means shaving 1 ms off the work can buy nothing at all, and
 crossing a multiple of <span class="math notranslate nohighlight">\(T\)</span> can buy a third of your rate at once.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>

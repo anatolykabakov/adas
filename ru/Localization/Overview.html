@@ -69,7 +69,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="Управление — как четыре главы опираются друг на друга" href="../Control/Overview.html" />
+    <link rel="next" title="Поперечный контур — планировщик, управление, платформа" href="../Planner/Overview.html" />
     <link rel="prev" title="Supercombo на устройстве" href="../Vision/Supercombo.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
@@ -233,13 +233,22 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -441,6 +451,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id22">Как это связано с удержанием полосы</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id23">Чеклист конфига</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id24">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id25">На собственной записи</a></li>
 </ul>
             </nav>
         </div>
@@ -589,6 +600,14 @@
 <p>Потому что сигнал скорости колеса квантован с шагом 0.0075 км/ч, а интервал около 10 мс. Дифференцирование
 квантованного сигнала на коротком интервале усиливает квант в <span class="math notranslate nohighlight">\(1/dt\)</span> раз. Измерено на настоящем 28-минутном
 заезде, наивная конечная разность дала:</p>
+<figure class="align-default" id="id26">
+<a class="reference internal image-reference" href="../_images/a_ego.png"><img alt="../_images/a_ego.png" src="../_images/a_ego.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 6 </span><span class="caption-text">Дифференцирование шумной скорости колёс взрывает ускорение; фильтр из двух состояний его восстанавливает
+(схема измеренного RMS 4.16 → 0.062 м/с²).</span><a class="headerlink" href="#id26" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p></p></th>
@@ -779,9 +798,19 @@ R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
 захвата дают неверный знак или огромное смещение, и тогда гейт согласия в EKF отбрасывает IMU целиком
 (<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> рад/с) — фильтр замолкает именно тогда, когда он был нужен.</p>
 </div>
-</section>
-</section>
 <hr class="docutils" />
+<div class="note admonition">
+<p class="admonition-title">Если вы не встречали фильтр Калмана</p>
+<p>Дальше оцениватель — это <strong>EKF</strong>, в два полушага на тик. <strong>Предсказание:</strong> толкнуть состояние вперёд по
+модели движения и <em>увеличить</em> его неопределённость (ковариацию <span class="math notranslate nohighlight">\(P\)</span>). <strong>Обновление:</strong> сравнить показание
+датчика с тем, что предсказывает состояние (<em>innovation</em>), и поправить состояние на долю этого разрыва —
+<em>усиление</em> <span class="math notranslate nohighlight">\(K\)</span>: большое, когда датчику верят больше, чем предсказанию, и малое — когда меньше. «EKF»
+значит лишь, что модели нелинейны и линеаризуются (якобиан <span class="math notranslate nohighlight">\(F\)</span>) на каждом шаге. Для этой главы вывод не
+нужен — только: предсказание растит неопределённость, измерение её уменьшает, а усиление — это насколько
+вы верите измерению.</p>
+</div>
+</section>
+</section>
 <section id="b">
 <h2>Шаг 2b: слияние с гироскопом и ошибка, которую стоит изучить<a class="headerlink" href="#b" title="Ссылка на этот заголовок">#</a></h2>
 <p>Состояние <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> в ENU. Тик по <strong>шасси</strong>, примерно каждые 10 мс.</p>
@@ -976,9 +1005,17 @@ GPS расходится больше чем на 0.5 рад. Фильтр не�
 измерен (1.0 против доплера, точного до 0.1), и пока скорость не стала состоянием, предсказание перезатирало
 это обновление примерно двадцать раз на каждую посылку GPS. Обе беды исправлены, а масштаб <em>всё равно</em> не
 выучивается — причина в шаге 4, и она интереснее самой ошибки.</p>
-</section>
-</section>
 <hr class="docutils" />
+<figure class="align-default" id="id27">
+<a class="reference internal image-reference" href="../_images/frames.png"><img alt="../_images/frames.png" src="../_images/frames.png" style="width: 60%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 7 </span><span class="caption-text">Три кадра, которые глава держит раздельно: оси ENU, азимут GPS (по часовой от Севера) и курс машины,
+связанные ψ = π/2 − b.</span><a class="headerlink" href="#id27" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
 <section id="a-gps">
 <h2>Шаг 3a: GPS → локальные метры<a class="headerlink" href="#a-gps" title="Ссылка на этот заголовок">#</a></h2>
 <p>Начало <span class="math notranslate nohighlight">\((\phi_0,\lambda_0)\)</span> — первый валидный фикс. С радиусом Земли <span class="math notranslate nohighlight">\(R = 6\,371\,000\)</span> м:</p>
@@ -1150,8 +1187,16 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
 это работает, но отдаёт единственное, что отличает поперечный уклон дороги от недокрута машины. Этот порядок
 был соблюдён, и шаг 6 — это то, что вышло, когда вход по крену, которого он требовал, встретился с бюджетом
 ошибок, в который обязан был поместиться.</p>
-</section>
 <hr class="docutils" />
+<figure class="align-default" id="id28">
+<a class="reference internal image-reference" href="../_images/understeer_speed.png"><img alt="../_images/understeer_speed.png" src="../_images/understeer_speed.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 8 </span><span class="caption-text">Отношение достигнутой к командной кривизны сползает со скоростью, так что один <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> не
+подходит — причина существования paramsd.</span><a class="headerlink" href="#id28" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
 <section id="id15">
 <h2>Шаг 6: учим параметры машины — и что об этом сказало измерение<a class="headerlink" href="#id15" title="Ссылка на этот заголовок">#</a></h2>
 <p>Всё до сих пор оценивало, <em>где машина</em>. Этот шаг оценивает, <em>какая она</em> — и он в этой главе, а не в главе про
@@ -1245,8 +1290,10 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
 <h3>Оценщик<a class="headerlink" href="#id17" title="Ссылка на этот заголовок">#</a></h3>
 <p>Три состояния, измерение — скорость рыска:</p>
 <div class="math notranslate nohighlight">
-\[x = [\text{tsf},\ \text{передаточное},\ \text{смещение угла}], \qquad
-\dot\psi_{\text{пред}} = v\,\kappa(x) + \frac{g\sin\phi}{v}\]</div>
+\[
+x = [\text{tsf},\ \text{передаточное},\ \text{смещение угла}], \qquad
+\dot\psi_{\text{пред}} = v\,\kappa(x) + \frac{g\sin\phi}{v}
+\]</div>
 <p>Две детали несут почти всю ценность.</p>
 <p><strong>Берите собственную функцию кривизны контроллера.</strong> Не её пересказ, а ту же самую функцию. Параметр,
 выученный против модели, чуть отличающейся от той, которая его потребляет, хуже настроенной руками константы,
@@ -1449,9 +1496,8 @@ CAN на 100 Гц оно жмёт ковариацию сто раз в секу
 <p>Поперечным MPC и Pure Pursuit глобальный ENU для руления <strong>не нужен</strong> — они следят за <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> в системе
 device. Локализация важна для:</p>
 <ul class="simple">
-<li><p>карт по бегам и наложений mapmatch (<code class="docutils literal notranslate"><span class="pre">docs/MAPMATCH.md</span></code> — это <strong>отдельный</strong> офлайновый сопоставитель формы
-трека, и он интегрирует измеренную скорость рыска напрямую, поэтому описанная выше ошибка его никогда не
-касалась);</p></li>
+<li><p>карт по бегам и подложек трека в визуализаторе (офлайновая вертикаль map-match удалена 2026-08-21;
+читалка <code class="docutils literal notranslate"><span class="pre">.admap</span></code> живёт как подложка визуализатора);</p></li>
 <li><p>проверок на разумность — расхождение GPS и чистого счисления пути;</p></li>
 <li><p>любой будущей функции, привязанной к карте;</p></li>
 <li><p>обучение параметров машины, которыми пользуется контроллер, — шаг 6, и единственный потребитель, которому
@@ -1512,6 +1558,29 @@ device. Локализация важна для:</p>
 <li><p>Возьмите бег, прогоните <code class="docutils literal notranslate"><span class="pre">v_ego_raw</span></code> через <code class="docutils literal notranslate"><span class="pre">SpeedFilter</span></code> с <code class="docutils literal notranslate"><span class="pre">factor</span> <span class="pre">=</span> <span class="pre">1.0</span></code> и <code class="docutils literal notranslate"><span class="pre">0.988</span></code> и сравните
 проинтегрированное расстояние с длиной трека GPS. Какой множитель ближе?</p></li>
 </ol>
+</section>
+<section id="id25">
+<h2>На собственной записи<a class="headerlink" href="#id25" title="Ссылка на этот заголовок">#</a></h2>
+<p>Всё выше работает без изменений на беге, который вы записали сами (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>,
+<em>Запишите собственный бег</em>), — и выигрывает от этого: у вашего GPS <em>ваш</em> мультипуть и ваши тоннели, ваш
+IMU несёт настоящую установку телефона, и каждое утверждение сверяется с треком, который вы способны
+проверить по памяти. Загрузите свои топики и пройдите пять шагов ещё раз:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — the loading pattern; the estimator code is the chapter's own</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vis.bag_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_topic_messages</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../adas_logs/&lt;your-session&gt;"</span><span class="p">)</span>
+<span class="n">gps</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/gps/data"</span><span class="p">)</span>
+<span class="n">imu</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/imu"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gps</span><span class="p">),</span> <span class="s2">"GPS fixes,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">imu</span><span class="p">),</span> <span class="s2">"IMU samples"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Два ожидания, которые стоит откалибровать заранее: телефонный GPS на открытом месте — несколько метров
+разброса на 1 Гц, достаточно, чтобы ограничить дрейф, и бесполезно для уровня полосы. А в пассажирской
+записи нет колёсной одометрии — шаг 1 работает на скорости, раздифференцированной из GPS: подмена,
+которую глава уже обсуждает, делая скорость состоянием. Если вы записывали пешком, допущение «системы
+кузова» нарушено во всей красе, и шаг с захватом рыска покажет, как калибратор справляется — или
+отказывается.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка камеры</span></a></p>
@@ -1558,11 +1627,11 @@ device. Локализация важна для:</p>
       </div>
     </a>
     <a class="right-next"
-       href="../Control/Overview.html"
+       href="../Planner/Overview.html"
        title="следующая страница">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">Управление — как четыре главы опираются друг на друга</p>
+        <p class="prev-next-title">Поперечный контур — планировщик, управление, платформа</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1622,6 +1691,7 @@ device. Локализация важна для:</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id22">Как это связано с удержанием полосы</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id23">Чеклист конфига</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id24">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id25">На собственной записи</a></li>
 </ul>
   </nav></div>
 

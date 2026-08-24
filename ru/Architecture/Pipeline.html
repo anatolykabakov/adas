@@ -231,13 +231,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -255,6 +264,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -414,6 +424,7 @@
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Параллельные топики</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Темпы</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Тот же конвейер на вашем ноутбуке</a></li>
 </ul>
             </nav>
         </div>
@@ -537,7 +548,7 @@ OpenCL недоступен. Первый кадр после запуска с�
 <p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code> в отдельном потоке, с двумя взаимозаменяемыми раннерами:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> — supercombo 0.9.7 в fp16 на GPU, <strong>17.6 мс</strong>, путь по умолчанию;</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> — та же сеть в fp32 через ONNX Runtime, 48.5 мс, запасной путь.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> — та же сеть в fp32 через ONNX Runtime, 45.6 мс (медиана), запасной путь.</p></li>
 </ul>
 <p>В обоих случаях: временной стек из двух кадров и рекуррентное состояние, выход разбирается в топик
 <strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (плюс одометрия и <code class="docutils literal notranslate"><span class="pre">model_long</span></code>), ставятся <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p>
@@ -559,8 +570,8 @@ middleware; <code class="docutils literal notranslate"><span class="pre">utils/p
 <p>Поперечный контур разделён на три сервиса, и в разделении весь смысл: каждый проверяем без двух остальных.</p>
 <ul class="simple">
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Planner</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code>) берёт полилинию пути и шасси и выдаёт план <strong>в кривизне</strong>, никогда
-не в угле руля. Каким алгоритмом он построен — выбор конфига: <code class="docutils literal notranslate"><span class="pre">pp</span></code> (pure pursuit), <code class="docutils literal notranslate"><span class="pre">mpc</span></code> (MPC пути из
-VisionPilot), <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC в области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
+не в угле руля. Каким алгоритмом он построен — выбор конфига: <code class="docutils literal notranslate"><span class="pre">pp</span></code> (pure pursuit) или <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC в
+области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
 одинаков, какой бы ни работал. Публикует <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) — закон управления и ничего больше: кривизна и шасси превращаются в
 момент, признак включения, пиктограммы приборки и желание нажать кнопку круиза. Он не знает ни адреса CAN,
@@ -635,6 +646,34 @@ VisionPilot), <code class="docutils literal notranslate"><span class="pre">fp</s
 задержки надо фиксировать <strong>до</strong> сравнения контроллеров, потому что контроллер, оценённый на окне 3 Гц, — это
 не тот контроллер, который вы поставили.</p>
 <p>Иконки предупреждений (<code class="docutils literal notranslate"><span class="pre">safety/warn</span></code>) идут параллельно удержанию полосы — см. <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>.</p>
+</section>
+<section id="id9">
+<h2>Тот же конвейер на вашем ноутбуке<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<p>Сервисы выше работают и без телефона: <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> открывает нативный <code class="docutils literal notranslate"><span class="pre">AdasApp</span></code> в симулированном режиме —
+вы публикуете protobuf-сообщения, зовёте <code class="docutils literal notranslate"><span class="pre">step()</span></code>, читаете, что опубликовали сервисы:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./app/src/main/cpp/build_cpp.sh<span class="w"> </span>-t<span class="w"> </span>linux<span class="w"> </span>--test<span class="w">    </span><span class="c1"># host build + ~230 gtest cases; pyadas core into scripts/</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyadas</span><span class="w"> </span><span class="kn">import</span> <span class="n">require_core</span>
+<span class="n">pyadas</span> <span class="o">=</span> <span class="n">require_core</span><span class="p">()</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">pyadas</span><span class="o">.</span><span class="n">AdasApp</span><span class="p">()</span>                      <span class="c1"># simulated mode: no threads, you own the clock</span>
+<span class="n">app</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="s2">"lane_keep_controller"</span><span class="p">,</span> <span class="s2">"fp"</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">ts</span><span class="p">,</span> <span class="n">lanes_msg</span><span class="p">,</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">lanes</span><span class="p">:</span>            <span class="c1"># your session, from step 8</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="n">raw</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vehicle/state"</span><span class="p">,</span> <span class="n">chassis_at</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>    <span class="c1"># your synthetic chassis, or a real one</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">payload</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">pop_messages</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">topic</span> <span class="o">==</span> <span class="s2">"control/lane_keep"</span><span class="p">:</span>
+            <span class="n">record</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>             <span class="c1"># the shipped stack's steering, frame by frame</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> оборачивает ровно этот цикл, им уже пользуются симулятор и визуализатор —
+прочтите его раз, и офлайновый инструментарий перестанет быть магией. Это же честный способ сравнить
+собственный регулятор с боевыми <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code> на одинаковых кадрах: один бег на входе, три команды на
+выходе, один график.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение — обзор</span></a></p>
@@ -720,6 +759,7 @@ VisionPilot), <code class="docutils literal notranslate"><span class="pre">fp</s
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Параллельные топики</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Темпы</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Тот же конвейер на вашем ноутбуке</a></li>
 </ul>
   </nav></div>
 

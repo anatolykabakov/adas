@@ -1,0 +1,992 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Pure Pursuit &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Planner/PurePursuit';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Путь разметки — из двух линий и плана в одну опору" href="LanePath.html" />
+    <link rel="prev" title="Кинематическая велосипедная модель" href="BicycleModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Planner/PurePursuit.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Pure Pursuit</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Постановка задачи</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Дальность взгляда</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Геометрия</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#delta">Полный вывод <span class="math notranslate nohighlight">\(\delta\)</span></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Числовой пример</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Игрушечный замкнутый контур (прямой путь, старт со смещением)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где одной точки перестаёт хватать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Измерьте компромисс сами</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Интеграция</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Частые ошибки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Задания</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="pure-pursuit">
+<h1>Pure Pursuit<a class="headerlink" href="#pure-pursuit" title="Ссылка на этот заголовок">#</a></h1>
+<blockquote>
+<div><p>Геометрический поперечный контроллер: путь и скорость <span class="math notranslate nohighlight">\(v\)</span> → угол колеса <span class="math notranslate nohighlight">\(\delta\)</span>.
+Режим <code class="docutils literal notranslate"><span class="pre">pp</span></code> в нашем стеке. Геометрия следует <a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">AAD</a> (CC BY 4.0).</p>
+</div></blockquote>
+<section id="id1">
+<h2>Постановка задачи<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<p>Нам нужно <span class="math notranslate nohighlight">\(\delta(t)\)</span>, чтобы машина ехала по пути <span class="math notranslate nohighlight">\(\{(x_i,y_i)\}\)</span> в метрах — это и есть <strong>поперечное управление</strong>.</p>
+<p><strong>Идея Pure Pursuit:</strong></p>
+<ol class="arabic simple">
+<li><p>Выбрать <strong>целевую точку</strong> на пути на дальности взгляда <span class="math notranslate nohighlight">\(l_d\)</span> от задней оси.</p></li>
+<li><p>Выбрать <span class="math notranslate nohighlight">\(\delta\)</span> так, чтобы дуга <strong>кинематической велосипедной модели</strong> прошла через эту точку.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Примечание</p>
+<p>Система device: <span class="math notranslate nohighlight">\(y\)</span> <strong>вправо-положительная</strong>. См. <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a>.</p>
+</div>
+</section>
+<section id="id2">
+<h2>Дальность взгляда<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<div class="math notranslate nohighlight">
+\[
+l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
+\]</div>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>параметр конфига</p></th>
+<th class="head"><p>роль</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pp_k_dd</span></code></p></td>
+<td><p>масштаб <span class="math notranslate nohighlight">\(l_d(v)\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pp_ld_min</span></code> / <code class="docutils literal notranslate"><span class="pre">pp_ld_max</span></code></p></td>
+<td><p>ограничители</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pp_shift</span></code></p></td>
+<td><p>небольшая подстройка</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">25.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Defaults match shipped config.json (C++ class defaults are smaller)."""</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K_dd</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">ld_min</span><span class="p">,</span> <span class="n">ld_max</span><span class="p">))</span>
+
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">30</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v=</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">2d</span><span class="si">}</span><span class="s2"> m/s → ld=</span><span class="si">{</span><span class="n">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="c1"># 5 → 8.0 (hit min), 15 → 12.0, 30 → 24.0</span>
+</pre></div>
+</div>
+<p>Малое <span class="math notranslate nohighlight">\(l_d\)</span>: агрессивно, дёргано. Большое <span class="math notranslate nohighlight">\(l_d\)</span>: плавно, срезает углы.
+Поставляемый конфиг телефона: <code class="docutils literal notranslate"><span class="pre">pp_k_dd=0.8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_min=8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_max=25</span></code>.</p>
+</section>
+<section id="id3">
+<h2>Геометрия<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="../_images/PurePursuitWrongDelta.png"><img alt="../_images/PurePursuitWrongDelta.png" src="../_images/PurePursuitWrongDelta.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 12 </span><span class="caption-text">Неверный <span class="math notranslate nohighlight">\(\delta\)</span>: дуга велосипедной модели проходит мимо целевой точки.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Пробуйте разные <span class="math notranslate nohighlight">\(\delta\)</span>, пока дуга не попадёт в точку (интерактивные рисунки AAD):</p>
+<figure class="align-default" id="id12">
+<a class="reference internal image-reference" href="../_images/PurePursuit_delta_25.png"><img alt="../_images/PurePursuit_delta_25.png" src="../_images/PurePursuit_delta_25.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 13 </span><span class="caption-text"><span class="math notranslate nohighlight">\(\delta = 25°\)</span> — слишком круто.</span><a class="headerlink" href="#id12" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="id13">
+<a class="reference internal image-reference" href="../_images/PurePursuit_delta_20.png"><img alt="../_images/PurePursuit_delta_20.png" src="../_images/PurePursuit_delta_20.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 14 </span><span class="caption-text"><span class="math notranslate nohighlight">\(\delta = 20°\)</span>.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/PurePursuit_delta_15.png"><img alt="../_images/PurePursuit_delta_15.png" src="../_images/PurePursuit_delta_15.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 15 </span><span class="caption-text"><span class="math notranslate nohighlight">\(\delta = 15°\)</span>.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="id15">
+<a class="reference internal image-reference" href="../_images/PurePursuit_delta_11p3.png"><img alt="../_images/PurePursuit_delta_11p3.png" src="../_images/PurePursuit_delta_11p3.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 16 </span><span class="caption-text"><span class="math notranslate nohighlight">\(\delta \approx 11.3°\)</span> — дуга проходит через целевую точку.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="delta">
+<h2>Полный вывод <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#delta" title="Ссылка на этот заголовок">#</a></h2>
+<figure class="align-default" id="id16">
+<a class="reference internal image-reference" href="../_images/PurePursuitLawOfSines.png"><img alt="../_images/PurePursuitLawOfSines.png" src="../_images/PurePursuitLawOfSines.png" style="width: 90%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 17 </span><span class="caption-text">Малиновый треугольник: МЦВ, задняя ось, целевая точка.</span><a class="headerlink" href="#id16" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p><strong>Обозначения</strong></p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(l_d\)</span> — расстояние от задней оси до целевой точки.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\alpha\)</span> — угол между осью <span class="math notranslate nohighlight">\(x\)</span> кузова и лучом на целевую точку.</p></li>
+<li><p><span class="math notranslate nohighlight">\(R\)</span> — радиус поворота велосипедной модели (задняя ось вокруг МЦВ).</p></li>
+<li><p><span class="math notranslate nohighlight">\(L\)</span> — база.</p></li>
+</ul>
+<p><strong>Шаг 1.</strong> Целевая точка лежит на окружности радиуса <span class="math notranslate nohighlight">\(R\)</span> вокруг МЦВ, поэтому треугольник МЦВ–задняя ось–точка <strong>равнобедренный</strong>: обе стороны до МЦВ равны <span class="math notranslate nohighlight">\(R\)</span>. Обозначим углы при основании <span class="math notranslate nohighlight">\(\gamma_2=\gamma_3\)</span>.</p>
+<p><strong>Шаг 2.</strong> Из рисунка <span class="math notranslate nohighlight">\(\gamma_3 + \alpha = 90°\)</span>, значит <span class="math notranslate nohighlight">\(\gamma_2 = \gamma_3 = 90° - \alpha\)</span>.</p>
+<p><strong>Шаг 3.</strong> Сумма углов треугольника равна <span class="math notranslate nohighlight">\(180°\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+\gamma_1 + \gamma_2 + \gamma_3 = 180°
+\Rightarrow
+\gamma_1 + 2(90°-\alpha) = 180°
+\Rightarrow
+\gamma_1 = 2\alpha.
+\]</div>
+<p><strong>Шаг 4.</strong> Теорема синусов:</p>
+<div class="math notranslate nohighlight">
+\[
+\frac{l_d}{\sin\gamma_1} = \frac{R}{\sin\gamma_2}
+\Rightarrow
+\frac{l_d}{\sin(2\alpha)} = \frac{R}{\sin(90°-\alpha)}.
+\]</div>
+<p>Используя <span class="math notranslate nohighlight">\(\sin(90°-\alpha)=\cos\alpha\)</span> и <span class="math notranslate nohighlight">\(\sin(2\alpha)=2\sin\alpha\cos\alpha\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[
+\frac{l_d}{2\sin\alpha\cos\alpha} = \frac{R}{\cos\alpha}
+\Rightarrow
+R = \frac{l_d}{2\sin\alpha}.
+\]</div>
+<p><strong>Шаг 5.</strong> Велосипедная модель (предыдущая глава): <span class="math notranslate nohighlight">\(\delta = \arctan(L/R)\)</span>. Подставляем <span class="math notranslate nohighlight">\(R\)</span>:</p>
+<div class="math notranslate nohighlight" id="equation-eq-pp">
+<span class="eqno">(1)<a class="headerlink" href="#equation-eq-pp" title="Ссылка на эту формулу">#</a></span>\[
+\delta = \arctan\left(\frac{2 L \sin\alpha}{l_d}\right).
+\]</div>
+<figure class="align-default" id="id17">
+<a class="reference internal image-reference" href="../_images/pure_pursuit_simple_geometry.png"><img alt="../_images/pure_pursuit_simple_geometry.png" src="../_images/pure_pursuit_simple_geometry.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 18 </span><span class="caption-text">Тот же закон на более простом наброске.</span><a class="headerlink" href="#id17" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<section id="id4">
+<h3>Числовой пример<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Возьмём <span class="math notranslate nohighlight">\(L=2.64\)</span> м, <span class="math notranslate nohighlight">\(l_d=8\)</span> м, целевую точку в <span class="math notranslate nohighlight">\((x,y)=(7.5,\ 2.8)\)</span> м (система device, <span class="math notranslate nohighlight">\(y\)</span> вправо).</p>
+<div class="math notranslate nohighlight">
+\[
+\alpha = \mathrm{atan2}(2.8,\ 7.5) \approx 0.358~\mathrm{рад} \approx 20.5°,
+\]</div>
+<div class="math notranslate nohighlight">
+\[
+\delta = \arctan\!\Big(\frac{2\cdot 2.64\cdot\sin(0.358)}{8}\Big)
+\approx \arctan(0.238) \approx 0.234~\mathrm{рад} \approx 13.4°.
+\]</div>
+<p>При <code class="docutils literal notranslate"><span class="pre">steer_ratio=15.7</span></code> получаем <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\approx 13.4\times 15.7 \approx 210°\)</span> до ограничителей — настоящие стеки насыщаются; формула даёт ненасыщенный геометрический запрос.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pure_pursuit_delta</span><span class="p">(</span><span class="n">x_tp</span><span class="p">,</span> <span class="n">y_tp</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.64</span><span class="p">):</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">y_tp</span><span class="p">,</span> <span class="n">x_tp</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">/</span> <span class="n">ld</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">delta</span><span class="p">,</span> <span class="n">alpha</span>
+
+<span class="n">delta</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">pure_pursuit_delta</span><span class="p">(</span><span class="mf">7.5</span><span class="p">,</span> <span class="mf">2.8</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="mf">8.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"alpha=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg, delta=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg"</span><span class="p">)</span>
+
+<span class="c1"># Sign check: TP on the other side → opposite delta</span>
+<span class="n">d_left</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pure_pursuit_delta</span><span class="p">(</span><span class="mf">7.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.8</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="mf">8.0</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"delta for y=-2.8: </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_left</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg  (sign flips)"</span><span class="p">)</span>
+
+<span class="c1"># Look-ahead vs speed (config-style)</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">lookahead</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">ld_min</span><span class="o">=</span><span class="mf">8.0</span><span class="p">,</span> <span class="n">ld_max</span><span class="o">=</span><span class="mf">25.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K_dd</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="n">ld_min</span><span class="p">,</span> <span class="n">ld_max</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"ld at 15 m/s:"</span><span class="p">,</span> <span class="n">lookahead</span><span class="p">(</span><span class="mi">15</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id5">
+<h2>Игрушечный замкнутый контур (прямой путь, старт со смещением)<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<p>Путь — это ось <span class="math notranslate nohighlight">\(x\)</span>. Машина начинает с <span class="math notranslate nohighlight">\(y=1\)</span> м при <span class="math notranslate nohighlight">\(\theta=0\)</span>. Pure Pursuit должен вернуть её.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.64</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">y</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="n">th</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">dt</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pp_toward_x_axis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.64</span><span class="p">,</span> <span class="n">K_dd</span><span class="o">=</span><span class="mf">0.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""TP = point ld ahead on the x-axis, in vehicle frame."""</span>
+    <span class="n">ld</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">K_dd</span> <span class="o">*</span> <span class="n">v</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">))</span>
+    <span class="c1"># world TP</span>
+    <span class="n">x_tp_w</span><span class="p">,</span> <span class="n">y_tp_w</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">ld</span><span class="p">,</span> <span class="mf">0.0</span>
+    <span class="c1"># into vehicle frame</span>
+    <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">x_tp_w</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">y_tp_w</span> <span class="o">-</span> <span class="n">y</span>
+    <span class="n">x_v</span> <span class="o">=</span>  <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dy</span>
+    <span class="n">y_v</span> <span class="o">=</span> <span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dx</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">th</span><span class="p">)</span> <span class="o">*</span> <span class="n">dy</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">y_v</span><span class="p">,</span> <span class="n">x_v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span> <span class="n">ld</span><span class="p">)</span>
+
+<span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">80</span><span class="p">):</span>  <span class="c1"># 4 s</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">pp_toward_x_axis</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span> <span class="o">=</span> <span class="n">step</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">th</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"after 4 s: y=</span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m (should be near 0), yaw=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">th</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> deg"</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id18">
+<a class="reference internal image-reference" href="../_images/pp_tradeoff.png"><img alt="../_images/pp_tradeoff.png" src="../_images/pp_tradeoff.png" style="width: 85%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 19 </span><span class="caption-text">|CTE| вдоль дуги R=60 м для трёх взглядов: длинный гладок на прямой, но оседает метрами внутри поворота.</span><a class="headerlink" href="#id18" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="id6">
+<h2>Где одной точки перестаёт хватать<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<p>Pure Pursuit сводит весь путь к одной точке. В этом его прелесть и его потолок, и потолок легко показать: у
+закона нет способа различить два пути, которые проходят через одну и ту же точку взгляда, а дальше делают
+совершенно разное.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">L_WB</span> <span class="o">=</span> <span class="mf">2.64</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Pure Pursuit: wheel angle to reach the target point (tx, ty), y right-positive."""</span>
+    <span class="n">ld_sq</span> <span class="o">=</span> <span class="n">tx</span> <span class="o">*</span> <span class="n">tx</span> <span class="o">+</span> <span class="n">ty</span> <span class="o">*</span> <span class="n">ty</span>
+    <span class="k">if</span> <span class="n">ld_sq</span> <span class="o">&lt;</span> <span class="mf">1e-6</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L_WB</span> <span class="o">*</span> <span class="n">ty</span><span class="p">,</span> <span class="n">ld_sq</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">path_point_at</span><span class="p">(</span><span class="n">kappa_near</span><span class="p">,</span> <span class="n">kappa_far</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">break_at</span><span class="o">=</span><span class="mf">12.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""A path that bends one way up to `break_at` and another way beyond it."""</span>
+    <span class="k">if</span> <span class="n">ld</span> <span class="o">&lt;=</span> <span class="n">break_at</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ld</span><span class="p">,</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">ld</span> <span class="o">*</span> <span class="n">ld</span>
+    <span class="n">y_break</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">break_at</span> <span class="o">*</span> <span class="n">break_at</span>
+    <span class="n">slope</span> <span class="o">=</span> <span class="n">kappa_near</span> <span class="o">*</span> <span class="n">break_at</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">ld</span> <span class="o">-</span> <span class="n">break_at</span>
+    <span class="k">return</span> <span class="n">ld</span><span class="p">,</span> <span class="n">y_break</span> <span class="o">+</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">d</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_far</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span>
+
+<span class="n">LD</span> <span class="o">=</span> <span class="mf">15.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'path'</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'point at 15 m'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'delta'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"steady right bend"</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s2">"right, then straightens"</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+                            <span class="p">(</span><span class="s2">"right, then reverses"</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.012</span><span class="p">)):</span>
+    <span class="n">tx</span><span class="p">,</span> <span class="n">ty</span> <span class="o">=</span> <span class="n">path_point_at</span><span class="p">(</span><span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span><span class="p">,</span> <span class="n">LD</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">tx</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">ty</span><span class="si">:</span><span class="s1">+.2f</span><span class="si">}</span><span class="s1">)'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">ty</span><span class="p">))</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Запустите — три команды различаются, и это выглядит успокаивающе, пока не заметишь <em>почему</em>. Они различаются
+только потому, что дальняя кривизна случайно сдвинула точку на 15 м. Укоротите дальность взгляда — разница
+исчезнет; удлините — исчезнет вместо неё ближний изгиб. Закон читает один отсчёт функции, а положение отсчёта
+— настраиваемый параметр.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'look-ahead'</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2"> "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"steady"</span><span class="p">,</span> <span class="s2">"straightens"</span><span class="p">,</span> <span class="s2">"reverses"</span><span class="p">)))</span>
+<span class="k">for</span> <span class="n">ld</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
+    <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.006</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.006</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.006</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.012</span><span class="p">)):</span>
+        <span class="n">tx</span><span class="p">,</span> <span class="n">ty</span> <span class="o">=</span> <span class="n">path_point_at</span><span class="p">(</span><span class="n">k_near</span><span class="p">,</span> <span class="n">k_far</span><span class="p">,</span> <span class="n">ld</span><span class="p">)</span>
+        <span class="n">row</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">ty</span><span class="p">)))</span>
+    <span class="n">spread</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">-</span> <span class="nb">min</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ld</span><span class="si">:</span><span class="s2">&gt;10.0f</span><span class="si">}</span><span class="s2"> m "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;11.2f</span><span class="si">}</span><span class="s2">°"</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">row</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"   spread </span><span class="si">{</span><span class="n">spread</span><span class="si">:</span><span class="s2">&gt;5.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>На 8 м три пути неразличимы: точка перелома лежит за целевой точкой, и контроллер не может знать, что она
+впереди. На 25 м разброс велик, но ближний изгиб перестал влиять, и машина его срежет. Такой дальности
+взгляда, которая читала бы оба, не существует, потому что читать нечего: число всего одно.</p>
+<p>Это аргумент в пользу горизонта, и он отличается от аргумента про недокрут. Недокрут — это ошибка
+<em>модели</em>, её можно исправить лучшей моделью того же одношагового закона. А здесь предел <em>информационный</em>, он
+у самого закона. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC</span></a> отвечает на него, оптимизируя сразу по многим точкам; глава про
+<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">модель машины</span></a> отвечает сначала на другой, потому что горизонт, построенный на неверной
+кинематике, просто даёт уверенный неверный план.</p>
+<div class="note admonition">
+<p class="admonition-title">Почему Pure Pursuit всё ещё в дереве</p>
+<p>У него нет весов стоимости, нет горизонта и есть один параметр с физическим смыслом — это единственный
+контроллер здесь, поведение которого можно предсказать руками. Когда заезд выглядит неправильно, переключение
+на <code class="docutils literal notranslate"><span class="pre">pp</span></code> говорит, в контроллере проблема или выше него. В офлайн-реплее он даже держит полосу лучше, чем <code class="docutils literal notranslate"><span class="pre">fp</span></code>,
+при любом испробованном уровне деградации — а на дороге наоборот, и это находка про реплей, а не про
+контроллеры.</p>
+</div>
+</section>
+<section id="id7">
+<h2>Измерьте компромисс сами<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<p>Игрушечный контур выше пользовался осью x. Отсюда дорога — <strong>полилиния</strong>, той же формы, что
+<code class="docutils literal notranslate"><span class="pre">vision/path</span></code> на телефоне, и регулятору можно только искать по точкам, ровно как настоящему:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">DT</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">2.636</span><span class="p">,</span> <span class="mf">10.0</span>
+<span class="n">MAX_STEER</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sine_path</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mf">1.75</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">400.0</span><span class="p">):</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span> <span class="o">/</span> <span class="n">lam</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">arc_path</span><span class="p">(</span><span class="n">radius</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mf">180.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Straight 40 m, then a constant left arc — the corner-cut detector."""</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">pts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">si</span> <span class="ow">in</span> <span class="n">s</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">si</span> <span class="o">&lt;</span> <span class="mf">40.0</span><span class="p">:</span>
+            <span class="n">pts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">si</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="p">(</span><span class="n">si</span> <span class="o">-</span> <span class="mf">40.0</span><span class="p">)</span> <span class="o">/</span> <span class="n">radius</span>
+            <span class="n">pts</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mf">40.0</span> <span class="o">+</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">radius</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">))))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pure_pursuit</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">near_idx</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return (delta, updated near_idx). Walks forward only, like the real tracker."""</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">near_idx</span><span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="n">near_idx</span><span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">near_idx</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">d</span><span class="p">[:</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">ld</span><span class="p">))]))</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">near_idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">ld</span><span class="p">:</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">near_idx</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="n">target</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">psi</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span> <span class="n">ld</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">delta</span><span class="p">,</span> <span class="o">-</span><span class="n">MAX_STEER</span><span class="p">,</span> <span class="n">MAX_STEER</span><span class="p">)),</span> <span class="n">near_idx</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drive</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">45.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return |CTE| samples and mean per-tick steering change [deg]."""</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span>
+    <span class="n">near</span><span class="p">,</span> <span class="n">prev_delta</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span>
+    <span class="n">ctes</span><span class="p">,</span> <span class="n">dsteps</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">t_end</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">delta</span><span class="p">,</span> <span class="n">near</span> <span class="o">=</span> <span class="n">pure_pursuit</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">near</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">+=</span> <span class="n">V</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">y</span> <span class="o">+=</span> <span class="n">V</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">psi</span> <span class="o">+=</span> <span class="n">V</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">path</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="n">path</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">ctes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">min</span><span class="p">()))</span>
+        <span class="n">dsteps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">prev_delta</span><span class="p">)))</span>
+        <span class="n">prev_delta</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="k">if</span> <span class="n">near</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">-</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ctes</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dsteps</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Теперь переберите единственный параметр этого регулятора:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sine</span><span class="p">,</span> <span class="n">arc</span> <span class="o">=</span> <span class="n">sine_path</span><span class="p">(),</span> <span class="n">arc_path</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'Ld'</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2"> | sine |CTE| p95 | arc settled | steer jitter °/tick"</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">ld</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">):</span>
+    <span class="n">c_sine</span><span class="p">,</span> <span class="n">jit</span> <span class="o">=</span> <span class="n">drive</span><span class="p">(</span><span class="n">sine</span><span class="p">,</span> <span class="n">ld</span><span class="p">)</span>
+    <span class="n">c_arc</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">drive</span><span class="p">(</span><span class="n">arc</span><span class="p">,</span> <span class="n">ld</span><span class="p">)</span>
+    <span class="n">sine_p95</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">c_sine</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">c_sine</span><span class="p">)</span> <span class="o">//</span> <span class="mi">3</span><span class="p">:],</span> <span class="mi">95</span><span class="p">)</span>
+    <span class="n">arc_settled</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">c_arc</span><span class="p">[</span><span class="mi">3</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">c_arc</span><span class="p">)</span> <span class="o">//</span> <span class="mi">4</span><span class="p">:],</span> <span class="mi">95</span><span class="p">)</span>
+    <span class="n">results</span><span class="p">[</span><span class="n">ld</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">sine_p95</span><span class="p">,</span> <span class="n">arc_settled</span><span class="p">,</span> <span class="n">jit</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ld</span><span class="si">:</span><span class="s2">4.0f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">sine_p95</span><span class="si">:</span><span class="s2">13.3f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">arc_settled</span><span class="si">:</span><span class="s2">11.3f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">jit</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Читайте три колонки друг против друга. Незатухающее виляние прошлой главы ушло на <strong>любом</strong> взгляде —
+но появились два новых факта. Короткий взгляд пилит руль (в пять раз больший шаг руля за тик, чем у
+длинного). Длинный не просто сглаживает команду — он <strong>оседает метрами внутри поворота</strong>: гнаться за
+точкой в 20 м впереди на дуге радиусом 60 м значит рулить по хорде, а хорда проходит изнутри. И даже
+на дружелюбном <span class="math notranslate nohighlight">\(L_d\)</span> синусоида несёт постоянное хордовое отставание ~0.24 м — Pure Pursuit никогда не
+едет ровно ту кривую, которую ему дали.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.40</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> \
+    <span class="s2">"acceptance: bounded error at every Ld, no per-road gains — the oscillation is gone"</span>
+<span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mf">20.0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="n">results</span><span class="p">[</span><span class="mf">3.0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> \
+    <span class="s2">"acceptance: the long look-ahead must settle an order of magnitude deeper inside the arc"</span>
+<span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mf">3.0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">results</span><span class="p">[</span><span class="mf">20.0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="s2">"acceptance: short Ld must be the jitteriest"</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"acceptance passed: arc offset </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="mf">3.0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="mf">20.0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m "</span>
+      <span class="sa">f</span><span class="s2">"as Ld goes 3 → 20; jitter moves the other way"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Одна точка не может представить путь, чья кривизна меняется <em>внутри</em> взгляда, — числа выше и есть эта
+фраза, измеренная. Масштабирование <span class="math notranslate nohighlight">\(L_d\)</span> по скорости двигает компромисс; убрать его оно не может.
+Читать весь путь вместо одной точки — это то, <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">что делает MPC</span></a>.</p>
+</section>
+<section id="id8">
+<h2>Интеграция<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>vision/lanes + vehicle/state → PurePursuit → δ → SWA → LatControlPID → Panda → HCA_01
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">&quot;lane_keep_controller&quot;:</span> <span class="pre">&quot;pp&quot;</span></code>. На дороге по умолчанию обычно <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p>
+</section>
+<section id="id9">
+<h2>Частые ошибки<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Неверный знак <span class="math notranslate nohighlight">\(y\)</span> (device против ISO).</p></li>
+<li><p>Забыли <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>.</p></li>
+<li><p>Настройка на окнах с тепловым троттлингом и темпом 3 Гц.</p></li>
+<li><p>Нет модели недокрута при <span class="math notranslate nohighlight">\(v\sim 20\)</span> м/с.</p></li>
+<li><p>Отношение к дальности взгляда как к ручке качества. Это выбор того, <strong>какую часть пути игнорировать</strong> —
+см. выше. Если её настройка ощущается как компромисс между срезанием углов и запоздалой реакцией, то это он
+и есть, и никакое значение его не снимает.</p></li>
+</ol>
+</section>
+<section id="id10">
+<h2>Задания<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Меняйте <code class="docutils literal notranslate"><span class="pre">K_dd</span></code> в игрушечном контуре: как меняется установление <span class="math notranslate nohighlight">\(y\)</span>?</p></li>
+<li><p>Поставьте целевую точку в <span class="math notranslate nohighlight">\((8, 0)\)</span> против <span class="math notranslate nohighlight">\((8, 3)\)</span>: напечатайте <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
+<li><p>Перебор по бегу: <code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code>, парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.</p></li>
+<li><p>В прогоне по дальности взгляда выше найдите дальность, минимизирующую разброс между тремя путями.
+Затем объясните, почему эта дальность — <em>худший</em> выбор, а не лучший.</p></li>
+<li><p>Добавьте поправку на недокрут из главы <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">про модель машины</span></a> в <code class="docutils literal notranslate"><span class="pre">pp_delta</span></code> и повторите
+прогон при 22 м/с. Меняет ли это информационный предел или только величины?</p></li>
+</ol>
+<p>Каждый контроллер до сих пор <em>полагал путь заданным</em>. Но две линии разметки шумны, а план модели режет
+дуги — так откуда берётся единственная полилиния, которую они отслеживают? Это следующая глава, и именно
+там решается половина измеренного смещения на дуге.</p>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Planner"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="BicycleModel.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Кинематическая велосипедная модель</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="LanePath.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Путь разметки — из двух линий и плана в одну опору</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Постановка задачи</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Дальность взгляда</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Геометрия</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#delta">Полный вывод <span class="math notranslate nohighlight">\(\delta\)</span></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Числовой пример</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Игрушечный замкнутый контур (прямой путь, старт со смещением)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где одной точки перестаёт хватать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Измерьте компромисс сами</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Интеграция</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Частые ошибки</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Задания</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

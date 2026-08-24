@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -409,10 +419,11 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 2: свежесть, и почему таймаута недостаточно</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Шаг 3: доверие там, где используется</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: метрическая верность и что делать, когда её нет</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Стройка: опорный путь из двух шумных линий</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aad">Два конвейера (AAD против этого курса)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Главы этого модуля</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Карта кода (читать, не запоминать)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Проверки, прежде чем винить контроллер</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Главы этого модуля</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Карта кода (читать, не запоминать)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Проверки, прежде чем винить контроллер</a></li>
 </ul>
             </nav>
         </div>
@@ -428,11 +439,11 @@
 <h1>Зрение — обзор<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
 <p>В этом модуле нам нужна <strong>метрическая геометрия полосы</strong>, за которой может ехать поперечный контроллер, а не красивая наложенная картинка.
 Если полилиния неверна, запаздывает или выражена с неверным знаком <span class="math notranslate nohighlight">\(y\)</span>, то Pure Pursuit и MPC будут выглядеть «сломанными», хотя их математика в порядке.</p>
-<figure class="align-default" id="id11">
+<figure class="align-default" id="id12">
 <a class="reference internal image-reference" href="../_images/iso8850_crop.png"><img alt="../_images/iso8850_crop.png" src="../_images/iso8850_crop.png" style="width: 85%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 3 </span><span class="caption-text">Путь <span class="math notranslate nohighlight">\(y(x)\)</span> вид сверху, в метрах. Контроллеры думают в этой плоскости: продольная <span class="math notranslate nohighlight">\(x\)</span> вперёд, поперечная <span class="math notranslate nohighlight">\(y\)</span> через полосу.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 3 </span><span class="caption-text">Путь <span class="math notranslate nohighlight">\(y(x)\)</span> вид сверху, в метрах. Контроллеры думают в этой плоскости: продольная <span class="math notranslate nohighlight">\(x\)</span> вперёд, поперечная <span class="math notranslate nohighlight">\(y\)</span> через полосу.</span><a class="headerlink" href="#id12" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <section id="id2">
@@ -443,7 +454,7 @@
 <li><p>достаточно метаданных, чтобы понять, можно ли доверять разметке и плану (вероятности, возраст);</p></li>
 <li><p>метки времени (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>), чтобы задержку потом можно было измерить.</p></li>
 </ul>
-<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервисы на C++ видят полилинию). Источник — живая Supercombo, карта или реплей бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неразличим</strong>. Это сделано намеренно: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
+<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервисы на C++ видят полилинию). Источник — живая Supercombo, карта или реплей бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неразличим</strong>. Это сделано намеренно: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
 </section>
 <section id="id3">
 <h2>Четыре условия, которые должны выполниться, по порядку<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
@@ -476,7 +487,7 @@
 </tr>
 <tr class="row-odd"><td><p>4</p></td>
 <td><p>геометрия <strong>метрически верна</strong></p></td>
-<td><p>модель занижает расстояния на 11 %</p></td>
+<td><p>две головы занижают по-разному: одометрия-дистанция ×0.888, скорость/поза ×0.686</p></td>
 <td><p>каждая производная величина наследует масштаб</p></td>
 </tr>
 </tbody>
@@ -536,10 +547,93 @@
 </section>
 <section id="id7">
 <h2>Шаг 4: метрическая верность и что делать, когда её нет<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Камерная одометрия той же сети даёт масштаб 0.888 против скорости колёс — модель занижает расстояния
-примерно на 11 %. Извне это не исправить, поэтому дисциплина в другом: знать, какие ваши числа этот масштаб
+<p>Модель занижает против скорости колёс, и <em>две разные головы занижают на разную величину</em> — это первое,
+что надо держать в голове. Масштаб <strong>дистанции</strong> камерной одометрии после поправки фокуса — <strong>0.888</strong>
+(около 11 % занижения, <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>); сырая голова
+<strong>скорости/позы</strong> занижает сильнее — <strong>0.686</strong> (<a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>). Извне это не исправить,
+поэтому дисциплина в другом: знать, какие ваши числа какой масштаб
 наследуют. Смещения в полосе — это отношения внутри одного кадра, они в основном выживают; всё, что
 сравнивает расстояние по модели с расстоянием по колёсам или GNSS, — нет.</p>
+</section>
+<section id="id8">
+<h2>Стройка: опорный путь из двух шумных линий<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<p>Четыре условия выше — это чему обязана опорная траектория. Теперь постройте её — из того, что реально
+отдаёт модель восприятия: две линии, обе шумные, у каждой своя заявленная σ, каждая вольна исчезнуть.
+Синтезируйте вход честно (σ растёт с расстоянием — на дальний пиксель приходится больше дороги):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">HALF</span> <span class="o">=</span> <span class="mf">1.75</span>                       <span class="c1"># half of a 3.5 m lane</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>     <span class="c1"># forward distance [m]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_true</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>     <span class="c1"># R = 250 m left arc</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sigma_of_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.05</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">x</span>        <span class="c1"># 5 cm near the bumper, 65 cm at 60 m</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">measure_lines</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""One vision frame: (y_left, y_right, sigma) in metres, y left-positive."""</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">sigma_of_x</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">y_l</span> <span class="o">=</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+    <span class="n">y_r</span> <span class="o">=</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">-</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span>
+</pre></div>
+</div>
+<p>Наивный планировщик берёт одну линию и сдвигает на полполосы. Честный взвешивает обе по тому, сколько
+каждая о себе заявляет, — обратной дисперсией, тем же правилом, на котором работает каждый оцениватель
+этой книги:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">centre_from_one</span><span class="p">(</span><span class="n">y_line</span><span class="p">,</span> <span class="n">side</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y_line</span> <span class="o">-</span> <span class="n">side</span> <span class="o">*</span> <span class="n">HALF</span>          <span class="c1"># side=+1 for the left line</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_fused</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig_l</span><span class="p">,</span> <span class="n">sig_r</span><span class="p">):</span>
+    <span class="n">w_l</span><span class="p">,</span> <span class="n">w_r</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sig_l</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sig_r</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_l</span> <span class="o">-</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_r</span> <span class="o">+</span> <span class="n">HALF</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">+</span> <span class="n">w_r</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rmse</span><span class="p">(</span><span class="n">y_est</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">y_est</span> <span class="o">-</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="n">measure_lines</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">)]</span>
+<span class="n">e_one</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_from_one</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="n">e_two</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_fused</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"one line: RMSE </span><span class="si">{</span><span class="n">e_one</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m   fused: </span><span class="si">{</span><span class="n">e_two</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m   ratio </span><span class="si">{</span><span class="n">e_two</span><span class="o">/</span><span class="n">e_one</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">e_two</span> <span class="o">&lt;</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fusion must beat a single line by the sqrt(2) class"</span>
+</pre></div>
+</div>
+<p>При равных σ слияние делит дисперсию пополам: отношение RMSE сидит около <span class="math notranslate nohighlight">\(1/\sqrt{2} \approx 0.707\)</span>.
+Этот множитель — вся причина существования слияния сенсоров. Настоящие линии ещё и пропадают — съезды,
+стёртая краска, дождь, — и запасной ход это <em>другая линия плюс ширина</em>, запомненная, пока были видны
+обе:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">width_memory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">l</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>  <span class="c1"># learned while both were visible</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_one_line_fallback</span><span class="p">(</span><span class="n">y_l</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y_l</span> <span class="o">-</span> <span class="n">width_memory</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+<span class="n">e_fallback</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_one_line_fallback</span><span class="p">(</span><span class="n">l</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"width memory: </span><span class="si">{</span><span class="n">width_memory</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m (true 3.50)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"fallback on left line only: RMSE </span><span class="si">{</span><span class="n">e_fallback</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">width_memory</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">"acceptance: width learned to within 5 cm"</span>
+<span class="k">assert</span> <span class="n">e_fallback</span> <span class="o">&lt;</span> <span class="mf">1.2</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fallback must not be worse than trusting one line ever was"</span>
+</pre></div>
+</div>
+<p>Самый тонкий отказ — линия, которая <em>есть и уверена в себе</em>, но неправа: стык гудрона, мокрый след
+фуры. Взвешивание по заявленной σ тянет слитый путь к лжецу:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">y_l_liar</span> <span class="o">=</span> <span class="n">y_l</span> <span class="o">+</span> <span class="mf">0.8</span>                              <span class="c1"># left "line" found 0.8 m off, confidently</span>
+<span class="n">fused_honest</span> <span class="o">=</span> <span class="n">centre_fused</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+<span class="n">fused_lied</span> <span class="o">=</span> <span class="n">centre_fused</span><span class="p">(</span><span class="n">y_l_liar</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+<span class="n">shift</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fused_lied</span> <span class="o">-</span> <span class="n">fused_honest</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a confident 0.8 m liar shifts the fused path by </span><span class="si">{</span><span class="n">shift</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="mf">0.3</span> <span class="o">&lt;</span> <span class="n">shift</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"half the lie, because the weights were equal"</span>
+</pre></div>
+</div>
+<p>Половина лжи уходит прямо в путь: σ-взвешивание защищает только от шума, в котором сенсор <em>признаётся</em>.
+Боевое слияние (<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> в <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, зеркало <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>) добавляет две
+защиты, которые вы теперь читаете с пониманием: <strong>фильтр ширины</strong> (2.6–4.6 м) и <strong>второе мнение</strong> с
+другими отказами — собственный план модели (<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>, <em>слияние разметки и
+плана</em>). И ваша σ здесь была честной по построению; настоящая выходит из сети — на заездах проекта
+медианы 0.37 м (левая) и 0.51 м (правая), и обе линии уверены одновременно лишь в ~22 % кадров.
+Запасной ход, который вы только что построили, — основной случай, а не исключение.</p>
 </section>
 <section id="aad">
 <h2>Два конвейера (AAD против этого курса)<a class="headerlink" href="#aad" title="Ссылка на этот заголовок">#</a></h2>
@@ -575,16 +669,16 @@
 <p>Обучение Supercombo <strong>за рамками курса</strong>. Сеть рассматривается как чёрный ящик с опубликованной раскладкой выхода, а изучается то, как наш конвейер на Java и C++ её кормит и разбирает.</p>
 </div>
 </section>
-<section id="id8">
-<h2>Главы этого модуля<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id9">
+<h2>Главы этого модуля<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Системы координат</span></a> — device с <span class="math notranslate nohighlight">\(y\)</span> вправо против ISO с <span class="math notranslate nohighlight">\(y\)</span> влево; источник инвертированного руления номер один.</p></li>
 <li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo на устройстве</span></a> — warp → GPU или ORT → разбор → публикация; темп и нагрев.</p></li>
 </ol>
-<p>Дальше вы переходите к <a class="reference internal" href="../Control/Overview.html"><span class="std std-doc">управлению</span></a>.</p>
+<p>Дальше вы переходите к <a class="reference internal" href="../Planner/Overview.html"><span class="std std-doc">управлению</span></a>.</p>
 </section>
-<section id="id9">
-<h2>Карта кода (читать, не запоминать)<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id10">
+<h2>Карта кода (читать, не запоминать)<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>часть</p></th>
@@ -614,8 +708,8 @@
 </table>
 </div>
 </section>
-<section id="id10">
-<h2>Проверки, прежде чем винить контроллер<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id11">
+<h2>Проверки, прежде чем винить контроллер<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Темп зрения <span class="math notranslate nohighlight">\(\gtrsim 9\)</span> Гц на том окне, которое вы оцениваете.</p></li>
 <li><p>График сверху: у левой разметки ожидаемый знак <span class="math notranslate nohighlight">\(y\)</span> для выбранной системы.</p></li>
@@ -700,10 +794,11 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шаг 2: свежесть, и почему таймаута недостаточно</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Шаг 3: доверие там, где используется</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Шаг 4: метрическая верность и что делать, когда её нет</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Стройка: опорный путь из двух шумных линий</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aad">Два конвейера (AAD против этого курса)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Главы этого модуля</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Карта кода (читать, не запоминать)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Проверки, прежде чем винить контроллер</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Главы этого модуля</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Карта кода (читать, не запоминать)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Проверки, прежде чем винить контроллер</a></li>
 </ul>
   </nav></div>
 

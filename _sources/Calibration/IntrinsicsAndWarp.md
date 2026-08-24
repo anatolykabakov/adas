@@ -53,6 +53,15 @@ The result on this phone, at 1280×720:
 
 ### The number that mattered was not the focal length
 
+```{figure} figures/focal_fov.png
+---
+width: 75%
+---
+Focal length matters only through the field of view it implies; the measured 993.4 px lands on the EON
+training FOV, the old 951 did not.
+```
+
+
 It is tempting to read that table as "the focal length was 4.5 % off". The useful reading is different.
 Convert each candidate to a horizontal field of view:
 
@@ -115,6 +124,14 @@ physical quantity is worse than one wrong estimator, because now the error moves
 ```
 
 ---
+
+```{figure} figures/pinhole_vp.png
+---
+width: 95%
+---
+Left: parallel road lines project to a vanishing point. Right: a camera yaw shifts that point sideways —
+which is how the extrinsics are read from the road.
+```
 
 ## Step 2: extrinsics online, from the vanishing point
 

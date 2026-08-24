@@ -3,7 +3,20 @@
 Most assignments run on a bag without the car. Road HCA — instructor supervision only.
 Every report must include vision **Hz** and **e2e** capture→infer (or say why missing).
 
+The small per-topic labs live inside their chapters now — each chapter builds its own toy and ends
+with a measurable check (the bicycle chapter's failed P-controller, Pure Pursuit's trade-off table, the
+sixty-line bus in Middleware, your own bag in Bags). This page keeps the larger, cross-chapter
+assignments — the capstones.
+
 Work in the AAD spirit: read the chapter → run a small measurement → write what you saw, including failure cases.
+
+```{admonition} Which bag each project needs
+:class: important
+A bag you record yourself (Bags, *Record your own bag*) has vision, GPS and IMU but **no `vehicle/state`,
+CAN or torque** — there was no panda. Projects that compare against the driver's steering or sweep a
+controller against actuation (**A2, A3, B1, B2**) therefore need an **instructor-supplied bag** with CAN.
+The rest run on your own recording.
+```
 
 ## A — data analysis
 
@@ -34,7 +47,7 @@ Repeat B1 (or `fp`) at `--vision-latency` ∈ $\{0,\ 0.07,\ 0.2\}$.
 **Deliverable:** which latency breaks which controller first.
 
 ### B3 Arc feed-forward
-Using `docs/MPC_EXPLAINED.md`, mark feed-forward vs feedback on one arc.
+Using [MPC and fp](../Planner/MPC_and_FP.md) (sections fp-3 and fp-5), mark feed-forward vs feedback on one arc.
 **Deliverable:** sketch or annotated plot; one sentence on why raising CTE weight is the wrong first lever.
 
 ## C — platform & safety

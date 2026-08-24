@@ -1,0 +1,766 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The platform layer — one car behind an interface &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Platform/Overview';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Warnings: FCW, AEB, LDW" href="../Safety/Warnings.html" />
+    <link rel="prev" title="Angle control — the loop where feedback actually ends" href="../Control/AngleControl.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">The platform layer — one car behind an interface</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Platform/Overview.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>The platform layer — one car behind an interface</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decode-from-frames-to-a-carstateview">Decode: from frames to a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-building-a-legal-hca-01">Encode: building a legal HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#allowed-the-panda-supervisor">Allowed: the panda supervisor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates-and-where-it-all-runs">Rates, and where it all runs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-depth">For depth</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="the-platform-layer-one-car-behind-an-interface">
+<h1>The platform layer — one car behind an interface<a class="headerlink" href="#the-platform-layer-one-car-behind-an-interface" title="Link to this heading">#</a></h1>
+<p>Everything upstream — vision, planner, control — speaks in physics: a curvature, a wheel angle, a
+torque in cNm. None of it knows the car is a Volkswagen. That knowledge lives in exactly one place, the
+<strong>platform layer</strong>, and this chapter is how it is built: the brand-neutral interface, the decode path
+that turns CAN frames into a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, the encode path that turns a torque request into a valid
+<code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> frame, and the panda supervisor that decides whether that frame is even allowed to leave.</p>
+<p>The design rule is one sentence: <strong>the brand is one implementation of an interface, not the
+architecture.</strong> Adding Toyota TSS2 once changed no line of <code class="docutils literal notranslate"><span class="pre">Planner</span></code> or <code class="docutils literal notranslate"><span class="pre">Control</span></code>. What follows is why
+that holds.</p>
+<section id="the-interface">
+<h2>The interface<a class="headerlink" href="#the-interface" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code> (<code class="docutils literal notranslate"><span class="pre">include/adas/platform/car_platform.h</span></code>) is a pure virtual class with four
+groups of methods, and reading its shape tells you the whole contract:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>read the bus     isAllowedRxAddress · update(frames) · carState · stateView
+write the bus    apply(CarControl) → frames · setCruiseIntent · steerLimits
+what's allowed   configureSafety · safetyTick · ignition · safetyModelOk · lateralActuationAllowed
+lifecycle        init · dbcAssetName · defaults · resetPandaState
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> and <code class="docutils literal notranslate"><span class="pre">Control</span></code> see only <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> — a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, brand-neutral: speed, steering
+angle, yaw rate, whether the driver is on the wheel, whether stock cruise is engaged. They never see a
+CAN address or a signal name. <code class="docutils literal notranslate"><span class="pre">VolkswagenMqb</span></code> (<code class="docutils literal notranslate"><span class="pre">vw_platform.cpp</span></code>) is the one implementation the config
+key <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code> selects; the platform service holds a <code class="docutils literal notranslate"><span class="pre">unique_ptr&lt;CarPlatform&gt;</span></code> and calls the
+interface, nothing brand-specific.</p>
+</section>
+<section id="decode-from-frames-to-a-carstateview">
+<h2>Decode: from frames to a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code><a class="headerlink" href="#decode-from-frames-to-a-carstateview" title="Link to this heading">#</a></h2>
+<p>Incoming frames pass one cheap gate first — <code class="docutils literal notranslate"><span class="pre">isAllowedRxAddress</span></code> drops anything not on the car’s
+receive list before any decoding, so a busy bus costs nothing per irrelevant frame. What survives goes
+to <code class="docutils literal notranslate"><span class="pre">MqbCarStateDecoder</span></code>, a <code class="docutils literal notranslate"><span class="pre">switch</span></code> on the address (<code class="docutils literal notranslate"><span class="pre">mqb_car_state_decoder.cpp</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>address</p></th>
+<th class="head"><p>frame</p></th>
+<th class="head"><p>what it gives</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x0B2</span></code></p></td>
+<td><p>ESP_02</p></td>
+<td><p>four wheel speeds → filtered <code class="docutils literal notranslate"><span class="pre">v_ego</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x086</span></code></p></td>
+<td><p>LWI_01</p></td>
+<td><p>steering-wheel angle and rate, with sign</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x101</span></code></p></td>
+<td><p>ESP_05</p></td>
+<td><p>yaw rate, with sign</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x106</span></code></p></td>
+<td><p>ESP_09</p></td>
+<td><p>brake pressure, driver-braking flag</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x121</span></code> / <code class="docutils literal notranslate"><span class="pre">0x3BE</span></code></p></td>
+<td><p>—</p></td>
+<td><p>TSK / cruise status → is stock ACC engaged</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x09F</span></code></p></td>
+<td><p>LH_EPS_03</p></td>
+<td><p>EPS HCA status — is the rack accepting torque</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The values are not extracted by hand-written bit math but through a <strong>DBC parser</strong>
+(<code class="docutils literal notranslate"><span class="pre">utils/can_parser.h</span></code>): <code class="docutils literal notranslate"><span class="pre">extractSignal(frame,</span> <span class="pre">&quot;LWI_Lenkradwinkel&quot;)</span></code> returns the physical value using
+the same <code class="docutils literal notranslate"><span class="pre">vw_mqb_2010.dbc</span></code> comma ships. That choice has a subtle safety property, and the parser makes
+it explicit — one malformed DBC line is skipped, not fatal:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The parser's contract, in miniature: a bad line must not void the whole database.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_dbc</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+    <span class="n">signals</span><span class="p">,</span> <span class="n">skipped</span> <span class="o">=</span> <span class="p">{},</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">parse_dbc_line</span><span class="p">(</span><span class="n">ln</span><span class="p">)</span>   <span class="c1"># raises on a malformed line</span>
+            <span class="n">signals</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">skipped</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">signals</span><span class="p">,</span> <span class="n">skipped</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_dbc_line</span><span class="p">(</span><span class="n">ln</span><span class="p">):</span>
+    <span class="c1"># a real SG_ line: "SG_ LWI_Lenkradwinkel : 0|13@1+ (0.1,0) ..."</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ln</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"SG_"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"not a signal line"</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mf">0.1</span>
+
+<span class="n">sig</span><span class="p">,</span> <span class="n">skipped</span> <span class="o">=</span> <span class="n">load_dbc</span><span class="p">([</span><span class="s2">"SG_ LWI_Lenkradwinkel : 0|13@1+ (0.1,0)"</span><span class="p">,</span>
+                         <span class="s2">"GARBAGE that will not parse"</span><span class="p">,</span>
+                         <span class="s2">"SG_ ESP_Gierrate : 0|14@1+ (0.01,0)"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="si">}</span><span class="s2"> signals, skipped </span><span class="si">{</span><span class="n">skipped</span><span class="si">}</span><span class="s2"> bad line(s)"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Why it matters: a DBC that fails to load whole leaves the car <strong>undecoded</strong>, which from the outside
+looks exactly like a car that is not talking — the wrong thing to conclude from a spacing difference on
+one unrelated message. <code class="docutils literal notranslate"><span class="pre">update()</span></code> returns true when any decoded value changed, and the platform service
+publishes <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> on that.</p>
+</section>
+<section id="encode-building-a-legal-hca-01">
+<h2>Encode: building a legal HCA_01<a class="headerlink" href="#encode-building-a-legal-hca-01" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">apply(CarControl)</span></code> turns the brand-neutral request (torque in cNm, lateral active, HUD lane bits) into
+the frames this car’s EPS will accept. For steering that is <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> at address <code class="docutils literal notranslate"><span class="pre">0x126</span></code>, and three
+things about it are non-negotiable — the brand owns all three, which is exactly why they live here and
+not in <code class="docutils literal notranslate"><span class="pre">Control</span></code>:</p>
+<ul class="simple">
+<li><p><strong>magnitude and sign are split</strong>: the 14-bit field carries <code class="docutils literal notranslate"><span class="pre">|torque|</span></code>, a separate bit carries the
+sign. Torque is clamped to ±<code class="docutils literal notranslate"><span class="pre">STEER_MAX</span></code> (300) before it is packed.</p></li>
+<li><p><strong>a 4-bit rolling counter</strong> increments every frame; the EPS rejects a frame whose counter did not
+advance.</p></li>
+<li><p><strong>a CRC-8 checksum</strong> over the payload, VW’s “8H2F” polynomial <code class="docutils literal notranslate"><span class="pre">0x2F</span></code>, init <code class="docutils literal notranslate"><span class="pre">0xFF</span></code>, final XOR <code class="docutils literal notranslate"><span class="pre">0xFF</span></code> —
+then XORed with a per-counter secret byte. For <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> that secret is a constant <code class="docutils literal notranslate"><span class="pre">0xDA</span></code> (for
+<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>, the cruise-button frame, it genuinely varies by counter); get it wrong and every frame is
+silently dropped by the EPS.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">crc8_2f</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""VW MQB 8H2F CRC over bytes 1.. : poly 0x2F, init 0xFF, final XOR 0xFF, plus a counter secret."""</span>
+    <span class="n">HCA_SECRET</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0xDA</span><span class="p">]</span> <span class="o">*</span> <span class="mi">16</span>                       <span class="c1"># HCA_01's secret is a constant 0xDA (GRA_ACC_01's varies)</span>
+    <span class="n">crc</span> <span class="o">=</span> <span class="mh">0xFF</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">crc</span> <span class="o">^=</span> <span class="n">b</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+            <span class="n">crc</span> <span class="o">=</span> <span class="p">((</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">^</span> <span class="mh">0x2F</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="k">if</span> <span class="n">crc</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="k">else</span> <span class="p">(</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="n">crc</span> <span class="o">^=</span> <span class="n">HCA_SECRET</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x0F</span><span class="p">]</span>              <span class="c1"># constant here, so counter-independent</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+        <span class="n">crc</span> <span class="o">=</span> <span class="p">((</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">^</span> <span class="mh">0x2F</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="k">if</span> <span class="n">crc</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="k">else</span> <span class="p">(</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="k">return</span> <span class="n">crc</span> <span class="o">^</span> <span class="mh">0xFF</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">build_hca</span><span class="p">(</span><span class="n">torque_cnm</span><span class="p">,</span> <span class="n">lkas_on</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
+    <span class="n">torque</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mi">300</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="n">torque_cnm</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">counter</span> <span class="o">&amp;</span> <span class="mh">0x0F</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x3</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">)</span>   <span class="c1"># counter in low nibble, a constant in the high</span>
+    <span class="n">mag</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">torque</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">mag</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">mag</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x3F</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x40</span> <span class="k">if</span> <span class="n">lkas_on</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x80</span> <span class="k">if</span> <span class="n">torque</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">crc8_2f</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>                              <span class="c1"># checksum goes in byte 0, last</span>
+    <span class="k">return</span> <span class="n">d</span>
+
+<span class="n">f0</span> <span class="o">=</span> <span class="n">build_hca</span><span class="p">(</span><span class="mi">120</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="n">build_hca</span><span class="p">(</span><span class="mi">120</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"counter 3:"</span><span class="p">,</span> <span class="n">f0</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s2">" counter 4:"</span><span class="p">,</span> <span class="n">f1</span><span class="o">.</span><span class="n">hex</span><span class="p">())</span>
+<span class="k">assert</span> <span class="n">f0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">f1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"same magnitude, different counter → different checksum"</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"checksum changed because the counter sits in the CRC payload — not because of the secret,"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"which is constant for HCA_01. A wrong or wrongly-varying secret (GRA_ACC_01) drops every frame."</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (the dashboard lane HUD) and <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code> (cruise buttons, its own secret) are built the same
+way. The cruise-button frame carries a wrinkle worth knowing: a press is <strong>held until the stock
+counter moves</strong>, because that is how this bus acknowledges a button — release too early and the press
+is never seen, too late and it repeats.</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/hca01_bits.png"><img alt="../_images/hca01_bits.png" src="../_images/hca01_bits.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 26 </span><span class="caption-text">HCA_01: torque magnitude and sign split across a 14-bit field and a sign bit, with the rolling counter
+and CRC the EPS validates.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="allowed-the-panda-supervisor">
+<h2>Allowed: the panda supervisor<a class="headerlink" href="#allowed-the-panda-supervisor" title="Link to this heading">#</a></h2>
+<p>A correctly built frame still must not leave unless the car is on and the panda is in the right safety
+mode. <code class="docutils literal notranslate"><span class="pre">PandaSafetySupervisor</span></code> (<code class="docutils literal notranslate"><span class="pre">panda_safety_supervisor.cpp</span></code>) owns that, and it is deliberately a layer
+below encode — the platform <em>builds</em> frames every tick, the supervisor decides whether the board will
+<em>pass</em> them:</p>
+<ul class="simple">
+<li><p><strong>safety model</strong> must be <code class="docutils literal notranslate"><span class="pre">kVolkswagen</span></code> (15); <code class="docutils literal notranslate"><span class="pre">safetyModelOk()</span></code> is false otherwise and no torque is
+sent — a wrong mode is treated as a fault, not worked around;</p></li>
+<li><p><strong>alternative-experience</strong> bits (e.g. disable-disengage-on-gas) are asserted on the board at init;</p></li>
+<li><p><strong>ignition</strong> is debounced with voltage hysteresis, so a dip does not toggle engagement;</p></li>
+<li><p>a <strong>heartbeat</strong> is sent every supervisor tick, or the panda enters its own safe mode.</p></li>
+</ul>
+<p>This is also what makes the panda survivable across a phone sleep. When a re-opened USB descriptor is
+seated into the running native layer, <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> forgets <strong>board</strong> state — safety model and
+alt-exp live on the board and must be re-asserted — while keeping decoded <strong>car</strong> state and the cruise
+latch. Two failed reseats in a row escalate to a full restart; a single one is invisible to the
+controllers.</p>
+</section>
+<section id="rates-and-where-it-all-runs">
+<h2>Rates, and where it all runs<a class="headerlink" href="#rates-and-where-it-all-runs" title="Link to this heading">#</a></h2>
+<p>The platform service (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) runs three timers: <strong>rx</strong> and <strong>tx</strong> at 10 ms, <strong>state</strong>
+at 100 ms. rx drains the panda and decodes; tx builds and sends <code class="docutils literal notranslate"><span class="pre">apply()</span></code>’s frames; state publishes
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, and the supervisor tick rides alongside publishing <code class="docutils literal notranslate"><span class="pre">panda/health</span></code>. Everything above in
+this chapter is called from those three callbacks and nowhere else — which is what lets bag replay and
+<code class="docutils literal notranslate"><span class="pre">pyadas</span></code> exercise the identical decode/encode with no panda attached.</p>
+</section>
+<section id="acceptance">
+<h2>Acceptance<a class="headerlink" href="#acceptance" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>the DBC miniature loads the good signals and counts the bad line instead of failing;</p></li>
+<li><p>the HCA builder produces a different checksum at two counters — and you can state <em>why</em>: the counter is
+part of the CRC payload, while the secret itself is constant for <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> and varies only for
+<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>;</p></li>
+<li><p>one sentence each: why <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> is brand-neutral, and why <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> forgets board
+state but keeps car state.</p></li>
+</ul>
+</section>
+<section id="for-depth">
+<h2>For depth<a class="headerlink" href="#for-depth" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">platform/car_platform.h</span></code> — the interface; <code class="docutils literal notranslate"><span class="pre">platform/volkswagen/</span></code> — the one implementation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code> — the procedure for adding a second car behind this interface.</p></li>
+<li><p><a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Angle control</span></a> — the torque this layer receives, and the panda rate
+limiter it must respect.</p></li>
+</ul>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Platform"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../Control/AngleControl.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Angle control — the loop where feedback actually ends</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Safety/Warnings.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Warnings: FCW, AEB, LDW</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decode-from-frames-to-a-carstateview">Decode: from frames to a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-building-a-legal-hca-01">Encode: building a legal HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#allowed-the-panda-supervisor">Allowed: the panda supervisor</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates-and-where-it-all-runs">Rates, and where it all runs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-depth">For depth</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

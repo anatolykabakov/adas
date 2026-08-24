@@ -26,12 +26,27 @@ Example rig numbers (order of magnitude): ~0.1 m left of centerline, pitch $\app
 
 ## Online calibration
 
-`CameraCalib` (`services/camera_calib.cpp`) consumes `model/camera_odometry` (and optionally lane UV) and
-publishes `calibration/camera`. On success / sufficient confidence, Java updates the warp used by the next
-Supercombo inputs.
+`CameraCalib` (`services/camera_calib.cpp`) runs **two estimators against one state**, because each
+covers the other's blind spot:
 
-It also refuses intrinsics it does not believe: the principal point has to sit near the middle of the frame
-the message declares. That check exists because of a lost drive — the story is at the end of this chapter.
+* **camera odometry** (`updateFromPose`): on a straight road the model's translation vector points along
+  the optical axis, so its direction *is* pitch and yaw. Samples are gated by speed and by the steering
+  angle (`steer_ratio` in the service config exists solely to tell a straight from a shallow turn), and
+  weighted by the odometry's own per-axis σ;
+* **the vanishing point of the lane lines** (`updateFromUv`): geometry AAD readers know, rate-limited and
+  gated on the fit residual — on a bend the lines are not parallel and their intersection is not a
+  vanishing point, so a curved pair is rejected.
+
+The fused estimate is published on `calibration/camera` with a convergence flag (`history_len` samples
+back the answer). From there it fans out to every consumer of "where does the camera point": the Java
+warp that builds the **next** Supercombo input, the on-screen ground projection, and the debug topic
+`calibration/camera_debug` that the bag keeps.
+
+The service also refuses intrinsics it does not believe: the principal point has to sit near the middle
+of the frame the message declares. That check exists because of a lost drive — the story is at the end
+of this chapter. Intrinsics themselves are per-device now (`intrinsics_from_device: true` asks the
+camera API; the config prior carries the values measured for a specific phone) — and on the Xiaomi 14
+the measured intrinsics and the datasheet differ by ~4 %, while the camera-odometry scale against wheel speed is still ~11 % short — an open item until a chessboard settles the lens (task #51).
 
 ```{admonition} Roll is weakly observable
 :class: warning
@@ -39,6 +54,15 @@ Roll often stays near $0$ in live estimates. Treat large roll swings as suspicio
 ```
 
 ## What a degree of error actually costs
+
+```{figure} figures/error_growth.png
+---
+width: 95%
+---
+A yaw error grows laterally with range; a pitch error moves the apparent ground point as range squared
+over camera height — which is why a degree matters far away.
+```
+
 
 The reason extrinsics matter more than they look is pure geometry: an angular error becomes a lateral
 error that grows with distance. A yaw error $\Delta\psi$ puts a point at range $d$ off by
@@ -80,13 +104,31 @@ plan offset is comparing two perception configurations, not two controllers — 
 into before noticing.
 ```
 
-## Persisting the estimate is not the fix it looks like
+```{figure} figures/calib_convergence.png
+---
+width: 80%
+---
+The online estimate settles within 30–60 s; the lateral error it implies at 20 m falls with it.
+```
 
-The online estimate converges and then is thrown away at shutdown, so the obvious move is to save it and
-use it as next drive's prior. Measured, that is nearly worthless: the mount is not repeatable, so a
-prior from the previous mount is no better than the default. What matters instead is **how fast the
-estimate converges**, and there the news is good — on the 08-06 run it settled within 30–60 s, and the
-lateral offset on straights during the first 30 s was 0.02 m.
+## Persisting the estimate: what it buys, and what it cannot
+
+The system **does** save a converged calibration: once the service reports convergence,
+`persistCalibrationIfSettled` writes the RPY (and camera position) into the saved runtime config — at
+most once a minute, and only when the estimate moved by more than 0.05°. Next start reads it back as
+the prior.
+
+Know exactly what that buys, because it was measured before it was built. Across a **remount** the
+saved prior is nearly worthless — the mount is not repeatable, so last week's angles are no better than
+the shipped default. What the persistence is actually for is **restart without remount**: an app
+restart, a watchdog recovery, a battery swap in the cradle — common events since the panda watchdog can
+escalate to a full restart — where the phone has not moved and the saved prior is simply correct. One
+operational caveat rides along: the saved config **shadows the asset** (open task #50), so a freshly
+shipped config key does not reach an installed phone until the saved copy is reset.
+
+Either way the online estimator still runs and still wins: what matters on the road is **how fast it
+converges from whatever prior it got**, and there the news is good — on the 08-06 run it settled within
+30–60 s, and the lateral offset on straights during the first 30 s was 0.02 m.
 
 ```python
 # Convergence as the online estimator actually behaved, from the bag: a first-order approach to the

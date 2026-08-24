@@ -2,14 +2,26 @@
 
 ## Repository
 
-Android ADAS root:
+Clone it, then build — one command does the rest:
 
 ```bash
-cd <repository root>
-git lfs install && git lfs pull   # the models and the map are LFS objects
+git clone https://github.com/anatolykabakov/adas.git
+cd adas
+./scripts/build_project.sh   # writes local.properties, fetches models, builds the APK
 ```
 
-Without that second line the network assets are 133-byte pointer files and the app starts without a model.
+`<repository root>` in the rest of the book means this `adas/` directory.
+
+**Prerequisites** the build assumes (a fresh Linux/macOS box needs these first —
+`scripts/install_dependencies.sh` installs them on Debian/Ubuntu): a JDK (17+), the Android SDK and NDK
+(`ANDROID_HOME` must point at an SDK that already has the `compileSdk` platform), Conan 2 and CMake for
+the C++, and Python 3.10+ with `numpy`. Everything offline — bag analysis, the simulator, `pyadas` — needs
+only the Python side and runs **without a phone or a car** (see [Bags](../Logging/Bags.md), *Record your
+own bag*, for the smallest hardware path).
+
+The repository carries no model. `scripts/fetch_models.sh` (which the build runs for you) downloads the
+fp16 supercombo from comma's own release and derives the fp32 and `.thneed` variants, verifying every
+sha256 against `scripts/models.manifest`. Run it alone when you only need the files.
 
 See also `README.md` at the repository root: APK build, `run_bag_vis.sh`, `run_sim.sh`, Java/C++/scripts layout.
 

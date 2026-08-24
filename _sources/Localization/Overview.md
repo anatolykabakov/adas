@@ -95,6 +95,15 @@ Because the wheel-speed signal is quantised at 0.0075 km/h and the interval is ~
 quantised signal over a short interval amplifies the quantum by $1/dt$. Measured on a real 28-minute
 run, the naive finite difference produced:
 
+```{figure} figures/a_ego.png
+---
+width: 80%
+---
+Differentiating noisy wheel speed explodes the acceleration; a two-state filter recovers it (schematic of
+the measured RMS 4.16 → 0.062 m/s²).
+```
+
+
 | | finite difference | two-state filter |
 |---|---|---|
 | `a_ego` p5 / p95 | −3.85 / +3.80 m/s² | −0.57 / +0.68 |
@@ -260,6 +269,17 @@ wrong sign or a huge bias, and then the EKF's agreement gate rejects the IMU out
 ```
 
 ---
+
+```{admonition} If you have not met a Kalman filter
+:class: note
+From here the estimator is an **EKF**, in two half-steps per tick. **Predict:** push the state forward
+with the motion model and *grow* its uncertainty (covariance $P$). **Update:** compare a sensor reading
+to what the state predicts (the *innovation*), and correct the state by a fraction of that gap — the
+*gain* $K$, which is large when the sensor is trusted more than the prediction and small when less. "EKF"
+just means the models are non-linear and are linearised (a Jacobian $F$) at each step. You do not need
+the derivation to follow this chapter — only: predict grows uncertainty, a measurement shrinks it, and
+the gain is how much you believe the measurement.
+```
 
 ## Step 2b: fusing the gyro, and the mistake worth studying
 
@@ -436,6 +456,14 @@ overwrote it about twenty times per GPS sample. Both are fixed now, and the scal
 learnable — see step 4 for the reason, which is more interesting than the bug.
 
 ---
+
+```{figure} figures/frames.png
+---
+width: 60%
+---
+Three frames the chapter keeps straight: ENU axes, the GPS bearing (clockwise from North), and the
+vehicle heading — related by ψ = π/2 − b.
+```
 
 ## Step 3a: GPS → local meters
 
@@ -622,6 +650,14 @@ fit inside.
 
 ---
 
+```{figure} figures/understeer_speed.png
+---
+width: 75%
+---
+The achieved-vs-commanded curvature ratio slides with speed, so no single `tire_stiffness_factor` fits —
+the reason paramsd exists (and why it needs more than one observable).
+```
+
 ## Step 6: learning the parameters, and what the measurement said about it
 
 Everything so far estimated *where the car is*. This step estimates *what the car is* — and it is in this
@@ -704,8 +740,10 @@ still wants explaining. But it changes what success would look like.
 
 Three states, and the measurement is the yaw rate:
 
-$$x = [\text{tsf},\ \text{steer ratio},\ \text{angle offset}], \qquad
-\dot\psi_{\text{pred}} = v\,\kappa(x) + \frac{g\sin\phi}{v}$$
+$$
+x = [\text{tsf},\ \text{steer ratio},\ \text{angle offset}], \qquad
+\dot\psi_{\text{pred}} = v\,\kappa(x) + \frac{g\sin\phi}{v}
+$$
 
 Two details carry most of the value.
 
@@ -902,9 +940,8 @@ result you can point at with numbers is a finished piece of work.
 The lateral MPC and Pure Pursuit **do not** need global ENU to steer — they track `vision/path` in the
 device frame. Localization matters for:
 
-* bag maps and mapmatch overlays (`docs/MAPMATCH.md` is a **separate** offline
-  track-shape matcher, and it integrates measured yaw rate directly, so it was never affected by the
-  bug above);
+* bag maps and track overlays in the visualizer (the offline map-match vertical was deleted on
+  2026-08-21; the `.admap` reader survives as the visualizer backdrop);
 * sanity checks — GPS against pure odometry divergence;
 * any future map-relative feature;
 * learning the vehicle parameters the controller uses — step 6, and the one consumer that turned out not to
@@ -946,6 +983,30 @@ consumer of `localization/pose` and quietly corrupt offline forensics.
    windows where speed is about zero.
 7. Take a bag, feed `v_ego_raw` through `SpeedFilter` with `factor = 1.0` and `0.988`, and compare the
    integrated distance against the GPS track length. Which factor gets you closer?
+
+## On your own recording
+
+Everything above runs unchanged on a bag you record yourself (see
+[Bags](../Logging/Bags.md), *Record your own bag*) — and gains from it: your GPS has *your* multipath
+and your tunnels, your IMU carries the phone's real mounting, and every claim is checked against a
+track you can verify from memory. Load your topics and walk the five steps again:
+
+```python
+# not-runnable — the loading pattern; the estimator code is the chapter's own
+from pathlib import Path
+from vis.bag_io import load_topic_messages
+
+session = Path("../adas_logs/<your-session>")
+gps = load_topic_messages(session, "sensors/gps/data")
+imu = load_topic_messages(session, "sensors/imu")
+print(len(gps), "GPS fixes,", len(imu), "IMU samples")
+```
+
+Two expectations to calibrate first: a phone GPS in the open is a few metres of scatter at 1 Hz — good
+enough to bound drift, useless for lane-level anything. And a passenger recording has no wheel
+odometry, so step 1 runs on GPS-differenced speed instead — the substitution this chapter already
+discusses when it makes speed a state. If you recorded on foot, the "vehicle frame" assumption is
+gloriously violated, and the yaw-lock step shows exactly how the calibrator copes, or refuses.
 
 <!-- next-chapter -->
 ---

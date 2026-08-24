@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -402,10 +412,12 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-format-in-forty-lines">Build: the format in forty lines</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#commands">Commands</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-topics">Key topics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-a-bag-yourself">Reading a bag yourself</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#measuring-something-real-agreement-between-two-sensors">Measuring something real: agreement between two sensors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-your-own-bag-and-run-your-own-code-on-it">Record your own bag, and run your own code on it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#report-template">Report template</a></li>
 </ul>
             </nav>
@@ -429,6 +441,52 @@
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">/</span></code> in topic name → <code class="docutils literal notranslate"><span class="pre">__</span></code> on disk.</p>
+<section id="build-the-format-in-forty-lines">
+<h2>Build: the format in forty lines<a class="headerlink" href="#build-the-format-in-forty-lines" title="Link to this heading">#</a></h2>
+<p>A bag is topic directories of length-prefixed records. That is the whole idea; everything else is
+protobuf. Write the toy version so the real one holds no mystery:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">topic_dir</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topic</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">topic</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="s2">"__"</span><span class="p">)</span>     <span class="c1"># '/' would nest; '__' keeps one level</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">write_bag</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topic</span><span class="p">,</span> <span class="n">records</span><span class="p">):</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">topic_dir</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topic</span><span class="p">)</span>
+    <span class="n">d</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="s2">"000.bin"</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">records</span><span class="p">:</span>
+            <span class="n">blob</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">"&lt;I"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">blob</span><span class="p">)))</span>    <span class="c1"># length prefix: records survive a truncated tail</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">blob</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">read_bag</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topic</span><span class="p">):</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">topic_dir</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">topic</span><span class="p">)</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*.bin"</span><span class="p">)):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">part</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="p">(</span><span class="n">n</span><span class="p">,)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="s2">"&lt;I"</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">n</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                <span class="k">break</span>                                <span class="c1"># the app was killed mid-record; keep what is whole</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">4</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">n</span><span class="p">]))</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span> <span class="o">+</span> <span class="n">n</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+<span class="n">root</span> <span class="o">=</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+<span class="n">recs</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">"ts"</span><span class="p">:</span> <span class="mi">1000</span> <span class="o">+</span> <span class="mi">42</span> <span class="o">*</span> <span class="n">k</span><span class="p">,</span> <span class="s2">"y_l"</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.7</span><span class="p">,</span> <span class="s2">"y_r"</span><span class="p">:</span> <span class="mf">1.8</span><span class="p">}</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">)]</span>
+<span class="n">write_bag</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="n">recs</span><span class="p">)</span>
+<span class="n">back</span> <span class="o">=</span> <span class="n">read_bag</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">"vision/lanes"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"wrote 100, read </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">back</span><span class="p">)</span><span class="si">}</span><span class="s2">, first ts </span><span class="si">{</span><span class="n">back</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">'ts'</span><span class="p">]</span><span class="si">}</span><span class="s2">, dir </span><span class="si">{</span><span class="n">topic_dir</span><span class="p">(</span><span class="n">root</span><span class="p">,</span><span class="w"> </span><span class="s1">'vision/lanes'</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">back</span> <span class="o">==</span> <span class="n">recs</span><span class="p">,</span> <span class="s2">"acceptance: a bag must survive the round trip byte-exactly"</span>
+</pre></div>
+</div>
+<p>The real format differs in two ways only: records are protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> (the exact bytes that
+crossed the bridge — logging is a <em>tap</em>, not a re-encoding), and files rotate by size. <code class="docutils literal notranslate"><span class="pre">Logger.java</span></code>
+writes it; <code class="docutils literal notranslate"><span class="pre">scripts/vis/bag_io.py</span></code> reads it; the <code class="docutils literal notranslate"><span class="pre">'/'→'__'</span></code> rule above is lifted from there verbatim.</p>
+</section>
 <section id="commands">
 <h2>Commands<a class="headerlink" href="#commands" title="Link to this heading">#</a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>&lt;repository<span class="w"> </span>root&gt;
@@ -570,6 +628,51 @@ survived. “Scale is 1.012” over eight samples and over 798 are different cla
 been wrong here before.</p>
 </div>
 </section>
+<section id="record-your-own-bag-and-run-your-own-code-on-it">
+<h2>Record your own bag, and run your own code on it<a class="headerlink" href="#record-your-own-bag-and-run-your-own-code-on-it" title="Link to this heading">#</a></h2>
+<p>No car is needed for a first bag: a phone on the windshield as a passenger is best, a walk along a road
+with painted edges works too. Build (<code class="docutils literal notranslate"><span class="pre">./scripts/build_project.sh</span></code>), install, start logging from the UI,
+move for 3–5 minutes, pull the session (<code class="docutils literal notranslate"><span class="pre">./scripts/pull_bags.sh</span></code>), open it in the visualizer. What your
+bag cannot contain — <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, <code class="docutils literal notranslate"><span class="pre">can/rx</span></code>, torque — is a feature: everything a controller outputs
+on it is unverifiable, so you can be as wrong as you like, for free.</p>
+<p>Then feed it to the code you built in <a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Vision</span></a> and
+<a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — needs your session directory and generated protobufs</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vis.bag_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_topic_messages</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../adas_logs/&lt;your-session&gt;"</span><span class="p">)</span>
+<span class="n">lanes</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"vision/lanes"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lanes</span><span class="p">),</span> <span class="s2">"lane frames"</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">ts</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">_raw</span> <span class="ow">in</span> <span class="n">lanes</span><span class="p">[:</span><span class="mi">3</span><span class="p">]:</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">msg</span><span class="o">.</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>      <span class="c1"># near-left and near-right host lines</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">points</span><span class="p">),</span> <span class="s2">"pts  prob"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">left</span><span class="o">.</span><span class="n">prob</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">right</span><span class="o">.</span><span class="n">prob</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — sketch of the analysis loop</span>
+<span class="n">deltas</span><span class="p">,</span> <span class="n">gaps</span><span class="p">,</span> <span class="n">sigmas</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">ts</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">lanes</span><span class="p">:</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">msg</span><span class="o">.</span><span class="n">lanes</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">left</span><span class="o">.</span><span class="n">prob</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="ow">or</span> <span class="n">right</span><span class="o">.</span><span class="n">prob</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+        <span class="n">gaps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>                             <span class="c1"># the frames your toy never had</span>
+        <span class="k">continue</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">fuse_from_proto</span><span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>             <span class="c1"># your step-3 code, adapted to proto points</span>
+    <span class="n">delta</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pure_pursuit</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">deltas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+    <span class="n">sigmas</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">median_std</span><span class="p">(</span><span class="n">left</span><span class="p">),</span> <span class="n">median_std</span><span class="p">(</span><span class="n">right</span><span class="p">)))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"frames:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">lanes</span><span class="p">),</span> <span class="s2">" usable:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">),</span> <span class="s2">" dropped:"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gaps</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"|delta| p95 [deg]:"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">deltas</span><span class="p">),</span> <span class="mi">95</span><span class="p">)))</span>
+</pre></div>
+</div>
+<p>Expect the shape, if not the numbers: σ nothing like a synthetic 5 cm (medians 0.37/0.51 m on this
+project’s drives, both lines confident at once in ~22 % of frames); whole unflagged stretches with
+neither line; a 42 ms frame step with jitter. Write down the three worst moments — a gap, a σ blow-up,
+a frame-step spike, one timestamp and one sentence each. Those three timestamps are your personal test
+set from now on.</p>
+</section>
 <section id="report-template">
 <h2>Report template<a class="headerlink" href="#report-template" title="Link to this heading">#</a></h2>
 <ol class="arabic simple">
@@ -650,10 +753,12 @@ been wrong here before.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-format-in-forty-lines">Build: the format in forty lines</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#commands">Commands</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#key-topics">Key topics</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-a-bag-yourself">Reading a bag yourself</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#measuring-something-real-agreement-between-two-sensors">Measuring something real: agreement between two sensors</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#record-your-own-bag-and-run-your-own-code-on-it">Record your own bag, and run your own code on it</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#report-template">Report template</a></li>
 </ul>
   </nav></div>

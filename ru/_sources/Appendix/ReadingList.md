@@ -6,6 +6,13 @@
 * Coursera *Introduction to Self-Driving Cars* (недели про поперечное управление)
 * openpilot / flowpilot — Supercombo и штатное поперечное управление
 
+**Фон под пробелы, которые открывают главы** (если глава тяжело идёт — сначала читать названное):
+
+* модель камеры / pinhole / гомография — Szeliski, *Computer Vision*, гл. 2 (под [IntrinsicsAndWarp](../Calibration/IntrinsicsAndWarp.md));
+* IDM (следование за лидером) — Treiber, Hennecke & Helbing 2000, *Congested traffic states…* (под [Safety](../Safety/Warnings.md));
+* Калман/EKF — Labbe, *Kalman and Bayesian Filters in Python* (под [Локализацию](../Localization/Overview.md));
+* protobuf и ZMQ — официальный туториал protobuf «Basics» и руководство ZeroMQ (под [Беги](../Logging/Bags.md), [Задержки](../Latency/Overview.md)).
+
 ## Внутреннее (`docs/`)
 
 | файл | тема |
@@ -14,13 +21,12 @@
 | `CONTROLLER_LIMITS.md` / `BACKLOG.md` | границы применимости / открытая работа |
 | `BENCHMARK_COMMA2.md` | сравнение с comma-two и план сокращения разрыва |
 | `SAFETY_WARN.md` | FCW / AEB / LDW |
-| `MPC_EXPLAINED.md` | MPC из VisionPilot |
 | `THNEED.md` | путь через GPU: что такое thneed, как наш собирается и проверяется |
 | `NEW_PHONE.md` | подъём на новом телефоне и что замерить до выезда |
 | `PORTING.md` | подключение машины за `CarPlatform` |
-| `PARAMSD.md` / `MAPMATCH.md` | обучение параметров / офлайн-привязка к карте |
+| `PARAMSD.md` | обучение параметров |
 | глава книги `Localization/Overview.md` | ENU из GPS, IMU телефона, живой EKF |
-| `TRAFFIC_VISION.md` / `MODEL_LONG_PLAN.md` / `CRUISE_BUTTONS.md` | смежное |
+| `TRAFFIC_VISION.md` | вертикаль светофоров |
 | `SIM_CONTROLLER_TEST.md` | оценка в MetaDrive |
 
 ## Опорные точки в коде

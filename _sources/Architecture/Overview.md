@@ -58,6 +58,13 @@ follows — is to close a loop as early as possible and then improve one link at
 | 5. Panda, transmit | actually steer, with the panda's safety model in the way | know whether it steered *well* |
 | 6. measurement | answer that question with a bag and a script | stop, because now the real work starts |
 
+Walked with an instructor, the same table is the safe bring-up order for a new phone, car, or student —
+each stage adds one irreversible thing, and each has a check *before* the next: stage 2 wants stable
+overlays and sane latency (`tools/latency.py`), stage 3 wants `middleware/stats` clean under road rates,
+stage 4 wants `vehicle/state` plausible against the dashboard, and stage 5 is one line here and a whole
+document in practice — `docs/PREDRIVE.md`, which fixes the drive's one question *before* looking at the
+data. On-road work is supervised, always.
+
 Stage 6 is where a course usually ends and where this project spends most of its time. Two illustrations of
 why, both from real runs:
 
@@ -119,7 +126,7 @@ Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`
 |---|---|
 | `vision.model_runner` | `thneed` (GPU, default) \| `onnx` (fallback) |
 | `vehicle.name` | which `CarPlatform` is instantiated |
-| `vehicle.lane_keep_controller` | `pp` \| `mpc` \| `fp` |
+| `vehicle.lane_keep_controller` | `pp` \| `fp` |
 | `vehicle.lat_use_vehicle_model` | $\kappa\to$ SWA via understeer model |
 | `vehicle.fp_steer_delay_s` | state lookahead for pipeline delay |
 | `nodes.vision_traffic` | YOLO; keep `false` when measuring lane-keep |

@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -445,7 +455,18 @@
 <h1>Задания<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
 <p>Большинство заданий выполняется по бегу, без машины. Дорожный HCA — только под присмотром преподавателя.
 Каждый отчёт обязан содержать <strong>темп</strong> зрения и <strong>сквозную</strong> задержку съёмка→инференс (или объяснение, почему их нет).</p>
+<p>Мелкие потемные лаборатории теперь живут внутри своих глав — каждая глава строит собственную игрушку
+и кончается измеримой проверкой (проваленный P-регулятор в главе про велосипед, таблица компромисса в
+Pure Pursuit, шина в шестьдесят строк в Middleware, собственный бег в «Бегах»). Эта страница хранит
+крупные, межглавные задания — капстоны.</p>
 <p>Работайте в духе AAD: прочитать главу → сделать небольшое измерение → написать, что увидели, включая случаи отказа.</p>
+<div class="important admonition">
+<p class="admonition-title">Какой бег нужен каждому проекту</p>
+<p>В беге, который вы записали сами (Беги, <em>Запишите собственный бег</em>), есть зрение, GPS и IMU, но <strong>нет
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, CAN и момента</strong> — панды не было. Проекты, сравнивающие с рулением водителя или гоняющие
+контроллер против актуации (<strong>A2, A3, B1, B2</strong>), поэтому требуют <strong>инструкторского бега</strong> с CAN. Остальные
+работают на вашей записи.</p>
+</div>
 <section id="a">
 <h2>A — анализ данных<a class="headerlink" href="#a" title="Ссылка на этот заголовок">#</a></h2>
 <section id="a1">
@@ -483,7 +504,7 @@
 </section>
 <section id="b3">
 <h3>B3 Упреждение на дуге<a class="headerlink" href="#b3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Пользуясь <code class="docutils literal notranslate"><span class="pre">docs/MPC_EXPLAINED.md</span></code>, отметьте упреждающую и обратную части на одной дуге.
+<p>Пользуясь главой <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> (разделы fp-3 и fp-5), отметьте упреждающую и обратную части на одной дуге.
 <strong>Результат:</strong> набросок или график с пометками; одно предложение о том, почему поднимать вес CTE — неверный первый рычаг.</p>
 </section>
 </section>

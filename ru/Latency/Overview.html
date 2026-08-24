@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -430,7 +440,7 @@
 <a class="reference internal image-reference" href="../_images/latency_chain.png"><img alt="../_images/latency_chain.png" src="../_images/latency_chain.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 13 </span><span class="caption-text">Разбейте сквозной путь на измеримые отрезки — тогда сессии можно честно сравнивать.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 37 </span><span class="caption-text">Разбейте сквозной путь на измеримые отрезки — тогда сессии можно честно сравнивать.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <section id="id2">
@@ -514,7 +524,7 @@ python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/
 <a class="reference internal image-reference" href="../_images/60_run0801_straights.png"><img alt="../_images/60_run0801_straights.png" src="../_images/60_run0801_straights.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 14 </span><span class="caption-text">Толковать качество контроллера можно только на окнах, где зрение оставалось здоровым.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 38 </span><span class="caption-text">Толковать качество контроллера можно только на окнах, где зрение оставалось здоровым.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -530,6 +540,14 @@ python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/
 \[
 f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 \]</div>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="../_images/ceiling.png"><img alt="../_images/ceiling.png" src="../_images/ceiling.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 39 </span><span class="caption-text">Достигнутый темп — лестница по объёму работы на кадр: 1 мс внутри ступени не даёт ничего, переход через
+кратное периода стоит трети темпа.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>Вся история — в этом округлении вверх. Из него следует, что срезать 1 мс работы может не дать ничего, а
 переход через кратное <span class="math notranslate nohighlight">\(T\)</span> разом добавляет треть темпа.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>

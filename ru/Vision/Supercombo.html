@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -493,7 +503,7 @@
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code></p></td>
 <td><p>та же сеть в fp32 через ONNX Runtime</p></td>
-<td class="text-right"><p>48.5 мс</p></td>
+<td class="text-right"><p>45.6 мс (медиана)</p></td>
 </tr>
 </tbody>
 </table>
@@ -707,6 +717,13 @@ SoC, поэтому выключайте его перед сравнением 
 <h2>Шаг 3: прочитать выходной вектор<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <p>Модель возвращает один плоский массив float. Ничто в нём не подписано, а раскладка — самое неверно
 прочитанное место в этом проекте, поэтому этот раздел — её запускаемая карта.</p>
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/supercombo_layout.png"><img alt="../_images/supercombo_layout.png" src="../_images/supercombo_layout.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 5 </span><span class="caption-text">Выход — один плоский вектор, читаемый по срезам; смещения ниже говорят, где какой блок.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>Для supercombo 0.9.7, ширина 6504 (у сборок 0.8.x шириной 6472 и 6409 весь префикс тот же — двигается
 только хвост):</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -868,7 +885,9 @@ SoC, поэтому выключайте его перед сравнением 
 </div>
 <div class="warning admonition">
 <p class="admonition-title">Выход модели — это форма, а не метры</p>
-<p>Камерная одометрия той же сети против скорости колёс занижает. На текущей сети множитель <strong>0.686</strong>, и
+<p>Голова <strong>скорости/позы</strong> этой сети против скорости колёс занижает — это другая величина, чем масштаб
+<em>дистанции</em> камерной одометрии 0.888 из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора Vision</span></a> и
+<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>, и другое число. На текущей сети множитель позы <strong>0.686</strong>, и
 интересна его плоскость: на интервалах между кадрами от 28 до 50 мс он держится в 0.686–0.688, корреляция с
 <code class="docutils literal notranslate"><span class="pre">dt</span></code> равна +0.005.</p>
 <p>Эта плоскость и убила очевидное объяснение. Поза, выраженная на кадр, а не на секунду, масштабировалась бы

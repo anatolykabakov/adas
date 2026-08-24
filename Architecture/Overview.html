@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -517,6 +527,12 @@ follows — is to close a loop as early as possible and then improve one link at
 </tbody>
 </table>
 </div>
+<p>Walked with an instructor, the same table is the safe bring-up order for a new phone, car, or student —
+each stage adds one irreversible thing, and each has a check <em>before</em> the next: stage 2 wants stable
+overlays and sane latency (<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>), stage 3 wants <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> clean under road rates,
+stage 4 wants <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> plausible against the dashboard, and stage 5 is one line here and a whole
+document in practice — <code class="docutils literal notranslate"><span class="pre">docs/PREDRIVE.md</span></code>, which fixes the drive’s one question <em>before</em> looking at the
+data. On-road work is supervised, always.</p>
 <p>Stage 6 is where a course usually ends and where this project spends most of its time. Two illustrations of
 why, both from real runs:</p>
 <ul class="simple">
@@ -583,7 +599,7 @@ what <a class="reference internal" href="../Logging/Bags.html"><span class="std 
 <td><p>which <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code> is instantiated</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span></code></p></td>
 <td><p><span class="math notranslate nohighlight">\(\kappa\to\)</span> SWA via understeer model</p></td>

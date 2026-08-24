@@ -70,7 +70,7 @@
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
     <link rel="next" title="Калибровка камеры" href="../Calibration/Overview.html" />
-    <link rel="prev" title="MPC и fp" href="../Control/MPC_and_FP.html" />
+    <link rel="prev" title="Платформенный слой — одна машина за интерфейсом" href="../Platform/Overview.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="current nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -552,6 +562,13 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 4.8–5.5 м/с. Теперь три теста проверяют, что поставляемый конфиг соответствует решениям, принятым на дороге, а
 сборка отказывается компилировать конфиг, который не разбирается.</p>
 </div>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../_images/fcw_thresholds.png"><img alt="../_images/fcw_thresholds.png" src="../_images/fcw_thresholds.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 31 </span><span class="caption-text">Два триггера: время до столкновения ниже 2.5 с или требуемое замедление выше 3.5 м/с².</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 </section>
 </section>
 <section id="fcw-aeb">
@@ -615,6 +632,14 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
 </div>
 <section id="y">
 <h3>Почему важен <span class="math notranslate nohighlight">\(y\)</span> относительно пути<a class="headerlink" href="#y" title="Ссылка на этот заголовок">#</a></h3>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="../_images/path_relative_y.png"><img alt="../_images/path_relative_y.png" src="../_images/path_relative_y.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 32 </span><span class="caption-text">На дуге край собственной полосы пересекает линию «прямо вперёд» — сравнение с осью помечает выезд,
+которого нет.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>На дуге машина впереди <strong>в вашей же</strong> полосе имеет ненулевой <span class="math notranslate nohighlight">\(y\)</span> в системе машины.
 Сравнение с <strong>осью</strong> ложно даёт «соседняя полоса». Сравнение с <span class="math notranslate nohighlight">\(y_{\mathrm{path}}(d)\approx \mathrm{CTE}+\tfrac12\kappa d^2\)</span> удерживает вашего собственного лидера в полосе.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">cte</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">kappa</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
@@ -776,12 +801,12 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Control/MPC_and_FP.html"
+       href="../Platform/Overview.html"
        title="предыдущая страница">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">MPC и fp</p>
+        <p class="prev-next-title">Платформенный слой — одна машина за интерфейсом</p>
       </div>
     </a>
     <a class="right-next"

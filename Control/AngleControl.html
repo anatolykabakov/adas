@@ -1,0 +1,796 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Angle control — the loop where feedback actually ends &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Control/AngleControl';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The platform layer — one car behind an interface" href="../Platform/Overview.html" />
+    <link rel="prev" title="Vehicle Model (Understeer)" href="VehicleModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Control/AngleControl.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Angle control — the loop where feedback actually ends</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-rack">Build the rack</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#p-alone-the-friction-deadband">P alone: the friction deadband</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#i-one-integrator-two-clamps-and-it-only-knows-about-one">I: one integrator, two clamps — and it only knows about one</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#f-the-feedforward-that-barely-participates">F: the feedforward that barely participates</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#override-unwind-dont-freeze">Override: unwind, don’t freeze</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-learner-changes-here">What the learner changes here</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-it-in-a-bag">Reading it in a bag</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-depth">For depth</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="angle-control-the-loop-where-feedback-actually-ends">
+<h1>Angle control — the loop where feedback actually ends<a class="headerlink" href="#angle-control-the-loop-where-feedback-actually-ends" title="Link to this heading">#</a></h1>
+<p>Every chapter so far produced a <em>desired</em> trajectory: a curvature from the planner, a wheel angle from
+the vehicle model. This chapter is about the last loop — the one that has to make a physical steering
+rack agree, through the only lever the car offers: <strong>assist torque, ±300 cNm, rate-limited by the
+panda</strong>. It is also where three of this project’s measured surprises live: torque saturates against
+<em>friction</em> long before the tyres matter, the integrator winds up against a limiter it cannot see, and
+the feedforward that was supposed to help contributes single-digit cNm out of 300.</p>
+<p>The chain, with owners and rates:</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/control_cascade.png"><img alt="../_images/control_cascade.png" src="../_images/control_cascade.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 23 </span><span class="caption-text">Planner → vehicle model → angle PID → platform → EPS, each stage at its own rate.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Planner (vision rate, ~24 Hz)   κ*  →  vehicle model  →  δ
+Control (chassis rate, ~100 Hz) δ × steer_ratio × steer_sign + learned zero  →  SWA setpoint
+                                angle PID (this chapter)  →  steer_norm ∈ [−1, 1]  →  × 300 cNm
+Platform (HCA rate, 50 Hz)      panda rate limiter (+4 / −10 cNm per frame)  →  HCA_01  →  EPS
+</pre></div>
+</div>
+<p>Code: <code class="docutils literal notranslate"><span class="pre">lateral/angle_control.h</span></code> (setpoint, learned zero, slew), <code class="docutils literal notranslate"><span class="pre">utils/lat_control_pid.h</span></code> (the PID
+itself), <code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code> (torque = <code class="docutils literal notranslate"><span class="pre">lround(steer_norm</span> <span class="pre">*</span> <span class="pre">max_torque_cnm)</span></code>),
+<code class="docutils literal notranslate"><span class="pre">platform/volkswagen/values.h</span></code> (the panda constants). Torque here is in <strong>cNm</strong> (centinewton-metres,
+hundredths of a N·m); the panda ceiling of ±300 cNm is ±3 N·m of assist at the column.</p>
+<div class="note admonition">
+<p class="admonition-title">If you have not met a PID</p>
+<p>A PID turns an <em>error</em> (setpoint minus measurement — here the steering-angle error) into a <em>command</em>
+(torque) by summing three terms: <strong>P</strong> proportional to the error now, <strong>I</strong> the integral of past error
+(it eats steady offsets a P term leaves behind), <strong>F</strong> a feedforward computed from the target directly
+rather than from the error. “Anti-windup” is the rule that stops <strong>I</strong> from accumulating while the output
+is already maxed out and cannot act — the failure this chapter measures is exactly that rule looking at
+the wrong limit.</p>
+</div>
+<section id="build-the-rack">
+<h2>Build the rack<a class="headerlink" href="#build-the-rack" title="Link to this heading">#</a></h2>
+<p>The plant this loop fights is not the car — it is the <strong>rack</strong>: dry friction plus the self-aligning
+torque that grows with speed and angle. Comma’s learned <code class="docutils literal notranslate"><span class="pre">frictionCoefficientRaw</span> <span class="pre">=</span> <span class="pre">0.192</span></code> for this
+platform is about <strong>57 cNm</strong> of stiction; the toy uses that number:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">DT</span> <span class="o">=</span> <span class="mf">0.01</span>              <span class="c1"># chassis-rate tick [s], ~100 Hz like the real inner loop</span>
+<span class="n">T_MAX</span> <span class="o">=</span> <span class="mf">300.0</span>          <span class="c1"># panda ceiling [cNm]</span>
+<span class="n">T_FRICTION</span> <span class="o">=</span> <span class="mf">57.0</span>      <span class="c1"># rack stiction [cNm] — comma's learned 0.192, in torque units</span>
+<span class="n">C_SAT</span> <span class="o">=</span> <span class="mf">0.0167</span>         <span class="c1"># self-aligning torque [cNm per deg per (m/s)^2]</span>
+<span class="n">K_RACK</span> <span class="o">=</span> <span class="mf">0.15</span>          <span class="c1"># rack speed [deg/s per net cNm]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rack_step</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">,</span> <span class="n">torque_cnm</span><span class="p">,</span> <span class="n">v_mps</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">DT</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One tick of the toy rack: torque in, steering-wheel angle out."""</span>
+    <span class="n">t_sat</span> <span class="o">=</span> <span class="n">C_SAT</span> <span class="o">*</span> <span class="n">v_mps</span> <span class="o">*</span> <span class="n">v_mps</span> <span class="o">*</span> <span class="n">swa_deg</span>      <span class="c1"># the road pushing the wheel straight</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">torque_cnm</span> <span class="o">-</span> <span class="n">t_sat</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">T_FRICTION</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">swa_deg</span>                            <span class="c1"># stiction: nothing moves</span>
+    <span class="k">return</span> <span class="n">swa_deg</span> <span class="o">+</span> <span class="n">K_RACK</span> <span class="o">*</span> <span class="p">(</span><span class="n">net</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">copysign</span><span class="p">(</span><span class="n">T_FRICTION</span><span class="p">,</span> <span class="n">net</span><span class="p">))</span> <span class="o">*</span> <span class="n">dt</span>
+</pre></div>
+</div>
+<p>Two honest omissions: no inertia (the rack is heavily geared) and no driver. Both matter less than
+friction, which is the point of the build.</p>
+</section>
+<section id="p-alone-the-friction-deadband">
+<h2>P alone: the friction deadband<a class="headerlink" href="#p-alone-the-friction-deadband" title="Link to this heading">#</a></h2>
+<p>The shipped proportional gain, converted to torque units, is about 180 cNm per degree of angle error
+(<code class="docutils literal notranslate"><span class="pre">pid_kp</span> <span class="pre">=</span> <span class="pre">0.6</span></code> on a normalised scale where ±1 is ±300 cNm and the error is normalised by the angle
+that pins the output — measured on this stack, P alone rails at 1.67° of error):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KP_T</span> <span class="o">=</span> <span class="mf">180.0</span>    <span class="c1"># cNm per degree of angle error</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drive_to</span><span class="p">(</span><span class="n">target_deg</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">6.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Track a setpoint; return the trajectory of (swa, torque)."""</span>
+    <span class="n">swa</span><span class="p">,</span> <span class="n">log</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="p">[]</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">t_end</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">torque</span> <span class="o">=</span> <span class="n">controller</span><span class="p">(</span><span class="n">target_deg</span> <span class="o">-</span> <span class="n">swa</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="n">torque</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">torque</span><span class="p">,</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="n">swa</span> <span class="o">=</span> <span class="n">rack_step</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span> <span class="n">torque</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">swa</span><span class="p">,</span> <span class="n">torque</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">p_only</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">err</span><span class="p">,</span> <span class="n">st</span><span class="p">:</span> <span class="n">KP_T</span> <span class="o">*</span> <span class="n">err</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">drive_to</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">p_only</span><span class="p">)</span>
+<span class="n">standing</span> <span class="o">=</span> <span class="mf">5.0</span> <span class="o">-</span> <span class="n">log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">t_sat_5</span> <span class="o">=</span> <span class="n">C_SAT</span> <span class="o">*</span> <span class="mf">15.0</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">5.0</span>
+<span class="n">predicted</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_sat_5</span> <span class="o">+</span> <span class="n">T_FRICTION</span><span class="p">)</span> <span class="o">/</span> <span class="n">KP_T</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"P only: standing error </span><span class="si">{</span><span class="n">standing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, predicted (T_sat + friction)/kp = </span><span class="si">{</span><span class="n">predicted</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="mf">0.25</span> <span class="o">&lt;</span> <span class="n">standing</span> <span class="o">&lt;</span> <span class="mf">0.6</span><span class="p">,</span> <span class="s2">"P alone must stall on friction: a standing error it can never close"</span>
+</pre></div>
+</div>
+<p>P stalls exactly where its torque no longer beats stiction plus self-alignment: the error freezes at
+<span class="math notranslate nohighlight">\((T_{\mathrm{sat}} + T_{\mathrm{fric}})/k_p\)</span>. Below that, 2° of error and 0.4° of error command the
+same <em>nothing</em>. No gain fixes this — raising <span class="math notranslate nohighlight">\(k_p\)</span> shrinks the deadband and amplifies every quantised
+CAN tick of measured SWA instead.</p>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/friction_deadband.png"><img alt="../_images/friction_deadband.png" src="../_images/friction_deadband.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 24 </span><span class="caption-text">The P command is proportional to the error, but below the friction-plus-self-align torque the rack does
+not move at all — a deadband no gain closes.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="i-one-integrator-two-clamps-and-it-only-knows-about-one">
+<h2>I: one integrator, two clamps — and it only knows about one<a class="headerlink" href="#i-one-integrator-two-clamps-and-it-only-knows-about-one" title="Link to this heading">#</a></h2>
+<p>The integrator eats the friction offset. But it lives between <strong>two</strong> clamps, and the shipped
+anti-windup logic (<code class="docutils literal notranslate"><span class="pre">lat_control_pid.h</span></code>) watches only the first:</p>
+<ul class="simple">
+<li><p>the output clamp ±1 (±300 cNm) — integration is skipped when the trial output would exceed it;</p></li>
+<li><p>the <strong>panda rate limiter</strong> — magnitude may rise only 4 cNm per 20 ms frame (200 cNm/s) and fall 10
+(500 cNm/s). The PID does not see it: its output is <em>not</em> at the clamp while the applied torque
+crawls, so the integral winds against an error that physically cannot be closed yet.</p></li>
+</ul>
+<p>Build the limiter and measure the blind spot:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">panda_limit</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">wanted</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">DT</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""MQB HCA rate limit: magnitude up 4 cNm / 20 ms, down 10 cNm / 20 ms."""</span>
+    <span class="n">up</span><span class="p">,</span> <span class="n">down</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="o">*</span> <span class="n">applied</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wanted</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">applied</span><span class="p">):</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">down</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">up</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="o">&gt;</span> <span class="n">applied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">applied</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">applied</span> <span class="o">-</span> <span class="n">step</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pi</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ki_t</span><span class="o">=</span><span class="mf">36.0</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">freeze</span><span class="p">:</span>
+        <span class="n">st</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">+</span> <span class="n">ki_t</span> <span class="o">*</span> <span class="n">err</span> <span class="o">*</span> <span class="n">DT</span>
+    <span class="k">return</span> <span class="n">KP_T</span> <span class="o">*</span> <span class="n">err</span> <span class="o">+</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Settle at +2°, then command −2°; return overshoot past the new target [deg]."""</span>
+    <span class="n">swa</span><span class="p">,</span> <span class="n">applied</span><span class="p">,</span> <span class="n">st</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="p">{}</span>
+    <span class="n">worst</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">10.0</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="k">if</span> <span class="n">k</span> <span class="o">*</span> <span class="n">DT</span> <span class="o">&lt;</span> <span class="mf">4.0</span> <span class="k">else</span> <span class="o">-</span><span class="mf">2.0</span>
+        <span class="c1"># What the PID would output right now, clamped to the ceiling:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">KP_T</span> <span class="o">*</span> <span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">swa</span><span class="p">)</span> <span class="o">+</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="c1"># The rack is still crawling toward it if the applied torque is far from that (rate-limited):</span>
+        <span class="n">rate_limited</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">applied</span> <span class="o">-</span> <span class="n">raw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">20.0</span>
+        <span class="n">freeze</span> <span class="o">=</span> <span class="n">freeze_while_limited</span> <span class="ow">and</span> <span class="n">rate_limited</span>
+        <span class="n">wanted</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">pi</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">swa</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="n">freeze</span><span class="p">),</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="n">applied</span> <span class="o">=</span> <span class="n">panda_limit</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+        <span class="n">swa</span> <span class="o">=</span> <span class="n">rack_step</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span> <span class="n">applied</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">*</span> <span class="n">DT</span> <span class="o">&gt;=</span> <span class="mf">4.0</span> <span class="ow">and</span> <span class="n">swa</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">:</span>
+            <span class="n">worst</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">worst</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span> <span class="o">-</span> <span class="n">swa</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">worst</span>
+
+<span class="n">over_blind</span> <span class="o">=</span> <span class="n">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">over_aware</span> <span class="o">=</span> <span class="n">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"overshoot past the new setpoint: integrator blind to the limiter </span><span class="si">{</span><span class="n">over_blind</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, "</span>
+      <span class="sa">f</span><span class="s2">"frozen while rate-limited </span><span class="si">{</span><span class="n">over_aware</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">over_blind</span> <span class="o">&gt;</span> <span class="n">over_aware</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">"winding against the rate limiter must cost visible overshoot"</span>
+</pre></div>
+</div>
+<p>This blind spot is not hypothetical: upstream openpilot passes <code class="docutils literal notranslate"><span class="pre">freeze_integrator</span> <span class="pre">=</span> <span class="pre">steer_limited</span></code> into
+the same PID, and our port carries the parameter in the signature <strong>without passing it</strong> — the applied
+torque crawls at 200 cNm/s after a reversal while the integral quietly charges. Same shape as the toy,
+measured on road bags in <code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code>.</p>
+</section>
+<section id="f-the-feedforward-that-barely-participates">
+<h2>F: the feedforward that barely participates<a class="headerlink" href="#f-the-feedforward-that-barely-participates" title="Link to this heading">#</a></h2>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../_images/feedforward.png"><img alt="../_images/feedforward.png" src="../_images/feedforward.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 25 </span><span class="caption-text">With the shipped <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> the feedforward stays under the rack’s own friction until highway speed; the
+9.8 m/s floor lifts it into the useful range.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<p>The feedforward is <span class="math notranslate nohighlight">\(k_f \cdot \mathrm{SWA} \cdot (v^2 + v_0^2)\)</span> — torque you will need even at zero
+error, from the self-aligning physics. Its shipped size, in the units that matter:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KF</span> <span class="o">=</span> <span class="mf">6e-5</span>     <span class="c1"># shipped lat_pid_kf, on the normalised scale</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ff_cnm</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">KF</span> <span class="o">*</span> <span class="n">swa_deg</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">v0</span> <span class="o">*</span> <span class="n">v0</span><span class="p">)</span> <span class="o">*</span> <span class="n">T_MAX</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'v, m/s'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="s1">'ff at SWA=5°, v0=0'</span><span class="si">:</span><span class="s2">&gt;19</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="s1">'v0=9.8'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> | friction"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">6.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">23.0</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;7.0f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;19.1f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="mf">9.8</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">T_FRICTION</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> cNm"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">T_FRICTION</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"at city speed the feedforward is buried under friction"</span>
+</pre></div>
+</div>
+<p>Two facts to hold together. First, below ~10 m/s the term is a rounding error next to the 57 cNm of
+friction it would need to beat — which is why the speed floor <span class="math notranslate nohighlight">\(v_0\)</span> exists (code default 9.8 m/s).
+Second, <strong>the shipped config sets <code class="docutils literal notranslate"><span class="pre">lat_pid_ff_floor_mps:</span> <span class="pre">0.0</span></code></strong>: on the 2026-08-21 drive the implied
+<span class="math notranslate nohighlight">\(k_f\)</span> recovered from the bag’s <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> was 5.63e-5 against the configured 6e-5 — the arithmetic of a
+zero floor — and the measured contribution was 1.3 / 3.2 / 4.3 cNm across the speed bins, out of 300.
+The correction exists in code and is off in the field; <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code> carries the
+measurement.</p>
+</section>
+<section id="override-unwind-dont-freeze">
+<h2>Override: unwind, don’t freeze<a class="headerlink" href="#override-unwind-dont-freeze" title="Link to this heading">#</a></h2>
+<p>When the driver holds the wheel (<code class="docutils literal notranslate"><span class="pre">steering_pressed</span></code>, 80 cNm allowance on the panda side), the
+integrator is not frozen — it is <strong>unwound</strong> at <code class="docutils literal notranslate"><span class="pre">0.3/rate</span></code> per tick, gone in about three seconds.
+Frozen state would hand back the pre-override torque the instant the driver lets go, on a road that has
+since curved; unwinding hands back a loop that re-learns from zero. The asymmetry is deliberate and
+cheap to see in the toy: freeze <code class="docutils literal notranslate"><span class="pre">st[&quot;i&quot;]</span></code> during a simulated override and watch the release transient.</p>
+</section>
+<section id="what-the-learner-changes-here">
+<h2>What the learner changes here<a class="headerlink" href="#what-the-learner-changes-here" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> feeds three numbers into this loop (<code class="docutils literal notranslate"><span class="pre">setLearnedParams</span></code>): tyre <strong>stiffness</strong> (used one level
+up, κ→δ), the <strong>steer ratio</strong>, and the <strong>angle zero</strong> — the learned offset added to every setpoint
+(<code class="docutils literal notranslate"><span class="pre">setSetpointFromSteer</span></code>). The zero matters most day-to-day: a phone remount or a wheel-alignment drift
+shows up as a constant steering bias that the integrator would otherwise absorb slowly on every single
+engagement. The <code class="docutils literal notranslate"><span class="pre">effective*</span></code> accessors in <code class="docutils literal notranslate"><span class="pre">angle_control.h</span></code> tell you which source is in force.</p>
+</section>
+<section id="reading-it-in-a-bag">
+<h2>Reading it in a bag<a class="headerlink" href="#reading-it-in-a-bag" title="Link to this heading">#</a></h2>
+<p>Everything above is logged per tick in <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code>: <code class="docutils literal notranslate"><span class="pre">desired_swa_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">actual_swa_deg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">angle_error_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">torque_cnm</span></code> and the split <code class="docutils literal notranslate"><span class="pre">pid_p</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_f</span></code>. <code class="docutils literal notranslate"><span class="pre">torque_saturated</span></code> is set at
+99 % of the ceiling and, held for a second, becomes the on-screen <strong>STEERING LIMIT</strong> alert. The single
+most useful sanity plot is <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> against time: it should breathe with corners, not ratchet.</p>
+</section>
+<section id="acceptance">
+<h2>Acceptance<a class="headerlink" href="#acceptance" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>the P deadband reproduces and matches <span class="math notranslate nohighlight">\((T_{\mathrm{sat}}+T_{\mathrm{fric}})/k_p\)</span>;</p></li>
+<li><p>the reversal experiment shows measurably larger overshoot when the integrator is blind to the rate
+limiter — you can now state the shipped <code class="docutils literal notranslate"><span class="pre">freeze_integrator</span></code> gap in one sentence;</p></li>
+<li><p>the feedforward table explains, with the bag-measured 1.3–4.3 cNm, why arcs saturate at 300 cNm while
+<code class="docutils literal notranslate"><span class="pre">pid_f</span></code> stays single-digit.</p></li>
+</ul>
+</section>
+<section id="for-depth">
+<h2>For depth<a class="headerlink" href="#for-depth" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="VehicleModel.html"><span class="std std-doc">Vehicle model</span></a> — the κ→δ conversion feeding this loop, and <span class="math notranslate nohighlight">\(G(v)\)</span>.</p></li>
+<li><p><a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a> — where the setpoint comes from, and the delay compensation upstream.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code> — the full chain audit this chapter compresses, with the road numbers.</p></li>
+</ul>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Control"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="VehicleModel.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Vehicle Model (Understeer)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Platform/Overview.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">The platform layer — one car behind an interface</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-the-rack">Build the rack</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#p-alone-the-friction-deadband">P alone: the friction deadband</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#i-one-integrator-two-clamps-and-it-only-knows-about-one">I: one integrator, two clamps — and it only knows about one</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#f-the-feedforward-that-barely-participates">F: the feedforward that barely participates</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#override-unwind-dont-freeze">Override: unwind, don’t freeze</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-learner-changes-here">What the learner changes here</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#reading-it-in-a-bag">Reading it in a bag</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#for-depth">For depth</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

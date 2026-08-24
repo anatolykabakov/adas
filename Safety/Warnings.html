@@ -69,7 +69,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Camera Calibration" href="../Calibration/Overview.html" />
-    <link rel="prev" title="MPC and fp" href="../Control/MPC_and_FP.html" />
+    <link rel="prev" title="The platform layer — one car behind an interface" href="../Platform/Overview.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="current nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -551,6 +561,13 @@ and wins. So the fix was dead, and the next run reproduced the same three false 
 Three tests now assert that the shipped config matches the decisions taken on the road, and the build
 refuses to compile a config it cannot parse.</p>
 </div>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/fcw_thresholds.png"><img alt="../_images/fcw_thresholds.png" src="../_images/fcw_thresholds.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 27 </span><span class="caption-text">The two triggers: time-to-collision below 2.5 s, or required deceleration above 3.5 m/s².</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 </section>
 </section>
 <section id="longitudinal-threat-math-fcw-aeb">
@@ -614,6 +631,14 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
 </div>
 <section id="why-path-relative-y-matters">
 <h3>Why path-relative <span class="math notranslate nohighlight">\(y\)</span> matters<a class="headerlink" href="#why-path-relative-y-matters" title="Link to this heading">#</a></h3>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/path_relative_y.png"><img alt="../_images/path_relative_y.png" src="../_images/path_relative_y.png" style="width: 70%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 28 </span><span class="caption-text">On a bend the ego lane’s own edge crosses a straight-ahead line — comparing to the axis flags a departure
+that is not there.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 <p>In an arc, a lead car on <strong>your</strong> lane has nonzero <span class="math notranslate nohighlight">\(y\)</span> in the vehicle frame.
 Comparing to the <strong>axis</strong> false-triggers “adjacent lane”. Comparing to <span class="math notranslate nohighlight">\(y_{\mathrm{path}}(d)\approx \mathrm{CTE}+\tfrac12\kappa d^2\)</span> keeps your own leader in-lane.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">path_y</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">cte</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">kappa</span><span class="o">=</span><span class="mf">0.01</span><span class="p">):</span>
@@ -776,12 +801,12 @@ stayed dead for two days.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Control/MPC_and_FP.html"
+       href="../Platform/Overview.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">MPC and fp</p>
+        <p class="prev-next-title">The platform layer — one car behind an interface</p>
       </div>
     </a>
     <a class="right-next"

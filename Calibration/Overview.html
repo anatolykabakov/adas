@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -405,7 +415,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-shipped-config">Prior (shipped config)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-calibration">Online calibration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-degree-of-error-actually-costs">What a degree of error actually costs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-is-not-the-fix-it-looks-like">Persisting the estimate is not the fix it looks like</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-what-it-buys-and-what-it-cannot">Persisting the estimate: what it buys, and what it cannot</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#causal-chain-bias-cte">Causal chain (bias → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#practice">Practice</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-bags-can-and-cannot-measure">What bags can and cannot measure</a></li>
@@ -446,11 +456,26 @@ why calibration shows up as a control symptom, and that one for how each piece a
 </section>
 <section id="online-calibration">
 <h2>Online calibration<a class="headerlink" href="#online-calibration" title="Link to this heading">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) consumes <code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> (and optionally lane UV) and
-publishes <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code>. On success / sufficient confidence, Java updates the warp used by the next
-Supercombo inputs.</p>
-<p>It also refuses intrinsics it does not believe: the principal point has to sit near the middle of the frame
-the message declares. That check exists because of a lost drive — the story is at the end of this chapter.</p>
+<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) runs <strong>two estimators against one state</strong>, because each
+covers the other’s blind spot:</p>
+<ul class="simple">
+<li><p><strong>camera odometry</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromPose</span></code>): on a straight road the model’s translation vector points along
+the optical axis, so its direction <em>is</em> pitch and yaw. Samples are gated by speed and by the steering
+angle (<code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> in the service config exists solely to tell a straight from a shallow turn), and
+weighted by the odometry’s own per-axis σ;</p></li>
+<li><p><strong>the vanishing point of the lane lines</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromUv</span></code>): geometry AAD readers know, rate-limited and
+gated on the fit residual — on a bend the lines are not parallel and their intersection is not a
+vanishing point, so a curved pair is rejected.</p></li>
+</ul>
+<p>The fused estimate is published on <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code> with a convergence flag (<code class="docutils literal notranslate"><span class="pre">history_len</span></code> samples
+back the answer). From there it fans out to every consumer of “where does the camera point”: the Java
+warp that builds the <strong>next</strong> Supercombo input, the on-screen ground projection, and the debug topic
+<code class="docutils literal notranslate"><span class="pre">calibration/camera_debug</span></code> that the bag keeps.</p>
+<p>The service also refuses intrinsics it does not believe: the principal point has to sit near the middle
+of the frame the message declares. That check exists because of a lost drive — the story is at the end
+of this chapter. Intrinsics themselves are per-device now (<code class="docutils literal notranslate"><span class="pre">intrinsics_from_device:</span> <span class="pre">true</span></code> asks the
+camera API; the config prior carries the values measured for a specific phone) — and on the Xiaomi 14
+the measured intrinsics and the datasheet differ by ~4 %, while the camera-odometry scale against wheel speed is still ~11 % short — an open item until a chessboard settles the lens (task #51).</p>
 <div class="warning admonition">
 <p class="admonition-title">Roll is weakly observable</p>
 <p>Roll often stays near <span class="math notranslate nohighlight">\(0\)</span> in live estimates. Treat large roll swings as suspicious; do not “tune LK” to compensate a broken roll state.</p>
@@ -458,6 +483,14 @@ the message declares. That check exists because of a lost drive — the story is
 </section>
 <section id="what-a-degree-of-error-actually-costs">
 <h2>What a degree of error actually costs<a class="headerlink" href="#what-a-degree-of-error-actually-costs" title="Link to this heading">#</a></h2>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/error_growth.png"><img alt="../_images/error_growth.png" src="../_images/error_growth.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 29 </span><span class="caption-text">A yaw error grows laterally with range; a pitch error moves the apparent ground point as range squared
+over camera height — which is why a degree matters far away.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 <p>The reason extrinsics matter more than they look is pure geometry: an angular error becomes a lateral
 error that grows with distance. A yaw error <span class="math notranslate nohighlight">\(\Delta\psi\)</span> puts a point at range <span class="math notranslate nohighlight">\(d\)</span> off by
 <span class="math notranslate nohighlight">\(d\tan\Delta\psi\)</span>, and a pitch error <span class="math notranslate nohighlight">\(\Delta\theta\)</span> moves the apparent ground intersection, which for a
@@ -494,14 +527,30 @@ with different learned yaw produce different model plans on the same road. Any c
 plan offset is comparing two perception configurations, not two controllers — a trap this project fell
 into before noticing.</p>
 </div>
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/calib_convergence.png"><img alt="../_images/calib_convergence.png" src="../_images/calib_convergence.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 30 </span><span class="caption-text">The online estimate settles within 30–60 s; the lateral error it implies at 20 m falls with it.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 </section>
-<section id="persisting-the-estimate-is-not-the-fix-it-looks-like">
-<h2>Persisting the estimate is not the fix it looks like<a class="headerlink" href="#persisting-the-estimate-is-not-the-fix-it-looks-like" title="Link to this heading">#</a></h2>
-<p>The online estimate converges and then is thrown away at shutdown, so the obvious move is to save it and
-use it as next drive’s prior. Measured, that is nearly worthless: the mount is not repeatable, so a
-prior from the previous mount is no better than the default. What matters instead is <strong>how fast the
-estimate converges</strong>, and there the news is good — on the 08-06 run it settled within 30–60 s, and the
-lateral offset on straights during the first 30 s was 0.02 m.</p>
+<section id="persisting-the-estimate-what-it-buys-and-what-it-cannot">
+<h2>Persisting the estimate: what it buys, and what it cannot<a class="headerlink" href="#persisting-the-estimate-what-it-buys-and-what-it-cannot" title="Link to this heading">#</a></h2>
+<p>The system <strong>does</strong> save a converged calibration: once the service reports convergence,
+<code class="docutils literal notranslate"><span class="pre">persistCalibrationIfSettled</span></code> writes the RPY (and camera position) into the saved runtime config — at
+most once a minute, and only when the estimate moved by more than 0.05°. Next start reads it back as
+the prior.</p>
+<p>Know exactly what that buys, because it was measured before it was built. Across a <strong>remount</strong> the
+saved prior is nearly worthless — the mount is not repeatable, so last week’s angles are no better than
+the shipped default. What the persistence is actually for is <strong>restart without remount</strong>: an app
+restart, a watchdog recovery, a battery swap in the cradle — common events since the panda watchdog can
+escalate to a full restart — where the phone has not moved and the saved prior is simply correct. One
+operational caveat rides along: the saved config <strong>shadows the asset</strong> (open task #50), so a freshly
+shipped config key does not reach an installed phone until the saved copy is reset.</p>
+<p>Either way the online estimator still runs and still wins: what matters on the road is <strong>how fast it
+converges from whatever prior it got</strong>, and there the news is good — on the 08-06 run it settled within
+30–60 s, and the lateral offset on straights during the first 30 s was 0.02 m.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convergence as the online estimator actually behaved, from the bag: a first-order approach to the</span>
 <span class="c1"># true angle. The question a student should ask is not "what is the final value" but "how much distance</span>
 <span class="c1"># do I cover before it is good enough".</span>
@@ -704,7 +753,7 @@ against the consumer’s, the learned angle against the one from the drive befor
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior-shipped-config">Prior (shipped config)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-calibration">Online calibration</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-a-degree-of-error-actually-costs">What a degree of error actually costs</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-is-not-the-fix-it-looks-like">Persisting the estimate is not the fix it looks like</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#persisting-the-estimate-what-it-buys-and-what-it-cannot">Persisting the estimate: what it buys, and what it cannot</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#causal-chain-bias-cte">Causal chain (bias → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#practice">Practice</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-bags-can-and-cannot-measure">What bags can and cannot measure</a></li>

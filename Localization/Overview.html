@@ -68,7 +68,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Control — how the four chapters build on each other" href="../Control/Overview.html" />
+    <link rel="next" title="The lateral loop — planner, control, platform" href="../Planner/Overview.html" />
     <link rel="prev" title="Supercombo on Device" href="../Vision/Supercombo.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -232,13 +232,22 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -440,6 +450,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">How this relates to lane-keep</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#on-your-own-recording">On your own recording</a></li>
 </ul>
             </nav>
         </div>
@@ -588,6 +599,14 @@ because <code class="docutils literal notranslate"><span class="pre">ESP_02</spa
 <p>Because the wheel-speed signal is quantised at 0.0075 km/h and the interval is ~10 ms. Differencing a
 quantised signal over a short interval amplifies the quantum by <span class="math notranslate nohighlight">\(1/dt\)</span>. Measured on a real 28-minute
 run, the naive finite difference produced:</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/a_ego.png"><img alt="../_images/a_ego.png" src="../_images/a_ego.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 6 </span><span class="caption-text">Differentiating noisy wheel speed explodes the acceleration; a two-state filter recovers it (schematic of
+the measured RMS 4.16 → 0.062 m/s²).</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p></p></th>
@@ -778,9 +797,19 @@ to pure bicycle if there is none.</p>
 wrong sign or a huge bias, and then the EKF’s agreement gate rejects the IMU outright
 (<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> rad/s) — the filter goes quiet exactly when you needed it.</p>
 </div>
-</section>
-</section>
 <hr class="docutils" />
+<div class="note admonition">
+<p class="admonition-title">If you have not met a Kalman filter</p>
+<p>From here the estimator is an <strong>EKF</strong>, in two half-steps per tick. <strong>Predict:</strong> push the state forward
+with the motion model and <em>grow</em> its uncertainty (covariance <span class="math notranslate nohighlight">\(P\)</span>). <strong>Update:</strong> compare a sensor reading
+to what the state predicts (the <em>innovation</em>), and correct the state by a fraction of that gap — the
+<em>gain</em> <span class="math notranslate nohighlight">\(K\)</span>, which is large when the sensor is trusted more than the prediction and small when less. “EKF”
+just means the models are non-linear and are linearised (a Jacobian <span class="math notranslate nohighlight">\(F\)</span>) at each step. You do not need
+the derivation to follow this chapter — only: predict grows uncertainty, a measurement shrinks it, and
+the gain is how much you believe the measurement.</p>
+</div>
+</section>
+</section>
 <section id="step-2b-fusing-the-gyro-and-the-mistake-worth-studying">
 <h2>Step 2b: fusing the gyro, and the mistake worth studying<a class="headerlink" href="#step-2b-fusing-the-gyro-and-the-mistake-worth-studying" title="Link to this heading">#</a></h2>
 <p>State <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> in ENU. Ticks on <strong>chassis</strong>, roughly every 10 ms.</p>
@@ -976,9 +1005,17 @@ rather than defending its estimate.</p>
 than measured (1.0 against a Doppler that is good to 0.1), and until speed became a state the prediction
 overwrote it about twenty times per GPS sample. Both are fixed now, and the scale is <em>still</em> not
 learnable — see step 4 for the reason, which is more interesting than the bug.</p>
-</section>
-</section>
 <hr class="docutils" />
+<figure class="align-default" id="id2">
+<a class="reference internal image-reference" href="../_images/frames.png"><img alt="../_images/frames.png" src="../_images/frames.png" style="width: 60%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">Three frames the chapter keeps straight: ENU axes, the GPS bearing (clockwise from North), and the
+vehicle heading — related by ψ = π/2 − b.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
 <section id="step-3a-gps-local-meters">
 <h2>Step 3a: GPS → local meters<a class="headerlink" href="#step-3a-gps-local-meters" title="Link to this heading">#</a></h2>
 <p>Origin <span class="math notranslate nohighlight">\((\phi_0,\lambda_0)\)</span> is the first valid fix. With Earth radius <span class="math notranslate nohighlight">\(R = 6\,371\,000\)</span> m:</p>
@@ -1151,8 +1188,16 @@ an orientation and roll estimate → <code class="docutils literal notranslate">
 zero, which works but gives up the one thing that separates road bank from vehicle understeer. That order
 was followed, and step 6 is what happened when the roll input it insisted on met the error budget it had to
 fit inside.</p>
-</section>
 <hr class="docutils" />
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../_images/understeer_speed.png"><img alt="../_images/understeer_speed.png" src="../_images/understeer_speed.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">The achieved-vs-commanded curvature ratio slides with speed, so no single <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> fits —
+the reason paramsd exists (and why it needs more than one observable).</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
 <section id="step-6-learning-the-parameters-and-what-the-measurement-said-about-it">
 <h2>Step 6: learning the parameters, and what the measurement said about it<a class="headerlink" href="#step-6-learning-the-parameters-and-what-the-measurement-said-about-it" title="Link to this heading">#</a></h2>
 <p>Everything so far estimated <em>where the car is</em>. This step estimates <em>what the car is</em> — and it is in this
@@ -1246,8 +1291,10 @@ still wants explaining. But it changes what success would look like.</p>
 <h3>The estimator<a class="headerlink" href="#the-estimator" title="Link to this heading">#</a></h3>
 <p>Three states, and the measurement is the yaw rate:</p>
 <div class="math notranslate nohighlight">
-\[x = [\text{tsf},\ \text{steer ratio},\ \text{angle offset}], \qquad
-\dot\psi_{\text{pred}} = v\,\kappa(x) + \frac{g\sin\phi}{v}\]</div>
+\[
+x = [\text{tsf},\ \text{steer ratio},\ \text{angle offset}], \qquad
+\dot\psi_{\text{pred}} = v\,\kappa(x) + \frac{g\sin\phi}{v}
+\]</div>
 <p>Two details carry most of the value.</p>
 <p><strong>Use the controller’s own curvature function.</strong> Not a re-derivation of it, the same function. A parameter
 learned against a slightly different model than the one that consumes it is worse than a hand-tuned
@@ -1452,9 +1499,8 @@ result you can point at with numbers is a finished piece of work.</p>
 <p>The lateral MPC and Pure Pursuit <strong>do not</strong> need global ENU to steer — they track <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> in the
 device frame. Localization matters for:</p>
 <ul class="simple">
-<li><p>bag maps and mapmatch overlays (<code class="docutils literal notranslate"><span class="pre">docs/MAPMATCH.md</span></code> is a <strong>separate</strong> offline
-track-shape matcher, and it integrates measured yaw rate directly, so it was never affected by the
-bug above);</p></li>
+<li><p>bag maps and track overlays in the visualizer (the offline map-match vertical was deleted on
+2026-08-21; the <code class="docutils literal notranslate"><span class="pre">.admap</span></code> reader survives as the visualizer backdrop);</p></li>
 <li><p>sanity checks — GPS against pure odometry divergence;</p></li>
 <li><p>any future map-relative feature;</p></li>
 <li><p>learning the vehicle parameters the controller uses — step 6, and the one consumer that turned out not to
@@ -1514,6 +1560,28 @@ windows where speed is about zero.</p></li>
 <li><p>Take a bag, feed <code class="docutils literal notranslate"><span class="pre">v_ego_raw</span></code> through <code class="docutils literal notranslate"><span class="pre">SpeedFilter</span></code> with <code class="docutils literal notranslate"><span class="pre">factor</span> <span class="pre">=</span> <span class="pre">1.0</span></code> and <code class="docutils literal notranslate"><span class="pre">0.988</span></code>, and compare the
 integrated distance against the GPS track length. Which factor gets you closer?</p></li>
 </ol>
+</section>
+<section id="on-your-own-recording">
+<h2>On your own recording<a class="headerlink" href="#on-your-own-recording" title="Link to this heading">#</a></h2>
+<p>Everything above runs unchanged on a bag you record yourself (see
+<a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a>, <em>Record your own bag</em>) — and gains from it: your GPS has <em>your</em> multipath
+and your tunnels, your IMU carries the phone’s real mounting, and every claim is checked against a
+track you can verify from memory. Load your topics and walk the five steps again:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — the loading pattern; the estimator code is the chapter's own</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vis.bag_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_topic_messages</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../adas_logs/&lt;your-session&gt;"</span><span class="p">)</span>
+<span class="n">gps</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/gps/data"</span><span class="p">)</span>
+<span class="n">imu</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/imu"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gps</span><span class="p">),</span> <span class="s2">"GPS fixes,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">imu</span><span class="p">),</span> <span class="s2">"IMU samples"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Two expectations to calibrate first: a phone GPS in the open is a few metres of scatter at 1 Hz — good
+enough to bound drift, useless for lane-level anything. And a passenger recording has no wheel
+odometry, so step 1 runs on GPS-differenced speed instead — the substitution this chapter already
+discusses when it makes speed a state. If you recorded on foot, the “vehicle frame” assumption is
+gloriously violated, and the yaw-lock step shows exactly how the calibrator copes, or refuses.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Next:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Camera calibration</span></a></p>
@@ -1560,11 +1628,11 @@ integrated distance against the GPS track length. Which factor gets you closer?<
       </div>
     </a>
     <a class="right-next"
-       href="../Control/Overview.html"
+       href="../Planner/Overview.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Control — how the four chapters build on each other</p>
+        <p class="prev-next-title">The lateral loop — planner, control, platform</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1624,6 +1692,7 @@ integrated distance against the GPS track length. Which factor gets you closer?<
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">How this relates to lane-keep</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#on-your-own-recording">On your own recording</a></li>
 </ul>
   </nav></div>
 

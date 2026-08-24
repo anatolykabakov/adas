@@ -231,13 +231,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -255,6 +264,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -421,12 +431,22 @@
 <h1>Установка и запуск<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
 <section id="id2">
 <h2>Репозиторий<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Корень Android ADAS:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>&lt;корень<span class="w"> </span>репозитория&gt;
-git<span class="w"> </span>lfs<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>lfs<span class="w"> </span>pull<span class="w">   </span><span class="c1"># модели и карта лежат в LFS</span>
+<p>Склонируйте и соберите — остальное одна команда сделает сама:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/anatolykabakov/adas.git
+<span class="nb">cd</span><span class="w"> </span>adas
+./scripts/build_project.sh<span class="w">   </span><span class="c1"># local.properties, модели, сборка APK</span>
 </pre></div>
 </div>
-<p>Без второй строки ассеты сети — это файлы-указатели по 133 байта, и приложение стартует без модели.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;корень</span> <span class="pre">репозитория&gt;</span></code> в остальной книге — это и есть каталог <code class="docutils literal notranslate"><span class="pre">adas/</span></code>.</p>
+<p><strong>Пререквизиты</strong>, которые сборка предполагает (на чистой Linux/macOS их нужно поставить первыми —
+<code class="docutils literal notranslate"><span class="pre">scripts/install_dependencies.sh</span></code> делает это на Debian/Ubuntu): JDK (17+), Android SDK и NDK
+(<code class="docutils literal notranslate"><span class="pre">ANDROID_HOME</span></code> должен указывать на SDK, где уже есть платформа <code class="docutils literal notranslate"><span class="pre">compileSdk</span></code>), Conan 2 и CMake для C++,
+Python 3.10+ с <code class="docutils literal notranslate"><span class="pre">numpy</span></code>. Всё офлайновое — разбор бегов, симулятор, <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> — требует только Python-части
+и работает <strong>без телефона и машины</strong> (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>, <em>Запишите собственный бег</em>, — самый
+короткий путь по железу).</p>
+<p>Моделей в репозитории нет. <code class="docutils literal notranslate"><span class="pre">scripts/fetch_models.sh</span></code> (сборка запускает его сама) скачивает fp16-supercombo
+из релиза comma и выводит из неё fp32- и <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>-варианты, сверяя каждый sha256 с
+<code class="docutils literal notranslate"><span class="pre">scripts/models.manifest</span></code>. Запускайте его отдельно, когда нужны только файлы.</p>
 <p>Смотрите также <code class="docutils literal notranslate"><span class="pre">README.md</span></code> в корне репозитория: сборка APK, <code class="docutils literal notranslate"><span class="pre">run_bag_vis.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">run_sim.sh</span></code>, раскладка Java / C++ / скриптов.</p>
 </section>
 <section id="html">

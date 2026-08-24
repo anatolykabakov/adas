@@ -69,8 +69,8 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="MPC и fp" href="MPC_and_FP.html" />
-    <link rel="prev" title="Pure Pursuit" href="PurePursuit.html" />
+    <link rel="next" title="Угловой контур — то место, где обратная связь действительно кончается" href="AngleControl.html" />
+    <link rel="prev" title="MPC и fp" href="../Planner/MPC_and_FP.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -405,17 +415,18 @@
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Кинематика против реальности</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Простая формула недокрута</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Рецепт измерения (по бегу)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Ручки проекта</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Калибровка одного коэффициента и обнаружение, что одним он быть не может</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Противоречие</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как это разрешилось: найти третий датчик</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Что правка дала на самом деле</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Почему это не может закончиться константой</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сначала прочувствуйте оба дефекта на игрушке</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Рецепт измерения (по бегу)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Ручки проекта</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Калибровка одного коэффициента и обнаружение, что одним он быть не может</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Противоречие</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Как это разрешилось: найти третий датчик</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Что правка дала на самом деле</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Почему это не может закончиться константой</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задержка конвейера и почему компенсация больше измерения</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Задержка конвейера и почему компенсация больше измерения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
 </ul>
             </nav>
         </div>
@@ -453,6 +464,14 @@
 </section>
 <section id="id3">
 <h2>Простая формула недокрута<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/understeer_command.png"><img alt="../_images/understeer_command.png" src="../_images/understeer_command.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 25 </span><span class="caption-text">Чтобы держать тот же радиус, модель командует больший угол с ростом скорости — и сильнее при меньшем
+факторе жёсткости.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>Однопараметрическая модель, используемая в стеках вроде openpilot (и наш <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>), выглядит так:</p>
 <div class="math notranslate nohighlight">
 \[
@@ -474,10 +493,112 @@
 </div>
 </section>
 <section id="id4">
-<h2>Рецепт измерения (по бегу)<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Сначала прочувствуйте оба дефекта на игрушке<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>Прежде чем измерять настоящую машину, испортите игрушечный объект теми двумя дефектами, о которых эта
+глава: колёса больше не едут туда, куда смотрят, а команды приходят через 0.35 с. Три опорные точки
+<span class="math notranslate nohighlight">\(G(v)\)</span> — измерение этой машины (таблица ниже); задержка — <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">deque</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">DT</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="mf">2.636</span>
+<span class="n">MAX_STEER</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">G_of_v</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Achieved / kinematic curvature, measured on the Golf at 8, 13.5, 23.5 m/s."""</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">[</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">13.5</span><span class="p">,</span> <span class="mf">23.5</span><span class="p">],</span> <span class="p">[</span><span class="mf">0.97</span><span class="p">,</span> <span class="mf">0.80</span><span class="p">,</span> <span class="mf">0.54</span><span class="p">]))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">make_plant</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">delay_s</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Returns step(delta_cmd) -&gt; (x, y, psi). The queue is the delay."""</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"x"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"psi"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+    <span class="n">q</span> <span class="o">=</span> <span class="n">deque</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">delay_s</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)))</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="n">delta_cmd</span><span class="p">):</span>
+        <span class="n">q</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">delta_cmd</span><span class="p">,</span> <span class="o">-</span><span class="n">MAX_STEER</span><span class="p">,</span> <span class="n">MAX_STEER</span><span class="p">)))</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">"x"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">"psi"</span><span class="p">])</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">"y"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">"psi"</span><span class="p">])</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">"psi"</span><span class="p">]</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">G_of_v</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="k">return</span> <span class="n">state</span><span class="p">[</span><span class="s2">"x"</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s2">"y"</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s2">"psi"</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">step</span><span class="p">,</span> <span class="n">q</span>
+</pre></div>
+</div>
+<p><strong>Дефект 1 — дуга, которая убегает.</strong> Подайте упреждение на дугу R = 210 м на 23.5 м/с ровно так, как
+велит велосипедная модель, и смотрите:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KAPPA</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">210.0</span>
+<span class="n">V</span> <span class="o">=</span> <span class="mf">23.5</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drift_on_arc</span><span class="p">(</span><span class="n">compensate</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Signed offset from the arc after t_end seconds (positive = outside)."""</span>
+    <span class="n">step</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">make_plant</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">KAPPA</span> <span class="o">/</span> <span class="p">(</span><span class="n">G_of_v</span><span class="p">(</span><span class="n">V</span><span class="p">)</span> <span class="k">if</span> <span class="n">compensate</span> <span class="k">else</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">t_end</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span> <span class="o">=</span> <span class="n">step</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">KAPPA</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">KAPPA</span>
+
+<span class="n">raw</span> <span class="o">=</span> <span class="n">drift_on_arc</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">fixed</span> <span class="o">=</span> <span class="n">drift_on_arc</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"kinematic feed-forward: </span><span class="si">{</span><span class="n">raw</span><span class="si">:</span><span class="s2">+.1f</span><span class="si">}</span><span class="s2"> m outside the arc after 5 s"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"divided by G(v):        </span><span class="si">{</span><span class="n">fixed</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2"> m   (open loop — the residue is Euler drift)"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">raw</span> <span class="o">&gt;</span> <span class="mf">5.0</span><span class="p">,</span> <span class="s2">"uncompensated understeer must leave the arc by metres"</span>
+<span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fixed</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"acceptance: dividing the curvature by G(v) holds the arc"</span>
+</pre></div>
+</div>
+<p>Одно деление чинит всё — <em>если вы знаете <span class="math notranslate nohighlight">\(G\)</span></em>. Остаток главы — про то, как его знать: из физической
+модели, а не по таблице, потому что таблица с сухого асфальта неверна на мокром.</p>
+<p><strong>Дефект 2 — задержка, превращающая хороший регулятор в осциллятор.</strong> Прямая дорога, регулятор
+«курс + смещение», державший 7 см на синусоиде, — и 0.35 с задержки:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">drive_straight</span><span class="p">(</span><span class="n">delay_s</span><span class="p">,</span> <span class="n">predict</span><span class="p">,</span> <span class="n">kp</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">23.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Straight road, start 1 m off centre; returns (settled |CTE| p95, worst |CTE|)."""</span>
+    <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">spsi</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span>
+    <span class="n">queue</span> <span class="o">=</span> <span class="n">deque</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">delay_s</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)))</span>
+    <span class="n">ctes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">t_end</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">ex</span><span class="p">,</span> <span class="n">ey</span><span class="p">,</span> <span class="n">epsi</span> <span class="o">=</span> <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">spsi</span>
+        <span class="k">if</span> <span class="n">predict</span><span class="p">:</span>
+            <span class="c1"># dead-reckon through every command still in flight</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">queue</span><span class="p">:</span>
+                <span class="n">ex</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+                <span class="n">ey</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+                <span class="n">epsi</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">G_of_v</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">delta_cmd</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">epsi</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">kp</span> <span class="o">*</span> <span class="n">ey</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="o">-</span><span class="n">MAX_STEER</span><span class="p">,</span> <span class="n">MAX_STEER</span><span class="p">))</span>
+        <span class="n">queue</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">delta_cmd</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+        <span class="n">sx</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">spsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">sy</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">spsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">spsi</span> <span class="o">+=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">G_of_v</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="o">*</span> <span class="n">DT</span>
+        <span class="n">ctes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">sy</span><span class="p">))</span>
+    <span class="n">ctes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ctes</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">ctes</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">ctes</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">:],</span> <span class="mi">95</span><span class="p">)),</span> <span class="nb">float</span><span class="p">(</span><span class="n">ctes</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+
+<span class="n">p95_no_delay</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">drive_straight</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">predict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">p95_delayed</span><span class="p">,</span> <span class="n">worst</span> <span class="o">=</span> <span class="n">drive_straight</span><span class="p">(</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">predict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">p95_predicted</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">drive_straight</span><span class="p">(</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">predict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"no delay:            settled p95 </span><span class="si">{</span><span class="n">p95_no_delay</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"0.35 s delay:        settled p95 </span><span class="si">{</span><span class="n">p95_delayed</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m, worst </span><span class="si">{</span><span class="n">worst</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"delay + prediction:  settled p95 </span><span class="si">{</span><span class="n">p95_predicted</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">p95_no_delay</span> <span class="o">&lt;</span> <span class="mf">0.05</span>
+<span class="k">assert</span> <span class="n">p95_delayed</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">,</span> <span class="s2">"the same gains with 0.35 s of delay must oscillate out of the lane"</span>
+<span class="k">assert</span> <span class="n">p95_predicted</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">"acceptance: predicting through the in-flight commands restores the loop"</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id15">
+<a class="reference internal image-reference" href="../_images/slip_delay.png"><img alt="../_images/slip_delay.png" src="../_images/slip_delay.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 26 </span><span class="caption-text">Слева: нескомпенсированный недокрут выносит из дуги; деление кривизны на G(v) держит её. Справа: 0.35 с
+задержки раскачивают контур, а досчёт сквозь команды в полёте его возвращает.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Лекарство — не меньший коэффициент (попробуйте: раскачка уменьшится, и отклик умрёт с ней). Лекарство —
+<strong>управлять тем состоянием, которое команда встретит, а не тем, которое вы измерили</strong>: досчитать через
+каждую команду в полёте и только потом решать. Боевой <code class="docutils literal notranslate"><span class="pre">lagAdjustedCurvature</span></code> — ровно этот цикл в
+пространстве кривизны (<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>, <em>fp-5</em>).</p>
+</section>
+<section id="id5">
+<h2>Рецепт измерения (по бегу)<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>На кадрах, где рулит <strong>водитель</strong> (или при любом известном SWA):</p>
 <ol class="arabic simple">
-<li><p><span class="math notranslate nohighlight">\(\delta = \mathrm{SWA} / (\texttt{steer\_sign}\cdot\texttt{steer\_ratio})\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\delta = \mathrm{SWA} / (\mathrm{steer\_sign}\cdot\mathrm{steer\_ratio})\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\kappa_{\mathrm{kin}} = \tan\delta / L\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}} = \dot\psi / v\)</span> (нужно, чтобы <span class="math notranslate nohighlight">\(v\)</span> не была крошечной).</p></li>
 <li><p>Разбить по диапазонам <span class="math notranslate nohighlight">\(v\)</span>, сообщить медианное отношение <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}\)</span>.</p></li>
@@ -548,22 +669,22 @@
 </pre></div>
 </div>
 </section>
-<section id="id5">
-<h2>Ручки проекта<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id6">
+<h2>Ручки проекта<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>C++ <code class="docutils literal notranslate"><span class="pre">vehicle_model.h</span></code>, Python <code class="docutils literal notranslate"><span class="pre">scripts/core/vehicle_model.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — <strong>поставляется 0.50</strong>, и остальная часть главы о том, как это значение получилось,
+<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — <strong>поставляется 0.64</strong> (дефолт в коде, оверрайда в конфиге нет); остальная часть главы
 потому что путь к нему полезнее самого значения.</p></li>
 </ul>
 </section>
-<section id="id6">
-<h2>Калибровка одного коэффициента и обнаружение, что одним он быть не может<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id7">
+<h2>Калибровка одного коэффициента и обнаружение, что одним он быть не может<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <p>Здесь курс обычно останавливается: есть формула с одним свободным параметром, вы измеряете отношение по бегу,
 решаете уравнение относительно параметра. Мы так и сделали. Получилось противоречие, на разрешение которого
 ушло два заезда и третий датчик, и само противоречие — это и есть урок.</p>
-<section id="id7">
-<h3>Противоречие<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h3>
+<section id="id8">
+<h3>Противоречие<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
 <p>Два независимых источника расходились в <em>направлении</em> поправки:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -587,8 +708,8 @@
 <p>Оба быть правы не могут, и отбросить нельзя ни один: их оценщик работал часами на наших дорогах с крошечным
 разбросом, а наш замер был прямой арифметикой по нашим же логам.</p>
 </section>
-<section id="id8">
-<h3>Как это разрешилось: найти третий датчик<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
+<section id="id9">
+<h3>Как это разрешилось: найти третий датчик<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h3>
 <p>Под подозрение попал вход, общий для обоих расчётов и не проверяемый ни одним из них, — скорость рыска. Наша
 приходит с датчика ESP машины по CAN. Если бы он был отмасштабирован, наши 0.54 были бы неверны ровно на этот
 масштаб, и спор кончился бы.</p>
@@ -609,8 +730,8 @@
 <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> был заморожен — намеренно, потому что двигать коэффициент, пока его собственный вход
 под подозрением, значит получить число, подходящее одному заезду и ничему больше.</p>
 </section>
-<section id="id9">
-<h3>Что правка дала на самом деле<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h3>
+<section id="id10">
+<h3>Что правка дала на самом деле<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h3>
 <p>С проверенным входом коэффициент сдвинулся с 0.64 до 0.50, и следующий заезд был измерен на той же дороге:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -647,8 +768,8 @@
 ошибки слежения. Это хорошее отношение эффекта к вмешательству, и одновременно тревожный признак: если 3 %
 изменения команды двигают результат на 25 %, контур работает у предела.</p>
 </section>
-<section id="id10">
-<h3>Почему это не может закончиться константой<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h3>
+<section id="id11">
+<h3>Почему это не может закончиться константой<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h3>
 <p>Заканчивается здесь потому, что само отношение непостоянно:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -674,13 +795,15 @@
 дугу ухудшил (−0.44 → −0.52 м), а такое расхождение получается, когда один параметр тащит две работы.</p>
 <p>Структурный ответ — перестать подгонять константу и оценивать параметры непрерывно, с зависимостью от <span class="math notranslate nohighlight">\(v^2\)</span> в
 модели наблюдения, а не запечённой в число. Именно это делает <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> у upstream — фильтр из девяти
-состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги, — и он есть в списке этого
-проекта. Предпосылка, которая ему нужна и которой у нас пока нет, — оценка <strong>крена дороги</strong>: поперечный уклон
-даёт ту же поперечную подпись, что и недокручивающая машина, и никакая точность рыска их не разделит.</p>
+состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги. В этом проекте порт
+<strong>существует, измерен и поставляется отключённым</strong>: <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a>, шаг 6 —
+это измерение того, почему. Крен дороги (поперечный уклон даёт ту же поперечную подпись, что и
+недокручивающая машина) теперь оценивается (шаг 5), но остаётся вырождение жёсткость↔передаточное, которое
+данные не разделяют, — оно и держит фичу выключенной.</p>
 </section>
 </section>
-<section id="id11">
-<h2>Задержка конвейера и почему компенсация больше измерения<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id12">
+<h2>Задержка конвейера и почему компенсация больше измерения<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
 <p>Второе, что должна знать упреждающая часть, — что её картина дороги устарела. Медианы, измеренные на ночном
 заезде длиной 28 минут:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -741,8 +864,8 @@
 <p>Порядок: (1) модель машины включена; (2) темп зрения и сквозная задержка в норме; (3) и только потом веса CTE и epsi.</p>
 </div>
 </section>
-<section id="id12">
-<h2>Задания<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id13">
+<h2>Задания<a class="headerlink" href="#id13" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Запустите синтетический пример <code class="docutils literal notranslate"><span class="pre">ratio_kin_vs_fact</span></code>; замените <code class="docutils literal notranslate"><span class="pre">0.54</span></code> на <code class="docutils literal notranslate"><span class="pre">0.99</span></code> и посмотрите, как исчезает раздувание SWA.</p></li>
 <li><p>По бегу с рулением водителя постройте отношение по диапазонам <span class="math notranslate nohighlight">\(v\)</span>; сравните с таблицей.</p></li>
@@ -750,7 +873,7 @@
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />
-<p><strong>Дальше:</strong> <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a></p>
+<p><strong>Дальше:</strong> <a class="reference internal" href="AngleControl.html"><span class="std std-doc">Угловой контур</span></a></p>
 </section>
 </section>
 
@@ -785,20 +908,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="PurePursuit.html"
+       href="../Planner/MPC_and_FP.html"
        title="предыдущая страница">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">Pure Pursuit</p>
+        <p class="prev-next-title">MPC и fp</p>
       </div>
     </a>
     <a class="right-next"
-       href="MPC_and_FP.html"
+       href="AngleControl.html"
        title="следующая страница">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">MPC и fp</p>
+        <p class="prev-next-title">Угловой контур — то место, где обратная связь действительно кончается</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -822,17 +945,18 @@
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Кинематика против реальности</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Простая формула недокрута</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Рецепт измерения (по бегу)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Ручки проекта</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Калибровка одного коэффициента и обнаружение, что одним он быть не может</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Противоречие</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как это разрешилось: найти третий датчик</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Что правка дала на самом деле</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Почему это не может закончиться константой</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сначала прочувствуйте оба дефекта на игрушке</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Рецепт измерения (по бегу)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Ручки проекта</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Калибровка одного коэффициента и обнаружение, что одним он быть не может</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Противоречие</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Как это разрешилось: найти третий датчик</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id10">Что правка дала на самом деле</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Почему это не может закончиться константой</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id11">Задержка конвейера и почему компенсация больше измерения</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id12">Задержка конвейера и почему компенсация больше измерения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id13">Задания</a></li>
 </ul>
   </nav></div>
 

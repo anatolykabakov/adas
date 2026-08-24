@@ -47,7 +47,7 @@ Two runners implement the same interface, and `vision.model_runner` picks one:
 | runner | what it is | inference |
 |---|---|---:|
 | `SupercomboThneedRunner` | supercombo 0.9.7 in fp16, executed on the GPU through OpenCL | **17.6 ms** |
-| `SupercomboOnnxRunner` | the same network in fp32 through ONNX Runtime | 48.5 ms |
+| `SupercomboOnnxRunner` | the same network in fp32 through ONNX Runtime | 45.6 ms median |
 
 ### What a `.thneed` actually is
 
@@ -171,6 +171,13 @@ pipeline whose inference budget is a third of what it was — not a diagnosis of
 
 The model returns one flat float array. Nothing in it is labelled, and the layout is the single most
 misread thing in this project — so this section is a runnable map of it.
+
+```{figure} figures/supercombo_layout.png
+---
+width: 95%
+---
+The output is one flat vector read by slice; the offsets below name where each block lives.
+```
 
 For supercombo 0.9.7, width 6504 (the 0.8.x builds of width 6472 and 6409 share the whole prefix — only the
 tail moves):
@@ -322,8 +329,10 @@ print(f"chosen hypothesis {best}, y at 30 m = {np.interp(30.0, px, py):+.2f} m, 
 
 ```{admonition} Model output is shape, not metres
 :class: warning
-Camera odometry from this same network, compared against wheel speed, reads short. On the current network
-the factor is **0.686**, and the interesting part is how flat it is: across frame intervals from 28 to 50 ms
+The network's **velocity/pose** head, compared against wheel speed, reads short — a different quantity
+from the camera-odometry *distance* scale of 0.888 that [the Vision overview](./Overview.md) and
+[IntrinsicsAndWarp](../Calibration/IntrinsicsAndWarp.md) discuss, and a different number. On the current
+network the pose factor is **0.686**, and the interesting part is how flat it is: across frame intervals from 28 to 50 ms
 it stays within 0.686–0.688, with a correlation against `dt` of +0.005.
 
 That flatness killed the obvious explanation. A pose expressed per-frame rather than per-second would scale

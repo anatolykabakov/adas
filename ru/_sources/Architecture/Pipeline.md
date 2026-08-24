@@ -122,7 +122,7 @@ OpenCL недоступен. Первый кадр после запуска с�
 `VisionPipeline` в отдельном потоке, с двумя взаимозаменяемыми раннерами:
 
 * `SupercomboThneedRunner` — supercombo 0.9.7 в fp16 на GPU, **17.6 мс**, путь по умолчанию;
-* `SupercomboOnnxRunner` — та же сеть в fp32 через ONNX Runtime, 48.5 мс, запасной путь.
+* `SupercomboOnnxRunner` — та же сеть в fp32 через ONNX Runtime, 45.6 мс (медиана), запасной путь.
 
 В обоих случаях: временной стек из двух кадров и рекуррентное состояние, выход разбирается в топик
 **`vision/lanes`** (плюс одометрия и `model_long`), ставятся `infer_ts_ms` и `infer_duration_ms`.
@@ -146,8 +146,8 @@ middleware; `utils/proto_convert.cpp` переводит сообщения пр
 Поперечный контур разделён на три сервиса, и в разделении весь смысл: каждый проверяем без двух остальных.
 
 * **`Planner`** (`services/planner.cpp`) берёт полилинию пути и шасси и выдаёт план **в кривизне**, никогда
-  не в угле руля. Каким алгоритмом он построен — выбор конфига: `pp` (pure pursuit), `mpc` (MPC пути из
-  VisionPilot), `fp` (MPC в области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
+  не в угле руля. Каким алгоритмом он построен — выбор конфига: `pp` (pure pursuit) или `fp` (MPC в
+  области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
   одинаков, какой бы ни работал. Публикует `control/lat_plan`, `control/long_plan`, `control/lane_keep`.
 * **`Control`** (`services/control.cpp`) — закон управления и ничего больше: кривизна и шасси превращаются в
   момент, признак включения, пиктограммы приборки и желание нажать кнопку круиза. Он не знает ни адреса CAN,
@@ -186,6 +186,37 @@ middleware; `utils/proto_convert.cpp` переводит сообщения пр
 не тот контроллер, который вы поставили.
 
 Иконки предупреждений (`safety/warn`) идут параллельно удержанию полосы — см. [FCW / AEB / LDW](../Safety/Warnings.md).
+
+## Тот же конвейер на вашем ноутбуке
+
+Сервисы выше работают и без телефона: `pyadas` открывает нативный `AdasApp` в симулированном режиме —
+вы публикуете protobuf-сообщения, зовёте `step()`, читаете, что опубликовали сервисы:
+
+```bash
+./app/src/main/cpp/build_cpp.sh -t linux --test    # host build + ~230 gtest cases; pyadas core into scripts/
+```
+
+```python
+# not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.
+from pyadas import require_core
+pyadas = require_core()
+
+app = pyadas.AdasApp()                      # simulated mode: no threads, you own the clock
+app.set_param("lane_keep_controller", "fp")
+
+for ts, lanes_msg, raw in lanes:            # your session, from step 8
+    app.publish("vision/lanes", raw.SerializeToString())
+    app.publish("vehicle/state", chassis_at(ts))    # your synthetic chassis, or a real one
+    app.step()
+    for topic, payload in app.pop_messages():
+        if topic == "control/lane_keep":
+            record(ts, payload)             # the shipped stack's steering, frame by frame
+```
+
+`scripts/core/lane_keep.py` оборачивает ровно этот цикл, им уже пользуются симулятор и визуализатор —
+прочтите его раз, и офлайновый инструментарий перестанет быть магией. Это же честный способ сравнить
+собственный регулятор с боевыми `pp` и `fp` на одинаковых кадрах: один бег на входе, три команды на
+выходе, один график.
 
 <!-- next-chapter -->
 ---

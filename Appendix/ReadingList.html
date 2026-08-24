@@ -66,7 +66,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Attribution" href="../ATTRIBUTION.html" />
+    <link rel="next" title="Glossary" href="Glossary.html" />
     <link rel="prev" title="Setup" href="Setup.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -230,13 +230,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -254,6 +263,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Setup.html">Setup</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -423,6 +433,13 @@
 <li><p>Coursera <em>Introduction to Self-Driving Cars</em> (lateral control weeks)</p></li>
 <li><p>openpilot / flowpilot — Supercombo and stock lateral</p></li>
 </ul>
+<p><strong>Background for the gaps the chapters open</strong> (read the named one first if that chapter is hard):</p>
+<ul class="simple">
+<li><p>camera model / pinhole / homography — Szeliski, <em>Computer Vision</em>, ch. 2 (for <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>);</p></li>
+<li><p>IDM car-following — Treiber, Hennecke &amp; Helbing 2000, <em>Congested traffic states…</em> (for <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Safety</span></a>);</p></li>
+<li><p>Kalman/EKF — Labbe, <em>Kalman and Bayesian Filters in Python</em> (for <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a>);</p></li>
+<li><p>protobuf &amp; ZMQ — the official protobuf “Basics” tutorial and the ZeroMQ guide (for <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a>, <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>).</p></li>
+</ul>
 </section>
 <section id="internal-docs">
 <h2>Internal (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)<a class="headerlink" href="#internal-docs" title="Link to this heading">#</a></h2>
@@ -445,28 +462,25 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></p></td>
-<td><p>VisionPilot MPC</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
 <td><p>the GPU path: what a thneed is, how ours is generated and checked</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
 <td><p>bringing up a new phone, and what to measure before driving</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
 <td><p>adding a car behind <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
-<td><p>params learning / offline map match</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code></p></td>
+<td><p>params learning</p></td>
 </tr>
-<tr class="row-odd"><td><p>book <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
+<tr class="row-even"><td><p>book <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
 <td><p>GPS ENU, phone IMU, live EKF</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
-<td><p>adjacent</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code></p></td>
+<td><p>the traffic-light vertical</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
 <td><p>MetaDrive eval</p></td>
 </tr>
 </tbody>
@@ -559,11 +573,11 @@
       </div>
     </a>
     <a class="right-next"
-       href="../ATTRIBUTION.html"
+       href="Glossary.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Attribution</p>
+        <p class="prev-next-title">Glossary</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

@@ -234,13 +234,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -258,6 +267,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -433,7 +443,7 @@
 <li><p>объяснить publish/subscribe в Middleware, таймеры и живые параметры;</p></li>
 <li><p>понимать, где кончается Java-обвязка (камера, ORT, ZMQ, беги) и начинаются алгоритмы на C++;</p></li>
 <li><p>отличать угол поворота колеса <span class="math notranslate nohighlight">\(\delta\)</span> от угла рулевого колеса (SWA) на шине;</p></li>
-<li><p>реализовать и настроить Pure Pursuit и объяснить, чем <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> отличаются от одношаговой геометрии;</p></li>
+<li><p>реализовать и настроить Pure Pursuit и объяснить, чем <code class="docutils literal notranslate"><span class="pre">fp</span></code> отличается от одношаговой геометрии;</p></li>
 <li><p>учитывать недокрут (<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>) и транспортное запаздывание (<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>);</p></li>
 <li><p>проецировать GPS в локальный ENU, объяснить захват ориентации IMU телефона и читать <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>;</p></li>
 <li><p>считать TTC и <span class="math notranslate nohighlight">\(a_{\mathrm{req}}\)</span> для FCW/AEB и условия LDW со всеми гейтами;</p></li>
@@ -452,7 +462,7 @@
 <ol class="arabic simple">
 <li><p>Камера телефона снимает кадр.</p></li>
 <li><p>Supercombo (ONNX Runtime) публикует полилинии разметки и план в метрах.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) строит план в кривизне, <code class="docutils literal notranslate"><span class="pre">Control</span></code> превращает его в SWA или момент.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) строит план в кривизне, <code class="docutils literal notranslate"><span class="pre">Control</span></code> превращает его в SWA или момент.</p></li>
 <li><p>Panda отправляет <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>; EPS прикладывает момент (только под присмотром).</p></li>
 </ol>
 </section>
@@ -490,14 +500,34 @@
 </section>
 <section id="id3">
 <h2>Рекомендуемый порядок<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Главы устроены по образцу AAD: каждая идёт <strong>от маленькой работающей вещи к настоящей</strong> — вы строите
+игрушку внутри главы, смотрите, как она ломается с числом в руках, и затем встречаете боевую версию той
+же идеи. Порядок ниже — поэтому ещё и порядок стройки, и построенное накапливается:</p>
 <ol class="arabic simple">
-<li><p><a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Архитектура</span></a> → <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> → <a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Конвейер</span></a></p></li>
-<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение</span></a> → <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a></p></li>
-<li><p><a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a> (ENU из GPS, IMU телефона, EKF)</p></li>
-<li><p><a class="reference internal" href="../Control/BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> → <a class="reference internal" href="../Control/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> → <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a> → <a class="reference internal" href="../Control/MPC_and_FP.html"><span class="std std-doc">MPC / fp</span></a></p></li>
-<li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p></li>
-<li><p><a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка</span></a> → <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержки</span></a> → <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a></p></li>
-<li><p><a class="reference internal" href="../Exercises/StudentProjects.html"><span class="std std-doc">Задания</span></a></p></li>
+<li><p>Поперечный контур, разделённый как код на три части. <strong>Planner</strong> (какую форму ехать):
+<a class="reference internal" href="../Planner/BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> — просимулируйте, попробуйте очевидный регулятор,
+посмотрите на раскачку, почините курсом; <a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — собственный
+pursuit на полилинии, компромисс измерен; <a class="reference internal" href="../Planner/LanePath.html"><span class="std std-doc">Путь разметки</span></a> — слить две шумные
+линии и план модели в одну опору, встретить σ и её ложь; <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC / fp</span></a> — MPC в
+области пути как учебная игрушка, затем боевой <strong>time-domain</strong> <code class="docutils literal notranslate"><span class="pre">fp</span></code>, замкнутый контур в MetaDrive. <strong>Control</strong> (какая команда):
+<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a> — испортите игрушку сносом и задержкой, затем измерьте
+<span class="math notranslate nohighlight">\(G(v)\)</span> на настоящей машине; <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> — внутренний контур против
+игрушечной рейки: трение, ограничитель панды, накручивающийся интегратор. <strong>Platform</strong> (на шину):
+<a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a> — декод CAN через DBC, сборка легального HCA_01 со счётчиком и
+секретом контрольной суммы, и супервизор панды, который его пропускает.</p></li>
+<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение</span></a> — постройте опорный путь из двух шумных линий, встретьте σ и её
+ложь; <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p></li>
+<li><p><a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> — напишите шину в шестьдесят строк, воспроизведите
+болезнь backlog, затем читайте настоящую. <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Архитектура</span></a> →
+<a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Конвейер</span></a> — с финалом «те же
+сервисы на вашем ноутбуке через <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>».</p></li>
+<li><p><a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a> — постройте формат в сорок строк, <strong>запишите собственный бег</strong> (машина
+не нужна), прогоните собственный регулятор по собственным кадрам.</p></li>
+<li><p><a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a> — оцениватель, собранный по одному сенсору, затем
+повторённый на вашей собственной записи.</p></li>
+<li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>, <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка</span></a> →
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержки</span></a>.</p></li>
+<li><p><a class="reference internal" href="../Exercises/StudentProjects.html"><span class="std std-doc">Задания</span></a> — капстоны; мелкие лаборатории живут внутри глав.</p></li>
 </ol>
 <p>Дорожные эксперименты с HCA требуют присутствия преподавателя. Режим курса по умолчанию — <strong>бег и скрипты</strong>.</p>
 </section>
@@ -508,11 +538,16 @@
 <li><p>Python (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>), чтение protobuf и CSV; умение читать C++ желательно.</p></li>
 <li><p>CNN и ONNX на уровне пользователя (обучать Supercombo вы не будете).</p></li>
 </ul>
+<p>Незнакомая аббревиатура? <a class="reference internal" href="../Appendix/Glossary.html"><span class="std std-doc">Глоссарий</span></a> собирает все термины, на которые опираются главы.</p>
 <p>Инженерные заметки команды лежат в <code class="docutils literal notranslate"><span class="pre">docs/*.md</span></code>. Эта книга — <strong>учебная дорожка</strong> к тому материалу.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Обзор системы</span></a></p>
 </section>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
 <div class="toctree-wrapper compound">
 </div>
 <div class="toctree-wrapper compound">

@@ -1,0 +1,764 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Платформенный слой — одна машина за интерфейсом &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Platform/Overview';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Предупреждения: FCW, AEB, LDW" href="../Safety/Warnings.html" />
+    <link rel="prev" title="Угловой контур — то место, где обратная связь действительно кончается" href="../Control/AngleControl.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Platform/Overview.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Платформенный слой — одна машина за интерфейсом</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Интерфейс</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#carstateview">Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hca-01">Кодирование: сборка легального HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Разрешено: супервизор панды</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Темпы, и где всё это работает</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Куда дальше</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Платформенный слой — одна машина за интерфейсом<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Всё выше по течению — зрение, планировщик, управление — говорит физикой: кривизна, угол колеса, момент
+в cNm. Никто из них не знает, что машина — Volkswagen. Это знание живёт ровно в одном месте,
+<strong>платформенном слое</strong>, и эта глава — как он устроен: брендово-нейтральный интерфейс, путь декодирования
+кадров CAN в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, путь кодирования запроса момента в валидный кадр <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> и супервизор
+панды, решающий, разрешено ли этому кадру вообще уйти.</p>
+<p>Правило проектирования — одно предложение: <strong>бренд это одна реализация интерфейса, а не архитектура.</strong>
+Добавление Toyota TSS2 однажды не изменило ни строки в <code class="docutils literal notranslate"><span class="pre">Planner</span></code> или <code class="docutils literal notranslate"><span class="pre">Control</span></code>. Дальше — почему так.</p>
+<section id="id2">
+<h2>Интерфейс<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code> (<code class="docutils literal notranslate"><span class="pre">include/adas/platform/car_platform.h</span></code>) — чисто виртуальный класс с четырьмя
+группами методов, и его форма и есть весь контракт:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>чтение шины      isAllowedRxAddress · update(frames) · carState · stateView
+запись шины      apply(CarControl) → frames · setCruiseIntent · steerLimits
+что разрешено    configureSafety · safetyTick · ignition · safetyModelOk · lateralActuationAllowed
+жизненный цикл   init · dbcAssetName · defaults · resetPandaState
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> и <code class="docutils literal notranslate"><span class="pre">Control</span></code> видят только <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> — <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, брендово-нейтральный: скорость, угол
+руля, скорость рыска, держит ли водитель руль, включён ли штатный круиз. Ни адреса CAN, ни имени
+сигнала они не видят. <code class="docutils literal notranslate"><span class="pre">VolkswagenMqb</span></code> (<code class="docutils literal notranslate"><span class="pre">vw_platform.cpp</span></code>) — единственная реализация, которую выбирает
+ключ конфига <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>; сервис платформы держит <code class="docutils literal notranslate"><span class="pre">unique_ptr&lt;CarPlatform&gt;</span></code> и зовёт интерфейс,
+ничего брендового.</p>
+</section>
+<section id="carstateview">
+<h2>Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code><a class="headerlink" href="#carstateview" title="Ссылка на этот заголовок">#</a></h2>
+<p>Входящие кадры сперва проходят один дешёвый гейт — <code class="docutils literal notranslate"><span class="pre">isAllowedRxAddress</span></code> отбрасывает всё, чего нет в
+приёмном списке машины, до всякого декодирования, так что занятая шина ничего не стоит на нерелевантном
+кадре. Что уцелело, идёт в <code class="docutils literal notranslate"><span class="pre">MqbCarStateDecoder</span></code>, <code class="docutils literal notranslate"><span class="pre">switch</span></code> по адресу (<code class="docutils literal notranslate"><span class="pre">mqb_car_state_decoder.cpp</span></code>):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>адрес</p></th>
+<th class="head"><p>кадр</p></th>
+<th class="head"><p>что даёт</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x0B2</span></code></p></td>
+<td><p>ESP_02</p></td>
+<td><p>четыре скорости колёс → фильтрованная <code class="docutils literal notranslate"><span class="pre">v_ego</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x086</span></code></p></td>
+<td><p>LWI_01</p></td>
+<td><p>угол и скорость руля, со знаком</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x101</span></code></p></td>
+<td><p>ESP_05</p></td>
+<td><p>скорость рыска, со знаком</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x106</span></code></p></td>
+<td><p>ESP_09</p></td>
+<td><p>давление тормоза, флаг торможения водителем</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">0x121</span></code> / <code class="docutils literal notranslate"><span class="pre">0x3BE</span></code></p></td>
+<td><p>—</p></td>
+<td><p>статус TSK / круиза → включён ли штатный ACC</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">0x09F</span></code></p></td>
+<td><p>LH_EPS_03</p></td>
+<td><p>статус HCA EPS — принимает ли рейка момент</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Значения извлекаются не рукописной битовой математикой, а <strong>парсером DBC</strong> (<code class="docutils literal notranslate"><span class="pre">utils/can_parser.h</span></code>):
+<code class="docutils literal notranslate"><span class="pre">extractSignal(frame,</span> <span class="pre">&quot;LWI_Lenkradwinkel&quot;)</span></code> возвращает физическое значение по тому же <code class="docutils literal notranslate"><span class="pre">vw_mqb_2010.dbc</span></code>,
+что поставляет comma. У этого выбора есть тонкое свойство безопасности, и парсер делает его явным — одна
+битая строка DBC пропускается, а не фатальна:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The parser's contract, in miniature: a bad line must not void the whole database.</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_dbc</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+    <span class="n">signals</span><span class="p">,</span> <span class="n">skipped</span> <span class="o">=</span> <span class="p">{},</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">ln</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">parse_dbc_line</span><span class="p">(</span><span class="n">ln</span><span class="p">)</span>   <span class="c1"># raises on a malformed line</span>
+            <span class="n">signals</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">length</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">skipped</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">signals</span><span class="p">,</span> <span class="n">skipped</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_dbc_line</span><span class="p">(</span><span class="n">ln</span><span class="p">):</span>
+    <span class="c1"># a real SG_ line: "SG_ LWI_Lenkradwinkel : 0|13@1+ (0.1,0) ..."</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ln</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"SG_"</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"not a signal line"</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">ln</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="mf">0.1</span>
+
+<span class="n">sig</span><span class="p">,</span> <span class="n">skipped</span> <span class="o">=</span> <span class="n">load_dbc</span><span class="p">([</span><span class="s2">"SG_ LWI_Lenkradwinkel : 0|13@1+ (0.1,0)"</span><span class="p">,</span>
+                         <span class="s2">"GARBAGE that will not parse"</span><span class="p">,</span>
+                         <span class="s2">"SG_ ESP_Gierrate : 0|14@1+ (0.01,0)"</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="si">}</span><span class="s2"> signals, skipped </span><span class="si">{</span><span class="n">skipped</span><span class="si">}</span><span class="s2"> bad line(s)"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Почему это важно: DBC, не загрузившийся целиком, оставляет машину <strong>недекодированной</strong>, что снаружи
+выглядит ровно как машина, которая молчит, — неверный вывод из-за разницы в пробелах в одном не
+относящемся к делу сообщении. <code class="docutils literal notranslate"><span class="pre">update()</span></code> возвращает true, когда любое декодированное значение
+изменилось, и сервис платформы публикует <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> по этому.</p>
+</section>
+<section id="hca-01">
+<h2>Кодирование: сборка легального HCA_01<a class="headerlink" href="#hca-01" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">apply(CarControl)</span></code> превращает брендово-нейтральный запрос (момент в cNm, поперечное активно, HUD-биты
+линий) в кадры, которые примет EPS этой машины. Для руления это <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> по адресу <code class="docutils literal notranslate"><span class="pre">0x126</span></code>, и три вещи
+о нём не обсуждаются — все три принадлежат бренду, потому и живут здесь, а не в <code class="docutils literal notranslate"><span class="pre">Control</span></code>:</p>
+<ul class="simple">
+<li><p><strong>величина и знак разделены</strong>: 14-битное поле несёт <code class="docutils literal notranslate"><span class="pre">|момент|</span></code>, отдельный бит несёт знак. Момент
+зажат в ±<code class="docutils literal notranslate"><span class="pre">STEER_MAX</span></code> (300) до упаковки.</p></li>
+<li><p><strong>4-битный катящийся счётчик</strong> растёт каждый кадр; EPS отвергает кадр, чей счётчик не сдвинулся.</p></li>
+<li><p><strong>контрольная сумма CRC-8</strong> по полезной нагрузке, полином VW «8H2F» <code class="docutils literal notranslate"><span class="pre">0x2F</span></code>, инициализация <code class="docutils literal notranslate"><span class="pre">0xFF</span></code>,
+финальный XOR <code class="docutils literal notranslate"><span class="pre">0xFF</span></code> — затем XOR с посчётчиковым секретным байтом. Для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> этот секрет — константа
+<code class="docutils literal notranslate"><span class="pre">0xDA</span></code> (у <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>, кадра кнопок круиза, он действительно меняется по счётчику); ошибись в секрете — и каждый
+кадр молча отбрасывается EPS.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">crc8_2f</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""VW MQB 8H2F CRC over bytes 1.. : poly 0x2F, init 0xFF, final XOR 0xFF, plus a counter secret."""</span>
+    <span class="n">HCA_SECRET</span> <span class="o">=</span> <span class="p">[</span><span class="mh">0xDA</span><span class="p">]</span> <span class="o">*</span> <span class="mi">16</span>                       <span class="c1"># HCA_01's secret is a constant 0xDA (GRA_ACC_01's varies)</span>
+    <span class="n">crc</span> <span class="o">=</span> <span class="mh">0xFF</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">crc</span> <span class="o">^=</span> <span class="n">b</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+            <span class="n">crc</span> <span class="o">=</span> <span class="p">((</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">^</span> <span class="mh">0x2F</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="k">if</span> <span class="n">crc</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="k">else</span> <span class="p">(</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="n">crc</span> <span class="o">^=</span> <span class="n">HCA_SECRET</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x0F</span><span class="p">]</span>              <span class="c1"># constant here, so counter-independent</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+        <span class="n">crc</span> <span class="o">=</span> <span class="p">((</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">^</span> <span class="mh">0x2F</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="k">if</span> <span class="n">crc</span> <span class="o">&amp;</span> <span class="mh">0x80</span> <span class="k">else</span> <span class="p">(</span><span class="n">crc</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="k">return</span> <span class="n">crc</span> <span class="o">^</span> <span class="mh">0xFF</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">build_hca</span><span class="p">(</span><span class="n">torque_cnm</span><span class="p">,</span> <span class="n">lkas_on</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
+    <span class="n">torque</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mi">300</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="n">torque_cnm</span><span class="p">))</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">counter</span> <span class="o">&amp;</span> <span class="mh">0x0F</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x3</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">)</span>   <span class="c1"># counter in low nibble, a constant in the high</span>
+    <span class="n">mag</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">torque</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">mag</span> <span class="o">&amp;</span> <span class="mh">0xFF</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">mag</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x3F</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x40</span> <span class="k">if</span> <span class="n">lkas_on</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x80</span> <span class="k">if</span> <span class="n">torque</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">crc8_2f</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>                              <span class="c1"># checksum goes in byte 0, last</span>
+    <span class="k">return</span> <span class="n">d</span>
+
+<span class="n">f0</span> <span class="o">=</span> <span class="n">build_hca</span><span class="p">(</span><span class="mi">120</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">f1</span> <span class="o">=</span> <span class="n">build_hca</span><span class="p">(</span><span class="mi">120</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"counter 3:"</span><span class="p">,</span> <span class="n">f0</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span> <span class="s2">" counter 4:"</span><span class="p">,</span> <span class="n">f1</span><span class="o">.</span><span class="n">hex</span><span class="p">())</span>
+<span class="k">assert</span> <span class="n">f0</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">f1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">"same magnitude, different counter → different checksum"</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"checksum changed because the counter sits in the CRC payload — not because of the secret,"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"which is constant for HCA_01. A wrong or wrongly-varying secret (GRA_ACC_01) drops every frame."</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (приборный HUD разметки) и <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code> (кнопки круиза, свой секрет) строятся так же. У
+кнопочного кадра есть тонкость, которую стоит знать: нажатие <strong>держится, пока штатный счётчик не
+сдвинется</strong>, потому что так эта шина подтверждает кнопку — отпустишь раньше, нажатие не увидят; позже —
+оно повторится.</p>
+<figure class="align-default" id="id7">
+<a class="reference internal image-reference" href="../_images/hca01_bits.png"><img alt="../_images/hca01_bits.png" src="../_images/hca01_bits.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 30 </span><span class="caption-text">HCA_01: величина и знак момента разнесены по 14-битному полю и биту знака, рядом катящийся счётчик и CRC,
+которые проверяет EPS.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="id3">
+<h2>Разрешено: супервизор панды<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Даже верно собранный кадр не должен уходить, пока машина не заведена и панда не в нужном режиме
+безопасности. Этим владеет <code class="docutils literal notranslate"><span class="pre">PandaSafetySupervisor</span></code> (<code class="docutils literal notranslate"><span class="pre">panda_safety_supervisor.cpp</span></code>), и он намеренно
+слоем ниже кодирования — платформа <em>строит</em> кадры каждый тик, супервизор решает, <em>пропустит</em> ли их
+плата:</p>
+<ul class="simple">
+<li><p><strong>модель безопасности</strong> должна быть <code class="docutils literal notranslate"><span class="pre">kVolkswagen</span></code> (15); иначе <code class="docutils literal notranslate"><span class="pre">safetyModelOk()</span></code> ложно и момент не
+шлётся — неверный режим считается неисправностью, а не обходится;</p></li>
+<li><p>биты <strong>альтернативного поведения</strong> (например, не-отключаться-по-газу) выставляются на плате при init;</p></li>
+<li><p><strong>зажигание</strong> дебаунсится с гистерезисом по напряжению, чтобы просадка не переключала включение;</p></li>
+<li><p><strong>heartbeat</strong> шлётся каждый тик супервизора, иначе панда уходит в собственный безопасный режим.</p></li>
+</ul>
+<p>Это же делает панду переживающей сон телефона. Когда заново открытый USB-дескриптор пересаживается в
+работающий нативный слой, <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> забывает <strong>состояние платы</strong> — модель безопасности и
+alt-exp живут на плате и должны быть выставлены заново, — сохраняя декодированное <strong>состояние машины</strong> и
+защёлку круиза. Две неудачные пересадки подряд эскалируют до полного перезапуска; одна невидима
+контроллерам.</p>
+</section>
+<section id="id4">
+<h2>Темпы, и где всё это работает<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>Сервис платформы (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) крутит три таймера: <strong>rx</strong> и <strong>tx</strong> по 10 мс, <strong>state</strong> по
+100 мс. rx вычерпывает панду и декодирует; tx строит и шлёт кадры из <code class="docutils literal notranslate"><span class="pre">apply()</span></code>; state публикует
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, а рядом едет тик супервизора, публикуя <code class="docutils literal notranslate"><span class="pre">panda/health</span></code>. Всё выше в этой главе зовётся из
+этих трёх колбэков и ниоткуда больше — это и позволяет реплею бега и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять идентичные
+декод/кодирование без подключённой панды.</p>
+</section>
+<section id="id5">
+<h2>Приёмка<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p>миниатюра DBC грузит хорошие сигналы и считает битую строку, а не падает;</p></li>
+<li><p>сборщик HCA даёт разную контрольную сумму при двух счётчиках — и вы можете сказать <em>почему</em>: счётчик
+входит в полезную нагрузку CRC, тогда как сам секрет для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> — константа и меняется только у
+<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>;</p></li>
+<li><p>по одному предложению: почему <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> брендово-нейтрален и почему <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> забывает
+состояние платы, но хранит состояние машины.</p></li>
+</ul>
+</section>
+<section id="id6">
+<h2>Куда дальше<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">platform/car_platform.h</span></code> — интерфейс; <code class="docutils literal notranslate"><span class="pre">platform/volkswagen/</span></code> — единственная реализация.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code> — процедура добавления второй машины за этот интерфейс.</p></li>
+<li><p><a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> — момент, который этот слой принимает, и темповой
+ограничитель панды, который он обязан уважать.</p></li>
+</ul>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Platform"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../Control/AngleControl.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Угловой контур — то место, где обратная связь действительно кончается</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Safety/Warnings.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Предупреждения: FCW, AEB, LDW</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Интерфейс</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#carstateview">Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hca-01">Кодирование: сборка легального HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Разрешено: супервизор панды</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Темпы, и где всё это работает</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Куда дальше</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

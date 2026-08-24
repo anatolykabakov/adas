@@ -103,6 +103,13 @@ Three tests now assert that the shipped config matches the decisions taken on th
 refuses to compile a config it cannot parse.
 ```
 
+```{figure} figures/fcw_thresholds.png
+---
+width: 95%
+---
+The two triggers: time-to-collision below 2.5 s, or required deceleration above 3.5 m/s².
+```
+
 ## Longitudinal threat math (FCW / AEB)
 
 Need a **present lead** (`lead0` only — not future hypotheses lead1/2):
@@ -152,6 +159,15 @@ print(forward_warning(30.0, 15.0, 16.0))
 ```
 
 ### Why path-relative $y$ matters
+
+```{figure} figures/path_relative_y.png
+---
+width: 70%
+---
+On a bend the ego lane's own edge crosses a straight-ahead line — comparing to the axis flags a departure
+that is not there.
+```
+
 
 In an arc, a lead car on **your** lane has nonzero $y$ in the vehicle frame.
 Comparing to the **axis** false-triggers “adjacent lane”. Comparing to $y_{\mathrm{path}}(d)\approx \mathrm{CTE}+\tfrac12\kappa d^2$ keeps your own leader in-lane.

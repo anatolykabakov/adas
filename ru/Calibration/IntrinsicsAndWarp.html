@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -523,6 +533,14 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 </div>
 <section id="id3">
 <h3>Важным оказалось не фокусное расстояние<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
+<figure class="align-default" id="id13">
+<a class="reference internal image-reference" href="../_images/focal_fov.png"><img alt="../_images/focal_fov.png" src="../_images/focal_fov.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 35 </span><span class="caption-text">Фокусное расстояние важно лишь через угол обзора, который оно задаёт; измеренные 993.4 px попадают на
+тренировочный FOV EON, старые 951 — нет.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>Соблазнительно прочитать эту таблицу как «фокус был неверен на 4.5 %». Полезное чтение другое. Переведите
 каждый вариант в горизонтальный угол зрения:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
@@ -577,9 +595,17 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <p>Прежде чем исправлять параметр, спросите, какой другой параметр его уже впитывает. Два оценщика на одну
 физическую величину хуже одного неверного, потому что теперь ошибка гуляет.</p>
 </div>
-</section>
-</section>
 <hr class="docutils" />
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/pinhole_vp.png"><img alt="../_images/pinhole_vp.png" src="../_images/pinhole_vp.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 36 </span><span class="caption-text">Слева: параллельные линии дороги проецируются в точку схода. Справа: рыскание камеры сдвигает её вбок —
+так экстринсики и считываются с дороги.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
 <section id="id5">
 <h2>Шаг 2: экстринсики онлайн, по точке сходимости<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Интринсики — свойство линзы, они не меняются. Углы крепления меняются каждый раз, когда телефон берут в руки:

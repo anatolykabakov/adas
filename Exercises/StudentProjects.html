@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -444,7 +454,18 @@
 <h1>Projects<a class="headerlink" href="#projects" title="Link to this heading">#</a></h1>
 <p>Most assignments run on a bag without the car. Road HCA — instructor supervision only.
 Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> capture→infer (or say why missing).</p>
+<p>The small per-topic labs live inside their chapters now — each chapter builds its own toy and ends
+with a measurable check (the bicycle chapter’s failed P-controller, Pure Pursuit’s trade-off table, the
+sixty-line bus in Middleware, your own bag in Bags). This page keeps the larger, cross-chapter
+assignments — the capstones.</p>
 <p>Work in the AAD spirit: read the chapter → run a small measurement → write what you saw, including failure cases.</p>
+<div class="important admonition">
+<p class="admonition-title">Which bag each project needs</p>
+<p>A bag you record yourself (Bags, <em>Record your own bag</em>) has vision, GPS and IMU but <strong>no <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>,
+CAN or torque</strong> — there was no panda. Projects that compare against the driver’s steering or sweep a
+controller against actuation (<strong>A2, A3, B1, B2</strong>) therefore need an <strong>instructor-supplied bag</strong> with CAN.
+The rest run on your own recording.</p>
+</div>
 <section id="a-data-analysis">
 <h2>A — data analysis<a class="headerlink" href="#a-data-analysis" title="Link to this heading">#</a></h2>
 <section id="a1-latency">
@@ -482,7 +503,7 @@ Every report must include vision <strong>Hz</strong> and <strong>e2e</strong> ca
 </section>
 <section id="b3-arc-feed-forward">
 <h3>B3 Arc feed-forward<a class="headerlink" href="#b3-arc-feed-forward" title="Link to this heading">#</a></h3>
-<p>Using <code class="docutils literal notranslate"><span class="pre">docs/MPC_EXPLAINED.md</span></code>, mark feed-forward vs feedback on one arc.
+<p>Using <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a> (sections fp-3 and fp-5), mark feed-forward vs feedback on one arc.
 <strong>Deliverable:</strong> sketch or annotated plot; one sentence on why raising CTE weight is the wrong first lever.</p>
 </section>
 </section>

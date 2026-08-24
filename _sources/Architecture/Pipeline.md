@@ -123,7 +123,7 @@ bit-for-bit: a wrong warp does not crash, it hands the network a plausible pictu
 `VisionPipeline` on a separate thread, with two interchangeable runners:
 
 * `SupercomboThneedRunner` — supercombo 0.9.7 in fp16 on the GPU, **17.6 ms**, the default;
-* `SupercomboOnnxRunner` — the same network in fp32 through ONNX Runtime, 48.5 ms, the fallback.
+* `SupercomboOnnxRunner` — the same network in fp32 through ONNX Runtime, 45.6 ms median, the fallback.
 
 Either way: temporal stack of two frames plus the recurrent state, output parsed into topic
 **`vision/lanes`** (+ odometry / model_long), stamped with `infer_ts_ms` and `infer_duration_ms`.
@@ -149,7 +149,7 @@ two.
 
 * **`Planner`** (`services/planner.cpp`) consumes the path polyline and the chassis and produces a plan
   **in curvature**, never in steering angle. Which algorithm produces it is a config choice —
-  `pp` (pure pursuit), `mpc` (VisionPilot path MPC), `fp` (stock-like time-domain MPC, the default on the
+  `pp` (pure pursuit) or `fp` (stock-like time-domain MPC, the default on the
   road) — and the interface is identical whichever runs. Publishes `control/lat_plan`, `control/long_plan`,
   `control/lane_keep`.
 * **`Control`** (`services/control.cpp`) is the control law and nothing else: curvature plus the chassis
@@ -188,6 +188,37 @@ must be recorded **before** comparing controllers, because a controller evaluate
 controller you shipped.
 
 Safety icons (`safety/warn`) are parallel to lane-keep — see [FCW / AEB / LDW](../Safety/Warnings.md).
+
+## The same pipeline on your laptop
+
+The services above run without a phone: `pyadas` exposes the native `AdasApp` in simulated mode — you
+publish protobuf messages, call `step()`, read what the services published:
+
+```bash
+./app/src/main/cpp/build_cpp.sh -t linux --test    # host build + ~230 gtest cases; pyadas core into scripts/
+```
+
+```python
+# not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.
+from pyadas import require_core
+pyadas = require_core()
+
+app = pyadas.AdasApp()                      # simulated mode: no threads, you own the clock
+app.set_param("lane_keep_controller", "fp")
+
+for ts, lanes_msg, raw in lanes:            # your session, from step 8
+    app.publish("vision/lanes", raw.SerializeToString())
+    app.publish("vehicle/state", chassis_at(ts))    # your synthetic chassis, or a real one
+    app.step()
+    for topic, payload in app.pop_messages():
+        if topic == "control/lane_keep":
+            record(ts, payload)             # the shipped stack's steering, frame by frame
+```
+
+`scripts/core/lane_keep.py` wraps exactly this loop, and the simulator and visualizer already use it —
+read it once and the offline toolchain stops being magic. It is also the honest way to compare your own
+controller against the shipped `pp` and `fp` on identical frames: same bag in, three commands out, one
+plot.
 
 <!-- next-chapter -->
 ---

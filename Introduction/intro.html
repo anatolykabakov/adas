@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -432,7 +442,7 @@ Bicycle-model and Pure Pursuit chapters reuse AAD figures and derivations (CC BY
 <li><p>explain Middleware pub/sub, timers, and live parameters;</p></li>
 <li><p>locate the Java shell (camera, ORT, ZMQ, bags) vs C++ algorithms;</p></li>
 <li><p>distinguish wheel steer angle <span class="math notranslate nohighlight">\(\delta\)</span> from steering-wheel angle (SWA) on the bus;</p></li>
-<li><p>implement / tune Pure Pursuit and explain how <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> differ from one-step geometry;</p></li>
+<li><p>implement / tune Pure Pursuit and explain how <code class="docutils literal notranslate"><span class="pre">fp</span></code> differs from one-step geometry;</p></li>
 <li><p>account for understeer (<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>) and transport delay (<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>);</p></li>
 <li><p>project GPS to local ENU, explain phone IMU lock, and read <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>;</p></li>
 <li><p>compute FCW/AEB TTC / <span class="math notranslate nohighlight">\(a_{\mathrm{req}}\)</span> and gated LDW conditions;</p></li>
@@ -451,7 +461,7 @@ Bicycle-model and Pure Pursuit chapters reuse AAD figures and derivations (CC BY
 <ol class="arabic simple">
 <li><p>Phone camera captures a frame.</p></li>
 <li><p>Supercombo (on the GPU, ONNX as fallback) publishes lane polylines / plan in meters.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">mpc</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) produces a plan in curvature; <code class="docutils literal notranslate"><span class="pre">Control</span></code> turns it into SWA / torque.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> (<code class="docutils literal notranslate"><span class="pre">pp</span></code> | <code class="docutils literal notranslate"><span class="pre">fp</span></code>) produces a plan in curvature; <code class="docutils literal notranslate"><span class="pre">Control</span></code> turns it into SWA / torque.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> sends <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>; EPS applies torque (supervised use only).</p></li>
 </ol>
 </section>
@@ -489,14 +499,34 @@ Use this book when you want an <strong>industry-near phone pipeline</strong> and
 </section>
 <section id="recommended-order">
 <h2>Recommended order<a class="headerlink" href="#recommended-order" title="Link to this heading">#</a></h2>
+<p>Chapters are built the AAD way: each one goes <strong>from a small working thing to the real one</strong> — you
+build a toy inside the chapter, watch it break with a number attached, then meet the shipped version of
+the same idea. The order below is therefore also a build order, and what you construct accumulates:</p>
 <ol class="arabic simple">
-<li><p><a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Architecture</span></a> → <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> → <a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Pipeline</span></a></p></li>
-<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Vision</span></a> → <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">coordinates</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a></p></li>
-<li><p><a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a> (GPS ENU, phone IMU, EKF)</p></li>
-<li><p><a class="reference internal" href="../Control/BicycleModel.html"><span class="std std-doc">Bicycle</span></a> → <a class="reference internal" href="../Control/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> → <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a> → <a class="reference internal" href="../Control/MPC_and_FP.html"><span class="std std-doc">MPC / fp</span></a></p></li>
-<li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a></p></li>
-<li><p><a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Calibration</span></a> → <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a> → <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a></p></li>
-<li><p><a class="reference internal" href="../Exercises/StudentProjects.html"><span class="std std-doc">Exercises</span></a></p></li>
+<li><p>The lateral loop, split like the code into three parts. <strong>Planner</strong> (what shape to drive):
+<a class="reference internal" href="../Planner/BicycleModel.html"><span class="std std-doc">Bicycle model</span></a> — simulate it, try the obvious controller, watch it
+oscillate, fix it with heading; <a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — your own pursuit on a
+polyline, the trade-off measured; <a class="reference internal" href="../Planner/LanePath.html"><span class="std std-doc">Lane path</span></a> — fuse two noisy lines and the
+model plan into one reference, meet σ and its lies; <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC / fp</span></a> — a
+path-domain MPC as a teaching toy, then the shipped <strong>time-domain</strong> <code class="docutils literal notranslate"><span class="pre">fp</span></code>, closed-loop in MetaDrive. <strong>Control</strong> (what command):
+<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a> — sabotage the toy with slip and delay, then measure
+<span class="math notranslate nohighlight">\(G(v)\)</span> on the real car; <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Angle control</span></a> — the inner loop against a toy
+rack: friction, the panda rate limiter, the winding integrator. <strong>Platform</strong> (onto the bus):
+<a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a> — decode CAN through a DBC, build a legal HCA_01 with counter and
+checksum secret, and the panda supervisor that gates it.</p></li>
+<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Vision</span></a> — build a reference path from two noisy lines, meet σ and its lies;
+<a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">coordinates</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p></li>
+<li><p><a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> — write a bus in sixty lines, reproduce the backlog
+disease, then read the real one. <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Architecture</span></a> →
+<a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Pipeline</span></a> — ending with the
+same services running on your laptop through <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>.</p></li>
+<li><p><a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a> — build the format in forty lines, <strong>record your own bag</strong> (no car
+needed), run your own controller on your own frames.</p></li>
+<li><p><a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Localization</span></a> — an estimator built one sensor at a time, then repeated
+on your own recording.</p></li>
+<li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>, <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Calibration</span></a> →
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Latency</span></a>.</p></li>
+<li><p><a class="reference internal" href="../Exercises/StudentProjects.html"><span class="std std-doc">Exercises</span></a> — capstones; the small labs live inside the chapters.</p></li>
 </ol>
 <p>Road experiments with HCA require an instructor. Default course mode: <strong>bag + scripts</strong>.</p>
 </section>
@@ -507,11 +537,16 @@ Use this book when you want an <strong>industry-near phone pipeline</strong> and
 <li><p>Python (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>), reading protobuf / CSV; ability to read C++ is desirable.</p></li>
 <li><p>CNN / ONNX at user level (you will not train Supercombo).</p></li>
 </ul>
+<p>Unfamiliar acronym? The <a class="reference internal" href="../Appendix/Glossary.html"><span class="std std-doc">Glossary</span></a> collects every term the chapters lean on.</p>
 <p>Team engineering notes live under <code class="docutils literal notranslate"><span class="pre">docs/*.md</span></code>. This book is the <strong>teaching path</strong> into that material.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Next:</strong> <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">System overview</span></a></p>
 </section>
+<div class="toctree-wrapper compound">
+</div>
+<div class="toctree-wrapper compound">
+</div>
 <div class="toctree-wrapper compound">
 </div>
 <div class="toctree-wrapper compound">

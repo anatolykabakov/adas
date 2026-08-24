@@ -232,13 +232,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Control — how the four chapters build on each other</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Kinematic Bicycle Model</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -256,6 +265,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
 </ul>
 
@@ -408,6 +418,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-freshness-and-why-a-timeout-is-not-enough">Step 2: freshness, and why a timeout is not enough</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-trustworthy-where-it-is-used">Step 3: trustworthy where it is used</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-metrically-true-and-what-to-do-when-it-is-not">Step 4: metrically true, and what to do when it is not</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-a-reference-path-from-two-noisy-lines">Build: a reference path from two noisy lines</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-pipelines-aad-vs-this-course">Two pipelines (AAD vs this course)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chapters-in-this-module">Chapters in this module</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-map-read-do-not-memorize">Code map (read, do not memorize)</a></li>
@@ -442,7 +453,7 @@ If the polyline is wrong, delayed, or expressed in the wrong <span class="math n
 <li><p>enough metadata to know whether paint / plan is trustworthy (probabilities, age);</p></li>
 <li><p>timestamps (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>) so latency can be measured later.</p></li>
 </ul>
-<p>In Phone ADAS that contract lives on topic <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (after <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is <strong>indistinguishable</strong> to <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">mpc</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>. That is intentional: you can debug geometry offline before touching gains.</p>
+<p>In Phone ADAS that contract lives on topic <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (after <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> the C++ services see a polyline). Point source — live Supercombo, map, or bag replay — is <strong>indistinguishable</strong> to <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code>. That is intentional: you can debug geometry offline before touching gains.</p>
 </section>
 <section id="the-four-things-that-have-to-be-true-in-order">
 <h2>The four things that have to be true, in order<a class="headerlink" href="#the-four-things-that-have-to-be-true-in-order" title="Link to this heading">#</a></h2>
@@ -535,10 +546,92 @@ is fine — see <a class="reference internal" href="Supercombo.html"><span class
 </section>
 <section id="step-4-metrically-true-and-what-to-do-when-it-is-not">
 <h2>Step 4: metrically true, and what to do when it is not<a class="headerlink" href="#step-4-metrically-true-and-what-to-do-when-it-is-not" title="Link to this heading">#</a></h2>
-<p>Camera odometry from the same network gives a scale of 0.888 against wheel speed — the model reads
-distances about 11 % short. You cannot fix that from the outside, so the discipline is to know which of
-your numbers inherit it. Lane <em>offsets</em> are ratios within one frame and largely survive; anything that
-compares model distance against a wheel or GNSS distance does not.</p>
+<p>The model reads short against wheel speed, and <em>two different heads read short by two different amounts</em> —
+which is the first thing to keep straight. The camera-odometry <strong>distance</strong> scale, after the focal-length
+fix, is <strong>0.888</strong> (about 11 % short — <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>); the raw
+<strong>velocity/pose</strong> head reads lower, <strong>0.686</strong> (<a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>). You cannot fix either from
+the outside, so the discipline is to know which of your numbers inherit which. Lane <em>offsets</em> are ratios
+within one frame and largely survive; anything comparing a model distance or speed against a wheel or GNSS
+value does not.</p>
+</section>
+<section id="build-a-reference-path-from-two-noisy-lines">
+<h2>Build: a reference path from two noisy lines<a class="headerlink" href="#build-a-reference-path-from-two-noisy-lines" title="Link to this heading">#</a></h2>
+<p>The four conditions above are what a reference must satisfy. Now build one — from what a perception
+model actually gives: two lane lines, each noisy, each with its own claimed σ, each free to disappear.
+Synthesise the input honestly (σ grows with distance, because pixels farther ahead subtend more road):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">HALF</span> <span class="o">=</span> <span class="mf">1.75</span>                       <span class="c1"># half of a 3.5 m lane</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>     <span class="c1"># forward distance [m]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_true</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span>     <span class="c1"># R = 250 m left arc</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">sigma_of_x</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="mf">0.05</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">x</span>        <span class="c1"># 5 cm near the bumper, 65 cm at 60 m</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">measure_lines</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">"""One vision frame: (y_left, y_right, sigma) in metres, y left-positive."""</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">sigma_of_x</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="n">y_l</span> <span class="o">=</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">+</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+    <span class="n">y_r</span> <span class="o">=</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">-</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span>
+</pre></div>
+</div>
+<p>The naive planner picks one line and offsets by half a lane. The honest one weights both by how much
+each claims to know — inverse variance, the same rule every estimator in this book runs on:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">centre_from_one</span><span class="p">(</span><span class="n">y_line</span><span class="p">,</span> <span class="n">side</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y_line</span> <span class="o">-</span> <span class="n">side</span> <span class="o">*</span> <span class="n">HALF</span>          <span class="c1"># side=+1 for the left line</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_fused</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig_l</span><span class="p">,</span> <span class="n">sig_r</span><span class="p">):</span>
+    <span class="n">w_l</span><span class="p">,</span> <span class="n">w_r</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sig_l</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">sig_r</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_l</span> <span class="o">-</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_r</span> <span class="o">+</span> <span class="n">HALF</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">+</span> <span class="n">w_r</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rmse</span><span class="p">(</span><span class="n">y_est</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">y_est</span> <span class="o">-</span> <span class="n">centre_true</span><span class="p">(</span><span class="n">X</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)))</span>
+
+<span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="n">measure_lines</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">)]</span>
+<span class="n">e_one</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_from_one</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="o">+</span><span class="mi">1</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="n">e_two</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_fused</span><span class="p">(</span><span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"one line: RMSE </span><span class="si">{</span><span class="n">e_one</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m   fused: </span><span class="si">{</span><span class="n">e_two</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m   ratio </span><span class="si">{</span><span class="n">e_two</span><span class="o">/</span><span class="n">e_one</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">e_two</span> <span class="o">&lt;</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fusion must beat a single line by the sqrt(2) class"</span>
+</pre></div>
+</div>
+<p>With equal σ, fusion halves the variance: the RMSE ratio sits near <span class="math notranslate nohighlight">\(1/\sqrt{2} \approx 0.707\)</span>. That
+factor is the entire reason sensor fusion exists. Real lines also vanish — exits, worn paint, rain —
+and the fallback is <em>the other line plus the width</em>, remembered from when both were visible:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">width_memory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">l</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>  <span class="c1"># learned while both were visible</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">centre_one_line_fallback</span><span class="p">(</span><span class="n">y_l</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">y_l</span> <span class="o">-</span> <span class="n">width_memory</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+<span class="n">e_fallback</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">rmse</span><span class="p">(</span><span class="n">centre_one_line_fallback</span><span class="p">(</span><span class="n">l</span><span class="p">))</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"width memory: </span><span class="si">{</span><span class="n">width_memory</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m (true 3.50)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"fallback on left line only: RMSE </span><span class="si">{</span><span class="n">e_fallback</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">width_memory</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">"acceptance: width learned to within 5 cm"</span>
+<span class="k">assert</span> <span class="n">e_fallback</span> <span class="o">&lt;</span> <span class="mf">1.2</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fallback must not be worse than trusting one line ever was"</span>
+</pre></div>
+</div>
+<p>The subtlest failure is a line that is <em>present and confident</em> but wrong — a tar seam, a truck’s wet
+track. Weighting by claimed σ pulls the fused path toward the liar:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">y_l_liar</span> <span class="o">=</span> <span class="n">y_l</span> <span class="o">+</span> <span class="mf">0.8</span>                              <span class="c1"># left "line" found 0.8 m off, confidently</span>
+<span class="n">fused_honest</span> <span class="o">=</span> <span class="n">centre_fused</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+<span class="n">fused_lied</span> <span class="o">=</span> <span class="n">centre_fused</span><span class="p">(</span><span class="n">y_l_liar</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
+<span class="n">shift</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">fused_lied</span> <span class="o">-</span> <span class="n">fused_honest</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a confident 0.8 m liar shifts the fused path by </span><span class="si">{</span><span class="n">shift</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="mf">0.3</span> <span class="o">&lt;</span> <span class="n">shift</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"half the lie, because the weights were equal"</span>
+</pre></div>
+</div>
+<p>Half of the lie goes straight into the path: σ-weighting only defends against noise a sensor <em>admits
+to</em>. The shipped fusion (<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> in <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, mirror <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>) adds
+two defences you can now read with understanding — the <strong>width filter</strong> (2.6–4.6 m) and a <strong>second
+opinion</strong> with different failure modes, the model’s own plan
+(<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a>, <em>lane / plan blending</em>). And your σ here was honest by
+construction; the real one comes out of a network — on this project’s drives the medians are 0.37 m
+(left) and 0.51 m (right), and both lines are confident at once in only ~22 % of frames. The fallback
+you just built is the common case, not the exception.</p>
 </section>
 <section id="two-pipelines-aad-vs-this-course">
 <h2>Two pipelines (AAD vs this course)<a class="headerlink" href="#two-pipelines-aad-vs-this-course" title="Link to this heading">#</a></h2>
@@ -580,7 +673,7 @@ compares model distance against a wheel or GNSS distance does not.</p>
 <li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Coordinate systems</span></a> — device <span class="math notranslate nohighlight">\(y\)</span> right+ vs ISO <span class="math notranslate nohighlight">\(y\)</span> left+; the #1 source of inverted steering.</p></li>
 <li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo on device</span></a> — warp → GPU or ORT → parse → publish; Hz and thermal.</p></li>
 </ol>
-<p>Then you move to <a class="reference internal" href="../Control/Overview.html"><span class="std std-doc">Control</span></a>.</p>
+<p>Then you move to <a class="reference internal" href="../Planner/Overview.html"><span class="std std-doc">Control</span></a>.</p>
 </section>
 <section id="code-map-read-do-not-memorize">
 <h2>Code map (read, do not memorize)<a class="headerlink" href="#code-map-read-do-not-memorize" title="Link to this heading">#</a></h2>
@@ -699,6 +792,7 @@ compares model distance against a wheel or GNSS distance does not.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2-freshness-and-why-a-timeout-is-not-enough">Step 2: freshness, and why a timeout is not enough</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-3-trustworthy-where-it-is-used">Step 3: trustworthy where it is used</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-4-metrically-true-and-what-to-do-when-it-is-not">Step 4: metrically true, and what to do when it is not</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#build-a-reference-path-from-two-noisy-lines">Build: a reference path from two noisy lines</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-pipelines-aad-vs-this-course">Two pipelines (AAD vs this course)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chapters-in-this-module">Chapters in this module</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#code-map-read-do-not-memorize">Code map (read, do not memorize)</a></li>

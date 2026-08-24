@@ -1,0 +1,797 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Угловой контур — то место, где обратная связь действительно кончается &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Control/AngleControl';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Платформенный слой — одна машина за интерфейсом" href="../Platform/Overview.html" />
+    <link rel="prev" title="Модель машины (недокрут)" href="VehicleModel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Control/AngleControl.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Угловой контур — то место, где обратная связь действительно кончается</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Постройте рейку</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#p">Только P: мёртвая зона трения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#i">I: один интегратор, два ограничения — а знает он только про одно</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#f">F: упреждение, которое почти не участвует</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Перехват водителем: разматывать, не замораживать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Что здесь меняет обучатель</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как это читать в беге</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Куда дальше</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Угловой контур — то место, где обратная связь действительно кончается<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Каждая глава до сих пор производила <em>желаемую</em> траекторию: кривизну из планировщика, угол колеса из
+модели машины. Эта глава — про последний контур, которому нужно заставить физическую рулевую рейку
+согласиться, через единственный рычаг, который предлагает машина: <strong>момент ассиста, ±300 cNm, с
+темповым ограничителем панды</strong>. Здесь же живут три измеренных сюрприза этого проекта: момент насыщается
+о <em>трение</em> задолго до того, как в дело вступают шины; интегратор накручивается против ограничителя,
+которого не видит; а упреждение, которое должно было помогать, вносит единицы cNm из 300.</p>
+<p>Цепочка, с владельцами и темпами:</p>
+<figure class="align-default" id="id8">
+<a class="reference internal image-reference" href="../_images/control_cascade.png"><img alt="../_images/control_cascade.png" src="../_images/control_cascade.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 27 </span><span class="caption-text">Планировщик → модель машины → угловой PID → платформа → EPS, каждая ступень на своём темпе.</span><a class="headerlink" href="#id8" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Planner (темп зрения, ~24 Гц)    κ*  →  модель машины  →  δ
+Control (темп шасси, ~100 Гц)    δ × steer_ratio × steer_sign + выученный ноль  →  уставка SWA
+                                 угловой PID (эта глава)  →  steer_norm ∈ [−1, 1]  →  × 300 cNm
+Platform (темп HCA, 50 Гц)       темповой ограничитель панды (+4 / −10 cNm за кадр)  →  HCA_01  →  EPS
+</pre></div>
+</div>
+<p>Код: <code class="docutils literal notranslate"><span class="pre">lateral/angle_control.h</span></code> (уставка, выученный ноль, слю), <code class="docutils literal notranslate"><span class="pre">utils/lat_control_pid.h</span></code> (сам PID),
+<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code> (момент = <code class="docutils literal notranslate"><span class="pre">lround(steer_norm</span> <span class="pre">*</span> <span class="pre">max_torque_cnm)</span></code>),
+<code class="docutils literal notranslate"><span class="pre">platform/volkswagen/values.h</span></code> (константы панды). Момент здесь — в <strong>cNm</strong> (сантиньютон-метрах, сотых
+Н·м); потолок панды ±300 cNm — это ±3 Н·м ассиста на колонке.</p>
+<div class="note admonition">
+<p class="admonition-title">Если вы не встречали PID</p>
+<p>PID превращает <em>ошибку</em> (уставка минус измерение — здесь ошибку угла руля) в <em>команду</em> (момент), складывая
+три члена: <strong>P</strong> — пропорционально текущей ошибке, <strong>I</strong> — интеграл прошлой ошибки (съедает постоянное
+смещение, которое P оставляет), <strong>F</strong> — упреждение, считаемое прямо из цели, а не из ошибки. «Антивиндап»
+— правило, не дающее <strong>I</strong> накапливаться, пока выход уже в упоре и действовать не может; именно этот
+механизм, смотрящий не на тот предел, эта глава и измеряет.</p>
+</div>
+<section id="id2">
+<h2>Постройте рейку<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<p>Объект, с которым борется этот контур, — не машина, а <strong>рейка</strong>: сухое трение плюс самоустанавливающий
+момент, растущий со скоростью и углом. Выученный comma <code class="docutils literal notranslate"><span class="pre">frictionCoefficientRaw</span> <span class="pre">=</span> <span class="pre">0.192</span></code> для этой
+платформы — это около <strong>57 cNm</strong> страгивания; игрушка берёт это число:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">DT</span> <span class="o">=</span> <span class="mf">0.01</span>              <span class="c1"># chassis-rate tick [s], ~100 Hz like the real inner loop</span>
+<span class="n">T_MAX</span> <span class="o">=</span> <span class="mf">300.0</span>          <span class="c1"># panda ceiling [cNm]</span>
+<span class="n">T_FRICTION</span> <span class="o">=</span> <span class="mf">57.0</span>      <span class="c1"># rack stiction [cNm] — comma's learned 0.192, in torque units</span>
+<span class="n">C_SAT</span> <span class="o">=</span> <span class="mf">0.0167</span>         <span class="c1"># self-aligning torque [cNm per deg per (m/s)^2]</span>
+<span class="n">K_RACK</span> <span class="o">=</span> <span class="mf">0.15</span>          <span class="c1"># rack speed [deg/s per net cNm]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rack_step</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">,</span> <span class="n">torque_cnm</span><span class="p">,</span> <span class="n">v_mps</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">DT</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""One tick of the toy rack: torque in, steering-wheel angle out."""</span>
+    <span class="n">t_sat</span> <span class="o">=</span> <span class="n">C_SAT</span> <span class="o">*</span> <span class="n">v_mps</span> <span class="o">*</span> <span class="n">v_mps</span> <span class="o">*</span> <span class="n">swa_deg</span>      <span class="c1"># the road pushing the wheel straight</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">torque_cnm</span> <span class="o">-</span> <span class="n">t_sat</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">T_FRICTION</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">swa_deg</span>                            <span class="c1"># stiction: nothing moves</span>
+    <span class="k">return</span> <span class="n">swa_deg</span> <span class="o">+</span> <span class="n">K_RACK</span> <span class="o">*</span> <span class="p">(</span><span class="n">net</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">copysign</span><span class="p">(</span><span class="n">T_FRICTION</span><span class="p">,</span> <span class="n">net</span><span class="p">))</span> <span class="o">*</span> <span class="n">dt</span>
+</pre></div>
+</div>
+<p>Два честных упрощения: нет инерции (рейка сильно заредуцирована) и нет водителя. Оба значат меньше
+трения — в этом и смысл стройки.</p>
+</section>
+<section id="p">
+<h2>Только P: мёртвая зона трения<a class="headerlink" href="#p" title="Ссылка на этот заголовок">#</a></h2>
+<p>Боевой пропорциональный коэффициент в единицах момента — около 180 cNm на градус ошибки угла
+(<code class="docutils literal notranslate"><span class="pre">pid_kp</span> <span class="pre">=</span> <span class="pre">0.6</span></code> на нормированной шкале, где ±1 — это ±300 cNm; измерено на этом стеке: один P упирается
+в предел при ошибке 1.67°):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KP_T</span> <span class="o">=</span> <span class="mf">180.0</span>    <span class="c1"># cNm per degree of angle error</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drive_to</span><span class="p">(</span><span class="n">target_deg</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">6.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Track a setpoint; return the trajectory of (swa, torque)."""</span>
+    <span class="n">swa</span><span class="p">,</span> <span class="n">log</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="p">[]</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">t_end</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">torque</span> <span class="o">=</span> <span class="n">controller</span><span class="p">(</span><span class="n">target_deg</span> <span class="o">-</span> <span class="n">swa</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+        <span class="n">torque</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">torque</span><span class="p">,</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="n">swa</span> <span class="o">=</span> <span class="n">rack_step</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span> <span class="n">torque</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">swa</span><span class="p">,</span> <span class="n">torque</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">p_only</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">err</span><span class="p">,</span> <span class="n">st</span><span class="p">:</span> <span class="n">KP_T</span> <span class="o">*</span> <span class="n">err</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">drive_to</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">p_only</span><span class="p">)</span>
+<span class="n">standing</span> <span class="o">=</span> <span class="mf">5.0</span> <span class="o">-</span> <span class="n">log</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<span class="n">t_sat_5</span> <span class="o">=</span> <span class="n">C_SAT</span> <span class="o">*</span> <span class="mf">15.0</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">5.0</span>
+<span class="n">predicted</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_sat_5</span> <span class="o">+</span> <span class="n">T_FRICTION</span><span class="p">)</span> <span class="o">/</span> <span class="n">KP_T</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"P only: standing error </span><span class="si">{</span><span class="n">standing</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, predicted (T_sat + friction)/kp = </span><span class="si">{</span><span class="n">predicted</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="mf">0.25</span> <span class="o">&lt;</span> <span class="n">standing</span> <span class="o">&lt;</span> <span class="mf">0.6</span><span class="p">,</span> <span class="s2">"P alone must stall on friction: a standing error it can never close"</span>
+</pre></div>
+</div>
+<p>P замирает ровно там, где его момент перестаёт побеждать страгивание плюс самоустановку: ошибка
+застывает на <span class="math notranslate nohighlight">\((T_{\mathrm{sat}} + T_{\mathrm{fric}})/k_p\)</span>. Ниже этого 2° ошибки и 0.4° ошибки командуют
+одно и то же <em>ничего</em>. Никакой коэффициент это не чинит — рост <span class="math notranslate nohighlight">\(k_p\)</span> сжимает мёртвую зону и заодно
+усиливает каждый квантованный тик измеренного SWA с CAN.</p>
+<figure class="align-default" id="id9">
+<a class="reference internal image-reference" href="../_images/friction_deadband.png"><img alt="../_images/friction_deadband.png" src="../_images/friction_deadband.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 28 </span><span class="caption-text">Команда P пропорциональна ошибке, но ниже момента трения-плюс-самоустановки рейка не двигается вовсе —
+мёртвая зона, которую не закрыть коэффициентом.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="i">
+<h2>I: один интегратор, два ограничения — а знает он только про одно<a class="headerlink" href="#i" title="Ссылка на этот заголовок">#</a></h2>
+<p>Интегратор съедает смещение от трения. Но живёт он между <strong>двумя</strong> ограничениями, и боевой антивиндап
+(<code class="docutils literal notranslate"><span class="pre">lat_control_pid.h</span></code>) смотрит только на первое:</p>
+<ul class="simple">
+<li><p>зажим выхода ±1 (±300 cNm) — интегрирование пропускается, когда пробный выход вышел бы за него;</p></li>
+<li><p><strong>темповой ограничитель панды</strong> — величина может расти лишь на 4 cNm за 20-мс кадр (200 cNm/с) и
+падать на 10 (500 cNm/с). PID его не видит: его выход <em>не</em> у зажима, пока применённый момент ползёт,
+и интеграл накручивается на ошибку, которую физически ещё нельзя убрать.</p></li>
+</ul>
+<p>Постройте ограничитель и измерьте слепое пятно:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">panda_limit</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">wanted</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">DT</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""MQB HCA rate limit: magnitude up 4 cNm / 20 ms, down 10 cNm / 20 ms."""</span>
+    <span class="n">up</span><span class="p">,</span> <span class="n">down</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="o">*</span> <span class="n">applied</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">wanted</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">applied</span><span class="p">):</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">down</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">up</span>
+    <span class="k">if</span> <span class="n">wanted</span> <span class="o">&gt;</span> <span class="n">applied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">applied</span> <span class="o">+</span> <span class="n">step</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">applied</span> <span class="o">-</span> <span class="n">step</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">pi</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">ki_t</span><span class="o">=</span><span class="mf">36.0</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">freeze</span><span class="p">:</span>
+        <span class="n">st</span><span class="p">[</span><span class="s2">"i"</span><span class="p">]</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="o">+</span> <span class="n">ki_t</span> <span class="o">*</span> <span class="n">err</span> <span class="o">*</span> <span class="n">DT</span>
+    <span class="k">return</span> <span class="n">KP_T</span> <span class="o">*</span> <span class="n">err</span> <span class="o">+</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Settle at +2°, then command −2°; return overshoot past the new target [deg]."""</span>
+    <span class="n">swa</span><span class="p">,</span> <span class="n">applied</span><span class="p">,</span> <span class="n">st</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="p">{}</span>
+    <span class="n">worst</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="mf">10.0</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="k">if</span> <span class="n">k</span> <span class="o">*</span> <span class="n">DT</span> <span class="o">&lt;</span> <span class="mf">4.0</span> <span class="k">else</span> <span class="o">-</span><span class="mf">2.0</span>
+        <span class="c1"># What the PID would output right now, clamped to the ceiling:</span>
+        <span class="n">raw</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">KP_T</span> <span class="o">*</span> <span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">swa</span><span class="p">)</span> <span class="o">+</span> <span class="n">st</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="c1"># The rack is still crawling toward it if the applied torque is far from that (rate-limited):</span>
+        <span class="n">rate_limited</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">applied</span> <span class="o">-</span> <span class="n">raw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">20.0</span>
+        <span class="n">freeze</span> <span class="o">=</span> <span class="n">freeze_while_limited</span> <span class="ow">and</span> <span class="n">rate_limited</span>
+        <span class="n">wanted</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">pi</span><span class="p">(</span><span class="n">target</span> <span class="o">-</span> <span class="n">swa</span><span class="p">,</span> <span class="n">st</span><span class="p">,</span> <span class="n">freeze</span><span class="o">=</span><span class="n">freeze</span><span class="p">),</span> <span class="o">-</span><span class="n">T_MAX</span><span class="p">,</span> <span class="n">T_MAX</span><span class="p">))</span>
+        <span class="n">applied</span> <span class="o">=</span> <span class="n">panda_limit</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">wanted</span><span class="p">)</span>
+        <span class="n">swa</span> <span class="o">=</span> <span class="n">rack_step</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span> <span class="n">applied</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="o">*</span> <span class="n">DT</span> <span class="o">&gt;=</span> <span class="mf">4.0</span> <span class="ow">and</span> <span class="n">swa</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">:</span>
+            <span class="n">worst</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">worst</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span> <span class="o">-</span> <span class="n">swa</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">worst</span>
+
+<span class="n">over_blind</span> <span class="o">=</span> <span class="n">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">over_aware</span> <span class="o">=</span> <span class="n">reversal</span><span class="p">(</span><span class="n">freeze_while_limited</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"overshoot past the new setpoint: integrator blind to the limiter </span><span class="si">{</span><span class="n">over_blind</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, "</span>
+      <span class="sa">f</span><span class="s2">"frozen while rate-limited </span><span class="si">{</span><span class="n">over_aware</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">over_blind</span> <span class="o">&gt;</span> <span class="n">over_aware</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">"winding against the rate limiter must cost visible overshoot"</span>
+</pre></div>
+</div>
+<p>Это слепое пятно не гипотеза: апстримный openpilot передаёт в тот же PID
+<code class="docutils literal notranslate"><span class="pre">freeze_integrator</span> <span class="pre">=</span> <span class="pre">steer_limited</span></code>, а наш порт несёт параметр в сигнатуре, <strong>не передавая его</strong>, —
+применённый момент после разворота ползёт со скоростью 200 cNm/с, пока интеграл тихо заряжается. Та же
+форма, что в игрушке, измерена по дорожным бегам в <code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code>.</p>
+</section>
+<section id="f">
+<h2>F: упреждение, которое почти не участвует<a class="headerlink" href="#f" title="Ссылка на этот заголовок">#</a></h2>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../_images/feedforward.png"><img alt="../_images/feedforward.png" src="../_images/feedforward.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 29 </span><span class="caption-text">При боевом <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> упреждение до шоссейной скорости остаётся ниже собственного трения рейки; порог 9.8 м/с
+поднимает его в полезный диапазон.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Упреждение — это <span class="math notranslate nohighlight">\(k_f \cdot \mathrm{SWA} \cdot (v^2 + v_0^2)\)</span>: момент, который понадобится даже при
+нулевой ошибке, из физики самоустановки. Его боевой размер, в тех единицах, которые важны:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KF</span> <span class="o">=</span> <span class="mf">6e-5</span>     <span class="c1"># shipped lat_pid_kf, on the normalised scale</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">ff_cnm</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">KF</span> <span class="o">*</span> <span class="n">swa_deg</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">*</span> <span class="n">v</span> <span class="o">+</span> <span class="n">v0</span> <span class="o">*</span> <span class="n">v0</span><span class="p">)</span> <span class="o">*</span> <span class="n">T_MAX</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'v, m/s'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="s1">'ff at SWA=5°, v0=0'</span><span class="si">:</span><span class="s2">&gt;19</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="s1">'v0=9.8'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> | friction"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">6.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">23.0</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;7.0f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;19.1f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="mf">9.8</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;7.1f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">T_FRICTION</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> cNm"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">T_FRICTION</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"at city speed the feedforward is buried under friction"</span>
+</pre></div>
+</div>
+<p>Держите вместе два факта. Первый: ниже ~10 м/с член — погрешность округления рядом с 57 cNm трения,
+которые ему нужно перебороть, — потому и существует скоростной порог <span class="math notranslate nohighlight">\(v_0\)</span> (дефолт в коде 9.8 м/с).
+Второй: <strong>в боевом конфиге <code class="docutils literal notranslate"><span class="pre">lat_pid_ff_floor_mps:</span> <span class="pre">0.0</span></code></strong> — на заезде 2026-08-21 подразумеваемый <span class="math notranslate nohighlight">\(k_f\)</span>,
+восстановленный из <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> бега, был 5.63e-5 против конфигурационных 6e-5 (арифметика нулевого порога),
+а измеренный вклад — 1.3 / 3.2 / 4.3 cNm по скоростным корзинам, из 300. Поправка существует в коде и
+выключена в поле; измерение — в <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code>.</p>
+</section>
+<section id="id3">
+<h2>Перехват водителем: разматывать, не замораживать<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Когда водитель держит руль (<code class="docutils literal notranslate"><span class="pre">steering_pressed</span></code>, допуск 80 cNm на стороне панды), интегратор не
+замораживается — он <strong>разматывается</strong> со скоростью <code class="docutils literal notranslate"><span class="pre">0.3/rate</span></code> за тик, исчезая примерно за три секунды.
+Замороженное состояние вернуло бы момент до перехвата в тот миг, когда водитель отпустит руль, — на
+дороге, которая с тех пор изогнулась; размотка возвращает контур, который учится заново с нуля.
+Асимметрия намеренная, и в игрушке её дёшево увидеть: заморозьте <code class="docutils literal notranslate"><span class="pre">st[&quot;i&quot;]</span></code> на время имитированного
+перехвата и посмотрите на переходный процесс отпускания.</p>
+</section>
+<section id="id4">
+<h2>Что здесь меняет обучатель<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> подаёт в этот контур три числа (<code class="docutils literal notranslate"><span class="pre">setLearnedParams</span></code>): <strong>жёсткость</strong> шин (работает уровнем выше,
+κ→δ), <strong>передаточное отношение</strong> и <strong>ноль угла</strong> — выученное смещение, добавляемое к каждой уставке
+(<code class="docutils literal notranslate"><span class="pre">setSetpointFromSteer</span></code>). В быту важнее всего ноль: переустановка телефона или уплывший сход-развал
+проявляются постоянным смещением руля, которое иначе интегратор медленно съедал бы при каждом
+включении заново. Аксессоры <code class="docutils literal notranslate"><span class="pre">effective*</span></code> в <code class="docutils literal notranslate"><span class="pre">angle_control.h</span></code> говорят, какой источник в силе.</p>
+</section>
+<section id="id5">
+<h2>Как это читать в беге<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<p>Всё выше пишется в <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> на каждом тике: <code class="docutils literal notranslate"><span class="pre">desired_swa_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">actual_swa_deg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">angle_error_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">torque_cnm</span></code> и разложение <code class="docutils literal notranslate"><span class="pre">pid_p</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_f</span></code>. <code class="docutils literal notranslate"><span class="pre">torque_saturated</span></code>
+взводится на 99 % потолка и, продержавшись секунду, становится экранным алертом <strong>STEERING LIMIT</strong>.
+Самый полезный график здравомыслия — <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> от времени: он должен дышать с поворотами, а не
+защёлкиваться.</p>
+</section>
+<section id="id6">
+<h2>Приёмка<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p>мёртвая зона P воспроизводится и сходится с <span class="math notranslate nohighlight">\((T_{\mathrm{sat}}+T_{\mathrm{fric}})/k_p\)</span>;</p></li>
+<li><p>опыт с разворотом показывает измеримо большее перерегулирование, когда интегратор слеп к темповому
+ограничителю, — теперь вы можете назвать боевой пробел <code class="docutils literal notranslate"><span class="pre">freeze_integrator</span></code> одним предложением;</p></li>
+<li><p>таблица упреждения объясняет — вместе с измеренными по бегу 1.3–4.3 cNm — почему дуги насыщаются на
+300 cNm, пока <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> остаётся однозначным числом.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h2>Куда дальше<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="VehicleModel.html"><span class="std std-doc">Модель машины</span></a> — преобразование κ→δ, питающее этот контур, и <span class="math notranslate nohighlight">\(G(v)\)</span>.</p></li>
+<li><p><a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> — откуда берётся уставка, и компенсация задержки выше по течению.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code> — полный аудит цепочки, который эта глава сжимает, с дорожными числами.</p></li>
+</ul>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Control"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="VehicleModel.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Модель машины (недокрут)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Platform/Overview.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Платформенный слой — одна машина за интерфейсом</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Постройте рейку</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#p">Только P: мёртвая зона трения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#i">I: один интегратор, два ограничения — а знает он только про одно</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#f">F: упреждение, которое почти не участвует</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Перехват водителем: разматывать, не замораживать</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Что здесь меняет обучатель</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как это читать в беге</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Куда дальше</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -67,7 +67,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="Атрибуция" href="../ATTRIBUTION.html" />
+    <link rel="next" title="Глоссарий" href="Glossary.html" />
     <link rel="prev" title="Установка и запуск" href="Setup.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
@@ -231,13 +231,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -255,6 +264,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -424,6 +434,13 @@
 <li><p>Coursera <em>Introduction to Self-Driving Cars</em> (недели про поперечное управление)</p></li>
 <li><p>openpilot / flowpilot — Supercombo и штатное поперечное управление</p></li>
 </ul>
+<p><strong>Фон под пробелы, которые открывают главы</strong> (если глава тяжело идёт — сначала читать названное):</p>
+<ul class="simple">
+<li><p>модель камеры / pinhole / гомография — Szeliski, <em>Computer Vision</em>, гл. 2 (под <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>);</p></li>
+<li><p>IDM (следование за лидером) — Treiber, Hennecke &amp; Helbing 2000, <em>Congested traffic states…</em> (под <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Safety</span></a>);</p></li>
+<li><p>Калман/EKF — Labbe, <em>Kalman and Bayesian Filters in Python</em> (под <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализацию</span></a>);</p></li>
+<li><p>protobuf и ZMQ — официальный туториал protobuf «Basics» и руководство ZeroMQ (под <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>, <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержки</span></a>).</p></li>
+</ul>
 </section>
 <section id="docs">
 <h2>Внутреннее (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>)<a class="headerlink" href="#docs" title="Ссылка на этот заголовок">#</a></h2>
@@ -446,28 +463,25 @@
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SAFETY_WARN.md</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MPC_EXPLAINED.md</span></code></p></td>
-<td><p>MPC из VisionPilot</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
 <td><p>путь через GPU: что такое thneed, как наш собирается и проверяется</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
 <td><p>подъём на новом телефоне и что замерить до выезда</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
 <td><p>подключение машины за <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MAPMATCH.md</span></code></p></td>
-<td><p>обучение параметров / офлайн-привязка к карте</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code></p></td>
+<td><p>обучение параметров</p></td>
 </tr>
-<tr class="row-odd"><td><p>глава книги <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
+<tr class="row-even"><td><p>глава книги <code class="docutils literal notranslate"><span class="pre">Localization/Overview.md</span></code></p></td>
 <td><p>ENU из GPS, IMU телефона, живой EKF</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code> / <code class="docutils literal notranslate"><span class="pre">MODEL_LONG_PLAN.md</span></code> / <code class="docutils literal notranslate"><span class="pre">CRUISE_BUTTONS.md</span></code></p></td>
-<td><p>смежное</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code></p></td>
+<td><p>вертикаль светофоров</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIM_CONTROLLER_TEST.md</span></code></p></td>
 <td><p>оценка в MetaDrive</p></td>
 </tr>
 </tbody>
@@ -560,11 +574,11 @@
       </div>
     </a>
     <a class="right-next"
-       href="../ATTRIBUTION.html"
+       href="Glossary.html"
        title="следующая страница">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">Атрибуция</p>
+        <p class="prev-next-title">Глоссарий</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

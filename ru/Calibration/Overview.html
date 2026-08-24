@@ -233,13 +233,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -257,6 +266,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -406,7 +416,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior">Prior (поставляемый конфиг)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Онлайн-калибровка</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Чего на самом деле стоит один градус ошибки</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сохранять оценку — не та правка, какой кажется</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сохранение оценки: что оно покупает, а чего не может</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cte">Причинная цепочка (смещение → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Практика</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Что беги могут измерить, а что нет</a></li>
@@ -446,11 +456,26 @@
 </section>
 <section id="id2">
 <h2>Онлайн-калибровка<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) потребляет <code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> (и при желании UV разметки) и
-публикует <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code>. При успехе и достаточной уверенности Java обновляет warp, который пойдёт на
-следующие входы Supercombo.</p>
-<p>Он же отказывается от интринсиков, которым не верит: главная точка обязана лежать близко к середине кадра,
-который объявляет само сообщение. Эта проверка появилась из-за потерянного заезда — история в конце главы.</p>
+<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) гонит <strong>два оценивателя в одно состояние</strong>, потому что
+каждый закрывает слепое пятно другого:</p>
+<ul class="simple">
+<li><p><strong>одометрия камеры</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromPose</span></code>): на прямой дороге вектор переноса модели смотрит вдоль
+оптической оси, так что его направление и <em>есть</em> тангаж с рысканием. Замеры гейтуются скоростью и
+углом руля (<code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> в конфиге сервиса существует только чтобы отличить прямую от пологого
+поворота) и взвешиваются собственными поосевыми σ одометрии;</p></li>
+<li><p><strong>точка схода линий разметки</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromUv</span></code>): геометрия, знакомая читателям AAD, — с ограничением
+темпа и гейтом по остатку аппроксимации: на дуге линии не параллельны и их пересечение — не точка
+схода, поэтому изогнутая пара отклоняется.</p></li>
+</ul>
+<p>Слитая оценка публикуется на <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code> с флагом сходимости (<code class="docutils literal notranslate"><span class="pre">history_len</span></code> замеров стоят за
+ответом). Оттуда она расходится всем потребителям вопроса «куда смотрит камера»: варпу в Java, который
+строит <strong>следующий</strong> вход Supercombo, наземной проекции на экране и отладочному топику
+<code class="docutils literal notranslate"><span class="pre">calibration/camera_debug</span></code>, который остаётся в беге.</p>
+<p>Сервис же отказывается от интринсиков, которым не верит: главная точка обязана лежать близко к середине
+кадра, который объявляет само сообщение. Эта проверка появилась из-за потерянного заезда — история в
+конце главы. Сами интринсики теперь по-устройственные (<code class="docutils literal notranslate"><span class="pre">intrinsics_from_device:</span> <span class="pre">true</span></code> спрашивает
+камерное API; прайор в конфиге несёт значения, измеренные для конкретного телефона) — и на Xiaomi 14
+измеренные интринсики и паспорт расходятся на ~4 %, тогда как масштаб камерной одометрии против скорости колёс всё ещё занижен на ~11 % — вопрос открыт, пока доска не закроет объектив (задача #51).</p>
 <div class="warning admonition">
 <p class="admonition-title">Крен наблюдаем слабо</p>
 <p>В живых оценках крен часто остаётся около <span class="math notranslate nohighlight">\(0\)</span>. Большие качания крена считайте подозрительными; не «настраивайте удержание полосы», чтобы скомпенсировать сломанное состояние крена.</p>
@@ -458,6 +483,14 @@
 </section>
 <section id="id3">
 <h2>Чего на самом деле стоит один градус ошибки<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<figure class="align-default" id="id9">
+<a class="reference internal image-reference" href="../_images/error_growth.png"><img alt="../_images/error_growth.png" src="../_images/error_growth.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 33 </span><span class="caption-text">Ошибка рыскания растёт вбок с дальностью; ошибка тангажа двигает кажущуюся точку земли как квадрат
+дальности на высоту камеры — потому градус и важен вдали.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 <p>Экстринсики важнее, чем кажется, по чистой геометрии: угловая ошибка превращается в поперечную, которая
 растёт с расстоянием. Ошибка рыска <span class="math notranslate nohighlight">\(\Delta\psi\)</span> сдвигает точку на дальности <span class="math notranslate nohighlight">\(d\)</span> на <span class="math notranslate nohighlight">\(d\tan\Delta\psi\)</span>, а
 ошибка тангажа <span class="math notranslate nohighlight">\(\Delta\theta\)</span> смещает видимое пересечение с землёй, что для камеры на высоте <span class="math notranslate nohighlight">\(h\)</span> на
@@ -494,14 +527,30 @@
 заездами сравнивает две конфигурации восприятия, а не два контроллера — в эту ловушку проект попадал, прежде
 чем заметил.</p>
 </div>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../_images/calib_convergence.png"><img alt="../_images/calib_convergence.png" src="../_images/calib_convergence.png" style="width: 80%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 34 </span><span class="caption-text">Онлайн-оценка устаканивается за 30–60 с; подразумеваемое ею поперечное смещение на 20 м падает вместе с ней.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
 </section>
 <section id="id4">
-<h2>Сохранять оценку — не та правка, какой кажется<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Онлайн-оценка сходится, а при выключении выбрасывается, поэтому очевидный шаг — сохранить её и использовать
-как prior следующего выезда. По измерениям это почти бесполезно: посадка не повторяема, поэтому prior от
-прошлой посадки не лучше значения по умолчанию. Важно другое — <strong>как быстро оценка сходится</strong>, и тут новости
-хорошие: на беге 08-06 она устоялась за 30–60 с, а поперечное смещение на прямых за первые 30 с составило
-0.02 м.</p>
+<h2>Сохранение оценки: что оно покупает, а чего не может<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>Система <strong>сохраняет</strong> сошедшуюся калибровку: как только сервис рапортует сходимость,
+<code class="docutils literal notranslate"><span class="pre">persistCalibrationIfSettled</span></code> записывает RPY (и позицию камеры) в сохранённый рабочий конфиг — не чаще
+раза в минуту и только когда оценка сдвинулась больше чем на 0.05°. Следующий старт читает её как prior.</p>
+<p>Знайте точно, что это покупает, — это было измерено до того, как построено. Через <strong>переустановку</strong>
+телефона сохранённый prior почти бесполезен: посадка не повторяема, и прошлонедельные углы не лучше
+заводского значения. Настоящая цель сохранения — <strong>перезапуск без переустановки</strong>: рестарт приложения,
+восстановление сторожем, смена батареи в держателе — события частые, раз сторож панды умеет
+эскалировать до полного перезапуска, — телефон не двигался, и сохранённый prior просто верен. Рядом
+едет эксплуатационная оговорка: сохранённый конфиг <strong>затеняет ассет</strong> (открытая задача #50), так что
+свежепоставленный ключ конфига не доходит до установленного телефона, пока сохранённую копию не
+сбросить.</p>
+<p>В любом случае онлайн-оцениватель продолжает работать и продолжает побеждать: на дороге важно, <strong>как
+быстро он сходится из любого доставшегося prior</strong>, и тут новости хорошие — на беге 08-06 оценка
+устоялась за 30–60 с, а поперечное смещение на прямых за первые 30 с составило 0.02 м.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convergence as the online estimator actually behaved, from the bag: a first-order approach to the</span>
 <span class="c1"># true angle. The question a student should ask is not "what is the final value" but "how much distance</span>
 <span class="c1"># do I cover before it is good enough".</span>
@@ -702,7 +751,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prior">Prior (поставляемый конфиг)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Онлайн-калибровка</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Чего на самом деле стоит один градус ошибки</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сохранять оценку — не та правка, какой кажется</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сохранение оценки: что оно покупает, а чего не может</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cte">Причинная цепочка (смещение → CTE)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Практика</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Что беги могут измерить, а что нет</a></li>

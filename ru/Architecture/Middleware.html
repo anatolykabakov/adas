@@ -231,13 +231,22 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Control/Overview.html">Управление — как четыре главы опираются друг на друга</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/BicycleModel.html">Кинематическая велосипедная модель</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
 <ul class="nav bd-sidenav">
@@ -255,6 +264,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
 </ul>
 
@@ -401,18 +411,19 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Мысленная модель</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Два режима</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Как написать крошечный сервис</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Сначала постройте свою: шина в шестьдесят строк</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Мысленная модель</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Два режима</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как написать крошечный сервис</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#configure">Что можно вызывать из <code class="docutils literal notranslate"><span class="pre">configure()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Топики, которые встречаются чаще всего</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Топики, которые встречаются чаще всего</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag">ParamBag (живые ручки)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шина ли виновата? Измерьте, а не предполагайте</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Очереди и потери</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Как это изучать в репозитории</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Шина ли виновата? Измерьте, а не предполагайте</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Очереди и потери</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как это изучать в репозитории</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Задания</a></li>
 </ul>
             </nav>
         </div>
@@ -432,7 +443,146 @@
 <p>Источник истины: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/adas/middleware/manager.hpp</span></code>.
 Тесты, которые читаются как учебник: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/tests/test_middleware.cpp</span></code>.</p>
 <section id="id1">
-<h2>Мысленная модель<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Сначала постройте свою: шина в шестьдесят строк<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<p>Быстрее всего читается та шина, маленькую версию которой вы уже написали. Свойств, которые важны, три,
+и они помещаются на один экран: <strong>топики</strong> отвязывают говорящего от слушающих; <strong>доставка
+детерминирована</strong> — опубликованное во время тика доставляется на следующем, так что прогон
+воспроизводим; и <strong>очередь наблюдаема</strong>, потому что очередь, которую не видно, — то место, где системы
+умирают:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Bus</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Topics, deferred delivery, a visible queue. The real one adds threads and timers."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_backlog</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">publish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topic</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">topic</span><span class="p">,</span> <span class="n">msg</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Deliver everything queued so far; what handlers publish waits for the next step."""</span>
+        <span class="n">batch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">,</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_backlog</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_backlog</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">topic</span><span class="p">,</span> <span class="p">[]):</span>
+                <span class="n">fn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Сервис владеет состоянием, подписывается, публикует — никто никого не вызывает. Здесь на шину переезжают
+игрушечный планировщик (слияние линий обратной дисперсией) и игрушечный контроллер (pure pursuit в
+связанной системе):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">L</span><span class="p">,</span> <span class="n">HALF</span> <span class="o">=</span> <span class="mf">2.636</span><span class="p">,</span> <span class="mf">1.75</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">PlannerService</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""lanes -&gt; path: the step-3 fusion, one message at a time."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bus</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus</span> <span class="o">=</span> <span class="n">bus</span>
+        <span class="n">bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_lanes</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_lanes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+        <span class="n">w_l</span><span class="p">,</span> <span class="n">w_r</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">m</span><span class="p">[</span><span class="s2">"sig_l"</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">m</span><span class="p">[</span><span class="s2">"sig_r"</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">centre</span> <span class="o">=</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">*</span> <span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"y_l"</span><span class="p">]</span> <span class="o">-</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"y_r"</span><span class="p">]</span> <span class="o">+</span> <span class="n">HALF</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">+</span> <span class="n">w_r</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vision/path"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"x"</span><span class="p">:</span> <span class="n">m</span><span class="p">[</span><span class="s2">"x"</span><span class="p">],</span> <span class="s2">"y"</span><span class="p">:</span> <span class="n">centre</span><span class="p">})</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ControlService</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""path + chassis -&gt; steer: the step-2 pursuit, ego frame."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bus</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="mf">8.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ld</span> <span class="o">=</span> <span class="n">bus</span><span class="p">,</span> <span class="n">ld</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"vision/path"</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"path"</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span>
+        <span class="n">bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"vehicle/state"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_chassis</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_chassis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="s2">"x"</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="s2">"y"</span><span class="p">]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ld</span><span class="p">))</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">ld</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"controls/steer"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"delta"</span><span class="p">:</span> <span class="n">delta</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Приёмка архитектурного шага — <em>равенство</em>: сервисы на шине обязаны воспроизвести прямые вызовы бит в
+бит:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">x_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+<span class="n">sig</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">x_grid</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">one_frame</span><span class="p">():</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="mf">0.004</span> <span class="o">*</span> <span class="n">x_grid</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"x"</span><span class="p">:</span> <span class="n">x_grid</span><span class="p">,</span> <span class="s2">"y_l"</span><span class="p">:</span> <span class="n">c</span> <span class="o">+</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">),</span> <span class="s2">"sig_l"</span><span class="p">:</span> <span class="n">sig</span><span class="p">,</span>
+            <span class="s2">"y_r"</span><span class="p">:</span> <span class="n">c</span> <span class="o">-</span> <span class="n">HALF</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sig</span><span class="p">),</span> <span class="s2">"sig_r"</span><span class="p">:</span> <span class="n">sig</span><span class="p">}</span>
+
+<span class="n">bus</span> <span class="o">=</span> <span class="n">Bus</span><span class="p">()</span>
+<span class="n">PlannerService</span><span class="p">(</span><span class="n">bus</span><span class="p">)</span>
+<span class="n">ControlService</span><span class="p">(</span><span class="n">bus</span><span class="p">)</span>
+<span class="n">got</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">bus</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"controls/steer"</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">got</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s2">"delta"</span><span class="p">]))</span>
+
+<span class="n">frames</span> <span class="o">=</span> <span class="p">[</span><span class="n">one_frame</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">50</span><span class="p">)]</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">:</span>
+    <span class="n">bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+    <span class="n">bus</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>                            <span class="c1"># deliver lanes -&gt; planner publishes path</span>
+    <span class="n">bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vehicle/state"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"v"</span><span class="p">:</span> <span class="mf">10.0</span><span class="p">})</span>
+    <span class="n">bus</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>                            <span class="c1"># deliver path and the chassis tick</span>
+    <span class="n">bus</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>                            <span class="c1"># deliver steer</span>
+<span class="c1"># Publish the chassis before the path has been delivered and every steer command quietly</span>
+<span class="c1"># computes on the PREVIOUS frame's path — off by one frame, no error raised. On the phone the</span>
+<span class="c1"># two arrive on independent threads, which is why every plan carries capture_ts and Control</span>
+<span class="c1"># gates on its age instead of trusting arrival order.</span>
+
+<span class="c1"># the same math, called directly</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">direct</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">ld</span><span class="o">=</span><span class="mf">8.0</span><span class="p">):</span>
+    <span class="n">w_l</span><span class="p">,</span> <span class="n">w_r</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">f</span><span class="p">[</span><span class="s2">"sig_l"</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">f</span><span class="p">[</span><span class="s2">"sig_r"</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">centre</span> <span class="o">=</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">*</span> <span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">"y_l"</span><span class="p">]</span> <span class="o">-</span> <span class="n">HALF</span><span class="p">)</span> <span class="o">+</span> <span class="n">w_r</span> <span class="o">*</span> <span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">"y_r"</span><span class="p">]</span> <span class="o">+</span> <span class="n">HALF</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">w_l</span> <span class="o">+</span> <span class="n">w_r</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">f</span><span class="p">[</span><span class="s2">"x"</span><span class="p">],</span> <span class="n">centre</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">ld</span><span class="p">))</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">centre</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">f</span><span class="p">[</span><span class="s2">"x"</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">L</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span> <span class="n">ld</span><span class="p">)</span>
+
+<span class="n">ref</span> <span class="o">=</span> <span class="p">[</span><span class="n">direct</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">]</span>
+<span class="n">worst</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">got</span><span class="p">,</span> <span class="n">ref</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">got</span><span class="p">)</span><span class="si">}</span><span class="s2"> commands, worst |bus - direct| = </span><span class="si">{</span><span class="n">worst</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2"> rad, "</span>
+      <span class="sa">f</span><span class="s2">"max backlog </span><span class="si">{</span><span class="n">bus</span><span class="o">.</span><span class="n">max_backlog</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">got</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span> <span class="ow">and</span> <span class="n">worst</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"acceptance: the bus must change nothing"</span>
+</pre></div>
+</div>
+<p>Теперь посмотрите, как это умирает по-настоящему. Мост ZMQ на телефоне когда-то вычерпывал <strong>одно
+сообщение за 10-мс тик</strong> — потолок 100 сообщений/с. Третий топик на 28 Гц вытолкнул вход за потолок,
+очередь росла, план старел, и гейт свежести молча снимал поперечное управление через минуту каждого
+заезда. Воспроизведите:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bus2</span> <span class="o">=</span> <span class="n">Bus</span><span class="p">()</span>
+<span class="n">delivered</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"n"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+<span class="n">bus2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">delivered</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="s2">"n"</span><span class="p">,</span> <span class="n">delivered</span><span class="p">[</span><span class="s2">"n"</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="n">backlog</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">200</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>                      <span class="c1"># 3 messages arrive per tick...</span>
+        <span class="n">bus2</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="n">tick</span><span class="p">)</span>
+    <span class="n">batch</span><span class="p">,</span> <span class="n">bus2</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="n">bus2</span><span class="o">.</span><span class="n">queue</span><span class="p">[:</span><span class="mi">1</span><span class="p">],</span> <span class="n">bus2</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>   <span class="c1"># ...but we deliver only 1</span>
+    <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">bus2</span><span class="o">.</span><span class="n">subs</span><span class="p">[</span><span class="n">topic</span><span class="p">]:</span>
+            <span class="n">fn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">backlog</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bus2</span><span class="o">.</span><span class="n">queue</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"inflow 3/tick, drain 1/tick: backlog after 200 ticks = </span><span class="si">{</span><span class="n">backlog</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"age of the message being delivered now ≈ </span><span class="si">{</span><span class="n">backlog</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">3</span><span class="si">}</span><span class="s2"> ticks"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">backlog</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">400</span><span class="p">,</span> <span class="s2">"a fixed drain below inflow does not lag — it diverges"</span>
+</pre></div>
+</div>
+<p>Очередь не стабилизируется на каком-то отставании — она <strong>расходится линейно</strong>, и возраст того, на что
+вы реагируете, расходится с ней. Лекарство (вычерпывать досуха, с разумной границей) — здесь одна
+строка, на телефоне — одна константа, <code class="docutils literal notranslate"><span class="pre">kMaxPerTick</span> <span class="pre">=</span> <span class="pre">32</span></code>. Всё ниже — эта игрушка, повзрослевшая:
+потоки, таймеры, параметры и <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> — ваш <code class="docutils literal notranslate"><span class="pre">max_backlog</span></code> в мундире.</p>
+</section>
+<section id="id2">
+<h2>Мысленная модель<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌──────────── Service A ────────────┐     ┌──────────── Service B ────────────┐
 │ worker thread                     │     │ worker thread                     │
 │  • subscribe callbacks            │     │  • subscribe callbacks            │
@@ -454,8 +604,8 @@
 <p>Java, реплей бега и MetaDrive нуждаются в одних и тех же алгоритмах. Шина плюс <code class="docutils literal notranslate"><span class="pre">Mode::Simulated</span></code> позволяют Python и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять <strong>тот же</strong> C++ без Camera2.</p>
 </div>
 </section>
-<section id="id2">
-<h2>Два режима<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id3">
+<h2>Два режима<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>режим</p></th>
@@ -487,8 +637,8 @@
 </pre></div>
 </div>
 </section>
-<section id="id3">
-<h2>Как написать крошечный сервис<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id4">
+<h2>Как написать крошечный сервис<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p>Настоящие имена API (упрощённое эхо):</p>
 <div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">"adas/middleware/manager.hpp"</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">"adas/utils/adas_topics.h"</span>
@@ -558,8 +708,8 @@
 </div>
 </section>
 </section>
-<section id="id4">
-<h2>Топики, которые встречаются чаще всего<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id5">
+<h2>Топики, которые встречаются чаще всего<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Объявлены в <code class="docutils literal notranslate"><span class="pre">utils/adas_topics.h</span></code>:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -626,8 +776,8 @@
 <p>Поддерживаемые типы: <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code>, <code class="docutils literal notranslate"><span class="pre">string</span></code>.
 Android NDK требует, чтобы разбирающие вспомогательные функции были свободными (см. <code class="docutils literal notranslate"><span class="pre">detail::parseParamText</span></code> в заголовке) — статический шаблон класса не слинковался.</p>
 </section>
-<section id="id5">
-<h2>Шина ли виновата? Измерьте, а не предполагайте<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id6">
+<h2>Шина ли виновата? Измерьте, а не предполагайте<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <p>Шина сообщений — естественный подозреваемый, когда конвейер медленный, и подозревать дёшево. Эту измерили, и
 ответ определяет, как читать любое другое число задержки в книге.</p>
 <p><strong>Публикация будит подписчика немедленно.</strong> <code class="docutils literal notranslate"><span class="pre">publish</span></code> копирует в очередь каждого подписчика и вызывает
@@ -675,8 +825,8 @@ Android NDK требует, чтобы разбирающие вспомогат
 до тракта камера → модель или до внешних границ, а <code class="docutils literal notranslate"><span class="pre">manager.hpp</span></code> можно не читать.</p>
 </div>
 </section>
-<section id="id6">
-<h2>Очереди и потери<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id7">
+<h2>Очереди и потери<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <p>Ёмкость очереди подписчика по умолчанию конечна (около 100). Если медленный сервис не вычитывает:</p>
 <ul class="simple">
 <li><p>при переполнении отбрасываются <strong>старые</strong> сообщения (<code class="docutils literal notranslate"><span class="pre">pop_front</span></code>), в очереди остаются последние ~100;</p></li>
@@ -694,8 +844,8 @@ Android NDK требует, чтобы разбирающие вспомогат
 держит ровно <strong>один</strong> слот и перезаписывает ожидающий кадр. Контроллеру запас несвежих кадров бесполезен,
 поэтому зрение агрессивнее; шина мягче, потому что один и тот же топик могут слушать и контур, и запись.</p>
 </section>
-<section id="id7">
-<h2>Как это изучать в репозитории<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id8">
+<h2>Как это изучать в репозитории<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Пробежать <code class="docutils literal notranslate"><span class="pre">tests/test_middleware.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">PubService</span></code>, <code class="docutils literal notranslate"><span class="pre">SubService</span></code>, <code class="docutils literal notranslate"><span class="pre">TimerService</span></code>).</p></li>
 <li><p>Открыть <code class="docutils literal notranslate"><span class="pre">src/services/planner.cpp</span></code> → <code class="docutils literal notranslate"><span class="pre">configure()</span></code>: параметры и подписки.</p></li>
@@ -703,8 +853,8 @@ Android NDK требует, чтобы разбирающие вспомогат
 <li><p>Прогнать тесты на хосте: <code class="docutils literal notranslate"><span class="pre">./scripts/docker.sh</span> <span class="pre">tests</span></code> (или <code class="docutils literal notranslate"><span class="pre">build_cpp.sh</span> <span class="pre">-t</span> <span class="pre">linux</span> <span class="pre">--test</span></code>).</p></li>
 </ol>
 </section>
-<section id="id8">
-<h2>Задания<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id9">
+<h2>Задания<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Нарисуйте путь одного <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> от <code class="docutils literal notranslate"><span class="pre">Platform</span></code> (или бега) до <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p></li>
 <li><p>Добавьте гипотетический параметр <code class="docutils literal notranslate"><span class="pre">echo.gain</span></code> — какой поток его пишет, какой читает?</p></li>
@@ -782,18 +932,19 @@ Android NDK требует, чтобы разбирающие вспомогат
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Мысленная модель</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Два режима</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Как написать крошечный сервис</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Сначала постройте свою: шина в шестьдесят строк</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Мысленная модель</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Два режима</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Как написать крошечный сервис</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#configure">Что можно вызывать из <code class="docutils literal notranslate"><span class="pre">configure()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Топики, которые встречаются чаще всего</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Топики, которые встречаются чаще всего</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#parambag">ParamBag (живые ручки)</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Шина ли виновата? Измерьте, а не предполагайте</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Очереди и потери</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Как это изучать в репозитории</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Задания</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Шина ли виновата? Измерьте, а не предполагайте</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Очереди и потери</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Как это изучать в репозитории</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Задания</a></li>
 </ul>
   </nav></div>
 
