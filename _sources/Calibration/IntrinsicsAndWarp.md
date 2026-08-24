@@ -355,7 +355,6 @@ downstream escapes it.
 ```json
 "calibration": {
   "camera": {
-    "chessboard_capture": false,
     "position_m": { "x_forward": 1.5, "y_left": 0.0, "z_up": 1.1 },
     "rpy_deg":    { "roll": 0.0, "pitch": -1.8, "yaw": 0.5 },
     "intrinsics_from_device": true,
