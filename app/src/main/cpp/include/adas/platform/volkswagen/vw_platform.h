@@ -6,6 +6,7 @@
 
 #include "adas/platform/car_platform.h"
 #include "adas/platform/volkswagen/car_iface.h"
+#include "adas/platform/volkswagen/mqb_variants.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
 namespace adas {
@@ -18,10 +19,12 @@ public:
    * \param[in] dbc_path DBC to parse for decoding.
    * \param[in] speed_filter Wheel-speed filter settings.
    * \param[in] long_control_enabled Send ACC frames and ask the panda for its longitudinal flag.
+   * \param[in] variant Which MQB car: geometry and mass differ, the bus does not.
    */
-  VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter, bool long_control_enabled);
+  VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter, bool long_control_enabled,
+                const ::volkswagen::MqbVariant& variant);
 
-  const char* name() const override { return "vw_golf_7_mqb"; }
+  const char* name() const override { return variant_.name; }
   const char* dbcAssetName() const override { return "vw_mqb_2010.dbc"; }
   void init() override;
   VehicleDefaults defaults() const override;
@@ -49,6 +52,7 @@ public:
 private:
   ::volkswagen::CarIface ci_;
   ::volkswagen::PandaSafetySupervisor safety_;
+  const ::volkswagen::MqbVariant& variant_;
   bool long_control_enabled_ = false;
 
   int log_torque_cnm_ = 0;

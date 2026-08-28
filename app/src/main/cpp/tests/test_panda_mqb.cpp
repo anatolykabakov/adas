@@ -425,3 +425,16 @@ TEST(MqbAccFrames, TheSafetyParamFollowsTheSwitch)
   EXPECT_FLOAT_EQ(-3.5f, with_long->longLimits().accelMinMs2);
   EXPECT_FALSE(with_long->longitudinalActuationAllowed()) << "no panda report yet: nothing may go out";
 }
+
+TEST(CarPlatformFactory, EveryMqbVariantCarriesItsOwnGeometry)
+{
+  auto golf = adas::platform::makeCarPlatform("vw_golf_7_mqb", {});
+  auto passat = adas::platform::makeCarPlatform("vw_passat_b8_mqb", {});
+  ASSERT_TRUE(golf && passat);
+  EXPECT_STREQ("vw_passat_b8_mqb", passat->name());
+  EXPECT_STREQ("vw_mqb_2010.dbc", passat->dbcAssetName()) << "one CAN layout for the whole platform";
+  EXPECT_NEAR(2.636, golf->defaults().wheelbase_m, 1e-9);
+  EXPECT_NEAR(2.79, passat->defaults().wheelbase_m, 1e-9);
+  EXPECT_GT(passat->defaults().mass_kg, golf->defaults().mass_kg);
+  EXPECT_FALSE(adas::platform::makeCarPlatform("vw_golf_8", {})) << "a Golf 8 is not MQB; guessing it would guess the bus";
+}

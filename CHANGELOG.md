@@ -13,6 +13,13 @@
 
 ### Продольное управление стандартным путём: планировщик → ускорение → ACC-кадры
 
+- **выбор машины**: в панели параметров название модели рисовалось чёрным по чёрному — свои макеты
+  строк спиннера с белым текстом; список расширен всей платформой MQB (Golf 7, Jetta 7, Passat B8, Arteon,
+  Tiguan 2, Touran 2, T-Roc, Polo 6, Atlas, Skoda Octavia 3/Superb 3/Kodiaq/Karoq, SEAT Leon 3/Ateca, Audi
+  A3 8V/Q2) — одна CAN-раскладка и один конверт панды, своя геометрия и масса
+  (`platform/volkswagen/mqb_variants.h`, числа платформы как в `values.py` openpilot, у Golf — наши
+  измеренные); `vehicle.name` любой из них, неизвестное имя по-прежнему отказ, не догадка;
+
 - **кнопочный путь круиза удалён целиком** (`cruiseIntent`, `CruiseRequest`, `GRA_ACC_01`-нажатия,
   ключи `cruise_buttons`/`cruise_deadband_ms`/`cruise_tip_*`). Скорость теперь идёт тем же путём, что
   и руль: Planner даёт план, Control — ускорение, Platform — кадры;

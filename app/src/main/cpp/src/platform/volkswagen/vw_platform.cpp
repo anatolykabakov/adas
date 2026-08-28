@@ -16,8 +16,8 @@ using C = ::volkswagen::MqbSafetyConstants;
 }  // namespace
 
 VolkswagenMqb::VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter,
-                             bool long_control_enabled)
-  : ci_({std::move(dbc_path), speed_filter}), long_control_enabled_(long_control_enabled)
+                             bool long_control_enabled, const ::volkswagen::MqbVariant& variant)
+  : ci_({std::move(dbc_path), speed_filter}), variant_(variant), long_control_enabled_(long_control_enabled)
 {
   ci_.setLongControlEnabled(long_control_enabled_);
 }
@@ -26,12 +26,12 @@ void VolkswagenMqb::init() { ci_.init(); }
 
 VehicleDefaults VolkswagenMqb::defaults() const
 {
-  // Golf 7 Highline, measured on our own car and refined from bags; the stiffness factor is where the
-  // learner starts, not where it stays.
+  // Geometry and mass per variant (mqb_variants.h): the Golf's measured on our own car and fitted from
+  // bags, the others as published. The stiffness factor is where the learner starts, not where it stays.
   VehicleDefaults v;
-  v.wheelbase_m = 2.636;
-  v.steer_ratio = 15.6;  // Fitted from bags; the factory figure is 15.7.
-  v.mass_kg = 1533.0;
+  v.wheelbase_m = variant_.wheelbase_m;
+  v.steer_ratio = variant_.steer_ratio;
+  v.mass_kg = variant_.mass_kg;
   v.center_to_front_frac = 0.45;
   v.steer_sign = -1.0;
   v.tire_stiffness_factor = 1.0;

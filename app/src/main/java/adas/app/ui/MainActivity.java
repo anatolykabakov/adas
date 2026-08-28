@@ -324,9 +324,10 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < AdasConfig.CARS.length; i++) {
             carLabels[i] = AdasConfig.CARS[i][1];
         }
+        // Own item layouts: the stock ones draw black text, invisible on the dark panel.
         android.widget.ArrayAdapter<String> carAdapter = new android.widget.ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, carLabels);
-        carAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                this, R.layout.spinner_item_light, carLabels);
+        carAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item_light);
         carSpinner.setAdapter(carAdapter);
         carSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
