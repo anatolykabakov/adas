@@ -15,7 +15,8 @@ The ADAS app:
    implementation rather than the architecture;
 5. writes a full **bag** for offline analysis.
 
-This is a research / teaching lane-keep stack — not a full ACC / "autopilot" product.
+This is a research / teaching stack, not an "autopilot" product: the lateral loop has road time, the
+longitudinal one (planner → acceleration → the car's ACC frames) has been proven in the simulator only.
 
 ```{figure} figures/pipeline_simple.png
 ---

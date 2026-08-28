@@ -17,11 +17,9 @@ public:
   /**
    * \param[in] dbc_path DBC to parse for decoding.
    * \param[in] speed_filter Wheel-speed filter settings.
-   * \param[in] cruise_buttons_enabled Whether the longitudinal axis is driven through the stock buttons.
-   * \param[in] cruise_tip_cooldown_ms Minimum gap between button presses [ms].
+   * \param[in] long_control_enabled Send ACC frames and ask the panda for its longitudinal flag.
    */
-  VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter, bool cruise_buttons_enabled,
-                int cruise_tip_cooldown_ms);
+  VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter, bool long_control_enabled);
 
   const char* name() const override { return "vw_golf_7_mqb"; }
   const char* dbcAssetName() const override { return "vw_mqb_2010.dbc"; }
@@ -34,8 +32,9 @@ public:
   CarStateView stateView() const override;
 
   std::vector<can_frame> apply(const CarControl& cc) override;
-  void setCruiseIntent(int intent, int64_t now_ms) override;
   SteerLimits steerLimits() const override;
+  LongLimits longLimits() const override;
+  bool longitudinalActuationAllowed() const override { return ci_.longActuationAllowed(safety_.lastControlsAllowed()); }
 
   void configureSafety() override;
   void resetPandaState() override { safety_.resetBoardState(); }
@@ -48,20 +47,9 @@ public:
   void setLastCommand(int torque_cnm, bool lat_active) override;
 
 private:
-  /// GRA counter handshake: hold the button until the stock counter advances, then pause.
-  ::volkswagen::CruiseButtonCmd cruiseButtons(const ::volkswagen::CarStateView& cs, int64_t now_ms);
-
   ::volkswagen::CarIface ci_;
   ::volkswagen::PandaSafetySupervisor safety_;
-
-  bool cruise_buttons_enabled_ = false;
-  int cruise_tip_cooldown_ms_ = 200;
-  int cruise_intent_ = 0;
-  int64_t cruise_intent_at_ms_ = 0;
-  int64_t cruise_cooldown_until_ms_ = 0;
-  bool cruise_hold_tip_up_ = false;
-  bool cruise_hold_tip_down_ = false;
-  uint8_t cruise_gra_cnt_at_arm_ = 0xFF;
+  bool long_control_enabled_ = false;
 
   int log_torque_cnm_ = 0;
   bool log_lat_active_ = false;

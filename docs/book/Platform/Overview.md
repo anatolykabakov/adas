@@ -17,7 +17,7 @@ groups of methods, and reading its shape tells you the whole contract:
 
 ```text
 read the bus     isAllowedRxAddress · update(frames) · carState · stateView
-write the bus    apply(CarControl) → frames · setCruiseIntent · steerLimits
+write the bus    apply(CarControl) → frames · steerLimits · longLimits
 what's allowed   configureSafety · safetyTick · ignition · safetyModelOk · lateralActuationAllowed
 lifecycle        init · dbcAssetName · defaults · resetPandaState
 ```
@@ -126,10 +126,10 @@ print("checksum changed because the counter sits in the CRC payload — not beca
 print("which is constant for HCA_01. A wrong or wrongly-varying secret (GRA_ACC_01) drops every frame.")
 ```
 
-`LDW_02` (the dashboard lane HUD) and `GRA_ACC_01` (cruise buttons, its own secret) are built the same
-way. The cruise-button frame carries a wrinkle worth knowing: a press is **held until the stock
-counter moves**, because that is how this bus acknowledges a button — release too early and the press
-is never seen, too late and it repeats.
+`LDW_02` (the dashboard lane HUD) and the three ACC frames — `ACC_06`, `ACC_07`, `ACC_02` — are built
+the same way; the two acceleration frames are the MQB messages whose secret genuinely changes with the
+counter, so a table of sixteen bytes replaces the constant. They go out only when `vehicle.long_control`
+is on, together with the panda's longitudinal flag — see [Longitudinal planner](../Planner/Longitudinal.md).
 
 ```{figure} figures/hca01_bits.png
 ---
@@ -154,8 +154,8 @@ below encode — the platform *builds* frames every tick, the supervisor decides
 
 This is also what makes the panda survivable across a phone sleep. When a re-opened USB descriptor is
 seated into the running native layer, `resetPandaState()` forgets **board** state — safety model and
-alt-exp live on the board and must be re-asserted — while keeping decoded **car** state and the cruise
-latch. Two failed reseats in a row escalate to a full restart; a single one is invisible to the
+alt-exp live on the board and must be re-asserted — while keeping decoded **car** state and the set
+speed. Two failed reseats in a row escalate to a full restart; a single one is invisible to the
 controllers.
 
 ## Rates, and where it all runs
@@ -170,8 +170,8 @@ this chapter is called from those three callbacks and nowhere else — which is 
 
 * the DBC miniature loads the good signals and counts the bad line instead of failing;
 * the HCA builder produces a different checksum at two counters — and you can state *why*: the counter is
-  part of the CRC payload, while the secret itself is constant for `HCA_01` and varies only for
-  `GRA_ACC_01`;
+  part of the CRC payload, while the secret itself is constant for `HCA_01` and varies by counter for
+  `GRA_ACC_01`, `ACC_06` and `ACC_07`;
 * one sentence each: why `stateView()` is brand-neutral, and why `resetPandaState()` forgets board
   state but keeps car state.
 

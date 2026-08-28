@@ -99,15 +99,28 @@ std::vector<can_frame> CarController::update(const CarControl& CC, const CarStat
         create_lka_hud_control(CanBus::pt, CS.ldwStock, CC.latActive, CS.steeringPressed, hud_alert, hud));
   }
 
-  if (CC.cruise.send && CS.graStock.valid) {
-    const uint8_t cnt = CS.graStock.counter();
-    if (cnt != gra_acc_counter_last_) {
-      const int bus = CanBus::pt;
-      can_sends.push_back(create_acc_buttons_control(bus, CS.graStock, CC.cruise));
-    }
-    gra_acc_counter_last_ = cnt;
-  } else if (CS.graStock.valid) {
-    gra_acc_counter_last_ = CS.graStock.counter();
+  if (long_control_enabled_ && frame_ % P::ACC_CONTROL_STEP == 0) {
+    // Same shape as the torque path: the gate decides whether a request goes out at all, the frame
+    // carries either the request or the bus's own "nothing asked" value — never a stale number.
+    AccControl acc;
+    acc.enabled = CC.longActive && CC.actuators.accelMs2.has_value();
+    acc.accel_ms2 = acc.enabled ? std::clamp(*CC.actuators.accelMs2, P::ACCEL_MIN, P::ACCEL_MAX) : 0.f;
+    acc.acc_type = CS.accType;
+    acc.acc_status = accControlValue(CS.cruiseAvailable, accFaultedFromTsk(CS.tskStatus), acc.enabled);
+    acc.stopping = acc.enabled && CC.longState == LongCtrlState::Stopping;
+    acc.starting = acc.enabled && CC.longState == LongCtrlState::Starting;
+    acc.esp_hold = CS.espHold;
+    apply_accel_last_ = acc.enabled ? acc.accel_ms2 : P::ACCEL_INACTIVE;
+    can_sends.push_back(create_acc_06(CanBus::pt, acc, &acc06_counter_));
+    can_sends.push_back(create_acc_07(CanBus::pt, acc, &acc07_counter_));
+  }
+
+  if (long_control_enabled_ && frame_ % P::ACC_HUD_STEP == 0) {
+    AccHud hud;
+    hud.acc_status = accControlValue(CS.cruiseAvailable, accFaultedFromTsk(CS.tskStatus), CC.longActive);
+    hud.set_speed_kph = CC.setSpeedMps > 0.f ? CC.setSpeedMps * 3.6f : 327.36f;
+    hud.lead_distance = CC.leadVisible ? 8 : 0;
+    can_sends.push_back(create_acc_02(CanBus::pt, hud, &acc02_counter_));
   }
 
   frame_ += 1;

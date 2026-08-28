@@ -7,7 +7,8 @@
 
 Phone-based ADAS for VW Golf 7 (MQB): camera → supercombo 0.9.7 on the phone GPU → lateral MPC (LKA)
 and longitudinal/safety functions (ACC, FCW, AEB, LDW) → HCA / related CAN through a panda. Plus bag
-recording, offline analysis tools, and a MetaDrive sim. No comma hardware beyond the panda.
+recording, offline analysis tools, and a MetaDrive sim with lead scenarios for the longitudinal path. No
+comma hardware beyond the panda.
 
 **All algorithms are in C++** (services inside `AdasApp`). Java handles the camera, inference, UI and
 logging; Python is offline only: bag visualizer, simulator, analysis (`publish → step →

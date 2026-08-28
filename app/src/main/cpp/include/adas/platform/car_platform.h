@@ -56,15 +56,14 @@ public:
   /// Frames to send this tick. Rate limits, counters and checksums are the brand's business.
   virtual std::vector<can_frame> apply(const CarControl& cc) = 0;
 
-  /**
-   * \brief Stock-cruise intent, for cars driven through the buttons.
-   * \param[in] intent 0 none, 1 setpoint up, 2 setpoint down.
-   * \param[in] now_ms Now [ms].
-   */
-  virtual void setCruiseIntent(int intent, int64_t now_ms) = 0;
-
   /// Steering envelope the panda enforces, so the controller clamps first.
   virtual SteerLimits steerLimits() const = 0;
+  /// Acceleration envelope, same idea. `supported == false` for a car without an ACC actuator.
+  virtual LongLimits longLimits() const = 0;
+  /// Whether an acceleration request would reach the bus now: the panda's controls_allowed plus whatever
+  /// the brand needs (a main switch, no brake). The lateral gate is separate on purpose — ALKA steers
+  /// with controls_allowed false, an acceleration never may.
+  virtual bool longitudinalActuationAllowed() const = 0;
 
   // --- What the panda will allow -------------------------------------------
 
@@ -108,8 +107,9 @@ public:
 struct CarPlatformOptions {
   std::string dbc_path;                      ///< DBC to parse, when the brand decodes through one.
   adas::SpeedFilter::Config speed_filter{};  ///< Wheel-speed filter settings.
-  bool cruise_buttons_enabled = false;       ///< Drive the longitudinal axis through the stock buttons.
-  int cruise_tip_cooldown_ms = 200;          ///< Minimum gap between button presses [ms].
+  /// Send acceleration frames and ask the panda for its longitudinal safety flag. Off keeps the stock
+  /// ACC in charge of speed and this stack lateral-only.
+  bool long_control_enabled = false;
 };
 
 /**

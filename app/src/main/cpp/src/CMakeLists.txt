@@ -57,6 +57,9 @@ add_library(
   utils/adas_config.cpp
   utils/lane_path.cpp
   utils/proto_convert.cpp
+  longitudinal/long_mpc.cpp
+  longitudinal/long_planner.cpp
+  longitudinal/long_control.cpp
 )
 target_link_libraries(
   adas_app_common

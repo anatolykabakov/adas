@@ -34,6 +34,19 @@ message SteerCommand {
   // Намерение, а не кадры: борт сам решит, как это уложить в шину и когда машина готова слушать.
   bool hud_left_lane_visible = 19;
   bool hud_right_lane_visible = 20;
-  // 0 — ничего не нажимать, 1 — быстрее, 2 — медленнее.
-  int32 cruise_intent = 21;
+  // 21 was the cruise-button intent; the longitudinal axis now goes the standard way, below.
+  reserved 21;
+
+  // Продольная команда — тем же путём, что поперечная: планер даёт план, закон управления даёт
+  // ускорение, платформа кладёт его в свои кадры. Никаких кнопок.
+  bool long_active = 22;
+  // Requested acceleration [m/s²], already inside the platform envelope (VW: −3.5 … 2.0).
+  double accel_ms2 = 23;
+  // 0 off, 1 pid, 2 stopping, 3 starting — upstream's LongCtrlState.
+  int32 long_state = 24;
+  // The plan's speed for this tick [m/s] and the set speed [m/s], for the HUD and the bag.
+  double v_target_mps = 25;
+  double v_cruise_mps = 26;
+  // Why the longitudinal command is off: ok | no_plan | stale | no_controls | gas | brake | no_cruise.
+  string long_status = 27;
 }

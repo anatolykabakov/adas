@@ -153,7 +153,7 @@ two.
   road) — and the interface is identical whichever runs. Publishes `control/lat_plan`, `control/long_plan`,
   `control/lane_keep`.
 * **`Control`** (`services/control.cpp`) is the control law and nothing else: curvature plus the chassis
-  become a torque command, engagement, HUD pictograms, and the wish to press a cruise button. It knows no
+  become a torque command and an acceleration request, engagement, HUD pictograms. It knows no
   CAN address, no signal, no frame counter. Publishes `controls/steer`.
 * **`Platform`** (`services/platform.cpp`) carries that intent onto the bus, and it names no brand — which
   car is behind the CAN is decided once, by `vehicle.name`, and reached through `platform::CarPlatform`.

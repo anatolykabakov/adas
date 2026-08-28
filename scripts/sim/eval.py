@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import dataclasses
 import json
 import math
 import sys
@@ -40,6 +41,7 @@ import _path  # noqa: F401
 from core.frames import METADRIVE_STEER_FROM_DEVICE
 from core.lane_keep import LaneKeepController, load_vehicle_config
 from core.path_fusion import iso_left_polyline_to_device
+from sim.longitudinal import SCENARIOS, LongSample, ScriptedLead, long_metrics, print_long_report
 from sim.track import LANE_WIDTH_M, TRACKS, env_config, resolve
 
 # MetaDrive maps action[0] to road-wheel angle: steering_deg = action * max_steering.
@@ -87,6 +89,9 @@ class RunResult:
     fcw_episodes: int = 0
     latency_ms: float = 0.0
     noise_m: float = 0.0
+    scenario: str = "none"
+    long_samples: List[LongSample] = field(default_factory=list)
+    long_metrics: Optional[Dict[str, Any]] = None
 
 
 def _segment_class(lane: Any) -> tuple[str, float]:
@@ -207,6 +212,8 @@ def run_once(
     noise_m: float = 0.15,
     jump_rate_hz: float = 0.0,
     jump_m: float = 1.6,
+    scenario: str = "none",
+    long_control: bool = False,
 ) -> RunResult:
     from metadrive.envs.metadrive_env import MetaDriveEnv
 
@@ -214,6 +221,14 @@ def run_once(
     target_speed = float(speed_mps if speed_mps is not None else track.speed_mps)
 
     cfg = env_config(track, seed)
+    if scenario != "none" and abs(offset_m) <= 1e-6:
+        # Longitudinal scenarios start at the set speed: the interesting part is the encounter with the
+        # lead, not the run-up from rest.
+        cfg["vehicle_config"] = {
+            **cfg.get("vehicle_config", {}),
+            "spawn_velocity": [float(target_speed), 0.0],
+            "spawn_velocity_car_frame": True,
+        }
     if abs(offset_m) > 1e-6:
         # spawn_lateral is right-positive like lane.local_coordinates.
         # At speed, too: by the time a standing start reaches LDW speed the controller has
@@ -249,7 +264,12 @@ def run_once(
         desired_speed=target_speed,
         dt_s=dt_s,
         vehicle_config=veh_cfg,
+        long_control=long_control,
     )
+    lead = None
+    lead_scn = SCENARIOS.get(scenario)
+    if lead_scn is not None:
+        lead = ScriptedLead(env, net, lead_scn, _next_lane)
 
     perception = Perception(latency_ms, noise_m, dt_s, seed, jump_rate_hz, jump_m)
     result = RunResult(
@@ -257,6 +277,8 @@ def run_once(
     )
     result.latency_ms = float(latency_ms)
     result.noise_m = float(noise_m)
+    result.scenario = scenario
+    crashed = False
     ldw_prev = [False]
     fcw_prev = [False]
     agent = env.agent
@@ -276,6 +298,16 @@ def run_once(
             poly_iso = centerline_ahead(agent, net)
             poly = iso_left_polyline_to_device(poly_iso) if poly_iso.size else None
             poly = perception.see(poly)
+            rel = None
+            if lead is not None:
+                lead.step(dt_s)
+                rel = lead.relative(agent)
+                ctrl.set_lead(rel)
+                if rel["gap_m"] <= 0.0:
+                    crashed = True
+                if lead.at_end:
+                    result.end_reason = "track_end"
+                    break
             # GT centreline *is* both lane lines, so the departure warning is armed here.
             lk = ctrl.compute_from_polyline(
                 speed,
@@ -285,12 +317,28 @@ def run_once(
             )
 
             steer_deg = float(np.rad2deg(lk.steer_rad))
+            # MetaDrive's action is [steer, throttle−brake]: one signed pedal axis.
             action = [
                 METADRIVE_STEER_FROM_DEVICE
                 * float(np.clip(steer_deg / MAX_STEERING_DEG, -1.0, 1.0)),
-                float(lk.throttle),
-                float(lk.brake),
+                float(lk.throttle) - float(lk.brake),
             ]
+            if long_control:
+                a_meas = ctrl._pedals.a_meas if ctrl._pedals is not None else float("nan")
+                result.long_samples.append(
+                    LongSample(
+                        t_s=step * dt_s,
+                        v_ego=speed,
+                        v_cruise=float(lk.v_cruise),
+                        accel_cmd=float(lk.accel_ms2) if lk.accel_ms2 is not None else 0.0,
+                        accel_meas=float(a_meas),
+                        long_status=str(lk.long_status),
+                        long_state=int(lk.long_state),
+                        source=str(lk.long_source),
+                        gap_m=float(rel["gap_m"]) if rel is not None else float("nan"),
+                        v_lead=float(rel["v_lead"]) if rel is not None else float("nan"),
+                    )
+                )
 
             t_s = step * dt_s
             if t_s >= warmup_s:
@@ -326,6 +374,9 @@ def run_once(
             prev_pos = pos
             result.duration_s = t_s
 
+            if crashed:
+                result.end_reason = "crash"
+                break
             if terminated or truncated:
                 if info.get("arrive_dest"):
                     result.end_reason = "arrive_dest"
@@ -337,8 +388,13 @@ def run_once(
                     result.end_reason = "terminated"
                 break
     finally:
+        if lead is not None:
+            lead.destroy()
         env.close()
 
+    if long_control:
+        m = long_metrics(result.long_samples, scenario, dt_s, result.end_reason == "crash")
+        result.long_metrics = dataclasses.asdict(m)
     return result
 
 
@@ -420,6 +476,10 @@ def print_report(
             f"{s['cte_max']:>8.2f}{s['depart_pct']:>9.1f}{s['sat_pct']:>9.1f}"
             f"{s['steer_hf_deg']:>7.2f}{s['lat_accel_p95']:>11.1f}"
         )
+    if result.long_metrics is not None:
+        from sim.longitudinal import LongMetrics
+
+        print_long_report(LongMetrics(**result.long_metrics))
     if failures:
         for f in failures:
             print(f"  FAIL {f}")
@@ -570,6 +630,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=1.6,
         help="jump magnitude at 20 m, m (p95 |Δy| from bags)",
     )
+    p.add_argument(
+        "--scenario",
+        default="none",
+        choices=sorted(SCENARIOS),
+        help="longitudinal scenario with a scripted lead (implies --long)",
+    )
+    p.add_argument(
+        "--long",
+        action="store_true",
+        help="drive speed through the C++ longitudinal planner + control law instead of the speed hold",
+    )
     p.add_argument("--csv", type=Path, default=None)
     p.add_argument("--json", type=Path, default=None)
     p.add_argument("--plot", type=Path, default=None)
@@ -628,9 +699,13 @@ def main() -> int:
                 noise_m=args.vision_noise_m,
                 jump_rate_hz=args.vision_jump_hz,
                 jump_m=args.vision_jump_m,
+                scenario=args.scenario,
+                long_control=args.long or args.scenario != "none",
             )
             s = summarize(r)
             failures = check(s)
+            if r.long_metrics is not None:
+                failures += r.long_metrics.get("failures", [])
             if r.end_reason in ("out_of_road", "crash"):
                 failures.append(f"run aborted: {r.end_reason}")
             print_report(r, s, failures)
@@ -644,6 +719,7 @@ def main() -> int:
                     "duration_s": r.duration_s,
                     "end_reason": r.end_reason,
                     "segments": s,
+                    "longitudinal": r.long_metrics,
                     "failures": failures,
                 }
             )

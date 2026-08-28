@@ -60,10 +60,12 @@ public:
   uint8_t epsHcaStatus() const { return eps_hca_status_; }
   /// \return Stock LDW payload, mirrored into our HUD frame.
   const LdwStockValues& ldwStock() const { return ldw_stock_; }
-  /// \return Stock cruise-button payload, base for our presses.
-  const GraStockValues& graStock() const { return gra_stock_; }
   /// \return Last TSK (cruise) status seen.
   int lastTskStatus() const { return last_tsk_status_; }
+  /// \return `ACC_Typ` from the stock radar's ACC_06 (camera bus), so our frames claim the same ACC kind.
+  uint8_t accType() const { return acc_type_; }
+  /// \return ESP standstill-hold confirmation (ESP_21), the cue for the hold-standby request in ACC_07.
+  bool espHoldConfirmation() const { return esp_hold_; }
 
   /// \return The brand-neutral view of the decoded state.
   CarStateView toCarStateView() const;
@@ -78,8 +80,9 @@ private:
   bool brake_motor_ = false;
   uint8_t eps_hca_status_ = 0;
   LdwStockValues ldw_stock_;
-  GraStockValues gra_stock_;
   int last_tsk_status_ = -1;
+  uint8_t acc_type_ = 0;
+  bool esp_hold_ = false;
 };
 
 }  // namespace volkswagen

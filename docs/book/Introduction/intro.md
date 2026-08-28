@@ -56,7 +56,9 @@ the same idea. The order below is therefore also a build order, and what you con
    oscillate, fix it with heading; [Pure Pursuit](../Planner/PurePursuit.md) — your own pursuit on a
    polyline, the trade-off measured; [Lane path](../Planner/LanePath.md) — fuse two noisy lines and the
    model plan into one reference, meet σ and its lies; [MPC / fp](../Planner/MPC_and_FP.md) — a
-   path-domain MPC as a teaching toy, then the shipped **time-domain** `fp`, closed-loop in MetaDrive. **Control** (what command):
+   path-domain MPC as a teaching toy, then the shipped **time-domain** `fp`, closed-loop in MetaDrive;
+   [Longitudinal planner](../Planner/Longitudinal.md) — a P law on the gap that rings, then upstream's
+   jerk-limited MPC on the same cost in numpy, closed-loop against a scripted lead. **Control** (what command):
    [Vehicle model](../Control/VehicleModel.md) — sabotage the toy with slip and delay, then measure
    $G(v)$ on the real car; [Angle control](../Control/AngleControl.md) — the inner loop against a toy
    rack: friction, the panda rate limiter, the winding integrator. **Platform** (onto the bus):

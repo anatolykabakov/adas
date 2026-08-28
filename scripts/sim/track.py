@@ -84,6 +84,16 @@ TRACKS: Dict[str, Track] = {
         speed_mps=13.0,
         description="tight arcs R 45–110 m at 13 m/s — beyond limit, expect off-road",
     ),
+    "long_straight": Track(
+        name="long_straight",
+        sequence="SSSSSSSSSS",
+        radius_m=(250.0, 700.0),
+        angle_deg=(25.0, 60.0),
+        curve_exit_m=(70.0, 110.0),
+        straight_m=(150.0, 250.0),
+        speed_mps=25.0,
+        description="1.5–2.5 km of straight — room for a longitudinal scenario to settle",
+    ),
     "straight": Track(
         name="straight",
         sequence="SSSS",

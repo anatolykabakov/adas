@@ -315,7 +315,7 @@ ten-second reverse-gear check below is still the only thing that exercises it en
 | native lib | rebuilt **23:35**; the binding added for the offline harness was the only source newer than the previous lib, and functionally irrelevant to the app — rebuilt anyway, because "irrelevant, probably" is how a stale lib ships |
 | lib inside the APK | sha256 `b0a678ae6c0383b46a869635…`, byte-identical to disk |
 | camera change inside the APK | 3 marker strings in `classes*.dex` (`AE metering on road`, `AE fps ranges available`, `AE: exposure`) |
-| `config.json` inside the APK | `nnapi_fp16 **true**`, `cruise_buttons false`. Always-on lateral, the assist gate, the parameter learner and the controller reading it are no longer switches: they are unconditional in the code as of 2026-08-13, and the config no longer carries them |
+| `config.json` inside the APK | `nnapi_fp16 **true**`, `long_control false`. Always-on lateral, the assist gate, the parameter learner and the controller reading it are no longer switches: they are unconditional in the code as of 2026-08-13, and the config no longer carries them |
 | APK signature | signer SHA-256 `79836abfcbc278ce270d2a68…`, matches `~/.android/debug.keystore` |
 
 That signature row is not paranoia: a container build that created its own debug keystore once forced an

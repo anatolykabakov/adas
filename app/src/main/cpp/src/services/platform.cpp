@@ -15,8 +15,7 @@ void Platform::configure()
   adas::platform::CarPlatformOptions opts;
   opts.dbc_path = config_.dbc_path;
   opts.speed_filter = config_.speed_filter;
-  opts.cruise_buttons_enabled = config_.cruise_buttons_enabled;
-  opts.cruise_tip_cooldown_ms = config_.cruise_tip_cooldown_ms;
+  opts.long_control_enabled = config_.long_control_enabled;
 
   car_ = adas::platform::makeCarPlatform(config_.car_name, opts);
   if (!car_) {
@@ -158,8 +157,13 @@ void Platform::txCallback()
   cc.actuators.steerTorqueCNm = cmd_.torque_cnm();
   cc.hud.leftLaneVisible = cmd_.hud_left_lane_visible();
   cc.hud.rightLaneVisible = cmd_.hud_right_lane_visible();
-
-  car_->setCruiseIntent(cmd_.cruise_intent(), nowMs());
+  // The longitudinal request rides the same message and passes its own gate: the panda's
+  // controls_allowed, not the always-on lateral permission.
+  cc.longActive = cmd_.long_active() && car_->longitudinalActuationAllowed();
+  cc.longState = static_cast<adas::platform::LongState>(cmd_.long_state());
+  if (cc.longActive)
+    cc.actuators.accelMs2 = static_cast<float>(cmd_.accel_ms2());
+  cc.hud.setSpeedMps = static_cast<float>(cmd_.v_cruise_mps());
 
   try {
     auto frames = car_->apply(cc);

@@ -26,7 +26,7 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 ```
 
 ```{note}
-`LongPlanService` may also read `model_long` for ACC-like **desired accel**.
+The [longitudinal planner](../Planner/Longitudinal.md) reads the same `model_long` leads for its plan and its own FCW.
 Warnings do **not** use that IDM accel anymore (it false-triggered on empty highways).
 ```
 

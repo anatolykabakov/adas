@@ -13,6 +13,17 @@ struct CanBus {
 struct CarControllerParams {
   static constexpr int STEER_STEP = 2;
   static constexpr int LDW_STEP = 10;
+  /// ACC_06/ACC_07 go at 50 Hz like HCA, the ACC_02 cluster message at ~16.7 Hz — the radar's own cadence.
+  static constexpr int ACC_CONTROL_STEP = 2;
+  static constexpr int ACC_HUD_STEP = 6;
+
+  /// The panda's longitudinal envelope for this platform [m/s²]: 2000 / −3500 in its milli-units, and
+  /// 3.01 is the value the bus reads as "no request".
+  static constexpr float ACCEL_MAX = 2.0f;
+  static constexpr float ACCEL_MIN = -3.5f;
+  static constexpr float ACCEL_INACTIVE = 3.01f;
+  /// Acceleration gradient the ACC_06 frame advertises when active [m/s³]; upstream's constant.
+  static constexpr float ACC_JERK_LIMIT = 4.0f;
 
   static constexpr int STEER_MAX = 300;
   static constexpr int STEER_DRIVER_MULTIPLIER = 3;
@@ -55,6 +66,29 @@ inline const char* epsHcaStatusName(uint8_t s)
       return "UNKNOWN";
   }
 }
+
+/** `ACC_Status_ACC` / `ACC_Status_Anzeige`: what the ACC reports about itself on the bus. */
+enum class AccStatus : uint8_t {
+  Off = 0,
+  MainOn = 2,
+  Active = 3,
+  Faulted = 6,
+};
+
+/// \return The status byte the ACC frames carry for this combination — upstream's acc_control_value.
+inline uint8_t accControlValue(bool main_switch_on, bool acc_faulted, bool long_active)
+{
+  if (acc_faulted)
+    return static_cast<uint8_t>(AccStatus::Faulted);
+  if (long_active)
+    return static_cast<uint8_t>(AccStatus::Active);
+  if (main_switch_on)
+    return static_cast<uint8_t>(AccStatus::MainOn);
+  return static_cast<uint8_t>(AccStatus::Off);
+}
+
+/// \return True when the TSK status means the stock cruise/ACC module reports a fault (upstream accFaulted).
+inline bool accFaultedFromTsk(int tsk_status) { return tsk_status == 6 || tsk_status == 7; }
 
 /// \return True when the EPS reports a state that accepts torque.
 inline bool epsHcaAllowsSteer(uint8_t s)

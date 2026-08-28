@@ -7,11 +7,14 @@
 
 namespace adas {
 namespace platform {
-/** What the lateral controller asks for. Torque in centinewton-metres when the platform actuates
- *  torque directly; `steer` is the same request normalised to [-1, 1]. */
+/** What the controllers ask for. Torque in centinewton-metres when the platform actuates torque
+ *  directly; `steer` is the same request normalised to [-1, 1]. The longitudinal request is an
+ *  acceleration [m/s²] — the standard actuator of every ACC bus, and the same shape the lateral one
+ *  has: a physical quantity the platform lays into its own frames. */
 struct Actuators {
   float steer = 0.f;
   std::optional<int> steerTorqueCNm;
+  std::optional<float> accelMs2;
 };
 
 /** Driver-facing state the car's own cluster shows. Kept minimal on purpose: anything a particular
@@ -22,21 +25,26 @@ struct HudState {
   bool leftLaneDepart = false;
   bool rightLaneDepart = false;
   int visualAlert = 0;
+  /// ACC cluster: the set speed and whether a lead is followed. Zero set speed draws nothing.
+  float setSpeedMps = 0.f;
+  bool leadVisible = false;
 };
 
-/** Stock-cruise button request for cars driven through the cruise stalk rather than by torque or
- *  acceleration directly. */
-struct CruiseRequest {
-  bool resume = false;
-  bool set = false;
-  bool cancel = false;
+/** Where the longitudinal law is in its own state machine — the bus encodes stopping/starting
+ *  differently from a plain acceleration, so the platform has to know. Mirrors LongCtrlState. */
+enum class LongState : int {
+  Off = 0,
+  Pid = 1,
+  Stopping = 2,
+  Starting = 3,
 };
 
 struct CarControl {
   bool latActive = false;
+  bool longActive = false;
+  LongState longState = LongState::Off;
   Actuators actuators;
   HudState hud;
-  CruiseRequest cruise;
 };
 
 /** The car as the controllers see it, with nothing brand-specific in it.
@@ -76,6 +84,15 @@ struct SteerLimits {
   int deltaUpPerStep = 0;      ///< Maximum increase of torque per step [cNm].
   int deltaDownPerStep = 0;    ///< Maximum decrease per step [cNm]; larger, since releasing is always safe.
   int driverAllowanceCNm = 0;  ///< Driver torque tolerated before the panda takes the rack back [cNm].
+};
+
+/** The acceleration envelope the panda enforces, same contract as the steering one: the control law
+ *  clamps to it first, so a frame is never cut on the board. */
+struct LongLimits {
+  float accelMaxMs2 = 0.f;   ///< Largest acceleration the bus accepts [m/s²].
+  float accelMinMs2 = 0.f;   ///< Largest deceleration [m/s²], negative.
+  int stepFrames = 0;        ///< Frames between acceleration messages.
+  bool supported = false;    ///< False when this platform has no longitudinal actuator at all.
 };
 
 }  // namespace platform

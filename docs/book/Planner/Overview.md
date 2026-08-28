@@ -1,19 +1,15 @@
 # The lateral loop — planner, control, platform
 
-**Longitudinal** control sets speed, **lateral** control sets steering. This course is about lateral
-control: on an MQB Golf without radar, longitudinal stays stock cruise and our HCA path is a supervised
-lateral actuator (the longitudinal story — stock cruise buttons only — lives in git history;
-`docs/CONTROLLER_LIMITS.md` has the curvature-ahead speed cap that remains).
+**Longitudinal** control sets speed, **lateral** control sets steering. Most of this part is about the
+lateral loop, which is what this stack has driven on the road; the last chapter is the longitudinal one —
+same three services, an acceleration instead of a torque — proven so far in the simulator only, because our
+own Golf has no ACC radar for the motor and brakes to take the request.
 
 The native code splits the lateral loop into three services, on purpose, and the book's parts follow
 that split: **Planner** decides *what shape to drive* (a curvature plan), **Control** decides *what
 command produces it* (a torque), **Platform** puts that command on the bus and is the only place that
 knows the car is a Volkswagen. This part is the Planner; the two that follow are Control and
 [Platform](../Platform/Overview.md).
-
-Longitudinal control is out of scope: on an MQB Golf without radar it stays stock cruise, and our HCA
-path is a supervised lateral actuator (the stock-cruise-button story lives in git history;
-`docs/CONTROLLER_LIMITS.md` has the curvature-ahead speed cap that remains).
 
 The chapters build on each other — each exists because the previous one fails at something measurable,
 and the failure is the interesting part:
@@ -24,6 +20,7 @@ and the failure is the interesting part:
 | [Pure Pursuit](./PurePursuit.md) | Planner | steer at one look-ahead point | one point cannot represent a path whose curvature changes inside the look-ahead |
 | [Lane path](./LanePath.md) | Planner | fuse two lane lines and the model plan into one reference | lines lie when they vanish; the plan cuts arcs; σ decides which you get |
 | [MPC and fp](./MPC_and_FP.md) | Planner | optimise a short future trajectory | the horizon costs money, the plan has a bias, and on tight arcs the actuator saturates |
+| [Longitudinal planner](./Longitudinal.md) | Planner | a jerk-limited speed plan behind the lead or at the set speed | a P law on the gap rings; the curvature preview reads path noise as a bend; the lead is vision, not radar |
 | [Vehicle model](../Control/VehicleModel.md) | Control | κ → δ through tyre slip and delay | the slip coefficient varies with speed, 0.97 → 0.54 |
 | [Angle control](../Control/AngleControl.md) | Control | δ → torque against the rack | friction eats P, the panda rate limiter winds the integrator, feedforward is single-digit cNm |
 | [Platform](../Platform/Overview.md) | Platform | torque → a legal HCA_01, if the panda allows | counter, checksum secret, safety mode, ignition debounce |

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 cd "$(dirname "$0")"
-PROTO_DIR="../proto"
+PROTO_DIR="../app/src/main/proto"
 OUTPUT_DIR="./proto"
 mkdir -p "$OUTPUT_DIR"
 
