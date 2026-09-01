@@ -85,9 +85,27 @@ public final class AdasConfig {
         return nodeBool(context, "vision_traffic", false);
     }
 
-    /** Known cars: the name for `vehicle.name` and the DBC that parses them. */
+    /** Known cars: the name for `vehicle.name`, the label the panel shows, and the DBC that parses them.
+     *  Every MQB car shares one CAN layout and one panda envelope; geometry and mass per car live with the
+     *  native platform (`platform/volkswagen/mqb_variants.h`) — keep the two lists in step. */
     public static final String[][] CARS = {
-        {"vw_golf_7_mqb", "VW Golf 7 (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_golf_7_mqb", "VW Golf 7 / GTI / e-Golf (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_jetta_7_mqb", "VW Jetta 7 (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_passat_b8_mqb", "VW Passat B8 (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_arteon_mqb", "VW Arteon (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_tiguan_2_mqb", "VW Tiguan 2 (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_touran_2_mqb", "VW Touran 2 (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_troc_mqb", "VW T-Roc (MQB)", "vw_mqb_2010.dbc"},
+        {"vw_polo_6_mqb", "VW Polo 6 (MQB A0)", "vw_mqb_2010.dbc"},
+        {"vw_atlas_mqb", "VW Atlas / Teramont (MQB)", "vw_mqb_2010.dbc"},
+        {"skoda_octavia_3_mqb", "Skoda Octavia 3 (MQB)", "vw_mqb_2010.dbc"},
+        {"skoda_superb_3_mqb", "Skoda Superb 3 (MQB)", "vw_mqb_2010.dbc"},
+        {"skoda_kodiaq_mqb", "Skoda Kodiaq (MQB)", "vw_mqb_2010.dbc"},
+        {"skoda_karoq_mqb", "Skoda Karoq (MQB)", "vw_mqb_2010.dbc"},
+        {"seat_leon_3_mqb", "SEAT Leon 3 (MQB)", "vw_mqb_2010.dbc"},
+        {"seat_ateca_mqb", "SEAT Ateca (MQB)", "vw_mqb_2010.dbc"},
+        {"audi_a3_8v_mqb", "Audi A3 8V (MQB)", "vw_mqb_2010.dbc"},
+        {"audi_q2_mqb", "Audi Q2 (MQB)", "vw_mqb_2010.dbc"},
     };
 
     /** Which car is selected — `vehicle.name` from the config. */

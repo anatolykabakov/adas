@@ -242,4 +242,4 @@ most useful sanity plot is `pid_i` against time: it should breathe with corners,
 <!-- next-chapter -->
 ---
 
-**Next:** [Platform](../Platform/Overview.md)
+**Next:** [Longitudinal control](./LongControl.md)

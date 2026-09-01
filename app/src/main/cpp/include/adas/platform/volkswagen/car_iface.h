@@ -49,6 +49,14 @@ public:
     return lateralActuationAllowed(controls_allowed, /*lat_always_on=*/true, carStateView());
   }
 
+  /// Whether an acceleration request goes to the bus now: controls_allowed plus the brand's own conditions.
+  bool longActuationAllowed(bool controls_allowed) const
+  {
+    return car_controller_.longControlEnabled() && longitudinalActuationAllowed(controls_allowed, carStateView());
+  }
+  /// Turn the acceleration frames on or off; off leaves the stock ACC in charge.
+  void setLongControlEnabled(bool on) { car_controller_.setLongControlEnabled(on); }
+
   /// \return Last cruise status.
   int lastTskStatus() const { return decoder_.lastTskStatus(); }
   /// \return EPS HCA status byte.

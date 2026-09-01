@@ -65,6 +65,13 @@ class LaneKeepResult:
     pure_pursuit: Optional[PurePursuitResult] = None
     status: str = "ok"
     controller: str = "pp"
+    # Longitudinal: the control law's acceleration request and where it stood; None when off.
+    accel_ms2: Optional[float] = None
+    long_status: str = "off"
+    long_state: int = 0
+    v_target: float = 0.0
+    v_cruise: float = 0.0
+    long_source: str = ""
 
 
 def build_centerline_polyline(
@@ -194,6 +201,7 @@ class LaneKeepController:
         dt_s: float = 0.05,
         vehicle_config: Optional[Dict[str, Any]] = None,
         app: Any = None,
+        long_control: bool = False,
     ):
         if mode not in self.MODES:
             raise ValueError(f"Unknown mode {mode!r}, expected one of {self.MODES}")
@@ -221,6 +229,17 @@ class LaneKeepController:
         self.set_mode(mode)
         self.last_result: Optional[LaneKeepResult] = None
         self.last_warn: Any = None
+        # Longitudinal path: the C++ planner + control law produce an acceleration; the harness plays
+        # the car's motor/brake controllers (sim.longitudinal.AccelActuator). Off keeps the old speed hold.
+        self.long_control = bool(long_control)
+        self.last_cmd: Any = None
+        self.last_long_plan: Any = None
+        self._lead: Optional[Dict[str, float]] = None
+        self._pedals = None
+        if self.long_control:
+            from sim.longitudinal import AccelActuator  # local: the harness lives outside core/
+            self._pedals = AccelActuator(self.dt_s)
+            self.set_cruise_speed(self.desired_speed)
 
     def apply_vehicle_config(self, cfg: Dict[str, Any]) -> None:
         """Push the ``vehicle`` block of config.json into the C++ service.
@@ -302,6 +321,47 @@ class LaneKeepController:
             return 0.0, min(0.5, 0.05 * (-err))
         return 0.0, 0.0
 
+    def set_cruise_speed(self, v_mps: float) -> None:
+        """The set speed the planner plans for; 0 clears it."""
+        self.desired_speed = float(v_mps)
+        if self.long_control:
+            self._app.set_param("v_cruise_kph", float(v_mps) * 3.6)
+
+    def set_lead(self, lead: Optional[Dict[str, float]]) -> None:
+        """Ground-truth lead for this step, as `sim.longitudinal.ScriptedLead.relative` reports it."""
+        self._lead = lead
+
+    def _publish_inputs(self, speed_mps: float, yaw_rate: float) -> None:
+        standstill = speed_mps < 0.3
+        self._app.publish_car_state(self._t_us, float(speed_mps), 0.0, float(yaw_rate), False, False, standstill, True)
+        if self.long_control:
+            self._app.publish_panda_health(True, True)
+            if self._lead is not None:
+                l = self._lead
+                self._app.publish_lead(self._t_us, float(l["d_rel_camera"]), float(l["y_rel"]), float(l["v_lead"]),
+                                       float(l.get("a_lead", 0.0)), 1.0)
+
+    def _pedal_action(self, speed_mps: float) -> tuple[float, float]:
+        """Throttle and brake for MetaDrive from the last command, or the legacy speed hold."""
+        if not self.long_control or self._pedals is None:
+            return self._speed_action(speed_mps)
+        cmd = self.last_cmd
+        a_req = float(cmd.accel_ms2) if (cmd is not None and cmd.long_active) else None
+        u = self._pedals.act(a_req, float(speed_mps))
+        return (u, 0.0) if u >= 0.0 else (0.0, -u)
+
+    def _fill_long(self, result: LaneKeepResult) -> LaneKeepResult:
+        cmd = self.last_cmd
+        if cmd is not None:
+            result.accel_ms2 = float(cmd.accel_ms2) if cmd.long_active else None
+            result.long_status = str(cmd.long_status)
+            result.long_state = int(cmd.long_state)
+            result.v_target = float(cmd.v_target_mps)
+            result.v_cruise = float(cmd.v_cruise_mps)
+        if self.last_long_plan is not None:
+            result.long_source = str(self.last_long_plan.source)
+        return result
+
     def _active_max_steer_rad(self) -> float:
         """Mirrors C++ LaneKeepService::activeMaxSteerRad (mpc family capped at 25°)."""
         if self.mode == "fp":
@@ -317,6 +377,21 @@ class LaneKeepController:
         lane_anchored: bool = False,
     ) -> LaneKeepResult:
         throttle, brake = self._speed_action(speed_mps)
+        if self.long_control and (self.mode == "straight" or polyline is None or
+                                  np.asarray(polyline, dtype=np.float64).ndim != 2 or
+                                  np.asarray(polyline, dtype=np.float64).shape[0] < 2):
+            # No lateral path this step, but the longitudinal loop still has to run.
+            self._t_us += int(round(float(dt_s if dt_s is not None else self.dt_s) * 1e6))
+            self._publish_inputs(float(speed_mps), float(yaw_rate))
+            self._app.step(self._t_us)
+            for msg in self._app.pop_messages():
+                if isinstance(msg, pyadas.SteerCommand):
+                    self.last_cmd = msg
+                elif isinstance(msg, pyadas.LongPlanState):
+                    self.last_long_plan = msg
+                elif isinstance(msg, pyadas.SafetyWarnState):
+                    self.last_warn = msg
+            throttle, brake = self._pedal_action(speed_mps)
 
         if self.mode == "straight" or polyline is None:
             result = LaneKeepResult(
@@ -331,7 +406,7 @@ class LaneKeepController:
                 status="straight" if self.mode == "straight" else "no_polyline",
                 controller=self._CONTROLLER[self.mode],
             )
-            self.last_result = result
+            self.last_result = self._fill_long(result)
             return result
 
         poly = np.asarray(polyline, dtype=np.float64)
@@ -346,14 +421,14 @@ class LaneKeepController:
                 status="no_polyline",
                 controller=self._CONTROLLER[self.mode],
             )
-            self.last_result = result
+            self.last_result = self._fill_long(result)
             return result
 
         pairs = [(float(x), float(y)) for x, y in poly]
         # Real step: the C++ planner measures its solve period from these stamps and scales
         # the x0 advance, jerk clips and slew guards by it (measured vision frame_dt).
         self._t_us += int(round(float(dt_s if dt_s is not None else self.dt_s) * 1e6))
-        self._app.publish_chassis(self._t_us, float(speed_mps), 0.0, float(yaw_rate))
+        self._publish_inputs(float(speed_mps), float(yaw_rate))
         self._app.publish_lanes(self._t_us, pairs, lane_anchored=lane_anchored)
         self._app.step(self._t_us)
         out = None
@@ -363,6 +438,12 @@ class LaneKeepController:
             elif isinstance(msg, pyadas.SafetyWarnState):
                 # Same drain: whoever wants the warnings has to read them here, or they are gone.
                 self.last_warn = msg
+            elif isinstance(msg, pyadas.SteerCommand):
+                self.last_cmd = msg
+            elif isinstance(msg, pyadas.LongPlanState):
+                self.last_long_plan = msg
+        # Pedals from the command this very step: the actuator sees the request the moment it is made.
+        throttle, brake = self._pedal_action(speed_mps)
         if out is None:
             result = LaneKeepResult(
                 mode=self.mode,
@@ -374,7 +455,7 @@ class LaneKeepController:
                 status="no_output",
                 controller=self._CONTROLLER[self.mode],
             )
-            self.last_result = result
+            self.last_result = self._fill_long(result)
             return result
 
         steer_rad = float(out.steer_rad)
@@ -411,7 +492,7 @@ class LaneKeepController:
             status=str(out.status),
             controller=str(controller),
         )
-        self.last_result = result
+        self.last_result = self._fill_long(result)
         return result
 
     def compute(

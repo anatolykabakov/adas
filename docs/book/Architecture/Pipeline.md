@@ -4,37 +4,29 @@
 
 Engineering version with implementation details: `docs/IMAGE_TO_CAN_PIPELINE.md`.
 
-## Follow one frame, with a clock
+## One frame's time budget
 
-The stages below are easier to hold onto if you watch a single frame move through them. Each number is a
-measured median from a 29-minute night run. Per-stage medians do not have to add up to cumulative medians —
-these are chosen to land on the two cumulative figures `tools/latency.py` actually reports, 22 ms to the model
-output and **52 ms to the command**, so the arithmetic is checkable rather than decorative.
+The stages below are easier to hold onto if you watch a single frame move through them. Every number is a
+measured median from a 29-minute night run (OnePlus 7T, thneed runner); the two anchors `tools/latency.py`
+actually reports are **22 ms to the model output** and **52 ms to the steering command**.
 
-```python
-# Measured medians, run 2026_08_16_23_59_45, OnePlus 7T, thneed runner.
-# "own" is the stage's own cost; the clock accumulates.
-STAGES = (
-    ("capture (Camera2 YUV, capture_ts stamped)", 0.0),
-    ("delivery to VisionPipeline", 0.0),           # median 0, p95 0 — instrumented since 2026-08
-    ("wait in the inference queue", 0.0),          # median 0, mean 1.0 — nothing is queueing up
-    ("geometric warp to 6x128x256 (OpenCL)", 4.6), # prep_ms; was 12.1 on the CPU
-    ("Supercombo inference (thneed, GPU)", 17.6),  # was 45.6 through ONNX Runtime
-    ("parse heads -> vision/lanes", 0.0),
-    ("Java -> ZMQ -> ZmqBridge -> proto_convert", 4.0),
-    ("Planner -> control/lat_plan, control/lane_keep", 5.0),
-    ("Control -> controls/steer", 21.0),
-    ("Platform -> HCA_01 on the wire", 10.0),      # its own 10 ms TX timer
-)
+| stage | own [ms] | clock [ms] |
+|---|---|---|
+| capture (Camera2 YUV, `capture_ts` stamped) | 0.0 | 0.0 |
+| delivery to `VisionPipeline` | 0.0 | 0.0 |
+| wait in the inference queue | 0.0 | 0.0 |
+| geometric warp to 6×128×256 (OpenCL) | 4.6 | 4.6 |
+| Supercombo inference (thneed, GPU) | 17.6 | **22.2** |
+| parse heads → `vision/lanes` | 0.0 | 22.2 |
+| Java → ZMQ → `ZmqBridge` → `proto_convert` | 4.0 | 26.2 |
+| `Planner` → `control/lat_plan` | 5.0 | 31.2 |
+| `Control` → `controls/steer` | 21.0 | **52.2** |
+| `Platform` → `HCA_01` on the wire | 10.0 | 62.2 |
 
-clock = 0.0
-print(f"{'stage':>46} {'own':>6} {'clock':>7} {'car has moved':>15}")
-for name, own in STAGES:
-    clock += own
-    print(f"{name:>46} {own:>5.1f} {clock:>6.1f} {22.0 * clock * 1e-3:>13.2f} m")
-print(f"\nAt 22 m/s the command that reaches the rack was computed for a road position {22.0 * clock * 1e-3:.2f} m back.")
-print("That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety.")
-```
+Why the clock matters is one line of physics: the road does not wait, $d = v\,t$. At $v = 22$ m/s the
+command that reaches the rack was computed for a road position $22 \cdot 0.052 \approx 1.1$ m back — and
+that metre is exactly what `fp_steer_delay_s` compensates by predicting the state forward, which is why it
+is a feedforward input to the planner rather than a nicety.
 
 Three of those lines deserve attention.
 
@@ -60,33 +52,17 @@ Vision runs at 30.0 Hz — one frame per camera period, nothing skipped. The act
 HCA needs a strict cadence or the EPS drops the command. So for roughly two ticks out of three, the panda
 transmits a command derived from a *reference it has already used*.
 
-That is correct behaviour and it creates a trap for anyone reading logs:
-
-```python
-VISION_HZ = 30.01
-TX_HZ = 100.0
-FRESH_WINDOW_MS = 50.0        # tools/latency.py keeps commands within this of their vision timestamp
-
-vision_period_ms = 1000.0 / VISION_HZ
-per_frame = TX_HZ / VISION_HZ
-print(f"vision period {vision_period_ms:.1f} ms, {per_frame:.1f} actuator ticks per vision frame")
-print(f"only the first tick uses a brand-new reference; the rest reuse it")
-print()
-# The freshness filter is a time window, not "one tick per frame" — so what it keeps is the fraction of
-# the vision period that falls inside the window.
-kept_predicted = min(1.0, FRESH_WINDOW_MS / vision_period_ms)
-print(f"predicted share passing a {FRESH_WINDOW_MS:.0f} ms freshness filter: {100 * kept_predicted:.0f} %")
-print(f"measured on the run: 171 097 kept of 175 573 = {100 * 171097 / 175573:.0f} %")
-print()
-print("Compute e2e latency over the raw stream instead and the republishes drag the number up, because")
-print("their vision_ts is older than the command that carries it.")
-```
+That is correct behaviour and it creates a trap for anyone reading logs. The arithmetic: $100/30 \approx 3.3$
+actuator ticks per vision frame, so only the first tick uses a brand-new reference and the next two reuse it.
+`tools/latency.py` therefore filters commands by **freshness** — a 50 ms window against the frame's own
+timestamp. With a 33 ms vision period every first-use command passes, and the filter cuts only the genuinely
+stale republishes: 171 097 kept of 175 573 on this run, 97 %. Compute end-to-end latency over the raw stream
+instead and the republishes drag the number up, because their `vision_ts` is older than the command that
+carries it.
 
 At 13 Hz — the rate this chapter reported before the model moved to the GPU — a third of the commands failed
-that filter, and the freshness window itself was doing visible work. At 30 Hz the vision period is shorter
-than the window, so the filter now drops only the genuinely stale republishes: 4 476 of 175 573. The lesson
-survives the improvement: "the command is fresh" and "the picture is fresh" are different claims, and only
-the second one matters for safety. That is why the staleness gate is keyed on the frame's capture timestamp
+that filter, and the window itself was doing visible work. The lesson survives the improvement: "the command
+is fresh" and "the picture is fresh" are different claims, and only the second one matters for safety. That is why the staleness gate is keyed on the frame's capture timestamp
 rather than on the command's age, and why a 250 ms HCA command timeout did not protect against a
 75-second-old plan.
 
@@ -153,7 +129,7 @@ two.
   road) — and the interface is identical whichever runs. Publishes `control/lat_plan`, `control/long_plan`,
   `control/lane_keep`.
 * **`Control`** (`services/control.cpp`) is the control law and nothing else: curvature plus the chassis
-  become a torque command, engagement, HUD pictograms, and the wish to press a cruise button. It knows no
+  become a torque command and an acceleration request, engagement, HUD pictograms. It knows no
   CAN address, no signal, no frame counter. Publishes `controls/steer`.
 * **`Platform`** (`services/platform.cpp`) carries that intent onto the bus, and it names no brand — which
   car is behind the CAN is decided once, by `vehicle.name`, and reached through `platform::CarPlatform`.
@@ -198,27 +174,11 @@ publish protobuf messages, call `step()`, read what the services published:
 ./app/src/main/cpp/build_cpp.sh -t linux --test    # host build + ~230 gtest cases; pyadas core into scripts/
 ```
 
-```python
-# not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.
-from pyadas import require_core
-pyadas = require_core()
-
-app = pyadas.AdasApp()                      # simulated mode: no threads, you own the clock
-app.set_param("lane_keep_controller", "fp")
-
-for ts, lanes_msg, raw in lanes:            # your session, from step 8
-    app.publish("vision/lanes", raw.SerializeToString())
-    app.publish("vehicle/state", chassis_at(ts))    # your synthetic chassis, or a real one
-    app.step()
-    for topic, payload in app.pop_messages():
-        if topic == "control/lane_keep":
-            record(ts, payload)             # the shipped stack's steering, frame by frame
-```
-
-`scripts/core/lane_keep.py` wraps exactly this loop, and the simulator and visualizer already use it —
-read it once and the offline toolchain stops being magic. It is also the honest way to compare your own
-controller against the shipped `pp` and `fp` on identical frames: same bag in, three commands out, one
-plot.
+The loop is four calls: create `pyadas.AdasApp()` in simulated mode, publish the frame's messages, call
+`step()`, read what the services published. `scripts/core/lane_keep.py` wraps exactly that, and the
+simulator and the visualizer already use it — read it once and the offline toolchain stops being magic. It
+is also the honest way to compare your own controller against the shipped `pp` and `fp`: the same bag in,
+three commands out, one plot.
 
 <!-- next-chapter -->
 ---

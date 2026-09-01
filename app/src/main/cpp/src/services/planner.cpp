@@ -25,6 +25,7 @@ Planner::Planner(Config p)
   : config_(std::move(p))
   , veh_({config_.steer_ratio, config_.steer_sign, config_.max_steer_deg, config_.tire_stiffness_factor})
   , max_torque_cnm_(config_.max_torque_cnm)
+  , long_planner_(config_.long_plan)
 {
   if (config_.controller != "fp")
     config_.controller = "pp";
@@ -37,6 +38,8 @@ Planner::Planner(Config p)
 void Planner::configure()
 {
   subscribe<adas::proto::CarState>(topics::kVehicleState, [this](const adas::proto::CarState& payload) {
+    car_state_ = payload;
+    updateCruiseSetpoint(payload);
     onChassis(carStateToChassis(payload, veh_.steerRatio()));
   });
   subscribe<adas::proto::LaneLines>(topics::kVisionLanes, [this](const adas::proto::LaneLines& payload) {
@@ -63,8 +66,12 @@ void Planner::configure()
     subscribe<adas::proto::ModelLongPlan>(topics::kVisionModelLong, [this](const adas::proto::ModelLongPlan& m) {
       model_long_ = m;
       have_model_long_ = true;
+      model_long_ts_ms_ = nowMs();
     });
     scheduleTimer(50, [this] { longTick(); }, "long");
+    if (config_.long_plan.lead_source == "radar")
+      LOGW("Planner: long_plan.lead_source=radar, but no platform decodes radar objects — leads come from vision");
+    LOGI("Planner: longitudinal plan on, leads from %s", config_.long_plan.lead_source.c_str());
   }
 
   registerParameters();
@@ -74,6 +81,17 @@ void Planner::configure()
 
 void Planner::registerParameters()
 {
+  // The set speed as a parameter: the simulator and the phone UI set it here; on the car the stalk edits
+  // the same value. Zero means "no set speed" and the longitudinal plan holds.
+  registerParameter<double>(
+      "v_cruise_kph",
+      [this](const double& v) {
+        cruise_.set(v / 3.6);
+        cruise_from_param_ = v > 0.0;
+        long_reset_pending_ = true;
+      },
+      [this] { return cruise_.value() * 3.6; });
+  registerParameter<double>("long_t_follow", config_.long_plan.mpc.t_follow);
   registerParameter<double>(
       "steer_ratio", [this](const double& v) { setSteerRatio(v); }, [this] { return veh_.steerRatio(); });
   registerParameter<double>(
@@ -185,27 +203,62 @@ double Planner::commandCurvature(double speed_mps) const
   return kappa;
 }
 
+void Planner::updateCruiseSetpoint(const adas::proto::CarState& cs)
+{
+  longitudinal::CruiseSetpoint::Buttons b;
+  b.set = cs.cruise_set();
+  b.resume = cs.cruise_resume();
+  b.accel = cs.cruise_accel();
+  b.decel = cs.cruise_decel();
+  b.cancel = cs.cruise_cancel();
+  // The parameter (UI, simulator) is a set speed of its own; the stalk edits it like any other.
+  const double before = cruise_.value();
+  const double after = cruise_.update(b, cs.v_ego(), cs.cruise_available() || cruise_from_param_, config_.long_plan,
+                                      cs.timestamp() * 1e-3);
+  if (std::abs(after - before) > 1e-6)
+    LOGI("Planner: set speed %.0f → %.0f km/h", before * 3.6, after * 3.6);
+}
+
 void Planner::longTick()
 {
-  if (!have_chassis_ || !have_model_long_)
+  if (!have_chassis_)
     return;
 
-  longplan::Input in;
+  longitudinal::PlannerInput in;
   in.v_ego = std::max(0.0, chassis_.speed_mps);
+  in.a_ego = a_ego_est_;
+  in.steering_angle_deg = chassis_.steering_angle_deg;
+  in.standstill = car_state_.standstill() || in.v_ego < 0.3;
   in.path = path_.size() >= 3 ? &path_ : nullptr;
+  in.v_cruise_mps = cruise_.value();
+  in.reset_state = long_reset_pending_;
+  long_reset_pending_ = false;
 
-  in.lead = leadFromModel(model_long_);
+  // Leads from the model, only when the model is still talking: a lead frozen from ten seconds ago is
+  // a phantom, and the fake far lead the planner substitutes is the honest alternative.
+  constexpr int64_t kModelLongMaxAgeMs = 500;
+  if (have_model_long_ && (nowMs() - model_long_ts_ms_) <= kModelLongMaxAgeMs) {
+    in.lead0 = leadFromModel(model_long_.lead0(), config_.long_plan.lead_origin_offset_m);
+    in.lead1 = leadFromModel(model_long_.lead1(), config_.long_plan.lead_origin_offset_m);
+  }
 
-  in.plan_v.valid = model_long_.plan_v_x_size() > 0 || model_long_.plan_v0() != 0.0;
-  in.plan_v.v_plan = model_long_.plan_v_x_size() > 0 ? model_long_.plan_v_x(0) : model_long_.plan_v0();
-  in.plan_v.pose_valid = model_long_.pose_valid();
-  in.plan_v.pose_vx = model_long_.pose_vx();
-
-  publish(topics::kLongPlan, createLongPlan(in, longplan::compute(config_.long_plan, in), nowMs()));
+  const auto plan = long_planner_.update(in);
+  publish(topics::kLongPlan, createLongPlan(in, plan, nowMs()));
 }
 
 void Planner::onChassis(const ChassisSample& msg)
 {
+  // Ego acceleration from the speed slope, lightly filtered: the plan's state starts from it on reset
+  // and the bus rarely carries a trustworthy a_ego of its own.
+  if (have_chassis_ && msg.timestamp_us > prev_v_ts_us_) {
+    const double dt = (msg.timestamp_us - prev_v_ts_us_) * 1e-6;
+    if (dt > 1e-3 && dt < 0.5) {
+      const double a = (msg.speed_mps - prev_v_ego_) / dt;
+      a_ego_est_ = 0.8 * a_ego_est_ + 0.2 * std::clamp(a, -6.0, 4.0);
+    }
+  }
+  prev_v_ego_ = msg.speed_mps;
+  prev_v_ts_us_ = msg.timestamp_us;
   chassis_ = msg;
   have_chassis_ = true;
 }

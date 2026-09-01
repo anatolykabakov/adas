@@ -164,7 +164,37 @@ PYBIND11_MODULE(core, m)
       .def_property_readonly("capture_ts_ms", &adas::proto::SteerCommand::capture_ts_ms)
       .def_property_readonly("vision_ts_ms", &adas::proto::SteerCommand::vision_ts_ms)
       .def_property_readonly("chassis_ts_ms", &adas::proto::SteerCommand::chassis_ts_ms)
-      .def_property_readonly("publish_ts_ms", &adas::proto::SteerCommand::publish_ts_ms);
+      .def_property_readonly("publish_ts_ms", &adas::proto::SteerCommand::publish_ts_ms)
+      .def_property_readonly("status", [](const adas::proto::SteerCommand& c) { return c.status(); })
+      .def_property_readonly("long_active", &adas::proto::SteerCommand::long_active)
+      .def_property_readonly("accel_ms2", &adas::proto::SteerCommand::accel_ms2)
+      .def_property_readonly("long_state", &adas::proto::SteerCommand::long_state)
+      .def_property_readonly("v_target_mps", &adas::proto::SteerCommand::v_target_mps)
+      .def_property_readonly("v_cruise_mps", &adas::proto::SteerCommand::v_cruise_mps)
+      .def_property_readonly("long_status", [](const adas::proto::SteerCommand& c) { return c.long_status(); });
+
+  py::class_<adas::proto::LongPlanState>(m, "LongPlanState")
+      .def_property_readonly("timestamp", &adas::proto::LongPlanState::timestamp)
+      .def_property_readonly("v_ego", &adas::proto::LongPlanState::v_ego)
+      .def_property_readonly("v_target", &adas::proto::LongPlanState::v_target)
+      .def_property_readonly("a_target", &adas::proto::LongPlanState::a_target)
+      .def_property_readonly("v_cruise", &adas::proto::LongPlanState::v_cruise)
+      .def_property_readonly("v_curv", &adas::proto::LongPlanState::v_curv)
+      .def_property_readonly("has_lead", &adas::proto::LongPlanState::has_lead)
+      .def_property_readonly("lead_d", &adas::proto::LongPlanState::lead_d)
+      .def_property_readonly("lead_v", &adas::proto::LongPlanState::lead_v)
+      .def_property_readonly("fcw", &adas::proto::LongPlanState::fcw)
+      .def_property_readonly("solver_ok", &adas::proto::LongPlanState::solver_ok)
+      .def_property_readonly("solver_iters", &adas::proto::LongPlanState::solver_iters)
+      .def_property_readonly("solver_cost", &adas::proto::LongPlanState::solver_cost)
+      .def_property_readonly("source", [](const adas::proto::LongPlanState& p) { return p.source(); })
+      .def_property_readonly("status", [](const adas::proto::LongPlanState& p) { return p.status(); })
+      .def_property_readonly("speeds", [](const adas::proto::LongPlanState& p) {
+        return std::vector<float>(p.speeds().begin(), p.speeds().end());
+      })
+      .def_property_readonly("accels", [](const adas::proto::LongPlanState& p) {
+        return std::vector<float>(p.accels().begin(), p.accels().end());
+      });
 
   py::class_<adas::proto::SafetyWarnState>(m, "SafetyWarnState")
       .def_property_readonly("timestamp", &adas::proto::SafetyWarnState::timestamp)
@@ -321,6 +351,68 @@ PYBIND11_MODULE(core, m)
           py::arg("timestamp_us"), py::arg("polyline_ego"), py::arg("frame_id") = 0,
           py::arg("plan_poly") = std::vector<std::pair<double, double>>{}, py::arg("plan_yaw") = std::vector<double>{},
           py::arg("plan_yaw_rate") = std::vector<double>{}, py::arg("lane_anchored") = false)
+      .def(
+          // The model's lead heads, as the simulator's ground truth or a recorded track. Distances are
+          // from the camera, as the model reports them; the planner moves them to the bumper.
+          "publish_lead",
+          [](AdasApp& self, int64_t timestamp_us, double d_rel, double y_rel, double v_lead, double a_lead,
+             double prob, double d_rel2, double v_lead2, double prob2) {
+            adas::proto::ModelLongPlan m;
+            m.set_timestamp(timestamp_us / 1000);
+            auto fill = [](adas::proto::LeadTrack* t, double d, double y, double v, double a, double p) {
+              t->set_prob(static_cast<float>(p));
+              t->set_d_rel(static_cast<float>(d));
+              t->set_y_rel(static_cast<float>(y));
+              t->set_v_lead(static_cast<float>(v));
+              t->set_a_lead(static_cast<float>(a));
+              t->add_x(static_cast<float>(d));
+              t->add_y(static_cast<float>(y));
+              t->add_v(static_cast<float>(v));
+              t->add_a(static_cast<float>(a));
+            };
+            fill(m.mutable_lead0(), d_rel, y_rel, v_lead, a_lead, prob);
+            fill(m.mutable_lead1(), d_rel2, 0.0, v_lead2, 0.0, prob2);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kVisionModelLong, m);
+          },
+          py::arg("timestamp_us"), py::arg("d_rel"), py::arg("y_rel") = 0.0, py::arg("v_lead") = 0.0,
+          py::arg("a_lead") = 0.0, py::arg("prob") = 1.0, py::arg("d_rel2") = 0.0, py::arg("v_lead2") = 0.0,
+          py::arg("prob2") = 0.0)
+      .def(
+          // What the panda would report: the two permissions the control laws gate on. In the simulator
+          // the harness is the panda, so it says so explicitly rather than the gates guessing.
+          "publish_panda_health",
+          [](AdasApp& self, bool controls_allowed, bool lat_actuation_allowed) {
+            adas::proto::PandaHealth h;
+            h.set_controls_allowed(controls_allowed);
+            h.set_lat_actuation_allowed(lat_actuation_allowed);
+            h.set_ignition(true);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kPandaHealth, h);
+          },
+          py::arg("controls_allowed") = true, py::arg("lat_actuation_allowed") = true)
+      .def(
+          // The chassis as the longitudinal law needs it: pedals and standstill besides speed.
+          "publish_car_state",
+          [](AdasApp& self, int64_t timestamp_us, double speed_mps, double steering_angle_deg, double yaw_rate,
+             bool gas_pressed, bool brake_pressed, bool standstill, bool cruise_available) {
+            adas::proto::CarState cs;
+            cs.set_timestamp(timestamp_us / 1000);
+            cs.set_v_ego(static_cast<float>(speed_mps));
+            cs.set_v_ego_raw(static_cast<float>(speed_mps));
+            cs.set_steering_angle_deg(static_cast<float>(steering_angle_deg));
+            cs.set_yaw_rate(static_cast<float>(yaw_rate));
+            cs.set_gas_pressed(gas_pressed);
+            cs.set_brake_pressed(brake_pressed);
+            cs.set_standstill(standstill);
+            cs.set_cruise_available(cruise_available);
+            cs.set_gear(8);
+            if (auto mw = self.getMiddleware())
+              mw->publish(adas::topics::kVehicleState, cs);
+          },
+          py::arg("timestamp_us"), py::arg("speed_mps"), py::arg("steering_angle_deg") = 0.0,
+          py::arg("yaw_rate") = 0.0, py::arg("gas_pressed") = false, py::arg("brake_pressed") = false,
+          py::arg("standstill") = false, py::arg("cruise_available") = true)
       .def(
           "publish_lane_lines",
           [](AdasApp& self, py::bytes serialized) {

@@ -6,14 +6,13 @@
 
 namespace adas {
 namespace services {
-/** Car-side settings: the bus, the brand, and the cruise buttons. */
+/** Car-side settings: the bus, the brand, and whether we take the longitudinal axis. */
 struct CarConfig {
-  int usb_fd = -1;                        ///< File descriptor of the panda, opened by the host; -1 means no hardware.
-  std::string dbc_path;                   ///< CAN database the decoder parses.
-  bool cruise_buttons_enabled = false;    ///< Drive the longitudinal axis through the stock cruise buttons.
-  double cruise_deadband_ms = 0.70;       ///< Speed error below which no button is pressed [m/s].
-  int cruise_tip_cooldown_ms = 200;       ///< Minimum gap between button presses [ms].
-  double cruise_tip_step_ms = 1.0 / 3.6;  ///< Setpoint change per press [m/s] — one stalk press is 1 km/h.
+  int usb_fd = -1;       ///< File descriptor of the panda, opened by the host; -1 means no hardware.
+  std::string dbc_path;  ///< CAN database the decoder parses.
+  /// Take over speed: the platform sends its ACC frames and asks the panda for its longitudinal flag,
+  /// and the control law produces an acceleration. Off is lateral-only with the stock ACC untouched.
+  bool long_control_enabled = false;
   adas::SpeedFilter::Config speed_filter{};  ///< Wheel-speed filter settings.
 };
 

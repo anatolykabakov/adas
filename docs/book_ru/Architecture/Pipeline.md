@@ -4,37 +4,29 @@
 
 Инженерная версия с деталями реализации: `docs/IMAGE_TO_CAN_PIPELINE.md`.
 
-## Проследите один кадр, с часами
+## Бюджет времени одного кадра
 
 Этапы ниже держать в голове проще, если смотреть, как через них движется один кадр. Каждое число — измеренная
-медиана с ночного заезда длиной 29 минут. Медианы по этапам не обязаны складываться в накопленные медианы —
-эти подобраны так, чтобы попасть в две накопленные величины, которые `tools/latency.py` реально печатает: 22 мс до
-выхода модели и **52 мс до команды**, — чтобы арифметику можно было проверить, а не принять на слово.
+медиана с ночного заезда длиной 29 минут (OnePlus 7T, раннер thneed); две опорные величины, которые
+`tools/latency.py` реально печатает, — **22 мс до выхода модели** и **52 мс до команды на руль**.
 
-```python
-# Measured medians, run 2026_08_16_23_59_45, OnePlus 7T, thneed runner.
-# "own" is the stage's own cost; the clock accumulates.
-STAGES = (
-    ("capture (Camera2 YUV, capture_ts stamped)", 0.0),
-    ("delivery to VisionPipeline", 0.0),           # median 0, p95 0 — instrumented since 2026-08
-    ("wait in the inference queue", 0.0),          # median 0, mean 1.0 — nothing is queueing up
-    ("geometric warp to 6x128x256 (OpenCL)", 4.6), # prep_ms; was 12.1 on the CPU
-    ("Supercombo inference (thneed, GPU)", 17.6),  # was 45.6 through ONNX Runtime
-    ("parse heads -> vision/lanes", 0.0),
-    ("Java -> ZMQ -> ZmqBridge -> proto_convert", 4.0),
-    ("Planner -> control/lat_plan, control/lane_keep", 5.0),
-    ("Control -> controls/steer", 21.0),
-    ("Platform -> HCA_01 on the wire", 10.0),      # its own 10 ms TX timer
-)
+| этап | своё [мс] | часы [мс] |
+|---|---|---|
+| съёмка (Camera2 YUV, ставится `capture_ts`) | 0.0 | 0.0 |
+| доставка в `VisionPipeline` | 0.0 | 0.0 |
+| ожидание в очереди инференса | 0.0 | 0.0 |
+| геометрический варп в 6×128×256 (OpenCL) | 4.6 | 4.6 |
+| инференс Supercombo (thneed, GPU) | 17.6 | **22.2** |
+| разбор голов → `vision/lanes` | 0.0 | 22.2 |
+| Java → ZMQ → `ZmqBridge` → `proto_convert` | 4.0 | 26.2 |
+| `Planner` → `control/lat_plan` | 5.0 | 31.2 |
+| `Control` → `controls/steer` | 21.0 | **52.2** |
+| `Platform` → `HCA_01` в проводе | 10.0 | 62.2 |
 
-clock = 0.0
-print(f"{'stage':>46} {'own':>6} {'clock':>7} {'car has moved':>15}")
-for name, own in STAGES:
-    clock += own
-    print(f"{name:>46} {own:>5.1f} {clock:>6.1f} {22.0 * clock * 1e-3:>13.2f} m")
-print(f"\nAt 22 m/s the command that reaches the rack was computed for a road position {22.0 * clock * 1e-3:.2f} m back.")
-print("That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety.")
-```
+Почему эти часы важны — одна строка физики: дорога не ждёт, $d = v\,t$. На $v = 22$ м/с команда, дошедшая до
+рейки, посчитана для положения на дороге $22 \cdot 0.052 \approx 1.1$ м назад — и ровно этот метр
+компенсирует `fp_steer_delay_s`, предсказывая состояние вперёд; поэтому он вход планировщика, а не
+косметика.
 
 Три строки в этом списке заслуживают внимания.
 
@@ -60,32 +52,16 @@ print("That is what fp_steer_delay_s compensates, and why it is a feedforward in
 строгий такт, иначе EPS отбрасывает команду. Значит примерно два тика из трёх панда передаёт команду,
 построенную на *эталоне, который уже использовался*.
 
-Это правильное поведение, и оно создаёт ловушку для того, кто читает логи:
-
-```python
-VISION_HZ = 30.01
-TX_HZ = 100.0
-FRESH_WINDOW_MS = 50.0        # tools/latency.py keeps commands within this of their vision timestamp
-
-vision_period_ms = 1000.0 / VISION_HZ
-per_frame = TX_HZ / VISION_HZ
-print(f"vision period {vision_period_ms:.1f} ms, {per_frame:.1f} actuator ticks per vision frame")
-print(f"only the first tick uses a brand-new reference; the rest reuse it")
-print()
-# The freshness filter is a time window, not "one tick per frame" — so what it keeps is the fraction of
-# the vision period that falls inside the window.
-kept_predicted = min(1.0, FRESH_WINDOW_MS / vision_period_ms)
-print(f"predicted share passing a {FRESH_WINDOW_MS:.0f} ms freshness filter: {100 * kept_predicted:.0f} %")
-print(f"measured on the run: 171 097 kept of 175 573 = {100 * 171097 / 175573:.0f} %")
-print()
-print("Compute e2e latency over the raw stream instead and the republishes drag the number up, because")
-print("their vision_ts is older than the command that carries it.")
-```
+Это правильное поведение, и оно создаёт ловушку для того, кто читает логи. Арифметика: $100/30 \approx 3.3$
+тика актуатора на кадр зрения, то есть только первый тик использует свежую опору, а следующие два повторяют
+её. Поэтому `tools/latency.py` фильтрует команды по **свежести** — окном 50 мс от метки самого кадра. При
+периоде зрения 33 мс любая команда первого использования проходит, и фильтр режет только по-настоящему
+несвежие переиздания: 171 097 из 175 573 на этом заезде, 97 %. Посчитайте сквозную задержку по сырому потоку
+— и переиздания утянут число вверх, потому что их `vision_ts` старше команды, которая их несёт.
 
 На 13 Гц — темпе, который эта глава приводила до переезда модели на GPU, — этот фильтр не проходила треть
-команд, и само окно свежести делало заметную работу. На 30 Гц период зрения короче окна, поэтому фильтр
-отбрасывает только по-настоящему несвежие переиздания: 4 476 из 175 573. Урок улучшение пережил: «команда
-свежая» и «картинка свежая» — разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт
+команд, и само окно делало заметную работу. Урок улучшение пережил: «команда свежая» и «картинка свежая» —
+разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт
 устаревания привязан к метке съёмки кадра, а не к возрасту команды, и поэтому таймаут команды HCA в 250 мс не
 защитил от плана возраста 75 секунд.
 
@@ -150,7 +126,7 @@ middleware; `utils/proto_convert.cpp` переводит сообщения пр
   области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
   одинаков, какой бы ни работал. Публикует `control/lat_plan`, `control/long_plan`, `control/lane_keep`.
 * **`Control`** (`services/control.cpp`) — закон управления и ничего больше: кривизна и шасси превращаются в
-  момент, признак включения, пиктограммы приборки и желание нажать кнопку круиза. Он не знает ни адреса CAN,
+  момент и запрос ускорения, признак включения, пиктограммы приборки. Он не знает ни адреса CAN,
   ни сигнала, ни счётчика кадра. Публикует `controls/steer`.
 * **`Platform`** (`services/platform.cpp`) выносит это намерение на шину и не называет ни одной марки: какая
   машина за шиной, решается один раз по `vehicle.name` и достигается через `platform::CarPlatform`. См.
@@ -196,27 +172,11 @@ middleware; `utils/proto_convert.cpp` переводит сообщения пр
 ./app/src/main/cpp/build_cpp.sh -t linux --test    # host build + ~230 gtest cases; pyadas core into scripts/
 ```
 
-```python
-# not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.
-from pyadas import require_core
-pyadas = require_core()
-
-app = pyadas.AdasApp()                      # simulated mode: no threads, you own the clock
-app.set_param("lane_keep_controller", "fp")
-
-for ts, lanes_msg, raw in lanes:            # your session, from step 8
-    app.publish("vision/lanes", raw.SerializeToString())
-    app.publish("vehicle/state", chassis_at(ts))    # your synthetic chassis, or a real one
-    app.step()
-    for topic, payload in app.pop_messages():
-        if topic == "control/lane_keep":
-            record(ts, payload)             # the shipped stack's steering, frame by frame
-```
-
-`scripts/core/lane_keep.py` оборачивает ровно этот цикл, им уже пользуются симулятор и визуализатор —
-прочтите его раз, и офлайновый инструментарий перестанет быть магией. Это же честный способ сравнить
-собственный регулятор с боевыми `pp` и `fp` на одинаковых кадрах: один бег на входе, три команды на
-выходе, один график.
+Весь цикл — четыре вызова: создать `pyadas.AdasApp()` в симулируемом режиме, опубликовать сообщения кадра,
+позвать `step()`, прочитать, что опубликовали сервисы. `scripts/core/lane_keep.py` оборачивает ровно это, и
+симулятор с визуализатором уже им пользуются — прочитайте его один раз, и офлайн-инструменты перестанут быть
+магией. Это же честный способ сравнить собственный контроллер с боевыми `pp` и `fp`: один бег на входе, три
+команды на выходе, один график.
 
 <!-- next-chapter -->
 ---

@@ -160,7 +160,8 @@ void SafetyWarn::tick()
   double lead_prob = 0.0;
   bool has_lead = false;
   if (have_model_) {
-    const longplan::LeadState lead = leadFromModel(model_);
+    // Distances here stay from the camera: the warning planner subtracts its own bumper offset below.
+    const longitudinal::Lead lead = leadFromModel(model_.lead0(), 0.0);
     lead_prob = lead.prob;
     lead_d = lead.d_rel;
     lead_v = lead.v_lead;

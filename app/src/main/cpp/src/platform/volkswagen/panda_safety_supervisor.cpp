@@ -60,7 +60,7 @@ std::optional<health_t> PandaSafetySupervisor::tick(Panda& panda, health_t healt
   const bool ignition = updateIgnitionSticky(ignition_hw, health.voltage_pkt, now_ms);
 
   constexpr uint16_t want = C::kVolkswagen;
-  constexpr uint16_t param = C::kParamStock;
+  const uint16_t param = safety_param_;
 
   if (!initialized_) {
     initialized_ = true;

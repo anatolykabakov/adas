@@ -162,7 +162,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
 
   cfg.lane_keep.lane_path = lane_path;
   cfg.lane_keep.steer_ratio = steer_ratio;
-  cfg.lane_keep.long_plan.lane_path = lane_path;
   cfg.lane_keep.long_plan.steer_ratio = steer_ratio;
   cfg.safety_warn.lane_path = lane_path;
   cfg.safety_warn.steer_ratio = steer_ratio;
@@ -182,11 +181,7 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setString(veh, "lane_keep_controller", cfg.lane_keep.controller);
   if (cfg.lane_keep.controller == "flowpilot")
     cfg.lane_keep.controller = "fp";
-  setBool(veh, "cruise_buttons", cfg.panda.cruise_buttons_enabled);
-  setDouble(veh, "cruise_deadband_ms", cfg.panda.cruise_deadband_ms);
-  setDouble(veh, "cruise_tip_step_ms", cfg.panda.cruise_tip_step_ms);
-  if (veh.isObject() && veh.isMember("cruise_tip_cooldown_ms") && veh["cruise_tip_cooldown_ms"].isNumeric())
-    cfg.panda.cruise_tip_cooldown_ms = veh["cruise_tip_cooldown_ms"].asInt();
+  setBool(veh, "long_control", cfg.panda.long_control_enabled);
   setDouble(veh, "mpc_Lf", cfg.lane_keep.mpc_Lf);
   setDouble(veh, "mpc_max_steer_deg", cfg.lane_keep.mpc_max_steer_deg);
   setDouble(veh, "mpc_low_speed_steer_deg", cfg.lane_keep.mpc_low_speed_steer_deg);
@@ -212,21 +207,32 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
     cfg.lane_keep.controller = "pp";
 
   const Json::Value& lp = root["long_plan"];
-  setDouble(lp, "t_follow", cfg.lane_keep.long_plan.t_follow);
-  setDouble(lp, "min_gap_m", cfg.lane_keep.long_plan.min_gap_m);
-  setDouble(lp, "a_max", cfg.lane_keep.long_plan.a_max);
-  setDouble(lp, "a_min", cfg.lane_keep.long_plan.a_min);
-  setDouble(lp, "kp_gap", cfg.lane_keep.long_plan.kp_gap);
-  setDouble(lp, "kp_v", cfg.lane_keep.long_plan.kp_v);
-  setDouble(lp, "lead_prob_thresh", cfg.lane_keep.long_plan.lead_prob_thresh);
-  setDouble(lp, "curv_a_lat_max", cfg.lane_keep.long_plan.curv_a_lat_max);
-  setDouble(lp, "curv_preview_s", cfg.lane_keep.long_plan.curv_preview_s);
-  setDouble(lp, "curv_min_speed_ms", cfg.lane_keep.long_plan.curv_min_speed_ms);
-  setDouble(lp, "curv_v_floor_ms", cfg.lane_keep.long_plan.curv_v_floor_ms);
-  setDouble(lp, "a_coast_ms2", cfg.lane_keep.long_plan.a_coast_ms2);
-  setDouble(lp, "lead_max_offset_m", cfg.lane_keep.long_plan.lead_max_offset_m);
-  setDouble(lp, "lead_min_speed_ms", cfg.lane_keep.long_plan.lead_min_speed_ms);
-  setBool(lp, "plan_v_enabled", cfg.lane_keep.long_plan.plan_v_enabled);
+  auto& lpc = cfg.lane_keep.long_plan;
+  setDouble(lp, "t_follow", lpc.mpc.t_follow);
+  setDouble(lp, "stop_distance_m", lpc.mpc.stop_distance);
+  setDouble(lp, "comfort_brake", lpc.mpc.comfort_brake);
+  setDouble(lp, "a_change_cost", lpc.mpc.a_change_cost);
+  setDouble(lp, "j_ego_cost", lpc.mpc.j_ego_cost);
+  setDouble(lp, "danger_zone_cost", lpc.mpc.danger_zone_cost);
+  setDouble(lp, "a_cruise_min", lpc.a_cruise_min);
+  setString(lp, "lead_source", lpc.lead_source);
+  if (lpc.lead_source != "vision" && lpc.lead_source != "none" && lpc.lead_source != "radar")
+    lpc.lead_source = "vision";
+  setDouble(lp, "cruise_short_step_kph", lpc.cruise_short_step_kph);
+  setDouble(lp, "cruise_long_press_s", lpc.cruise_long_press_s);
+  setDouble(lp, "cruise_long_step_kph", lpc.cruise_long_step_kph);
+  setDouble(lp, "lead_prob_thresh", lpc.lead_prob_thresh);
+  setDouble(lp, "lead_max_offset_m", lpc.lead_max_offset_m);
+  setDouble(lp, "lead_origin_offset_m", lpc.lead_origin_offset_m);
+  setDouble(lp, "actuator_delay_s", lpc.actuator_delay_s);
+  setBool(lp, "curv_limit_enabled", lpc.curv_limit_enabled);
+  setDouble(lp, "curv_a_lat_max", lpc.curv_a_lat_max);
+  setDouble(lp, "curv_preview_s", lpc.curv_preview_s);
+  setDouble(lp, "curv_min_speed_ms", lpc.curv_min_speed_ms);
+  setDouble(lp, "curv_v_floor_ms", lpc.curv_v_floor_ms);
+  setDouble(lp, "curv_filter_tau_s", lpc.curv_filter_tau_s);
+  lpc.steer_ratio = cfg.lane_keep.steer_ratio;
+  lpc.wheelbase_m = cfg.lane_keep.wheelbase_m;
 
   const Json::Value& warn = root["safety_warn"];
   auto& planner = cfg.safety_warn.planner;
@@ -261,7 +267,6 @@ AdasApp::Config AdasApp::Config::loadFromFile(const std::string& path, bool* ok)
   setDouble(pos, "z_up", cfg.camera_calib.height_m);
   setDouble(pos, "y_left", cfg.lane_keep.cam_y_left_m);
   setDouble(pos, "y_left", cfg.lane_keep.lane_path.cam_y_left_m);
-  cfg.lane_keep.long_plan.lane_path.cam_y_left_m = cfg.lane_keep.lane_path.cam_y_left_m;
   cfg.safety_warn.lane_path.cam_y_left_m = cfg.lane_keep.lane_path.cam_y_left_m;
 
   const Json::Value& K = cam["intrinsics_prior"];

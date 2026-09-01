@@ -20,8 +20,7 @@ public:
     int usb_fd = -1;                           ///< Panda file descriptor, opened by the host; -1 means no hardware.
     std::string dbc_path;                      ///< CAN database the decoder parses.
     std::string car_name = "vw_golf_7_mqb";    ///< Which car is on the bus; `vehicle.name` in the config.
-    bool cruise_buttons_enabled = false;       ///< Send cruise-button frames at all.
-    int cruise_tip_cooldown_ms = 200;          ///< Minimum gap between button presses [ms].
+    bool long_control_enabled = false;         ///< Send ACC frames; see CarConfig::long_control_enabled.
     adas::SpeedFilter::Config speed_filter{};  ///< Wheel-speed filter settings.
   };
 

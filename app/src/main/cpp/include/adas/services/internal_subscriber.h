@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "adas/middleware/manager.hpp"
+#include "model_long.pb.h"
 #include "safety_warn.pb.h"
 #include "steer.pb.h"
 #include "adas/services/planner.h"
@@ -13,7 +14,7 @@
 
 namespace adas {
 using HostOutMsg = std::variant<LaneKeepOutput, LocalizationPose, CameraCalibrationState, adas::proto::SafetyWarnState,
-                                adas::proto::SteerCommand>;
+                                adas::proto::SteerCommand, adas::proto::LongPlanState>;
 
 namespace services {
 /** Collects internal-bus messages for the host application. */

@@ -16,23 +16,22 @@ using C = ::volkswagen::MqbSafetyConstants;
 }  // namespace
 
 VolkswagenMqb::VolkswagenMqb(std::string dbc_path, const adas::SpeedFilter::Config& speed_filter,
-                             bool cruise_buttons_enabled, int cruise_tip_cooldown_ms)
-  : ci_({std::move(dbc_path), speed_filter})
-  , cruise_buttons_enabled_(cruise_buttons_enabled)
-  , cruise_tip_cooldown_ms_(cruise_tip_cooldown_ms)
+                             bool long_control_enabled, const ::volkswagen::MqbVariant& variant)
+  : ci_({std::move(dbc_path), speed_filter}), variant_(variant), long_control_enabled_(long_control_enabled)
 {
+  ci_.setLongControlEnabled(long_control_enabled_);
 }
 
 void VolkswagenMqb::init() { ci_.init(); }
 
 VehicleDefaults VolkswagenMqb::defaults() const
 {
-  // Golf 7 Highline, measured on our own car and refined from bags; the stiffness factor is where the
-  // learner starts, not where it stays.
+  // Geometry and mass per variant (mqb_variants.h): the Golf's measured on our own car and fitted from
+  // bags, the others as published. The stiffness factor is where the learner starts, not where it stays.
   VehicleDefaults v;
-  v.wheelbase_m = 2.636;
-  v.steer_ratio = 15.6;  // Fitted from bags; the factory figure is 15.7.
-  v.mass_kg = 1533.0;
+  v.wheelbase_m = variant_.wheelbase_m;
+  v.steer_ratio = variant_.steer_ratio;
+  v.mass_kg = variant_.mass_kg;
   v.center_to_front_frac = 0.45;
   v.steer_sign = -1.0;
   v.tire_stiffness_factor = 1.0;
@@ -73,10 +72,15 @@ SteerLimits VolkswagenMqb::steerLimits() const
   return lim;
 }
 
-void VolkswagenMqb::setCruiseIntent(int intent, int64_t now_ms)
+LongLimits VolkswagenMqb::longLimits() const
 {
-  cruise_intent_ = intent;
-  cruise_intent_at_ms_ = now_ms;
+  using P = ::volkswagen::CarControllerParams;
+  LongLimits lim;
+  lim.accelMaxMs2 = P::ACCEL_MAX;
+  lim.accelMinMs2 = P::ACCEL_MIN;
+  lim.stepFrames = P::ACC_CONTROL_STEP;
+  lim.supported = long_control_enabled_;
+  return lim;
 }
 
 void VolkswagenMqb::setLastCommand(int torque_cnm, bool lat_active)
@@ -91,48 +95,24 @@ std::vector<can_frame> VolkswagenMqb::apply(const CarControl& cc)
 
   ::volkswagen::CarControl out;
   out.latActive = cc.latActive;
+  out.longActive = cc.longActive;
+  out.longState = static_cast<::volkswagen::LongCtrlState>(static_cast<int>(cc.longState));
   out.actuators.steerTorqueCNm = cc.actuators.steerTorqueCNm;
+  out.actuators.accelMs2 = cc.actuators.accelMs2;
   out.hud.leftLaneVisible = cc.hud.leftLaneVisible;
   out.hud.rightLaneVisible = cc.hud.rightLaneVisible;
-  out.cruise = cruiseButtons(cs, cruise_intent_at_ms_);
+  out.setSpeedMps = cc.hud.setSpeedMps;
+  out.leadVisible = cc.hud.leadVisible;
 
   return ci_.apply(out, cs);
-}
-
-::volkswagen::CruiseButtonCmd VolkswagenMqb::cruiseButtons(const ::volkswagen::CarStateView& cs, int64_t now_ms)
-{
-  ::volkswagen::CruiseButtonCmd cmd;
-  if (!cruise_buttons_enabled_)
-    return cmd;
-
-  // A press is held until the stock counter moves: that is how this bus acknowledges it. Releasing
-  // earlier leaves the press unseen, releasing later repeats it.
-  if (cruise_hold_tip_up_ || cruise_hold_tip_down_) {
-    cmd.send = true;
-    cmd.tip_up = cruise_hold_tip_up_;
-    cmd.tip_down = cruise_hold_tip_down_;
-    if (cs.graStock.counter() != cruise_gra_cnt_at_arm_) {
-      cruise_hold_tip_up_ = cruise_hold_tip_down_ = false;
-      cruise_cooldown_until_ms_ = now_ms + cruise_tip_cooldown_ms_;
-    }
-    return cmd;
-  }
-
-  if (now_ms < cruise_cooldown_until_ms_ || !cs.graStock.valid || cruise_intent_ == 0)
-    return cmd;
-
-  cruise_gra_cnt_at_arm_ = cs.graStock.counter();
-  cmd.send = true;
-  cruise_hold_tip_up_ = cruise_intent_ == 1;
-  cruise_hold_tip_down_ = cruise_intent_ == 2;
-  cmd.tip_up = cruise_hold_tip_up_;
-  cmd.tip_down = cruise_hold_tip_down_;
-  return cmd;
 }
 
 void VolkswagenMqb::configureSafety()
 {
   safety_.setAlternativeExperience(C::kAltExpDisableDisengageOnGas | C::kAltExpAlka);
+  // The longitudinal flag is the takeover itself: with it the panda stops forwarding the radar's
+  // ACC frames. Without our own frames behind it the car would lose its stock ACC, so the two are one switch.
+  safety_.setSafetyParam(long_control_enabled_ ? C::kParamLongControl : C::kParamStock);
 }
 
 std::optional<health_t> VolkswagenMqb::safetyTick(::Panda& panda, health_t health, int64_t now_ms)

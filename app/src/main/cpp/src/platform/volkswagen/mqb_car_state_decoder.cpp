@@ -31,7 +31,9 @@ CarStateView MqbCarStateDecoder::toCarStateView() const
   cs.steeringPressed = state_.steering_pressed();
   cs.epsHcaStatus = eps_hca_status_;
   cs.ldwStock = ldw_stock_;
-  cs.graStock = gra_stock_;
+  cs.accType = acc_type_;
+  cs.espHold = esp_hold_;
+  cs.tskStatus = last_tsk_status_;
   cs.cruiseEngaged = state_.cruise_engaged();
   cs.cruiseAvailable = state_.cruise_available();
   cs.gearReverse = gearIsReverse(state_.gear());
@@ -163,10 +165,6 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame, int64_t now_ms)
       break;
     }
     case 0x12B: {
-      if (frame.dat.size() >= 8) {
-        std::memcpy(gra_stock_.data, frame.dat.data(), 8);
-        gra_stock_.valid = true;
-      }
       auto set_btn = [&](const char* name, void (adas::proto::CarState::*setter)(bool)) {
         if (auto v = dbc_->extractSignal(frame, name)) {
           (state_.*setter)(*v > 0.5);
@@ -183,6 +181,20 @@ void MqbCarStateDecoder::updateFromFrame(const can_frame& frame, int64_t now_ms)
         state_.set_cruise_gap_adjust(static_cast<int32_t>(*gap));
         dirty_ = true;
       }
+      break;
+    }
+    case 0x122: {
+      // The stock radar's own ACC_06 arrives from the camera side of the panda (src 2); when we take the
+      // longitudinal axis the panda stops forwarding it, so this is read, never mirrored back as-is.
+      if ((frame.src & 0x0F) == CanBus::cam) {
+        if (auto typ = dbc_->extractSignal(frame, "ACC_Typ"))
+          acc_type_ = static_cast<uint8_t>(*typ);
+      }
+      break;
+    }
+    case 0x0FD: {
+      if (auto hold = dbc_->extractSignal(frame, "ESP_Haltebestaetigung"))
+        esp_hold_ = *hold > 0.5;
       break;
     }
     case 0x397: {

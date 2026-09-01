@@ -23,9 +23,7 @@
   "vehicle": {
     "name": "vw_golf_7_mqb",
     "lane_keep_controller": "fp",
-    "cruise_buttons": false,
-    "cruise_deadband_ms": 0.7,
-    "cruise_tip_cooldown_ms": 200,
+    "long_control": false,
     "pp_k_dd": 0.8,
     "pp_ld_min": 8.0,
     "pp_ld_max": 25.0,
@@ -65,18 +63,23 @@
     "fp_solver": "acados"
   },
   "long_plan": {
-    "t_follow": 1.5,
-    "min_gap_m": 4.0,
-    "a_max": 1.2,
-    "a_min": -2.5,
+    "t_follow": 1.45,
+    "stop_distance_m": 6.0,
+    "comfort_brake": 2.5,
+    "a_cruise_min": -1.2,
+    "lead_source": "vision",
+    "cruise_short_step_kph": 1.0,
+    "cruise_long_press_s": 0.5,
+    "cruise_long_step_kph": 10.0,
+    "lead_prob_thresh": 0.5,
+    "lead_max_offset_m": 2.0,
+    "lead_origin_offset_m": 1.4,
+    "actuator_delay_s": 0.15,
+    "curv_limit_enabled": true,
     "curv_a_lat_max": 1.8,
     "curv_preview_s": 4.0,
     "curv_min_speed_ms": 8.0,
-    "curv_v_floor_ms": 8.0,
-    "a_coast_ms2": -0.3,
-    "lead_max_offset_m": 2.0,
-    "lead_min_speed_ms": 2.0,
-    "plan_v_enabled": false
+    "curv_v_floor_ms": 8.0
   },
   "safety_warn": {
     "fcw_ttc_s": 2.5,

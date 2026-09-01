@@ -14,7 +14,7 @@
 #include "adas/utils/lat_control_pid.h"
 #include "adas/utils/pose_calibrator.h"
 #include "adas/utils/vanishing_point_calib.h"
-#include "adas/utils/long_planner.h"
+#include "adas/longitudinal/long_planner.h"
 #include "adas/utils/safety_planner.h"
 #include "messages.pb.h"
 #include "lane_keep.pb.h"
@@ -43,7 +43,8 @@ adas::proto::LaneKeepDebug createLaneKeepDebug(const LaneKeepOutput& out, int64_
                                                double frame_dt_s, const services::Planner::Config& config);
 
 /// \return The longitudinal plan message: target speed, gap and its inputs.
-adas::proto::LongPlanState createLongPlan(const longplan::Input& in, const longplan::Plan& plan, int64_t now_ms);
+adas::proto::LongPlanState createLongPlan(const longitudinal::PlannerInput& in, const longitudinal::PlannerOutput& plan,
+                                          int64_t now_ms);
 
 /// \return The calibration message published on calibration/camera.
 adas::proto::CameraCalibrationState createCameraCalibState(const CameraCalibrationState& state, int64_t timestamp_us);
@@ -128,7 +129,13 @@ struct SteerCommandInputs {
   bool assist_allowed = false;
   bool assist_known = false;
   std::string status;
-  int cruise_intent = 0;
+  /// The longitudinal command, produced by the same tick: an acceleration and the state it came from.
+  bool long_active = false;
+  double accel_ms2 = 0.0;
+  int long_state = 0;
+  double v_target_mps = 0.0;
+  double v_cruise_mps = 0.0;
+  std::string long_status = "off";
   /// The HUD lane pictograms. Hardcoded true until the vision status is wired through; see task #40.
   bool hud_left_lane_visible = true;
   bool hud_right_lane_visible = true;
@@ -165,6 +172,7 @@ adas::proto::CarState carStateFromChassis(const ChassisSample& chassis);
  * \param[in] plan The model's longitudinal message.
  * \return Probability, longitudinal and lateral gap [m], and the lead's speed [m/s].
  */
-longplan::LeadState leadFromModel(const adas::proto::ModelLongPlan& plan);
+/// A model lead track → planner lead, distances moved from the lens to the bumper by `origin_offset_m`.
+longitudinal::Lead leadFromModel(const adas::proto::LeadTrack& track, double origin_offset_m);
 
 }  // namespace adas

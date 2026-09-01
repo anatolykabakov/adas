@@ -171,22 +171,38 @@ adas::proto::CameraCalibDebug createCameraCalibDebug(const CameraCalibrationStat
   return msg;
 }
 
-adas::proto::LongPlanState createLongPlan(const longplan::Input& in, const longplan::Plan& plan, int64_t now_ms)
+adas::proto::LongPlanState createLongPlan(const longitudinal::PlannerInput& in, const longitudinal::PlannerOutput& plan,
+                                          int64_t now_ms)
 {
   adas::proto::LongPlanState msg;
-  auto* lp = &msg;
-  lp->set_timestamp(now_ms);
-  lp->set_v_ego(static_cast<float>(in.v_ego));
-  lp->set_v_target(static_cast<float>(plan.v_target));
-  lp->set_a_target(static_cast<float>(plan.a_target));
-  lp->set_lead_d(static_cast<float>(in.lead.d_rel));
-  lp->set_lead_v(static_cast<float>(in.lead.v_lead));
-  lp->set_lead_prob(static_cast<float>(in.lead.prob));
-  lp->set_has_lead(plan.has_lead);
-  lp->set_source(plan.source);
-  lp->set_v_curv(static_cast<float>(plan.v_curv));
-  lp->set_kappa_ahead(static_cast<float>(plan.kappa_ahead));
-  lp->set_status(plan.status);
+  msg.set_timestamp(now_ms);
+  msg.set_v_ego(static_cast<float>(in.v_ego));
+  msg.set_v_target(static_cast<float>(plan.v_target));
+  msg.set_a_target(static_cast<float>(plan.a_target));
+  msg.set_lead_d(static_cast<float>(in.lead0.d_rel));
+  msg.set_lead_v(static_cast<float>(in.lead0.v_lead));
+  msg.set_lead_prob(static_cast<float>(in.lead0.prob));
+  msg.set_lead2_d(static_cast<float>(in.lead1.d_rel));
+  msg.set_lead2_v(static_cast<float>(in.lead1.v_lead));
+  msg.set_lead2_prob(static_cast<float>(in.lead1.prob));
+  msg.set_has_lead(plan.has_lead);
+  msg.set_source(plan.source);
+  msg.set_status(plan.valid ? plan.status : "no_cruise");
+  msg.set_v_curv(static_cast<float>(plan.v_curv));
+  msg.set_kappa_ahead(static_cast<float>(plan.kappa_ahead));
+  msg.set_v_cruise(static_cast<float>(plan.v_cruise));
+  msg.set_solver_ok(plan.solver_ok);
+  msg.set_solver_iters(plan.solver_iters);
+  msg.set_solver_cost(static_cast<float>(plan.solver_cost));
+  msg.set_fcw(plan.fcw);
+  msg.set_lead_source(plan.lead_source);
+  if (plan.valid) {
+    for (int i = 0; i < longitudinal::kControlN; ++i) {
+      msg.add_speeds(static_cast<float>(plan.speeds[i]));
+      msg.add_accels(static_cast<float>(plan.accels[i]));
+      msg.add_jerks(static_cast<float>(plan.jerks[i]));
+    }
+  }
   return msg;
 }
 
@@ -564,7 +580,12 @@ adas::proto::SteerCommand createSteerCommand(const SteerCommandInputs& in, const
   cmd.set_status(in.status);
   cmd.set_hud_left_lane_visible(in.hud_left_lane_visible);
   cmd.set_hud_right_lane_visible(in.hud_right_lane_visible);
-  cmd.set_cruise_intent(in.cruise_intent);
+  cmd.set_long_active(in.long_active);
+  cmd.set_accel_ms2(in.accel_ms2);
+  cmd.set_long_state(in.long_state);
+  cmd.set_v_target_mps(in.v_target_mps);
+  cmd.set_v_cruise_mps(in.v_cruise_mps);
+  cmd.set_long_status(in.long_status);
   return cmd;
 }
 
@@ -659,14 +680,16 @@ adas::proto::CarState carStateFromChassis(const ChassisSample& chassis)
   return cs;
 }
 
-longplan::LeadState leadFromModel(const adas::proto::ModelLongPlan& plan)
+longitudinal::Lead leadFromModel(const adas::proto::LeadTrack& track, double origin_offset_m)
 {
-  const auto& lead = plan.lead0();
-  longplan::LeadState out;
-  out.prob = lead.prob();
-  out.d_rel = lead.d_rel() > 0 ? lead.d_rel() : (lead.x_size() > 0 ? lead.x(0) : 0.0);
-  out.v_lead = lead.v_lead() != 0 ? lead.v_lead() : (lead.v_size() > 0 ? lead.v(0) : 0.0);
-  out.y_rel = lead.y_rel();
+  longitudinal::Lead out;
+  const double x = track.d_rel() > 0 ? track.d_rel() : (track.x_size() > 0 ? track.x(0) : 0.0);
+  out.valid = track.prob() > 0.0 && x > 0.0;
+  out.prob = track.prob();
+  out.d_rel = x - origin_offset_m;
+  out.y_rel = track.y_rel();
+  out.v_lead = track.v_lead() != 0 ? track.v_lead() : (track.v_size() > 0 ? track.v(0) : 0.0);
+  out.a_lead = track.a_lead() != 0 ? track.a_lead() : (track.a_size() > 0 ? track.a(0) : 0.0);
   return out;
 }
 

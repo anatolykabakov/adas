@@ -54,4 +54,17 @@ message LongPlanState {
   // Curvature preview: what the path ahead asks for, before the lead/plan reference is applied.
   float v_curv = 11;             // speed at which the curve ahead costs curv_a_lat_max
   float kappa_ahead = 12;        // 1/m, high percentile over the preview window
+  // The MPC trajectory the control law tracks: CONTROL_N = 17 samples on T_IDXS[:17] (0 … 2.5 s).
+  repeated float speeds = 13;    // m/s
+  repeated float accels = 14;    // m/s²
+  repeated float jerks = 15;     // m/s³
+  float v_cruise = 16;           // set speed the plan was made for [m/s]; 0 = no set speed
+  bool solver_ok = 17;           // the solve converged; false means the plan is the reset (hold) plan
+  int32 solver_iters = 18;
+  float solver_cost = 19;
+  bool fcw = 20;                 // the plan predicts a crash inside 5 s and the lead is believed (>0.9)
+  float lead2_d = 21;            // the second lead, if the model saw one
+  float lead2_v = 22;
+  float lead2_prob = 23;
+  string lead_source = 24;       // vision | none | radar (config long_plan.lead_source)
 }

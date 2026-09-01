@@ -80,8 +80,8 @@ void AdasApp::setupServices()
   const bool have_car = rt && cfg_.panda.usb_fd != -1 && f.enable_panda;
   if (have_car)
     platform_service_ = middleware_->registerService<adas::services::Platform>(adas::services::Platform::Config{
-        cfg_.panda.usb_fd, cfg_.panda.dbc_path, cfg_.vehicle_name, cfg_.panda.cruise_buttons_enabled,
-        cfg_.panda.cruise_tip_cooldown_ms, cfg_.panda.speed_filter});
+        cfg_.panda.usb_fd, cfg_.panda.dbc_path, cfg_.vehicle_name, cfg_.panda.long_control_enabled,
+        cfg_.panda.speed_filter});
   if (have_car || !rt)
     control_service_ = middleware_->registerService<adas::services::Control>(controlConfig());
 
@@ -126,9 +126,11 @@ adas::services::Control::Config AdasApp::controlConfig() const
 {
   const auto& lk = cfg_.lane_keep;
   adas::services::Control::Config c;
-  c.cruise_buttons_enabled = cfg_.panda.cruise_buttons_enabled;
-  c.cruise_deadband_ms = cfg_.panda.cruise_deadband_ms;
-  c.cruise_tip_step_ms = cfg_.panda.cruise_tip_step_ms;
+  // The longitudinal law runs wherever the platform would carry it, and always in replay/simulation,
+  // where the harness is the actuator.
+  c.long_control_enabled = cfg_.panda.long_control_enabled || mode_ != Mode::RealTime;
+  c.long_actuator_delay_s = cfg_.lane_keep.long_plan.actuator_delay_s;
+  c.long_ctl.actuator_delay_s = cfg_.lane_keep.long_plan.actuator_delay_s;
 
   c.ctl = {lk.pid_kp,      lk.pid_ki,     lk.pid_kf,        lk.pid_ff_floor_mps,     100.0,
            lk.steer_ratio, lk.steer_sign, lk.max_steer_deg, lk.tire_stiffness_factor};

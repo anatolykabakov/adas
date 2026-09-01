@@ -5,6 +5,7 @@
 
 #include "adas/panda/health.h"
 #include "adas/platform/car_platform.h"
+#include "adas/platform/volkswagen/carcontroller.h"
 #include "adas/platform/volkswagen/mqb_car_state_decoder.h"
 #include "adas/platform/volkswagen/panda_safety_supervisor.h"
 
@@ -287,4 +288,153 @@ TEST(CarPlatformFactory, SteerLimitsComeThroughTheInterface)
   EXPECT_EQ(lim.stepFrames, 2);
   EXPECT_GT(lim.deltaDownPerStep, lim.deltaUpPerStep) << "releasing the rack is always safe, so it may be faster";
   EXPECT_GT(lim.driverAllowanceCNm, 0);
+}
+
+// --- the acceleration frames ---------------------------------------------------------------------------
+
+namespace {
+int bits(const can_frame& f, int start, int length)
+{
+  int v = 0;
+  for (int i = 0; i < length; ++i) {
+    const int bit = start + i;
+    const uint8_t byte = static_cast<uint8_t>(f.dat[bit / 8]);
+    v |= ((byte >> (bit % 8)) & 1) << i;
+  }
+  return v;
+}
+}  // namespace
+
+TEST(MqbAccFrames, Acc06CarriesTheRequestWithACountedChecksum)
+{
+  volkswagen::AccControl acc;
+  acc.enabled = true;
+  acc.accel_ms2 = -1.0f;
+  acc.acc_type = 1;
+  acc.acc_status = 3;
+  uint8_t counter = 5;
+  const auto f = volkswagen::create_acc_06(0, acc, &counter);
+  EXPECT_EQ(0x122, f.address);
+  ASSERT_EQ(8u, f.dat.size());
+  EXPECT_EQ(5, bits(f, 8, 4));
+  EXPECT_EQ(6, counter);
+  // ACC_Sollbeschleunigung_02: (−1.0 + 7.22) / 0.005 = 1244
+  EXPECT_EQ(1244, bits(f, 24, 11));
+  EXPECT_EQ(80, bits(f, 40, 8));  // 4.0 m/s³ / 0.05
+  EXPECT_EQ(1, bits(f, 58, 2));
+  EXPECT_EQ(3, bits(f, 60, 3));
+  const uint8_t crc = volkswagen::volkswagen_mqb_checksum(0x122, reinterpret_cast<const uint8_t*>(f.dat.data()), 8);
+  EXPECT_EQ(crc, static_cast<uint8_t>(f.dat[0]));
+
+  // The panda decodes the same field the same way: ((B4 & 7) << 8 | B3) * 5 − 7220 = −1000 milli-m/s².
+  const uint8_t b3 = static_cast<uint8_t>(f.dat[3]);
+  const uint8_t b4 = static_cast<uint8_t>(f.dat[4]);
+  EXPECT_EQ(-1000, ((((b4 & 0x07) << 8) | b3) * 5) - 7220);
+}
+
+TEST(MqbAccFrames, InactiveFramesSayNothingAsked)
+{
+  volkswagen::AccControl acc;  // enabled = false
+  uint8_t c6 = 0, c7 = 0;
+  const auto f6 = volkswagen::create_acc_06(0, acc, &c6);
+  const auto f7 = volkswagen::create_acc_07(0, acc, &c7);
+  // 3.01 m/s² → (3.01 + 7.22) / 0.005 = 2046 in both frames, gradients zero, stop distance 20.46.
+  EXPECT_EQ(2046, bits(f6, 24, 11));
+  EXPECT_EQ(0, bits(f6, 40, 8));
+  EXPECT_EQ(2046, bits(f7, 53, 11));
+  EXPECT_EQ(2046, bits(f7, 12, 11));
+  // ACC_Folgebeschl must always read 3.02: (3.02 + 4.6) / 0.03 = 254 — the panda checks exactly this.
+  EXPECT_EQ(254, bits(f7, 32, 8));
+  EXPECT_EQ((254 * 30) - 4600, 3020);
+}
+
+TEST(MqbAccFrames, Acc07EncodesStoppingAndHold)
+{
+  volkswagen::AccControl acc;
+  acc.enabled = true;
+  acc.accel_ms2 = -0.5f;
+  acc.stopping = true;
+  uint8_t c = 0;
+  auto f = volkswagen::create_acc_07(0, acc, &c);
+  EXPECT_EQ(0x12E, f.address);
+  EXPECT_EQ(75, bits(f, 12, 11));  // 0.75 m stop distance
+  EXPECT_EQ(1, bits(f, 23, 1));    // ACC_Anhalten
+  EXPECT_EQ(1, bits(f, 28, 3));    // hold request
+  acc.stopping = false;
+  acc.starting = true;
+  f = volkswagen::create_acc_07(0, acc, &c);
+  EXPECT_EQ(4, bits(f, 28, 3));    // hold release
+  EXPECT_EQ(1, bits(f, 31, 1));    // ACC_Anfahren
+  const uint8_t crc = volkswagen::volkswagen_mqb_checksum(0x12E, reinterpret_cast<const uint8_t*>(f.dat.data()), 8);
+  EXPECT_EQ(crc, static_cast<uint8_t>(f.dat[0]));
+}
+
+TEST(MqbAccFrames, TheCarControllerSendsAccOnlyWhenLongControlIsOn)
+{
+  volkswagen::CarController cc;
+  volkswagen::CarControl req;
+  volkswagen::CarStateView cs;
+  cs.epsHcaStatus = 3;
+  cs.vEgo = 20.f;
+  req.longActive = true;
+  req.actuators.accelMs2 = 0.5f;
+  auto frames = cc.update(req, cs);
+  for (const auto& f : frames)
+    EXPECT_NE(0x122, f.address) << "ACC_06 without the switch would fight the stock ACC";
+
+  volkswagen::CarController on;
+  on.setLongControlEnabled(true);
+  frames = on.update(req, cs);
+  bool saw06 = false, saw07 = false, saw02 = false;
+  for (const auto& f : frames) {
+    saw06 |= f.address == 0x122;
+    saw07 |= f.address == 0x12E;
+    saw02 |= f.address == 0x30C;
+  }
+  EXPECT_TRUE(saw06 && saw07 && saw02);
+  EXPECT_NEAR(0.5f, on.applyAccelLast(), 1e-6);
+}
+
+TEST(MqbAccFrames, TheLongGateNeedsControlsAllowedAndNoBrake)
+{
+  volkswagen::CarStateView cs;
+  cs.cruiseAvailable = true;
+  cs.gearKnown = true;
+  EXPECT_TRUE(volkswagen::longitudinalActuationAllowed(true, cs));
+  EXPECT_FALSE(volkswagen::longitudinalActuationAllowed(false, cs)) << "no always-on longitudinal";
+  cs.brakePressed = true;
+  EXPECT_FALSE(volkswagen::longitudinalActuationAllowed(true, cs));
+  cs.brakePressed = false;
+  cs.gearReverse = true;
+  EXPECT_FALSE(volkswagen::longitudinalActuationAllowed(true, cs));
+}
+
+TEST(MqbAccFrames, TheSafetyParamFollowsTheSwitch)
+{
+  using C = volkswagen::MqbSafetyConstants;
+  EXPECT_EQ(1, C::kParamLongControl);
+  auto lateral_only = adas::platform::makeCarPlatform("vw_golf_7_mqb", {});
+  ASSERT_TRUE(lateral_only);
+  EXPECT_FALSE(lateral_only->longLimits().supported);
+  adas::platform::CarPlatformOptions o;
+  o.long_control_enabled = true;
+  auto with_long = adas::platform::makeCarPlatform("vw_golf_7_mqb", o);
+  ASSERT_TRUE(with_long);
+  EXPECT_TRUE(with_long->longLimits().supported);
+  EXPECT_FLOAT_EQ(2.0f, with_long->longLimits().accelMaxMs2);
+  EXPECT_FLOAT_EQ(-3.5f, with_long->longLimits().accelMinMs2);
+  EXPECT_FALSE(with_long->longitudinalActuationAllowed()) << "no panda report yet: nothing may go out";
+}
+
+TEST(CarPlatformFactory, EveryMqbVariantCarriesItsOwnGeometry)
+{
+  auto golf = adas::platform::makeCarPlatform("vw_golf_7_mqb", {});
+  auto passat = adas::platform::makeCarPlatform("vw_passat_b8_mqb", {});
+  ASSERT_TRUE(golf && passat);
+  EXPECT_STREQ("vw_passat_b8_mqb", passat->name());
+  EXPECT_STREQ("vw_mqb_2010.dbc", passat->dbcAssetName()) << "one CAN layout for the whole platform";
+  EXPECT_NEAR(2.636, golf->defaults().wheelbase_m, 1e-9);
+  EXPECT_NEAR(2.79, passat->defaults().wheelbase_m, 1e-9);
+  EXPECT_GT(passat->defaults().mass_kg, golf->defaults().mass_kg);
+  EXPECT_FALSE(adas::platform::makeCarPlatform("vw_golf_8", {})) << "a Golf 8 is not MQB; guessing it would guess the bus";
 }

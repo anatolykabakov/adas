@@ -11,6 +11,9 @@ struct MqbSafetyConstants {
   static constexpr uint16_t kVolkswagen = 15;
   static constexpr uint16_t kNoOutput = 19;
   static constexpr uint16_t kParamStock = 0;
+  /// FLAG_VOLKSWAGEN_LONG_CONTROL: the panda accepts ACC_02/06/07 from us and stops forwarding the
+  /// radar's own — one flag owns both sides of the takeover.
+  static constexpr uint16_t kParamLongControl = 1;
   static constexpr uint16_t kAltExpDisableDisengageOnGas = 1;
   static constexpr uint16_t kAltExpAlka = 16;
   static constexpr uint32_t kIgnVoltageOnMv = 11500;
@@ -42,6 +45,11 @@ public:
   void setAlternativeExperience(uint16_t alt_exp) { alt_exp_ = alt_exp; }
   /// \return The alternative-experience bits to be written.
   uint16_t alternativeExperience() const { return alt_exp_; }
+  /** The safety parameter sent with the model. Stock (0) is lateral-only; the longitudinal flag makes the
+   *  panda drop the radar's ACC frames, so it must be set only when we actually send our own. */
+  void setSafetyParam(uint16_t param) { safety_param_ = param; }
+  /// \return See setSafetyParam.
+  uint16_t safetyParam() const { return safety_param_; }
 
   /// Ignition with voltage hysteresis and off-debounce. \return The debounced state.
   bool updateIgnitionSticky(bool ignition_hw, uint32_t voltage_mv, int64_t now_ms);
@@ -71,6 +79,7 @@ private:
   int64_t ignition_low_since_ms_ = 0;
   bool alt_exp_configured_ = false;
   uint16_t alt_exp_ = C::kAltExpDisableDisengageOnGas;
+  uint16_t safety_param_ = C::kParamStock;
 
   int64_t next_safety_attempt_ms_ = 0;
   int safety_fail_streak_ = 0;

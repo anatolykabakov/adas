@@ -21,6 +21,8 @@ void InternalSubscriber::configure()
                                        [this](const adas::proto::SteerCommand& m) { out_.emplace_back(m); });
   subscribe<adas::proto::SafetyWarnState>(topics::kSafetyWarn,
                                           [this](const adas::proto::SafetyWarnState& m) { out_.emplace_back(m); });
+  subscribe<adas::proto::LongPlanState>(topics::kLongPlan,
+                                        [this](const adas::proto::LongPlanState& m) { out_.emplace_back(m); });
 }
 
 void InternalSubscriber::reset() { out_.clear(); }

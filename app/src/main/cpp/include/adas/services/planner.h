@@ -17,7 +17,7 @@
 #include "adas/lateral/pp_planner.h"
 #include "adas/lateral/fp_planner.h"
 #include "adas/lateral/planner.h"
-#include "adas/utils/long_planner.h"
+#include "adas/longitudinal/long_planner.h"
 
 namespace adas {
 namespace services {
@@ -76,7 +76,7 @@ public:
     double assist_max_age_s = 0.5;  ///< A panda report older than this counts as unknown [s].
     /// The longitudinal plan is produced here too, the way upstream's `plannerd` emits both plans.
     bool long_plan_enabled = true;
-    longplan::Config long_plan{};  ///< Longitudinal planner settings.
+    longitudinal::PlannerConfig long_plan{};  ///< Longitudinal planner settings.
 
     LanePathConfig lane_path{};  ///< How lane lines are turned into a reference path.
   };
@@ -236,8 +236,11 @@ private:
   void onChassis(const ChassisSample& msg);
   void onLanes(const LanePathMsg& msg);
   double commandCurvature(double speed_mps) const;
-  /// Longitudinal plan: target speed and the gap to the lead. Own tick, own rate, shared input.
+  /// Longitudinal plan: the speed/acceleration trajectory behind the lead or at the set speed. Own tick
+  /// (20 Hz, upstream's model rate), shared inputs.
   void longTick();
+  /// The set speed as the stalk and the parameters drive it.
+  void updateCruiseSetpoint(const adas::proto::CarState& cs);
 
   lateral::VehicleParams vehicleParams() const
   {
@@ -259,6 +262,15 @@ private:
   std::vector<Vec2> path_{};
   adas::proto::ModelLongPlan model_long_{};
   bool have_model_long_ = false;
+  int64_t model_long_ts_ms_ = 0;
+  adas::proto::CarState car_state_{};
+  longitudinal::Planner long_planner_;
+  longitudinal::CruiseSetpoint cruise_;
+  bool long_reset_pending_ = true;
+  bool cruise_from_param_ = false;
+  double a_ego_est_ = 0.0;
+  double prev_v_ego_ = 0.0;
+  int64_t prev_v_ts_us_ = 0;
   /// The controller's last command. Debug record only — the planner does not act on it.
   adas::proto::SteerCommand cmd_{};
   std::unique_ptr<lateral::IPlanner> solver_;
