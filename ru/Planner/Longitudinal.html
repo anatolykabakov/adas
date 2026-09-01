@@ -1,0 +1,1052 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Продольный планировщик — скорость и дистанция &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Planner/Longitudinal';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Модель машины (недокрут)" href="../Control/VehicleModel.html" />
+    <link rel="prev" title="fp — MPC в области времени, который едет" href="MPC_and_FP.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Продольный планировщик — скорость и дистанция</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Planner/Longitudinal.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Продольный планировщик — скорость и дистанция</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Две дистанции, на которых всё держится</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Сборка 1: пропорциональный закон по зазору — и где он ломается</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сборка 2: горизонт — тройной интегратор, управляемый рывком</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Сборка 3: уставка скорости как призрачная машина</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#metadrive">Замкнуть контур в MetaDrive</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где ломается</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Упражнение</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Куда дальше</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Продольный планировщик — скорость и дистанция<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Поперечные главы заканчивались кривизной. Эта заканчивается <strong>ускорением</strong>: планировщик решает, как быстро
+ехать и на каком расстоянии сидеть за машиной впереди, закон управления превращает это в запрос ускорения,
+а платформа кладёт его в собственные ACC-кадры автомобиля — те же три сервиса, что и у рулевого пути,
+намеренно. Это замена кнопочному пути через штатный круиз, которым стек управлял скоростью раньше: нажимать
+подрулевой переключатель за водителя — обход отсутствия актуатора; ускорение — и есть актуатор.</p>
+<p>Код: <code class="docutils literal notranslate"><span class="pre">longitudinal/long_mpc.cpp</span></code> (оптимизатор), <code class="docutils literal notranslate"><span class="pre">longitudinal/long_planner.cpp</span></code> (то, что вокруг него),
+<code class="docutils literal notranslate"><span class="pre">longitudinal/long_control.cpp</span></code> (закон), <code class="docutils literal notranslate"><span class="pre">platform/volkswagen/mqbcan.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">ACC_06</span></code>/<code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>/<code class="docutils literal notranslate"><span class="pre">ACC_02</span></code>).
+Формулировка, веса и сетка — из <code class="docutils literal notranslate"><span class="pre">long_mpc.py</span></code> / <code class="docutils literal notranslate"><span class="pre">longitudinal_planner.py</span></code> openpilot; солвер — наш, а глава
+заканчивается прогонами в симуляторе, которые говорят, что порт ведёт себя как надо.</p>
+<div class="note admonition">
+<p class="admonition-title">Если вы не встречали ACC</p>
+<p>Адаптивный круиз держит <strong>уставку скорости</strong>, когда дорога пуста, и <strong>временной зазор</strong> за машиной впереди,
+когда нет, — здесь 1.45 с плюс запас 6 м на стоянке. Всё ниже — один вопрос, заданный двенадцать раз в
+будущее: <em>где мне можно быть в момент t, чтобы остановка всё ещё была комфортной?</em></p>
+</div>
+<section id="id2">
+<h2>Две дистанции, на которых всё держится<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<p>Общие константы игрушки для всех фрагментов ниже — upstream’овские, дословно:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">T_FOLLOW</span> <span class="o">=</span> <span class="mf">1.45</span>      <span class="c1"># desired time gap [s]</span>
+<span class="n">COMFORT_BRAKE</span> <span class="o">=</span> <span class="mf">2.5</span>  <span class="c1"># deceleration the safe distance assumes [m/s^2]</span>
+<span class="n">STOP_DISTANCE</span> <span class="o">=</span> <span class="mf">6.0</span>  <span class="c1"># gap kept at standstill [m]</span>
+<span class="n">A_CRUISE_MIN</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.2</span>  <span class="c1"># comfort deceleration when cruising or following [m/s^2]</span>
+<span class="n">ACCEL_MIN</span><span class="p">,</span> <span class="n">ACCEL_MAX</span> <span class="o">=</span> <span class="o">-</span><span class="mf">3.5</span><span class="p">,</span> <span class="mf">2.0</span>   <span class="c1"># the panda's envelope for a VW MQB [m/s^2]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">safe_distance</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">t_follow</span><span class="o">=</span><span class="n">T_FOLLOW</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Room to stop at COMFORT_BRAKE from v_ego, plus the time gap, plus the standstill margin."""</span>
+    <span class="k">return</span> <span class="n">v_ego</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">COMFORT_BRAKE</span><span class="p">)</span> <span class="o">+</span> <span class="n">t_follow</span> <span class="o">*</span> <span class="n">v_ego</span> <span class="o">+</span> <span class="n">STOP_DISTANCE</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">stopped_equivalence</span><span class="p">(</span><span class="n">v_lead</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""How much further a moving lead's stopping point is than its bumper."""</span>
+    <span class="k">return</span> <span class="n">v_lead</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">COMFORT_BRAKE</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">desired_gap</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">v_lead</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">safe_distance</span><span class="p">(</span><span class="n">v_ego</span><span class="p">)</span> <span class="o">-</span> <span class="n">stopped_equivalence</span><span class="p">(</span><span class="n">v_lead</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v=</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;2</span><span class="si">}</span><span class="s2"> m/s: safe to a wall </span><span class="si">{</span><span class="n">safe_distance</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">6.1f</span><span class="si">}</span><span class="s2"> m, gap behind an equal-speed lead </span><span class="si">{</span><span class="n">desired_gap</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">desired_gap</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">T_FOLLOW</span> <span class="o">*</span> <span class="mi">20</span> <span class="o">+</span> <span class="n">STOP_DISTANCE</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mf">1e-9</span>
+</pre></div>
+</div>
+<p>Раскроем первую функцию:</p>
+<div class="math notranslate nohighlight">
+\[
+d_{\mathrm{safe}}(v_{\mathrm{ego}}) = \underbrace{\frac{v_{\mathrm{ego}}^{2}}{2\,a_{\mathrm{brake}}}}_{\text{тормозной путь}}
+\;+\; \underbrace{t_{\mathrm{follow}}\, v_{\mathrm{ego}}}_{\text{временной зазор}}
+\;+\; \underbrace{d_{\mathrm{stop}}}_{\text{запас в статике}},
+\qquad a_{\mathrm{brake}} = 2.5\ \text{м/с}^2,\; t_{\mathrm{follow}} = 1.45\ \text{с},\; d_{\mathrm{stop}} = 6\ \text{м}.
+\]</div>
+<ul class="simple">
+<li><p><strong>Тормозной путь</strong> <span class="math notranslate nohighlight">\(v^2 / (2a)\)</span> выводится из классического <span class="math notranslate nohighlight">\(v^2 - v_0^2 = 2as\)</span> при <span class="math notranslate nohighlight">\(v = 0\)</span>: сколько
+дороги проедет машина, замедляясь от <span class="math notranslate nohighlight">\(v_{\mathrm{ego}}\)</span> до нуля с <em>комфортным</em> <span class="math notranslate nohighlight">\(2.5\)</span> м/с² — пределом не шин,
+а пассажиров. На 20 м/с это 80 м, на 30 м/с — 180 м; именно этот член делает кривую квадратичной.</p></li>
+<li><p><strong>Временной зазор</strong> <span class="math notranslate nohighlight">\(t_{\mathrm{follow}} \cdot v_{\mathrm{ego}}\)</span> — дорога за 1.45 с на текущей скорости: время
+реакции, которое план резервирует человеку и актуатору, и та часть, что масштабирует дистанцию со
+скоростью так, как её чувствует водитель — 29 м на 20 м/с.</p></li>
+<li><p><strong>Запас в статике</strong> <span class="math notranslate nohighlight">\(d_{\mathrm{stop}}\)</span> — то, что должно остаться между бамперами, когда обе машины стоят:
+6 м, чтобы остановка никогда не заканчивалась впритык.</p></li>
+</ul>
+<p>Вторая функция — та же физика, увиденная со стороны лида:</p>
+<div class="math notranslate nohighlight">
+\[
+d_{\mathrm{stopped}}(v_{\mathrm{lead}}) = \frac{v_{\mathrm{lead}}^{2}}{2\,a_{\mathrm{brake}}} .
+\]</div>
+<p>Лид, едущий со скоростью <span class="math notranslate nohighlight">\(v_{\mathrm{lead}}\)</span>, остановится не там, где он сейчас: тормозя с тем же комфортным
+<span class="math notranslate nohighlight">\(a_{\mathrm{brake}}\)</span>, он встанет на <span class="math notranslate nohighlight">\(d_{\mathrm{stopped}}\)</span> дальше по дороге. Поэтому <em>препятствие</em> для MPC — положение
+лида <strong>плюс</strong> <span class="math notranslate nohighlight">\(d_{\mathrm{stopped}}\)</span>: точка, где он мог бы стоять, а не где он есть, — и поэтому за движущейся
+машиной план может сидеть ближе, чем перед стеной. Разность двух функций — зазор, на котором план оседает:</p>
+<div class="math notranslate nohighlight">
+\[
+d_{\mathrm{gap}}(v_{\mathrm{ego}}, v_{\mathrm{lead}}) = d_{\mathrm{safe}}(v_{\mathrm{ego}}) - d_{\mathrm{stopped}}(v_{\mathrm{lead}})
+= \frac{v_{\mathrm{ego}}^{2} - v_{\mathrm{lead}}^{2}}{2\,a_{\mathrm{brake}}} + t_{\mathrm{follow}}\, v_{\mathrm{ego}} + d_{\mathrm{stop}} .
+\]</div>
+<p>При равных скоростях квадраты сокращаются и <span class="math notranslate nohighlight">\(d_{\mathrm{gap}} = 1.45\,v + 6\)</span>: 35 м на 20 м/с. При сближении с
+более медленным лидом разность квадратов и требует запаса: на 25 м/с за машиной на 15 м/с она добавляет
+<span class="math notranslate nohighlight">\((625 - 225)/5 = 80\)</span> м — ровно то торможение, что показывает прогон в симуляторе в конце главы.</p>
+<p>Две вещи, которые надо удержать. Во-первых, <strong>безопасная дистанция</strong> — это тормозной путь: она растёт как
+<span class="math notranslate nohighlight">\(v^2\)</span>, и при 30 м/с это 230 м. Во-вторых, лид, который <em>движется</em>, возвращает вам свой тормозной путь,
+поэтому за машиной на вашей же скорости зазор схлопывается до линейной части: <span class="math notranslate nohighlight">\(1.45\,v + 6\)</span>. Весь
+планировщик — способ жить между этими двумя кривыми.</p>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../_images/long_safe_distance.png"><img alt="../_images/long_safe_distance.png" src="../_images/long_safe_distance.png" style="width: 85%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 25 </span><span class="caption-text">Безопасная дистанция до неподвижного препятствия (квадратичная) против желаемого зазора за лидом на той же
+скорости (линейный). План никогда не даёт ego пересечь первую; он пытается сидеть на второй.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="id3">
+<h2>Сборка 1: пропорциональный закон по зазору — и где он ломается<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p>Очевидный регулятор: ускоряться пропорционально тому, насколько зазор отличается от желаемого.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">follow_p</span><span class="p">(</span><span class="n">kp</span><span class="p">,</span> <span class="n">kv</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mf">40.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Ego behind a lead that brakes from 20 to 5 m/s at -2 m/s^2 between t=5 and t=10 s."""</span>
+    <span class="n">v_lead</span><span class="p">,</span> <span class="n">v_ego</span><span class="p">,</span> <span class="n">gap</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">30.0</span>
+    <span class="n">log</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">seconds</span> <span class="o">/</span> <span class="n">dt</span><span class="p">)):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">k</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="k">if</span> <span class="mf">5.0</span> <span class="o">&lt;=</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mf">10.0</span><span class="p">:</span>
+            <span class="n">v_lead</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">v_lead</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="n">want</span> <span class="o">=</span> <span class="n">T_FOLLOW</span> <span class="o">*</span> <span class="n">v_ego</span> <span class="o">+</span> <span class="n">STOP_DISTANCE</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">kp</span> <span class="o">*</span> <span class="p">(</span><span class="n">gap</span> <span class="o">-</span> <span class="n">want</span><span class="p">)</span> <span class="o">+</span> <span class="n">kv</span> <span class="o">*</span> <span class="p">(</span><span class="n">v_lead</span> <span class="o">-</span> <span class="n">v_ego</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ACCEL_MIN</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">ACCEL_MAX</span><span class="p">,</span> <span class="n">a</span><span class="p">))</span>
+        <span class="n">v_ego</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">v_ego</span> <span class="o">+</span> <span class="n">a</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="n">gap</span> <span class="o">+=</span> <span class="p">(</span><span class="n">v_lead</span> <span class="o">-</span> <span class="n">v_ego</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">t</span><span class="p">,</span> <span class="n">gap</span><span class="p">,</span> <span class="n">want</span><span class="p">,</span> <span class="n">a</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">log</span><span class="p">)</span>
+
+<span class="n">gap_only</span> <span class="o">=</span> <span class="n">follow_p</span><span class="p">(</span><span class="n">kp</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">kv</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">with_speed</span> <span class="o">=</span> <span class="n">follow_p</span><span class="p">(</span><span class="n">kp</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">kv</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"gap-only law:   min gap </span><span class="si">{</span><span class="n">gap_only</span><span class="p">[:,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> m, hardest brake </span><span class="si">{</span><span class="n">gap_only</span><span class="p">[:,</span><span class="w"> </span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> m/s^2"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"with speed term: min gap </span><span class="si">{</span><span class="n">with_speed</span><span class="p">[:,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> m, hardest brake </span><span class="si">{</span><span class="n">with_speed</span><span class="p">[:,</span><span class="w"> </span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2"> m/s^2"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">gap_only</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">with_speed</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="s2">"a gap-only law overshoots into the lead"</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="../_images/long_gap_p_toy.png"><img alt="../_images/long_gap_p_toy.png" src="../_images/long_gap_p_toy.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 26 </span><span class="caption-text">Игрушка 1: P-закон только по зазору звенит после торможения лида; скоростной член его гасит. Ни один не
+знает, что лид сделает в следующую секунду, и ни один не умеет обменять комфорт сейчас на дистанцию потом.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>У P-закона три отказа, которые не лечатся коэффициентом. Он реагирует на зазор <em>после</em> того, как тот
+закрылся; лида, тормозящего с −2, и лида, который уже перестал тормозить, он трактует одинаково; и у него
+нет понятия <strong>рывка</strong>, поэтому он просит любое ускорение, какое скажет ошибка, мгновенно. Каждый из трёх —
+утверждение о будущем, а для этого и существует оптимизатор на горизонте.</p>
+</section>
+<section id="id4">
+<h2>Сборка 2: горизонт — тройной интегратор, управляемый рывком<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<p>Продольный MPC upstream мал настолько, что помещается в одной руке. Объект — положение, скорость и
+ускорение ego, управление — рывок:</p>
+<div class="math notranslate nohighlight">
+\[
+\dot x = v,\qquad \dot v = a,\qquad \dot a = j .
+\]</div>
+<p>Он интегрируется на <strong>двенадцати интервалах квадратичной сетки</strong> <span class="math notranslate nohighlight">\(t_i = 10\,(i/12)^2\)</span>: 0.07 с у руля,
+1.6 с в конце 10-секундного горизонта. Ближние решения получают разрешение, дальний конец — охват.</p>
+<p>При постоянном рывке на интервале длиной <span class="math notranslate nohighlight">\(\Delta t\)</span> три уравнения интегрируются точно — каждое есть
+первообразная предыдущего:</p>
+<div class="math notranslate nohighlight">
+\[
+a_{k+1} = a_k + j_k\,\Delta t,\qquad
+v_{k+1} = v_k + a_k\,\Delta t + \tfrac{1}{2}\, j_k\,\Delta t^{2},\qquad
+x_{k+1} = x_k + v_k\,\Delta t + \tfrac{1}{2}\, a_k\,\Delta t^{2} + \tfrac{1}{6}\, j_k\,\Delta t^{3}.
+\]</div>
+<p>Это школьная кинематика на один уровень выше: <span class="math notranslate nohighlight">\(\tfrac12 a t^2\)</span> становится <span class="math notranslate nohighlight">\(\tfrac16 j t^3\)</span>. Поскольку объект
+линейный, вся 10-секундная траектория — <em>линейная</em> функция двенадцати рывков; именно это делает решение
+ниже дешёвым: нелинейна только стоимость, никогда не физика. Пример узла: из <span class="math notranslate nohighlight">\(v = 20\)</span>, <span class="math notranslate nohighlight">\(a = 0\)</span> один
+интервал в 1 с при <span class="math notranslate nohighlight">\(j = -1\)</span> м/с³ заканчивается в <span class="math notranslate nohighlight">\(a = -1\)</span>, <span class="math notranslate nohighlight">\(v = 19.5\)</span>, <span class="math notranslate nohighlight">\(x = 19.83\)</span> м.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">N</span> <span class="o">=</span> <span class="mi">12</span>
+<span class="n">T</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">10.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="n">N</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+<span class="n">DT</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rollout</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Exact integration of constant jerk per interval — the plant is linear."""</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">DT</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+        <span class="n">x</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="n">v</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">a</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span><span class="o">**</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">6</span>
+        <span class="n">v</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="n">a</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">u</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">d</span>
+        <span class="n">a</span><span class="p">[</span><span class="n">k</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">"grid [s]:"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"first interval </span><span class="si">%.3f</span><span class="s2"> s, last </span><span class="si">%.2f</span><span class="s2"> s"</span> <span class="o">%</span> <span class="p">(</span><span class="n">DT</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">DT</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+<span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">T</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">-</span> <span class="mf">2.5</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">T</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">10.0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span>
+</pre></div>
+</div>
+<figure class="align-default" id="id12">
+<a class="reference internal image-reference" href="../_images/long_mpc_grid.png"><img alt="../_images/long_mpc_grid.png" src="../_images/long_mpc_grid.png" style="width: 90%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 27 </span><span class="caption-text">Сетка горизонта. Красные числа — длина каждого интервала и, поскольку acados масштабирует стоимость каждой
+стадии её шагом по времени, её <strong>вес</strong>. Без этого масштабирования та же стоимость даёт план куда мягче
+upstream’овского.</span><a class="headerlink" href="#id12" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Стоимость — один член по препятствию плюс рывок, с числами upstream: <code class="docutils literal notranslate"><span class="pre">X_EGO_OBSTACLE_COST</span> <span class="pre">=</span> <span class="pre">3</span></code>,
+<code class="docutils literal notranslate"><span class="pre">J_EGO_COST</span> <span class="pre">=</span> <span class="pre">5</span></code>, <code class="docutils literal notranslate"><span class="pre">A_CHANGE_COST</span> <span class="pre">=</span> <span class="pre">200</span></code> (гаснет на 1–2 с) и мягкие ограничения с <code class="docutils literal notranslate"><span class="pre">LIMIT_COST</span> <span class="pre">=</span> <span class="pre">1e6</span></code> на
+границы скорости и ускорения и <code class="docutils literal notranslate"><span class="pre">DANGER_ZONE_COST</span> <span class="pre">=</span> <span class="pre">100</span></code> за вход в 0.75 безопасной дистанции:</p>
+<div class="math notranslate nohighlight">
+\[
+r_{\mathrm{obs},i} = \frac{(x_{\mathrm{obs},i} - x_i) - d_{\mathrm{safe}}(v_i)}{v_i + 10},\qquad
+J = \sum_i \Delta t_i \Big[\,3\,r_{\mathrm{obs},i}^2 + 5\,j_i^2 + 200\,w_i\,(a_i - a^{\mathrm{prev}}_i)^2 + \text{штрафы}\Big].
+\]</div>
+<p>Стоимость по слагаемым:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(r_{\mathrm{obs},i}\)</span> — <strong>ошибка зазора в секундах</strong>: числитель <span class="math notranslate nohighlight">\(g = (x_{\mathrm{obs}} - x) - d_{\mathrm{safe}}(v)\)</span> — на
+сколько метров ego не дотягивает до безопасной дистанции (или перебирает), а деление на <span class="math notranslate nohighlight">\(v + 10\)</span> переводит
+метры примерно в «секунды до препятствия»: ошибка в 10 м — много на 5 м/с (0.67 с) и мало на 30 м/с
+(0.25 с). <span class="math notranslate nohighlight">\(+10\)</span> держит член конечным на стоянке. План целится в <span class="math notranslate nohighlight">\(g = 0\)</span> — ровно безопасная дистанция от
+места, где лид мог бы встать, потому что <span class="math notranslate nohighlight">\(x_{\mathrm{obs}}\)</span> — положение лида <strong>плюс</strong> <span class="math notranslate nohighlight">\(d_{\mathrm{stopped}}\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(5\,j_i^2\)</span> — цена <strong>рывка</strong>: комфорт — это производная ускорения, а квадрат делает один большой толчок
+дороже двух маленьких — поэтому план ниже наращивает торможение плавно, а не ступенькой.</p></li>
+<li><p><span class="math notranslate nohighlight">\(200\,w_i\,(a_i - a^{\mathrm{prev}}_i)^2\)</span> — «<strong>не противоречь тому, что просил тик назад</strong>», где <span class="math notranslate nohighlight">\(w_i\)</span> гаснет с 1
+при <span class="math notranslate nohighlight">\(t \le 1\)</span> с до 0 при 2 с: ближнее будущее — обязательство, дальнее свободно меняться. Это то, что не
+даёт запросу дрожать между пересчётами.</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta t_i\)</span> перед каждой стадией — <strong>интегральная</strong> трактовка суммы в acados: стадия в 1.6 с весит в 23
+раза больше стадии в 0.07 с; без этого те же веса дают план втрое мягче.</p></li>
+<li><p><strong>Штрафы</strong> — односторонние квадраты: <span class="math notranslate nohighlight">\(10^6\,\max(0, a_{\min} - a_i)^2\)</span> и подобные — стена, на которую солвер
+может опереться, но не пройти, — и <span class="math notranslate nohighlight">\(100\,\max(0, -h_{\mathrm{danger}})^2\)</span> за вход в <span class="math notranslate nohighlight">\(0.75\,d_{\mathrm{safe}}\)</span> —
+стена мягче: «так близко — только когда иначе нельзя».</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">residuals</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">,</span> <span class="n">a_min</span><span class="o">=</span><span class="n">ACCEL_MIN</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="mf">1.2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""upstream's cost as a residual vector, each stage scaled by sqrt(dt) like acados does."""</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">rollout</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">)</span>
+    <span class="n">sc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DT</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_obs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="n">safe_distance</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">g</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">:</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">5.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">sc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1000.0</span>                          <span class="c1"># sqrt(LIMIT_COST)</span>
+        <span class="n">r</span> <span class="o">+=</span> <span class="p">[</span><span class="n">z</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">z</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">a_min</span> <span class="o">-</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="n">z</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">a_max</span><span class="p">)]</span>
+        <span class="n">danger</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_obs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">safe_distance</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">danger</span> <span class="o">/</span> <span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mf">10.0</span><span class="p">)))</span>   <span class="c1"># sqrt(DANGER_ZONE_COST)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">solve</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">,</span> <span class="n">iters</span><span class="o">=</span><span class="mi">60</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Gauss-Newton with a backtracking step: twelve unknowns, a linear plant, a mildly nonlinear cost."""</span>
+    <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iters</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">residuals</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">)</span>
+        <span class="n">J</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">),</span> <span class="n">N</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">du</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">);</span> <span class="n">du</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
+            <span class="n">J</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">residuals</span><span class="p">(</span><span class="n">u</span> <span class="o">+</span> <span class="n">du</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">)</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1e-6</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">J</span> <span class="o">+</span> <span class="mf">1e-3</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">N</span><span class="p">),</span> <span class="o">-</span><span class="n">J</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">r</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">alpha</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.125</span><span class="p">):</span>
+            <span class="n">r_try</span> <span class="o">=</span> <span class="n">residuals</span><span class="p">(</span><span class="n">u</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">step</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">r_try</span> <span class="o">@</span> <span class="n">r_try</span> <span class="o">&lt;</span> <span class="n">r</span> <span class="o">@</span> <span class="n">r</span><span class="p">:</span>
+                <span class="n">u</span> <span class="o">=</span> <span class="n">u</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">step</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">rollout</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">a0</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">lead_trajectory</span><span class="p">(</span><span class="n">x_lead</span><span class="p">,</span> <span class="n">v_lead</span><span class="p">,</span> <span class="n">a_lead</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">1.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""upstream's extrapolate_lead: acceleration decays as exp(-tau t^2/2), speed never reverses."""</span>
+    <span class="n">xs</span><span class="p">,</span> <span class="n">vs</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">x_lead</span><span class="p">,</span> <span class="n">v_lead</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">DT</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">v</span> <span class="o">+</span> <span class="n">d</span> <span class="o">*</span> <span class="n">a_lead</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">tau</span> <span class="o">*</span> <span class="n">T</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">+=</span> <span class="n">d</span> <span class="o">*</span> <span class="n">v</span>
+        <span class="n">xs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">);</span> <span class="n">vs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">vs</span><span class="p">)</span>
+
+<span class="n">x_lead</span><span class="p">,</span> <span class="n">v_lead</span> <span class="o">=</span> <span class="n">lead_trajectory</span><span class="p">(</span><span class="mf">35.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.0</span><span class="p">)</span>
+<span class="n">x_obs</span> <span class="o">=</span> <span class="n">x_lead</span> <span class="o">+</span> <span class="n">stopped_equivalence</span><span class="p">(</span><span class="n">v_lead</span><span class="p">)</span>
+<span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">x_obs</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"lead 35 m ahead at 15 m/s braking, ego 20 m/s: a within 1.2 s = </span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="n">T</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mf">1.2</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m/s^2, "</span>
+      <span class="sa">f</span><span class="s2">"speed at 10 s = </span><span class="si">{</span><span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m/s, closest approach </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x_lead</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">x</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">x_lead</span><span class="p">),</span> <span class="s2">"the plan must never cross the lead"</span>
+<span class="k">assert</span> <span class="n">a</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="n">ACCEL_MIN</span> <span class="o">-</span> <span class="mf">0.3</span>
+</pre></div>
+</div>
+<p>Будущее самого лида экстраполируется с затухающим ускорением:</p>
+<div class="math notranslate nohighlight">
+\[
+a_{\mathrm{lead}}(t) = a_{\mathrm{lead},0}\, e^{-\tau t^{2}/2},\qquad
+v_{\mathrm{lead}}(t) = \max\!\Big(0,\ v_{\mathrm{lead},0} + \int_0^{t} a_{\mathrm{lead}}\,\mathrm{d}t\Big),\qquad
+\tau = 1.5\ \text{с}^{-2} .
+\]</div>
+<p>Машина, тормозящая сейчас, не будет тормозить вечно, и гауссово затухание говорит это мягко: всего лид
+может потерять <span class="math notranslate nohighlight">\(\int_0^\infty a_0 e^{-\tau t^2/2}\,\mathrm{d}t = a_0\sqrt{\pi / 2\tau} \approx 1.02\,a_0\)</span> скорости —
+торможение с <span class="math notranslate nohighlight">\(-3\)</span> м/с² стоит ему около 3 м/с, большую часть в первую секунду. <span class="math notranslate nohighlight">\(\max(0, \cdot)\)</span> — единственный
+нефизический факт, который нужен модели: машины не едут назад. Лид из фрагмента на 15 м/с при −3
+заканчивает горизонт около 12 м/с, а не стоя.</p>
+<figure class="align-default" id="id13">
+<a class="reference internal image-reference" href="../_images/long_mpc_plan.png"><img alt="../_images/long_mpc_plan.png" src="../_images/long_mpc_plan.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 28 </span><span class="caption-text">То же решение, что во фрагменте: тормозить сейчас, сильнее комфортных −1.2, потому что лид тормозит, и
+осесть там, где зазор равен безопасной дистанции от точки остановки лида.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Выпадают три свойства, которых у P-закона быть не могло. План тормозит <strong>до</strong> того, как зазор закрылся,
+потому что предсказанная траектория лида — внутри стоимости. Он тормозит <strong>сильнее круизного лимита</strong>, когда
+должен, — <code class="docutils literal notranslate"><span class="pre">A_CRUISE_MIN</span></code> формирует круизное препятствие ниже, а жёсткая граница — панда с её −3.5. И за
+каждый рывок платится, так что запрос гладок по построению, а не благодаря фильтру после.</p>
+<div class="warning admonition">
+<p class="admonition-title">Солвер не upstream’овский — задача да</p>
+<p>upstream генерирует эту задачу в C через <code class="docutils literal notranslate"><span class="pre">acados_template</span></code> и решает SQP-RTI. Этого генератора в сборке
+репозитория нет, поэтому <code class="docutils literal notranslate"><span class="pre">long_mpc.cpp</span></code> решает идентичную формулировку плотным Гауссом–Ньютоном
+(аналитический якобиан, демпфирование Левенберга, бэктрекинг, тёплый старт). Две вещи, на которые ушёл день
+и которые стоит знать: <strong>масштабирование стадий по Δt</strong> выше, и то, что полный гаусс-ньютоновский шаг из
+покоя перепрыгивает в штраф границы с весом 1e6, так что шагу нужен линейный поиск — одно раздувание
+демпфирования заставляет его ползти. Сходимость — 4–9 итераций на тёплом старте, меньше миллисекунды.</p>
+</div>
+</section>
+<section id="id5">
+<h2>Сборка 3: уставка скорости как призрачная машина<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<p>Без лида та же стоимость гонит к <strong>круизному препятствию</strong>: где была бы машина, уже едущая на уставке, —
+удержанная в пределах того, чего ego физически достигнет на этом горизонте, чтобы солвер никогда не
+стартовал вне собственных границ.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cruise_obstacle</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">v_cruise</span><span class="p">,</span> <span class="n">a_min</span><span class="o">=</span><span class="n">A_CRUISE_MIN</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="mf">1.2</span><span class="p">):</span>
+    <span class="n">v_lower</span> <span class="o">=</span> <span class="n">v_ego</span> <span class="o">+</span> <span class="n">T</span> <span class="o">*</span> <span class="n">a_min</span> <span class="o">*</span> <span class="mf">1.05</span>
+    <span class="n">v_upper</span> <span class="o">=</span> <span class="n">v_ego</span> <span class="o">+</span> <span class="n">T</span> <span class="o">*</span> <span class="n">a_max</span> <span class="o">*</span> <span class="mf">1.05</span>
+    <span class="n">v_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">v_cruise</span><span class="p">,</span> <span class="n">v_lower</span><span class="p">,</span> <span class="n">v_upper</span><span class="p">)</span>
+    <span class="n">x_c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">DT</span><span class="p">)</span> <span class="o">*</span> <span class="n">v_c</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x_c</span> <span class="o">+</span> <span class="n">safe_distance</span><span class="p">(</span><span class="n">v_c</span><span class="p">)</span>
+
+<span class="n">x_c</span> <span class="o">=</span> <span class="n">cruise_obstacle</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">)</span>
+<span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">x_c</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"from 10 m/s toward a 25 m/s set speed: a(0.6 s) = </span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, a(2.5 s) = </span><span class="si">{</span><span class="n">a</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m/s^2, v(10 s) = </span><span class="si">{</span><span class="n">v</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> m/s"</span><span class="p">)</span>
+<span class="k">assert</span> <span class="mf">0.7</span> <span class="o">&lt;</span> <span class="n">a</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mf">1.25</span><span class="p">,</span> <span class="s2">"cruising accelerates at the ceiling, not above it"</span>
+</pre></div>
+</div>
+<p>В символах, где <span class="math notranslate nohighlight">\(T_i\)</span> — времена сетки, а <span class="math notranslate nohighlight">\(\Delta T_i\)</span> — их разности:</p>
+<div class="math notranslate nohighlight">
+\[
+v_{c,i} = \mathrm{clip}\big(v_{\mathrm{cruise}},\ v_{\mathrm{ego}} + 1.05\,a_{\min} T_i,\ v_{\mathrm{ego}} + 1.05\,a_{\max} T_i\big),\qquad
+x_{\mathrm{cruise},i} = \sum_{k \le i} v_{c,k}\,\Delta T_k + d_{\mathrm{safe}}(v_{c,i}) .
+\]</div>
+<p>Клип — честность призрачной машины: она может быть лишь там, где оказалось бы ego, разгоняясь на комфортном
+потолке (<span class="math notranslate nohighlight">\(1.2\)</span> м/с², плюс 5 % запаса, чтобы граница не была активна на старте), — иначе член препятствия
+требовал бы ускорения, запрещённого границами, и солвер стартовал бы в штрафе. Прибавка <span class="math notranslate nohighlight">\(d_{\mathrm{safe}}(v_c)\)</span>
+ставит препятствие на полную безопасную дистанцию впереди призрака, так что следовать за ним с <span class="math notranslate nohighlight">\(g = 0\)</span> и
+<em>есть</em> ехать на уставке. При <span class="math notranslate nohighlight">\(v_{\mathrm{ego}} = 10\)</span>, уставке 25: <span class="math notranslate nohighlight">\(v_c\)</span> растёт как <span class="math notranslate nohighlight">\(10 + 1.26\,T_i\)</span> и достигает 25
+при <span class="math notranslate nohighlight">\(T \approx 11.9\)</span> с — за горизонтом, так что весь 10-секундный план — рампа на потолке.</p>
+<figure class="align-default" id="id14">
+<a class="reference internal image-reference" href="../_images/long_cruise_obstacle.png"><img alt="../_images/long_cruise_obstacle.png" src="../_images/long_cruise_obstacle.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 29 </span><span class="caption-text">Без лида: уставка — призрачная машина; план гонится за ней с зависящим от скорости потолком (1.6 м/с² с
+места, 0.6 на 40 м/с) и оседает на её скорости.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<p>Вокруг MPC живут ещё две формулы. Лимит в повороте делит один бюджет ускорения между осями:</p>
+<div class="math notranslate nohighlight">
+\[
+a_y = v^{2}\kappa = \frac{v^{2}\,\delta_{\mathrm{wheel}}}{\mathrm{steer\_ratio}\cdot L},\qquad
+a_x \le \sqrt{a_{\mathrm{total}}^{2} - a_y^{2}},\qquad a_{\mathrm{total}} = 1.7 \to 3.2\ \text{м/с}^2\ (20 \to 40\ \text{м/с}).
+\]</div>
+<p><span class="math notranslate nohighlight">\(a_y = v^2\kappa\)</span> — центростремительное ускорение с <span class="math notranslate nohighlight">\(\kappa = \tan\delta/L \approx \delta/L\)</span> велосипедной модели и
+вложенным передаточным «руль → колесо»; корень — Пифагор на круге трения: у шины одно общее сцепление, и что
+берёт поворот, того нет у газа. На 15 м/с и 10° руля: <span class="math notranslate nohighlight">\(a_y = 225 \cdot 0.1745 / (15.6 \cdot 2.636) \approx 0.95\)</span>,
+значит <span class="math notranslate nohighlight">\(a_x \le \sqrt{1.7^2 - 0.95^2} \approx 1.4\)</span> м/с² — не режет. На 20 м/с и 20°: <span class="math notranslate nohighlight">\(a_y \approx 3.4\)</span>, бюджет
+исчерпан, ускорения в этом такте нет.</p>
+<p>Превью кривизны превращает поворот впереди в потолок скорости тем же центростремительным соотношением:</p>
+<div class="math notranslate nohighlight">
+\[
+v_{\mathrm{curv}} = \sqrt{\frac{a_{\mathrm{lat,max}}}{\kappa_{\mathrm{ahead}}}} = \sqrt{a_{\mathrm{lat,max}}\, R},\qquad a_{\mathrm{lat,max}} = 1.8\ \text{м/с}^2 .
+\]</div>
+<p><span class="math notranslate nohighlight">\(R = 150\)</span> м даёт 16.4 м/с; <span class="math notranslate nohighlight">\(R = 250\)</span> м, край мёртвой зоны, — 21.2 м/с; поэтому на дугах трассы highway
+R 391–699 м при 25 м/с потолок не срабатывает (их <span class="math notranslate nohighlight">\(a_y\)</span> — 0.9–1.6).</p>
+<p>Планировщик вокруг MPC (<code class="docutils literal notranslate"><span class="pre">long_planner.cpp</span></code>) делает ещё четыре вещи, которые делает upstream: фильтрует
+желаемую скорость с постоянной времени 2 с и интегрирует её вперёд по плану, ограничивает ускорение по
+скорости и по <strong>повороту</strong> (дуга на 20 м/с при 60° руля почти ничего не оставляет продольному), верит лиду
+модели только выше <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> и только на нашем пути и поднимает <strong>FCW</strong>, когда план три тика подряд
+предсказывает столкновение внутри 5 с. Этот стек добавляет одну свою вещь: превью кривизны по слитому пути
+ограничивает <em>уставку</em> — никогда не текущую скорость, — чтобы к повороту впереди подъезжали, а не
+обнаруживали его.</p>
+</section>
+<section id="metadrive">
+<h2>Замкнуть контур в MetaDrive<a class="headerlink" href="#metadrive" title="Ссылка на этот заголовок">#</a></h2>
+<p>Стенд играет машину: скриптованный лид, движущийся по полосе с заданной скоростью, и актуатор, превращающий
+запрос ускорения в педальную ось MetaDrive (измеренный feedforward — газ 0.3 даёт 2.84 м/с² на этой машине
+— плюс небольшой внутренний контур, как ECU замыкает свой):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
+python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>long_straight<span class="w"> </span>--scenario<span class="w"> </span>lead_const<span class="w"> </span>--speed<span class="w"> </span><span class="m">25</span><span class="w">    </span><span class="c1"># steady 15 m/s lead</span>
+python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>long_straight<span class="w"> </span>--scenario<span class="w"> </span>lead_brake<span class="w"> </span>--speed<span class="w"> </span><span class="m">22</span><span class="w">    </span><span class="c1"># lead 20 → 5 m/s at −2</span>
+python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>long_straight<span class="w"> </span>--scenario<span class="w"> </span>lead_stop<span class="w">  </span>--speed<span class="w"> </span><span class="m">20</span><span class="w">    </span><span class="c1"># lead brakes to a stop</span>
+python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>long_straight<span class="w"> </span>--scenario<span class="w"> </span>stationary<span class="w"> </span>--speed<span class="w"> </span><span class="m">20</span><span class="w">    </span><span class="c1"># stopped car 120 m ahead</span>
+python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>long_straight<span class="w"> </span>--scenario<span class="w"> </span>none<span class="w"> </span>--long<span class="w"> </span>--speed<span class="w"> </span><span class="m">25</span><span class="w">   </span><span class="c1"># cruise alone</span>
+</pre></div>
+</div>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>сценарий</p></th>
+<th class="head"><p>мин. зазор</p></th>
+<th class="head"><p>зазор в конце</p></th>
+<th class="head"><p>желаемый</p></th>
+<th class="head"><p>сильнейшее торможение</p></th>
+<th class="head"><p>итог</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>круиз без лида, уставка 25 м/с</p></td>
+<td><p>—</p></td>
+<td><p>—</p></td>
+<td><p>—</p></td>
+<td><p>−0.02</p></td>
+<td><p>25.0 м/с удержаны, достигнуты за 22.6 с, рывок p95 0.16 м/с³</p></td>
+</tr>
+<tr class="row-odd"><td><p>лид 15 м/с, ego с 25</p></td>
+<td><p>27.7 м</p></td>
+<td><p>27.7 м</p></td>
+<td><p>27.7 м</p></td>
+<td><p>−2.42</p></td>
+<td><p>оседает ровно на желаемом зазоре</p></td>
+</tr>
+<tr class="row-even"><td><p>лид 20 → 5 м/с при −2</p></td>
+<td><p>10.3 м</p></td>
+<td><p>13.3 м</p></td>
+<td><p>13.3 м</p></td>
+<td><p>−2.52</p></td>
+<td><p>TTC не ниже 4.2 с</p></td>
+</tr>
+<tr class="row-odd"><td><p>лид 15 → 0 при −2.5</p></td>
+<td><p>4.6 м</p></td>
+<td><p>4.6 м</p></td>
+<td><p>6.0 м</p></td>
+<td><p>−2.90</p></td>
+<td><p>остановка; удержание <code class="docutils literal notranslate"><span class="pre">stopping</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>стоящая машина в 120 м</p></td>
+<td><p>5.4 м</p></td>
+<td><p>5.4 м</p></td>
+<td><p>6.0 м</p></td>
+<td><p>−2.44</p></td>
+<td><p>остановка; TTC мин. 3.1 с</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<figure class="align-default" id="id15">
+<a class="reference internal image-reference" href="../_images/long_sim_scenarios.png"><img alt="../_images/long_sim_scenarios.png" src="../_images/long_sim_scenarios.png" style="width: 95%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 30 </span><span class="caption-text">Пять встреч в MetaDrive: без контакта, конверт панды не тронут, зазоры на стоянке внутри стоп-дистанции 6 м.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="id6">
+<h2>Где ломается<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><strong>Превью кривизны принимает шум за поворот.</strong> С измеренными 0.15 м разброса пути на 20 м квадратичная
+аппроксимация 25 м пути говорит <span class="math notranslate nohighlight">\(R \approx 200\)</span> м на прямой, и первая версия тихо режала уставку до 19 м/с.
+Одно длинное окно, медиана, НЧ-фильтр 2 с и мёртвая зона при <span class="math notranslate nohighlight">\(R &lt; 250\)</span> м лечат это в симуляторе — на дороге
+смотрите <code class="docutils literal notranslate"><span class="pre">v_curv</span></code> в <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>, прежде чем доверять.</p></li>
+<li><p><strong>Лид — зрение, не радар.</strong> <code class="docutils literal notranslate"><span class="pre">long_plan.lead_source</span></code> называет это явно — <code class="docutils literal notranslate"><span class="pre">vision</span></code> сегодня, <code class="docutils literal notranslate"><span class="pre">none</span></code>, чтобы
+планировать только по уставке, <code class="docutils literal notranslate"><span class="pre">radar</span></code> зарезервирован (ни одна платформа не декодирует объекты радара;
+он падает в vision и говорит об этом). У лида модели нет доплера; его скорость и ускорение выведены. <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> —
+гейт, <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.9</span></code> — гейт FCW, а лид дальше 2 м от нашего пути игнорируется. Безрадарный фолбэк upstream —
+тот же, но у upstream на большинстве машин ещё и радар.</p></li>
+<li><p><strong>Модель актуатора.</strong> В симуляторе ускорение становится педалью через калиброванную карту; в машине это
+делают мотор и ESP со своей динамикой. Задержка 0.15 с — число upstream для VW, не измеренное на этой
+машине.</p></li>
+<li><p><strong>Солвер.</strong> Гаусс–Ньютон — не SQP-RTI; тесты закрепляют формулировку (дистанции, сетка, границы) и
+поведение (осесть на желаемом зазоре, остановиться на стоп-дистанции), а не точные числа upstream.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h2>Приёмка<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p>Игрушка 1 воспроизводится: закон только по зазору подходит к лиду ближе, чем демпфированный;</p></li>
+<li><p>фрагмент MPC тормозит в первые 1.2 с за тормозящим лидом и никогда не планирует сквозь него;</p></li>
+<li><p>круизный фрагмент ускоряется на потолке, не выше;</p></li>
+<li><p>по одному предложению: почему уставка — препятствие и почему <code class="docutils literal notranslate"><span class="pre">stay_stopped</span></code> не должен читать скорость.</p></li>
+</ul>
+</section>
+<section id="id8">
+<h2>Упражнение<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
+<ol class="arabic simple">
+<li><p>Поменяйте <code class="docutils literal notranslate"><span class="pre">T_FOLLOW</span></code> на 1.0 и 1.8 во фрагменте MPC — как сдвигается точка наибольшего сближения?</p></li>
+<li><p>Обнулите <code class="docutils literal notranslate"><span class="pre">A_CHANGE_COST</span></code> (уберите член) и перерешайте с плана <span class="math notranslate nohighlight">\(a=1\)</span>: что происходит с <span class="math notranslate nohighlight">\(j\)</span>?</p></li>
+<li><p>Дайте круизному препятствию уставку <em>ниже</em> текущей скорости — какой узел связывается первым?</p></li>
+<li><p>В <code class="docutils literal notranslate"><span class="pre">sim.eval</span></code> запустите <code class="docutils literal notranslate"><span class="pre">lead_brake</span></code> с <code class="docutils literal notranslate"><span class="pre">--vision-latency-ms</span> <span class="pre">300</span></code>: где проявится лишняя задержка?</p></li>
+</ol>
+</section>
+<section id="id9">
+<h2>Куда дальше<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a> — закон, который превращает этот план в ускорение, и его состояния остановки.</p></li>
+<li><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a> — поперечный оптимизатор; идея горизонта та же, объект — нет.</p></li>
+<li><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a> — кадры, счётчики и супервизор панды, общие с ACC-путём.</p></li>
+<li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Предупреждения</span></a> — FCW, который поднимает этот планировщик, и тот, что независимо
+поднимает <code class="docutils literal notranslate"><span class="pre">safety_warn</span></code>.</p></li>
+</ul>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины (недоворот)</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Planner"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="MPC_and_FP.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">fp — MPC в области времени, который едет</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Control/VehicleModel.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Модель машины (недокрут)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Две дистанции, на которых всё держится</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Сборка 1: пропорциональный закон по зазору — и где он ломается</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Сборка 2: горизонт — тройной интегратор, управляемый рывком</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Сборка 3: уставка скорости как призрачная машина</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#metadrive">Замкнуть контур в MetaDrive</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Где ломается</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Упражнение</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id9">Куда дальше</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

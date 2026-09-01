@@ -69,7 +69,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="MPC и fp" href="MPC_and_FP.html" />
+    <link rel="next" title="MPC как игрушка — семь шагов вдоль пути" href="MpcToy.html" />
     <link rel="prev" title="Pure Pursuit" href="PurePursuit.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
@@ -232,6 +232,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="current nav bd-sidenav">
@@ -239,12 +242,15 @@
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -614,7 +620,7 @@ y = d_{\mathrm{prob}}\,y_{\mathrm{lane}} + (1-d_{\mathrm{prob}})\,y_{\mathrm{pla
 </ul>
 <!-- next-chapter -->
 <hr class="docutils" />
-<p><strong>Дальше:</strong> <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a></p>
+<p><strong>Дальше:</strong> <a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a></p>
 </section>
 </section>
 
@@ -658,11 +664,11 @@ y = d_{\mathrm{prob}}\,y_{\mathrm{lane}} + (1-d_{\mathrm{prob}})\,y_{\mathrm{pla
       </div>
     </a>
     <a class="right-next"
-       href="MPC_and_FP.html"
+       href="MpcToy.html"
        title="следующая страница">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">MPC и fp</p>
+        <p class="prev-next-title">MPC как игрушка — семь шагов вдоль пути</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

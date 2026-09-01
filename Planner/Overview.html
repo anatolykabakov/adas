@@ -69,7 +69,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Kinematic Bicycle Model" href="BicycleModel.html" />
-    <link rel="prev" title="Localization: building an estimator one sensor at a time" href="../Localization/Overview.html" />
+    <link rel="prev" title="Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said" href="../Localization/ParamsLearner.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -217,7 +217,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
@@ -231,6 +231,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="current nav bd-sidenav">
@@ -238,12 +241,15 @@
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -430,18 +436,15 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="the-lateral-loop-planner-control-platform">
 <h1>The lateral loop — planner, control, platform<a class="headerlink" href="#the-lateral-loop-planner-control-platform" title="Link to this heading">#</a></h1>
-<p><strong>Longitudinal</strong> control sets speed, <strong>lateral</strong> control sets steering. This course is about lateral
-control: on an MQB Golf without radar, longitudinal stays stock cruise and our HCA path is a supervised
-lateral actuator (the longitudinal story — stock cruise buttons only — lives in git history;
-<code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code> has the curvature-ahead speed cap that remains).</p>
+<p><strong>Longitudinal</strong> control sets speed, <strong>lateral</strong> control sets steering. Most of this part is about the
+lateral loop, which is what this stack has driven on the road; the last chapter is the longitudinal one —
+same three services, an acceleration instead of a torque — proven so far in the simulator only, because our
+own Golf has no ACC radar for the motor and brakes to take the request.</p>
 <p>The native code splits the lateral loop into three services, on purpose, and the book’s parts follow
 that split: <strong>Planner</strong> decides <em>what shape to drive</em> (a curvature plan), <strong>Control</strong> decides <em>what
 command produces it</em> (a torque), <strong>Platform</strong> puts that command on the bus and is the only place that
 knows the car is a Volkswagen. This part is the Planner; the two that follow are Control and
 <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a>.</p>
-<p>Longitudinal control is out of scope: on an MQB Golf without radar it stays stock cruise, and our HCA
-path is a supervised lateral actuator (the stock-cruise-button story lives in git history;
-<code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code> has the curvature-ahead speed cap that remains).</p>
 <p>The chapters build on each other — each exists because the previous one fails at something measurable,
 and the failure is the interesting part:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -468,10 +471,20 @@ and the failure is the interesting part:</p>
 <td><p>fuse two lane lines and the model plan into one reference</p></td>
 <td><p>lines lie when they vanish; the plan cuts arcs; σ decides which you get</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC as a toy</span></a></p></td>
 <td><p>Planner</p></td>
-<td><p>optimise a short future trajectory</p></td>
+<td><p>optimise a short future trajectory along the path, seven steps</p></td>
+<td><p>the toy has no notion of time — and so no notion of the actuator’s delay</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a></p></td>
+<td><p>Planner</p></td>
+<td><p>the time-domain MPC with delay compensation</p></td>
 <td><p>the horizon costs money, the plan has a bias, and on tight arcs the actuator saturates</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Longitudinal planner</span></a></p></td>
+<td><p>Planner</p></td>
+<td><p>a jerk-limited speed plan behind the lead or at the set speed</p></td>
+<td><p>a P law on the gap rings; the curvature preview reads path noise as a bend; the lead is vision, not radar</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a></p></td>
 <td><p>Control</p></td>
@@ -483,7 +496,12 @@ and the failure is the interesting part:</p>
 <td><p>δ → torque against the rack</p></td>
 <td><p>friction eats P, the panda rate limiter winds the integrator, feedforward is single-digit cNm</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Longitudinal control</span></a></p></td>
+<td><p>Control</p></td>
+<td><p>speed plan → acceleration, read 0.15 s ahead</p></td>
+<td><p>a P law on speed creeps at a stop; the stock ACC’s hold flag does not exist once we own the axis</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a></p></td>
 <td><p>Platform</p></td>
 <td><p>torque → a legal HCA_01, if the panda allows</p></td>
 <td><p>counter, checksum secret, safety mode, ignition debounce</p></td>
@@ -513,7 +531,7 @@ normalised torque for <code class="docutils literal notranslate"><span class="pr
 </table>
 </div>
 <p>A third, path-domain MPC (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, VisionPilot) was the middle step between the two and was deleted on
-2026-08-21 once <code class="docutils literal notranslate"><span class="pre">fp</span></code> had displaced it on the road; <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a> still builds its
+2026-08-21 once <code class="docutils literal notranslate"><span class="pre">fp</span></code> had displaced it on the road; <a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC as a toy</span></a> still builds its
 seven-step mental model, because it is the clearest way to learn what any MPC does.</p>
 </section>
 <section id="why-one-number-is-worth-carrying-through-the-whole-loop">
@@ -630,10 +648,12 @@ perception work begins.</p>
 <li><p><a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Bicycle model</span></a> — <span class="math notranslate nohighlight">\(\delta\)</span>, the instantaneous centre of rotation, <span class="math notranslate nohighlight">\(\kappa = \tan\delta/L\)</span>.</p></li>
 <li><p><a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — the one-step geometric law, and what the look-ahead hides.</p></li>
 <li><p><a class="reference internal" href="LanePath.html"><span class="std std-doc">Lane path</span></a> — where the reference the controllers track actually comes from.</p></li>
-<li><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC and fp</span></a> — horizon optimisation, cost weights, and the road defaults.</p></li>
+<li><p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC as a toy</span></a> and <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a> — horizon optimisation, cost weights, delay compensation, and the road defaults.</p></li>
+<li><p><a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Longitudinal planner</span></a> — the speed plan behind the lead or at the set speed.</p></li>
 </ol>
 <p>Then the <strong>Control</strong> part turns that plan into torque: <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model</span></a>
-(why kinematics lies above 15 m/s) and <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Angle control</span></a> (the inner PID).</p>
+(why kinematics lies above 15 m/s), <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Angle control</span></a> (the inner PID) and
+<a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Longitudinal control</span></a> (the speed plan into an acceleration).</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The one diagnostic rule worth memorising: <strong>bad vision rate or bad calibration is not a reason to raise
@@ -686,12 +706,12 @@ controller parameters second.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Localization/Overview.html"
+       href="../Localization/ParamsLearner.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Localization: building an estimator one sensor at a time</p>
+        <p class="prev-next-title">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</p>
       </div>
     </a>
     <a class="right-next"

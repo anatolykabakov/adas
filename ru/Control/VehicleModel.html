@@ -70,7 +70,7 @@
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
     <link rel="next" title="Угловой контур — то место, где обратная связь действительно кончается" href="AngleControl.html" />
-    <link rel="prev" title="MPC и fp" href="../Planner/MPC_and_FP.html" />
+    <link rel="prev" title="Продольный планировщик — скорость и дистанция" href="../Planner/Longitudinal.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -232,6 +232,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -239,12 +242,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -468,7 +474,7 @@
 <a class="reference internal image-reference" href="../_images/understeer_command.png"><img alt="../_images/understeer_command.png" src="../_images/understeer_command.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 25 </span><span class="caption-text">Чтобы держать тот же радиус, модель командует больший угол с ростом скорости — и сильнее при меньшем
+<p><span class="caption-number">Рис. 31 </span><span class="caption-text">Чтобы держать тот же радиус, модель командует больший угол с ростом скорости — и сильнее при меньшем
 факторе жёсткости.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
@@ -585,7 +591,7 @@
 <a class="reference internal image-reference" href="../_images/slip_delay.png"><img alt="../_images/slip_delay.png" src="../_images/slip_delay.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 26 </span><span class="caption-text">Слева: нескомпенсированный недокрут выносит из дуги; деление кривизны на G(v) держит её. Справа: 0.35 с
+<p><span class="caption-number">Рис. 32 </span><span class="caption-text">Слева: нескомпенсированный недокрут выносит из дуги; деление кривизны на G(v) держит её. Справа: 0.35 с
 задержки раскачивают контур, а досчёт сквозь команды в полёте его возвращает.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
@@ -908,12 +914,12 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Planner/MPC_and_FP.html"
+       href="../Planner/Longitudinal.html"
        title="предыдущая страница">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">MPC и fp</p>
+        <p class="prev-next-title">Продольный планировщик — скорость и дистанция</p>
       </div>
     </a>
     <a class="right-next"

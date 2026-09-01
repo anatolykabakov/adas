@@ -68,7 +68,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="The platform layer — one car behind an interface" href="../Platform/Overview.html" />
+    <link rel="next" title="Longitudinal control — read the plan where the actuator will be" href="LongControl.html" />
     <link rel="prev" title="Vehicle Model (Understeer)" href="VehicleModel.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
@@ -217,7 +217,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
@@ -231,6 +231,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -238,12 +241,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -445,7 +451,7 @@ the feedforward that was supposed to help contributes single-digit cNm out of 30
 <a class="reference internal image-reference" href="../_images/control_cascade.png"><img alt="../_images/control_cascade.png" src="../_images/control_cascade.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 23 </span><span class="caption-text">Planner → vehicle model → angle PID → platform → EPS, each stage at its own rate.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+<p><span class="caption-number">Fig. 29 </span><span class="caption-text">Planner → vehicle model → angle PID → platform → EPS, each stage at its own rate.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Planner (vision rate, ~24 Hz)   κ*  →  vehicle model  →  δ
@@ -528,7 +534,7 @@ CAN tick of measured SWA instead.</p>
 <a class="reference internal image-reference" href="../_images/friction_deadband.png"><img alt="../_images/friction_deadband.png" src="../_images/friction_deadband.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 24 </span><span class="caption-text">The P command is proportional to the error, but below the friction-plus-self-align torque the rack does
+<p><span class="caption-number">Fig. 30 </span><span class="caption-text">The P command is proportional to the error, but below the friction-plus-self-align torque the rack does
 not move at all — a deadband no gain closes.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
@@ -596,7 +602,7 @@ measured on road bags in <code class="docutils literal notranslate"><span class=
 <a class="reference internal image-reference" href="../_images/feedforward.png"><img alt="../_images/feedforward.png" src="../_images/feedforward.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 25 </span><span class="caption-text">With the shipped <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> the feedforward stays under the rack’s own friction until highway speed; the
+<p><span class="caption-number">Fig. 31 </span><span class="caption-text">With the shipped <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> the feedforward stays under the rack’s own friction until highway speed; the
 9.8 m/s floor lifts it into the useful range.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
@@ -663,7 +669,7 @@ limiter — you can now state the shipped <code class="docutils literal notransl
 </ul>
 <!-- next-chapter -->
 <hr class="docutils" />
-<p><strong>Next:</strong> <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a></p>
+<p><strong>Next:</strong> <a class="reference internal" href="LongControl.html"><span class="std std-doc">Longitudinal control</span></a></p>
 </section>
 </section>
 
@@ -707,11 +713,11 @@ limiter — you can now state the shipped <code class="docutils literal notransl
       </div>
     </a>
     <a class="right-next"
-       href="../Platform/Overview.html"
+       href="LongControl.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">The platform layer — one car behind an interface</p>
+        <p class="prev-next-title">Longitudinal control — read the plan where the actuator will be</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

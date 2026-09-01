@@ -1,0 +1,712 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Localization/Gps';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение" href="ParamsLearner.html" />
+    <link rel="prev" title="Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить" href="GyroFusion.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Localization/Gps.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-gps">Шаг 3a: GPS → локальные метры</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#b-gps">Шаг 3b: что даёт GPS и что он прячет</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Шаг 4: как сделать, чтобы коррекция дожила, и обнаружить, что этого всё равно мало</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="gps">
+<h1>GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила<a class="headerlink" href="#gps" title="Ссылка на этот заголовок">#</a></h1>
+<p>Одометрия уплывает; единственная абсолютная опора у телефона — его GPS. Эта глава переводит широту и долготу в
+метры на локальной плоскости, честно смотрит, что фикс в 1–5 м может и не может поправить, и разбирается,
+почему коррекция, дошедшая до фильтра, через секунду всё равно может исчезнуть.</p>
+<section id="a-gps">
+<h2>Шаг 3a: GPS → локальные метры<a class="headerlink" href="#a-gps" title="Ссылка на этот заголовок">#</a></h2>
+<p>Начало <span class="math notranslate nohighlight">\((\phi_0,\lambda_0)\)</span> — первый валидный фикс. С радиусом Земли <span class="math notranslate nohighlight">\(R = 6\,371\,000\)</span> м:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+\Delta\phi &amp;= (\phi-\phi_0)\tfrac{\pi}{180},&amp;
+\Delta\lambda &amp;= (\lambda-\lambda_0)\tfrac{\pi}{180},\\
+y &amp;= R\,\Delta\phi &amp;&amp; \text{(север)},\\
+x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
+\end{aligned}
+\end{split}\]</div>
+<p>Пеленг (градусы от севера по часовой) → рыск в ENU (от востока против часовой):</p>
+<div class="math notranslate nohighlight">
+\[
+\psi = \mathrm{normalize}\Big(\tfrac{\pi}{2} - b_{\deg}\tfrac{\pi}{180}\Big).
+\]</div>
+<p>Это <span class="math notranslate nohighlight">\(\tfrac{\pi}{2} - b\)</span> стоит выжечь в памяти. Однажды перевёрнутое, оно дало в анализе заезда сообщение об
+ошибке курса в 103° там, где настоящая ошибка была 0.3°, и час ушёл на охоту за несуществующей ошибкой
+фильтра.</p>
+<p>Курсу доверяют только выше <span class="math notranslate nohighlight">\(v &gt; 2\)</span> м/с, а особенность стояния (<span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> при почти нулевом пеленге)
+отбрасывается. Затем <span class="math notranslate nohighlight">\(v_x = v\sin b\)</span>, <span class="math notranslate nohighlight">\(v_y = v\cos b\)</span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">R_EARTH</span> <span class="o">=</span> <span class="mf">6_371_000.0</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">enu_from_ll</span><span class="p">(</span><span class="n">lat_deg</span><span class="p">,</span> <span class="n">lon_deg</span><span class="p">,</span> <span class="n">lat0_deg</span><span class="p">,</span> <span class="n">lon0_deg</span><span class="p">):</span>
+    <span class="n">dlat</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat_deg</span> <span class="o">-</span> <span class="n">lat0_deg</span><span class="p">)</span>
+    <span class="n">dlon</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon_deg</span> <span class="o">-</span> <span class="n">lon0_deg</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">dlat</span> <span class="o">*</span> <span class="n">R_EARTH</span>                                       <span class="c1"># North</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">dlon</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lat0_deg</span><span class="p">))</span> <span class="o">*</span> <span class="n">R_EARTH</span>     <span class="c1"># East</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="n">bearing_deg</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">bearing_deg</span><span class="p">)</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">enu_from_ll</span><span class="p">(</span><span class="mf">55.001</span><span class="p">,</span> <span class="mf">37.001</span><span class="p">,</span> <span class="mf">55.0</span><span class="p">,</span> <span class="mf">37.0</span><span class="p">))</span>   <span class="c1"># ~(64 m East, 111 m North) at φ₀=55°</span>
+<span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">90.0</span><span class="p">,</span> <span class="mf">180.0</span><span class="p">,</span> <span class="mf">270.0</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bearing </span><span class="si">{</span><span class="n">b</span><span class="si">:</span><span class="s2">5.0f</span><span class="si">}</span><span class="s2">° → ENU yaw </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="n">b</span><span class="p">))</span><span class="si">:</span><span class="s2">+7.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Плоская Земля подходит для заезда на несколько километров. Пересечение сброса начала координат (перезапуск
+приложения) начинает <strong>новую</strong> плоскость — не сшивайте беги без повторной привязки.</p>
+</section>
+<hr class="docutils" />
+<section id="b-gps">
+<h2>Шаг 3b: что даёт GPS и что он прячет<a class="headerlink" href="#b-gps" title="Ссылка на этот заголовок">#</a></h2>
+<p>Измерено против GNSS на ночном заезде (23.5 мин, трёхмерный фикс всё время):</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>величина</p></th>
+<th class="head"><p>согласие</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>курс против курса GNSS</p></td>
+<td><p>0.3° медианно, 5.4° p99</p></td>
+</tr>
+<tr class="row-odd"><td><p>скорость против GNSS</p></td>
+<td><p>0.17 м/с медианно</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Выглядит отлично, и так оно и есть — с оговоркой, что число по курсу частично измеряет, как часто GPS
+защёлкивал курс на место, а число по скорости несёт описанное выше смещение радиуса колеса. Фильтр,
+сравниваемый с тем, что его корректирует, всегда будет выглядеть хорошо.</p>
+<p>Честная проверка фильтра — что он делает, когда источника нет. Ровно для этого нужна симуляция дуги выше, и
+именно поэтому правка со скоростью рыска была важна, хотя ни один записанный заезд не жаловался.</p>
+</section>
+<hr class="docutils" />
+<section id="id1">
+<h2>Шаг 4: как сделать, чтобы коррекция дожила, и обнаружить, что этого всё равно мало<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<p>Шаг 3 дал ограниченные позицию и курс. Он не дал заслуживающей доверия <strong>скорости</strong>, и причина той же формы,
+что в шаге 2, — это стоит увидеть дважды, потому что так фильтр Калмана тихо выводят из строя чаще всего.</p>
+<p><code class="docutils literal notranslate"><span class="pre">updateGpsVel</span></code> вызывался. Но <code class="docutils literal notranslate"><span class="pre">predict</span></code> делал <code class="docutils literal notranslate"><span class="pre">state_(3)</span> <span class="pre">=</span> <span class="pre">v_measured</span></code> на каждом тике, то есть примерно каждые
+10 мс, а скорость GPS приходит раз в 0.2 с. Значит коррекцию перезаписывало около двадцати раз до прихода
+следующей. Слитая скорость была скоростью колёс с точностью до шестого знака.</p>
+<p>Была и вторая, независимая причина: обновлению задали <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code>, то есть предположенный шум доплера в 1 м/с.
+Измеренный доплер на порядок лучше — остаток против скорости колёс с исправленным масштабом составляет
+0.066–0.101 м/с, и в него входят оба датчика плюс дискретизация 1 Гц.</p>
+<p>Две причины взаимодействуют так, что стоит предсказать до запуска кода. В старом режиме с присваиванием
+дисперсию скорости ничто не сжимало, поэтому она росла без границы и усиление GPS подходило к единице:
+обновление сдвигало скорость <em>полностью</em> к значению GPS, а следующий тик это выбрасывал. Сделайте скорость
+состоянием — и дисперсия теперь мала, поэтому при <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code> обновление почти не регистрируется. Только с
+обеими правками оно и попадает, и держится.</p>
+<p>Обе исправлены: скорость — состояние (<code class="docutils literal notranslate"><span class="pre">setSpeedIsAState</span></code>), а <code class="docutils literal notranslate"><span class="pre">gps_vel_R</span></code> равно <span class="math notranslate nohighlight">\(0.1^2\)</span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The two failure modes and the fix, in one experiment. True speed 20.0; CAN reports 20.24 (the measured</span>
+<span class="c1"># 1.2 % scale); GPS velocity reports the truth once every 20 ticks.</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SpeedState</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The speed part of the EKF, with the old behaviour available for comparison."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">as_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mf">0.5</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">r_wheel</span><span class="o">=</span><span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_wheel</span> <span class="o">=</span> <span class="n">as_state</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">r_wheel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">1.0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_wheel</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">v_wheel</span>                      <span class="c1"># &lt;-- the assignment that erased everything</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_wheel</span><span class="p">)</span>       <span class="c1"># wheel speed as a measurement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">+=</span> <span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">v_wheel</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">*=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">k</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">observe_gps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_gps</span><span class="p">,</span> <span class="n">r_gps</span><span class="p">):</span>
+        <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">+</span> <span class="n">r_gps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">+=</span> <span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">v_gps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">*=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">k</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="n">as_state</span><span class="p">,</span> <span class="n">r_gps</span><span class="p">,</span> <span class="n">ticks</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">every</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">SpeedState</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="n">as_state</span><span class="p">)</span>
+    <span class="n">right_after</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ticks</span><span class="p">):</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="mf">20.24</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="n">every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">observe_gps</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">r_gps</span><span class="p">)</span>
+            <span class="n">right_after</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">v</span>
+    <span class="k">return</span> <span class="n">right_after</span><span class="p">,</span> <span class="n">f</span><span class="o">.</span><span class="n">v</span>
+
+<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">as_state</span><span class="p">,</span> <span class="n">r_gps</span> <span class="ow">in</span> <span class="p">((</span><span class="s2">"assigned, R=1.0  (as shipped before)"</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+                               <span class="p">(</span><span class="s2">"state,    R=1.0  (noise still assumed)"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
+                               <span class="p">(</span><span class="s2">"state,    R=0.01 (Doppler as measured)"</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">)):</span>
+    <span class="n">after</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span><span class="n">as_state</span><span class="p">,</span> <span class="n">r_gps</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: right after GPS </span><span class="si">{</span><span class="n">after</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, one GPS period later </span><span class="si">{</span><span class="n">end</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Прочитайте третью строку внимательно. Коррекция теперь попадает — и к моменту, когда GPS заговорит снова,
+скорость колёс затянула оценку обратно к 20.24.</p>
+<p>Это не провал настройки, а неидентифицируемость. Смещённое измерение приходит в двадцать раз чаще при том же
+предполагаемом шуме, поэтому между посылками выигрывает оно; и никакая пара предположений о несмещённом шуме
+не отделит <strong>постоянное смещение на частом измерении</strong> от истины. Понизить доверие к колёсам значило бы
+выбросить их по-настоящему низкий шум и ухудшить оценку везде.</p>
+<p>Выход — перестать делать вид, что смещение это шум, и дать ему собственное состояние: оценивать масштаб. Именно
+это <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> делает для параметров машины, и поэтому шаг 5 — то место, где эта глава останавливается, а та
+работа начинается.</p>
+<div class="tip admonition">
+<p class="admonition-title">Общий урок</p>
+<p>Дважды в одном фильтре измерение победила не плохая математика, а присваивание в шаге предсказания. Если вам
+досталcя оценщик и датчик «как будто ни на что не влияет», сначала проверьте, не пишет ли кто-то ниже по
+потоку в его состояние.</p>
+</div>
+<hr class="docutils" />
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="ParamsLearner.html"><span class="std std-doc">Учим параметры машины</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Localization"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="GyroFusion.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="ParamsLearner.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a-gps">Шаг 3a: GPS → локальные метры</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#b-gps">Шаг 3b: что даёт GPS и что он прячет</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Шаг 4: как сделать, чтобы коррекция дожила, и обнаружить, что этого всё равно мало</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

@@ -68,7 +68,7 @@
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
     <link rel="next" title="Предупреждения: FCW, AEB, LDW" href="../Safety/Warnings.html" />
-    <link rel="prev" title="Угловой контур — то место, где обратная связь действительно кончается" href="../Control/AngleControl.html" />
+    <link rel="prev" title="Продольное управление — читать план там, где будет актуатор" href="../Control/LongControl.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -230,6 +230,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -237,12 +240,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="current nav bd-sidenav">
@@ -414,10 +420,11 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Интерфейс</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#carstateview">Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hca-01">Кодирование: сборка легального HCA_01</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Разрешено: супервизор панды</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Темпы, и где всё это работает</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Приёмка</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Куда дальше</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Кодирование: кадры ускорения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Разрешено: супервизор панды</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Темпы, и где всё это работает</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Куда дальше</a></li>
 </ul>
             </nav>
         </div>
@@ -443,7 +450,7 @@
 <p><code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code> (<code class="docutils literal notranslate"><span class="pre">include/adas/platform/car_platform.h</span></code>) — чисто виртуальный класс с четырьмя
 группами методов, и его форма и есть весь контракт:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>чтение шины      isAllowedRxAddress · update(frames) · carState · stateView
-запись шины      apply(CarControl) → frames · setCruiseIntent · steerLimits
+запись шины      apply(CarControl) → frames · steerLimits · longLimits
 что разрешено    configureSafety · safetyTick · ignition · safetyModelOk · lateralActuationAllowed
 жизненный цикл   init · dbcAssetName · defaults · resetPandaState
 </pre></div>
@@ -572,21 +579,37 @@
 <span class="nb">print</span><span class="p">(</span><span class="s2">"which is constant for HCA_01. A wrong or wrongly-varying secret (GRA_ACC_01) drops every frame."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (приборный HUD разметки) и <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code> (кнопки круиза, свой секрет) строятся так же. У
-кнопочного кадра есть тонкость, которую стоит знать: нажатие <strong>держится, пока штатный счётчик не
-сдвинется</strong>, потому что так эта шина подтверждает кнопку — отпустишь раньше, нажатие не увидят; позже —
-оно повторится.</p>
-<figure class="align-default" id="id7">
+<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (приборный HUD разметки) и три ACC-кадра — <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> — строятся так же; два
+кадра ускорения — те сообщения MQB, у которых секрет действительно меняется со счётчиком, так что константу
+заменяет таблица из шестнадцати байт. Они уходят только при включённом <code class="docutils literal notranslate"><span class="pre">vehicle.long_control</span></code>, вместе с
+продольным флагом панды — см. <a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a>.</p>
+<figure class="align-default" id="id8">
 <a class="reference internal image-reference" href="../_images/hca01_bits.png"><img alt="../_images/hca01_bits.png" src="../_images/hca01_bits.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 30 </span><span class="caption-text">HCA_01: величина и знак момента разнесены по 14-битному полю и биту знака, рядом катящийся счётчик и CRC,
-которые проверяет EPS.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 37 </span><span class="caption-text">HCA_01: величина и знак момента разнесены по 14-битному полю и биту знака, рядом катящийся счётчик и CRC,
+которые проверяет EPS.</span><a class="headerlink" href="#id8" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="id3">
-<h2>Разрешено: супервизор панды<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Кодирование: кадры ускорения<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Control</span></code> публикует ускорение в том же сообщении <code class="docutils literal notranslate"><span class="pre">SteerCommand</span></code>, что и момент. Платформа гейтит его по
+<code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code> панды — нет никакого «всегда включённого» продольного, как есть всегда включённое
+поперечное, — и VW-порт кладёт его в <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> (0x122, для мотора), <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> (0x12E, для ESP) на 50 Гц и
+<code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> (0x30C, приборка) на 16.7 Гц. Поле <code class="docutils literal notranslate"><span class="pre">ACC_Sollbeschleunigung_02</span></code> несёт запрос шагами 0.005 м/с² от
+−7.22; <strong>3.01</strong> — слово шины для «ничего не просим», а панда проверяет, что <code class="docutils literal notranslate"><span class="pre">ACC_Folgebeschl</span></code> в каждом
+<code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> читается ровно 3.02. Счётчик и CRC следуют рецепту <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>, с секретными таблицами на каждое
+сообщение (<code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> и <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> — те два кадра MQB, у которых секрет меняется со счётчиком).</p>
+<p>Всё связывает один флаг: <code class="docutils literal notranslate"><span class="pre">FLAG_VOLKSWAGEN_LONG_CONTROL</span></code> в параметре безопасности панды. С ним панда
+принимает наши три кадра <strong>и перестаёт форвардить радарные</strong> — перехват одним переключателем, поэтому
+<code class="docutils literal notranslate"><span class="pre">vehicle.long_control:</span> <span class="pre">true</span></code> выставляет и флаг, и кадры, а выключенный оставляет штатный ACC нетронутым. Что
+флагу нужно на машине, честно сказать: панда на разъёме гейтвея (на камерном разъёме кадры радара через неё
+не проходят), машина с ACC-радаром, чтобы мотор и ESP были закодированы под запрос, и прошивка панды, собранная
+с <code class="docutils literal notranslate"><span class="pre">ALLOW_DEBUG</span></code>. У нашего Golf радара нет — поэтому дорожные данные этой главы взяты из симулятора.</p>
+</section>
+<section id="id4">
+<h2>Разрешено: супервизор панды<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p>Даже верно собранный кадр не должен уходить, пока машина не заведена и панда не в нужном режиме
 безопасности. Этим владеет <code class="docutils literal notranslate"><span class="pre">PandaSafetySupervisor</span></code> (<code class="docutils literal notranslate"><span class="pre">panda_safety_supervisor.cpp</span></code>), и он намеренно
 слоем ниже кодирования — платформа <em>строит</em> кадры каждый тик, супервизор решает, <em>пропустит</em> ли их
@@ -601,30 +624,30 @@
 <p>Это же делает панду переживающей сон телефона. Когда заново открытый USB-дескриптор пересаживается в
 работающий нативный слой, <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> забывает <strong>состояние платы</strong> — модель безопасности и
 alt-exp живут на плате и должны быть выставлены заново, — сохраняя декодированное <strong>состояние машины</strong> и
-защёлку круиза. Две неудачные пересадки подряд эскалируют до полного перезапуска; одна невидима
+уставку скорости. Две неудачные пересадки подряд эскалируют до полного перезапуска; одна невидима
 контроллерам.</p>
 </section>
-<section id="id4">
-<h2>Темпы, и где всё это работает<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id5">
+<h2>Темпы, и где всё это работает<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Сервис платформы (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) крутит три таймера: <strong>rx</strong> и <strong>tx</strong> по 10 мс, <strong>state</strong> по
 100 мс. rx вычерпывает панду и декодирует; tx строит и шлёт кадры из <code class="docutils literal notranslate"><span class="pre">apply()</span></code>; state публикует
 <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, а рядом едет тик супервизора, публикуя <code class="docutils literal notranslate"><span class="pre">panda/health</span></code>. Всё выше в этой главе зовётся из
 этих трёх колбэков и ниоткуда больше — это и позволяет реплею бега и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять идентичные
 декод/кодирование без подключённой панды.</p>
 </section>
-<section id="id5">
-<h2>Приёмка<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id6">
+<h2>Приёмка<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>миниатюра DBC грузит хорошие сигналы и считает битую строку, а не падает;</p></li>
 <li><p>сборщик HCA даёт разную контрольную сумму при двух счётчиках — и вы можете сказать <em>почему</em>: счётчик
-входит в полезную нагрузку CRC, тогда как сам секрет для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> — константа и меняется только у
-<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>;</p></li>
+входит в полезную нагрузку CRC, тогда как сам секрет для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> — константа, а у <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code>
+и <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> меняется по счётчику;</p></li>
 <li><p>по одному предложению: почему <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> брендово-нейтрален и почему <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> забывает
 состояние платы, но хранит состояние машины.</p></li>
 </ul>
 </section>
-<section id="id6">
-<h2>Куда дальше<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
+<section id="id7">
+<h2>Куда дальше<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">platform/car_platform.h</span></code> — интерфейс; <code class="docutils literal notranslate"><span class="pre">platform/volkswagen/</span></code> — единственная реализация.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code> — процедура добавления второй машины за этот интерфейс.</p></li>
@@ -668,12 +691,12 @@ alt-exp живут на плате и должны быть выставлены
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Control/AngleControl.html"
+       href="../Control/LongControl.html"
        title="предыдущая страница">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">Угловой контур — то место, где обратная связь действительно кончается</p>
+        <p class="prev-next-title">Продольное управление — читать план там, где будет актуатор</p>
       </div>
     </a>
     <a class="right-next"
@@ -706,10 +729,11 @@ alt-exp живут на плате и должны быть выставлены
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Интерфейс</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#carstateview">Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hca-01">Кодирование: сборка легального HCA_01</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Разрешено: супервизор панды</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Темпы, и где всё это работает</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Приёмка</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Куда дальше</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Кодирование: кадры ускорения</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Разрешено: супервизор панды</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Темпы, и где всё это работает</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Приёмка</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Куда дальше</a></li>
 </ul>
   </nav></div>
 

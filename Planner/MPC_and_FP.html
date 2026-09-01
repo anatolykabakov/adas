@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>MPC and fp &#8212; Algorithms for Phone ADAS</title>
+    <title>fp — the time-domain MPC that drives &#8212; Algorithms for Phone ADAS</title>
   
   
   
@@ -68,8 +68,8 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Vehicle Model (Understeer)" href="../Control/VehicleModel.html" />
-    <link rel="prev" title="Lane path — from two lines and a plan to one reference" href="LanePath.html" />
+    <link rel="next" title="Longitudinal planner — speed and the gap" href="Longitudinal.html" />
+    <link rel="prev" title="MPC as a toy — seven steps along the path" href="MpcToy.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -217,7 +217,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
@@ -231,6 +231,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="current nav bd-sidenav">
@@ -238,12 +241,15 @@
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -402,7 +408,7 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>MPC and fp</h1>
+    <h1>fp — the time-domain MPC that drives</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -412,18 +418,6 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-symbols">State symbols</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#seven-steps-a-path-domain-mpc-as-a-toy">Seven steps (a path-domain MPC, as a toy)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#measure-cte-epsi-kappa">1. Measure CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict-trajectories-for-trial-delta">2. Predict trajectories for trial <span class="math notranslate nohighlight">\(\delta\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#score-with-j">3. Score with <span class="math notranslate nohighlight">\(J\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-delta-mathrm-ff">4. Build <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#solve-warm-start-gradient">5. Solve (warm start + gradient)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#apply-first-sample-limits-swa-pid-hca">6. Apply first sample → limits → SWA → PID → HCA</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#repeat-next-frame">7. Repeat next frame</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-the-controller-the-reference-is-a-fusion">Before the controller: the reference is a fusion</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-model-flowpilot-time-domain-mpc"><code class="docutils literal notranslate"><span class="pre">fp</span></code> model (flowpilot time-domain MPC)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-1-reference-in-time">fp-1. Reference in time</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-2-dynamics-state">fp-2. Dynamics (state)</a></li>
@@ -456,343 +450,15 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="mpc-and-fp">
-<h1>MPC and fp<a class="headerlink" href="#mpc-and-fp" title="Link to this heading">#</a></h1>
-<p>Pure Pursuit picks <strong>one</strong> <span class="math notranslate nohighlight">\(\delta\)</span> that hits a look-ahead point.
-<strong>MPC</strong> optimizes a <strong>short future trajectory</strong>, applies the first command, and re-solves next frame.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">lane_keep_controller</span></code></p></th>
-<th class="head"><p>role</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
-<td><p>stock-like time-domain MPC (<strong>road default</strong>)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pp</span></code></p></td>
-<td><p>geometric baseline, and the fallback</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>This chapter teaches MPC twice: first as a <strong>path-domain toy you can hold in your head</strong> (the seven
-steps below — this design shipped as the <code class="docutils literal notranslate"><span class="pre">vp</span></code> / VisionPilot controller until 2026-08-21, when <code class="docutils literal notranslate"><span class="pre">fp</span></code>
-displaced it on the road and it was deleted; the code lives in git history), then as the <strong>time-domain
-<code class="docutils literal notranslate"><span class="pre">fp</span></code></strong> that actually drives.</p>
-<p>The planners live behind one interface, <code class="docutils literal notranslate"><span class="pre">IPlanner</span></code>, and the <code class="docutils literal notranslate"><span class="pre">Planner</span></code> service holds exactly one of them:</p>
-<ul class="simple">
-<li><p>pure pursuit <code class="docutils literal notranslate"><span class="pre">pp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/pp_planner.cpp</span></code>.</p></li>
-<li><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/fp_planner.cpp</span></code> + <code class="docutils literal notranslate"><span class="pre">flowpilot_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, time grid → 2.5 s), with a
-swappable numerical method — <code class="docutils literal notranslate"><span class="pre">kappa_solver_grad</span></code> or <code class="docutils literal notranslate"><span class="pre">kappa_solver_acados</span></code>.</p></li>
-<li><p>Path fusion (lanes↔plan): <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> in <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code> / <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>.</p></li>
-</ul>
-<p>All of them emit <strong>curvature</strong>, never an angle. That is what lets them be swapped at runtime and compared on
-the same bag: the conversion to steering happens once, downstream, in <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p>
-<section id="state-symbols">
-<h2>State symbols<a class="headerlink" href="#state-symbols" title="Link to this heading">#</a></h2>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>symbol</p></th>
-<th class="head"><p>meaning</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>CTE</p></td>
-<td><p>lateral offset from lane center [m]</p></td>
-</tr>
-<tr class="row-odd"><td><p>epsi</p></td>
-<td><p>heading error vs path tangent [rad]</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(\kappa\)</span></p></td>
-<td><p>path curvature [1/m]</p></td>
-</tr>
-<tr class="row-odd"><td><p><span class="math notranslate nohighlight">\(\delta\)</span></p></td>
-<td><p>front wheel angle [rad]</p></td>
-</tr>
-<tr class="row-even"><td><p><span class="math notranslate nohighlight">\(L\)</span></p></td>
-<td><p>wheelbase, 2.636 m (config; examples round to 2.64)</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p><strong>Straight:</strong> CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\approx 0\)</span> → <strong>feedback</strong> dominates.
-<strong>Arc:</strong> feed-forward from <span class="math notranslate nohighlight">\(\kappa\)</span> dominates. Bad/delayed <span class="math notranslate nohighlight">\(\kappa\)</span> → outward drift.</p>
-<figure class="align-default" id="id1">
-<a class="reference internal image-reference" href="../_images/57_run0801_curve.png"><img alt="../_images/57_run0801_curve.png" src="../_images/57_run0801_curve.png" style="width: 95%;" />
-</a>
-<figcaption>
-<p><span class="caption-number">Fig. 18 </span><span class="caption-text">When planner <span class="math notranslate nohighlight">\(\kappa\)</span> lags yaw-derived curvature, SWA undershoots and CTE grows.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
-</figcaption>
-</figure>
-</section>
-<hr class="docutils" />
-<section id="seven-steps-a-path-domain-mpc-as-a-toy">
-<h2>Seven steps (a path-domain MPC, as a toy)<a class="headerlink" href="#seven-steps-a-path-domain-mpc-as-a-toy" title="Link to this heading">#</a></h2>
-<p>Shared toy constants for every snippet below:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-
-<span class="n">L</span> <span class="o">=</span> <span class="mf">2.64</span>          <span class="c1"># wheelbase [m]</span>
-<span class="n">N</span> <span class="o">=</span> <span class="mi">20</span>            <span class="c1"># horizon steps</span>
-<span class="n">DS</span> <span class="o">=</span> <span class="mf">0.5</span>          <span class="c1"># path step [m] (~1 s preview at ~10 m/s)</span>
-<span class="n">K_US</span> <span class="o">=</span> <span class="mf">0.0015</span>     <span class="c1"># understeer-ish term in the toy ff</span>
-<span class="n">FF_SCALE</span> <span class="o">=</span> <span class="mf">2.0</span>
-<span class="n">W_DELTA</span> <span class="o">=</span> <span class="mf">45000.0</span> <span class="c1"># pin δ to δ_ff</span>
-<span class="n">W_DDELTA</span> <span class="o">=</span> <span class="mf">15000.0</span>
-</pre></div>
-</div>
-<section id="measure-cte-epsi-kappa">
-<h3>1. Measure CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span><a class="headerlink" href="#measure-cte-epsi-kappa" title="Link to this heading">#</a></h3>
-<p>Lane markings → lane-center polyline → quadratic <span class="math notranslate nohighlight">\(y = a x^2 + b x + c\)</span> in ego frame.
-At the vehicle (<span class="math notranslate nohighlight">\(x\approx 0\)</span>):</p>
-<ul class="simple">
-<li><p><span class="math notranslate nohighlight">\(\mathrm{CTE} \approx c\)</span> (lateral offset),</p></li>
-<li><p><span class="math notranslate nohighlight">\(\mathrm{epsi} \approx b\)</span> (heading vs path),</p></li>
-<li><p><span class="math notranslate nohighlight">\(\kappa \approx 2a\)</span> (curvature of the fit).</p></li>
-</ul>
-<p>If the fit window is short or noisy, <span class="math notranslate nohighlight">\(\kappa\)</span> is <strong>low and late</strong> — the whole feed-forward chain inherits that error.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fit_lane_state</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Quadratic fit y≈a x²+b x+c → (CTE, epsi, kappa) at x=0."""</span>
-    <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">a</span><span class="p">)</span>
-
-<span class="c1"># Toy centerline: gentle left arc in device frame (y right+)</span>
-<span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">31</span><span class="p">)</span>
-<span class="n">kappa_true</span> <span class="o">=</span> <span class="mf">0.02</span>
-<span class="n">y</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">kappa_true</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">0.05</span> <span class="o">*</span> <span class="n">x</span> <span class="o">+</span> <span class="mf">0.30</span>   <span class="c1"># also 30 cm off + slight epsi</span>
-<span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span> <span class="o">=</span> <span class="n">fit_lane_state</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CTE=</span><span class="si">{</span><span class="n">cte</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m, epsi=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, κ=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> 1/m "</span>
-      <span class="sa">f</span><span class="s2">"(true κ=</span><span class="si">{</span><span class="n">kappa_true</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>You should recover CTE ≈ 0.3 m and <span class="math notranslate nohighlight">\(\kappa\)</span> near 0.02. On a real bag, compare <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> κ to <code class="docutils literal notranslate"><span class="pre">yaw_rate</span> <span class="pre">/</span> <span class="pre">v</span></code>.</p>
-</section>
-<section id="predict-trajectories-for-trial-delta">
-<h3>2. Predict trajectories for trial <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#predict-trajectories-for-trial-delta" title="Link to this heading">#</a></h3>
-<p>The toy rolls <strong>along path length</strong>, not clock time. For a candidate wheel angle <span class="math notranslate nohighlight">\(\delta\)</span>:</p>
-<div class="math notranslate nohighlight">
-\[\begin{split}
-\begin{aligned}
-\mathrm{CTE} &amp;\leftarrow \mathrm{CTE} - \sin(\mathrm{epsi})\, ds, \\
-\mathrm{epsi} &amp;\leftarrow \mathrm{epsi} + \big(\kappa - \tfrac{\tan\delta}{L}\big)\, ds.
-\end{aligned}
-\end{split}\]</div>
-<ul class="simple">
-<li><p>Nose cocked relative to the road (<span class="math notranslate nohighlight">\(\mathrm{epsi}\neq 0\)</span>) → CTE integrates.</p></li>
-<li><p><span class="math notranslate nohighlight">\(\tan\delta/L\)</span> must match road <span class="math notranslate nohighlight">\(\kappa\)</span>, or heading error integrates.</p></li>
-</ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">ds</span><span class="o">=</span><span class="n">DS</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">N</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Return arrays (cte[0..n], epsi[0..n]) including the start state."""</span>
-    <span class="n">cs</span><span class="p">,</span> <span class="n">es</span> <span class="o">=</span> <span class="p">[</span><span class="n">cte</span><span class="p">],</span> <span class="p">[</span><span class="n">epsi</span><span class="p">]</span>
-    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-        <span class="n">cte</span> <span class="o">=</span> <span class="n">cte</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">ds</span>
-        <span class="n">epsi</span> <span class="o">=</span> <span class="n">epsi</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="n">ds</span>
-        <span class="n">cs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cte</span><span class="p">)</span>
-        <span class="n">es</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cs</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">es</span><span class="p">)</span>
-
-<span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span> <span class="o">=</span> <span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.02</span>
-<span class="n">delta_ff_kin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">delta</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"δ=0"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="p">(</span><span class="s2">"δ=atan(Lκ)"</span><span class="p">,</span> <span class="n">delta_ff_kin</span><span class="p">)]:</span>
-    <span class="n">cs</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">12s</span><span class="si">}</span><span class="s2"> CTE@0=</span><span class="si">{</span><span class="n">cs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> → CTE@end=</span><span class="si">{</span><span class="n">cs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Wrong <span class="math notranslate nohighlight">\(\delta\)</span> lets CTE grow; geometric <span class="math notranslate nohighlight">\(\delta\)</span> holds better. This is only the <strong>predictor</strong> — cost picks which <span class="math notranslate nohighlight">\(\delta\)</span> wins.</p>
-</section>
-<section id="score-with-j">
-<h3>3. Score with <span class="math notranslate nohighlight">\(J\)</span><a class="headerlink" href="#score-with-j" title="Link to this heading">#</a></h3>
-<figure class="align-default" id="id2">
-<a class="reference internal image-reference" href="../_images/mpc_cost.png"><img alt="../_images/mpc_cost.png" src="../_images/mpc_cost.png" style="width: 75%;" />
-</a>
-<figcaption>
-<p><span class="caption-number">Fig. 19 </span><span class="caption-text">The cost against a trial angle: the huge δ-pin weight pulls the minimum onto the feed-forward, so descent
-barely moves the seed.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
-</figcaption>
-</figure>
-<p>Lower is better. The terms, simplified (these are VisionPilot’s, which is where the toy comes from):</p>
-<div class="math notranslate nohighlight">
-\[
-J = \sum_s \Big(
-w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2}
-+ W_\delta(\delta_s - \delta_{\mathrm{ff},s})^{2}
-+ W_{\Delta}(\delta_s - \delta_{s-1})^{2}
-\Big).
-\]</div>
-<p>Weights grow with <span class="math notranslate nohighlight">\(|\kappa|\)</span> (<code class="docutils literal notranslate"><span class="pre">curve_factor</span> <span class="pre">=</span> <span class="pre">1</span> <span class="pre">+</span> <span class="pre">20·κ</span></code>). The <span class="math notranslate nohighlight">\(W_\delta{=}45000\)</span> term is enormous — so the optimum hugs <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost</span><span class="p">(</span><span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
-         <span class="n">cte_w_base</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span> <span class="n">epsi_w_base</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">quartic</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Score a sequence of wheel angles (len N)."""</span>
-    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">)</span> <span class="o">==</span> <span class="n">N</span>
-    <span class="n">v2</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span>
-    <span class="n">curve</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="mf">20.0</span> <span class="o">*</span> <span class="nb">abs</span><span class="p">(</span><span class="n">kappa</span><span class="p">)</span>
-    <span class="n">cte_w</span> <span class="o">=</span> <span class="n">cte_w_base</span> <span class="o">*</span> <span class="n">curve</span>
-    <span class="n">epsi_w</span> <span class="o">=</span> <span class="n">epsi_w_base</span> <span class="o">*</span> <span class="n">curve</span>
-    <span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span> <span class="o">=</span> <span class="n">cte0</span><span class="p">,</span> <span class="n">epsi0</span>
-    <span class="n">j</span> <span class="o">=</span> <span class="mf">0.0</span>
-    <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">delta</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">):</span>
-        <span class="n">j</span> <span class="o">+=</span> <span class="n">cte_w</span> <span class="o">*</span> <span class="n">cte</span><span class="o">**</span><span class="mi">2</span>
-        <span class="n">j</span> <span class="o">+=</span> <span class="n">cte_w</span> <span class="o">*</span> <span class="n">quartic</span> <span class="o">*</span> <span class="n">cte</span><span class="o">**</span><span class="mi">4</span>
-        <span class="n">j</span> <span class="o">+=</span> <span class="n">epsi_w</span> <span class="o">*</span> <span class="n">epsi</span><span class="o">**</span><span class="mi">2</span>
-        <span class="n">delta_ff</span> <span class="o">=</span> <span class="n">FF_SCALE</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_US</span> <span class="o">*</span> <span class="n">v2</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
-        <span class="n">j</span> <span class="o">+=</span> <span class="n">W_DELTA</span> <span class="o">*</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">delta_ff</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
-        <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">j</span> <span class="o">+=</span> <span class="n">W_DDELTA</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="mf">9.0</span><span class="p">),</span> <span class="mf">25.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">delta</span> <span class="o">-</span> <span class="n">deltas</span><span class="p">[</span><span class="n">s</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
-        <span class="c1"># one predict step</span>
-        <span class="n">cte</span> <span class="o">=</span> <span class="n">cte</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">epsi</span><span class="p">)</span> <span class="o">*</span> <span class="n">DS</span>
-        <span class="n">epsi</span> <span class="o">=</span> <span class="n">epsi</span> <span class="o">+</span> <span class="p">(</span><span class="n">kappa</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span><span class="p">)</span> <span class="o">*</span> <span class="n">DS</span>
-    <span class="k">return</span> <span class="n">j</span>
-
-<span class="n">kappa</span> <span class="o">=</span> <span class="mf">0.02</span>
-<span class="n">delta_ff</span> <span class="o">=</span> <span class="n">FF_SCALE</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_US</span> <span class="o">*</span> <span class="mi">15</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">scale</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">):</span>
-    <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">scale</span> <span class="o">*</span> <span class="n">delta_ff</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-    <span class="n">j</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"δ=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">delta_ff</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°  J=</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Expect the minimum near <code class="docutils literal notranslate"><span class="pre">scale=1</span></code> (<span class="math notranslate nohighlight">\(\delta\approx\delta_{\mathrm{ff}}\)</span>). Set <code class="docutils literal notranslate"><span class="pre">W_DELTA=0</span></code> mentally: the ranking can flip toward pure CTE-minimizing <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
-</section>
-<section id="build-delta-mathrm-ff">
-<h3>4. Build <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span><a class="headerlink" href="#build-delta-mathrm-ff" title="Link to this heading">#</a></h3>
-<p>Feed-forward is the steering you need <strong>even if already centered</strong>:</p>
-<div class="math notranslate nohighlight">
-\[
-\delta_{\mathrm{ff}} = f_{\mathrm{scale}}\big(\arctan(L\kappa) + K_{\mathrm{us}} v^{2}\kappa\big).
-\]</div>
-<p>It is <strong>linear in <span class="math notranslate nohighlight">\(\kappa\)</span></strong>. Underestimate <span class="math notranslate nohighlight">\(\kappa\)</span> → understeer the arc. On a straight <span class="math notranslate nohighlight">\(\kappa\approx 0\)</span> → <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\approx 0\)</span> and feedback carries the car.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">ff_scale</span><span class="o">=</span><span class="n">FF_SCALE</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">K_us</span><span class="o">=</span><span class="n">K_US</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">ff_scale</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span> <span class="o">+</span> <span class="n">K_us</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">kappa</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">):</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">20.0</span><span class="p">)</span>
-    <span class="c1"># What if perception returns only 66% of true kappa?</span>
-    <span class="n">d_bad</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="mf">0.66</span> <span class="o">*</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">20.0</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"κ=</span><span class="si">{</span><span class="n">kappa</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  δ_ff=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°  "</span>
-          <span class="sa">f</span><span class="s2">"if κ×0.66 → </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_bad</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="solve-warm-start-gradient">
-<h3>5. Solve (warm start + gradient)<a class="headerlink" href="#solve-warm-start-gradient" title="Link to this heading">#</a></h3>
-<p>Seed, then finite-difference / gradient steps on the <span class="math notranslate nohighlight">\(\delta\)</span> sequence (C++: ~80 iters). In practice on road bags the descent barely moves the seed — <strong>seed quality ≈ output quality</strong>.</p>
-<div class="warning admonition">
-<p class="admonition-title">The toy collapses the horizon; the real solver does not</p>
-<p>To keep the demo readable the block below optimises <strong>one shared <span class="math notranslate nohighlight">\(\delta\)</span></strong> for all <span class="math notranslate nohighlight">\(N\)</span> nodes — a scalar
-line search, not a real MPC. It is enough to show that the descent barely leaves a good seed. The shipped
-solver moves the whole <em>sequence</em> <span class="math notranslate nohighlight">\(\delta_0\ldots\delta_{N-1}\)</span>; do not read this block as how many
-variables an MPC actually has.</p>
-</div>
-<div class="math notranslate nohighlight">
-\[
-\delta_{\mathrm{seed}} = \delta_{\mathrm{ff}} + \underbrace{k_{\mathrm{cte}}\mathrm{CTE} + k_{\mathrm{epsi}}\mathrm{epsi}}_{\text{feedback clamp ~±0.25 rad}}.
-\]</div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k_cte_base</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">k_epsi</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
-    <span class="n">v2</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span>
-    <span class="n">k_cte</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">k_cte_base</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">v2</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
-    <span class="n">fb</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">0.25</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="n">k_cte</span> <span class="o">*</span> <span class="n">cte</span> <span class="o">+</span> <span class="n">k_epsi</span> <span class="o">*</span> <span class="n">epsi</span><span class="p">))</span>
-    <span class="n">d0</span> <span class="o">=</span> <span class="n">delta_ff</span><span class="p">(</span><span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="o">+</span> <span class="n">fb</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">d0</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">solve</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">iters</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mf">2e-4</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Tiny FD gradient descent on a shared δ (toy; C++ optimizes the sequence)."""</span>
-    <span class="n">deltas</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-    <span class="n">best</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iters</span><span class="p">):</span>
-        <span class="c1"># one shared angle for the demo</span>
-        <span class="n">d</span> <span class="o">=</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">trial_p</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="o">+</span> <span class="n">step</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-        <span class="n">trial_m</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="o">-</span> <span class="n">step</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-        <span class="n">jp</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">trial_p</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
-        <span class="n">jm</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">trial_m</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
-        <span class="n">grad</span> <span class="o">=</span> <span class="p">(</span><span class="n">jp</span> <span class="o">-</span> <span class="n">jm</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">step</span><span class="p">)</span>
-        <span class="n">d_new</span> <span class="o">=</span> <span class="n">d</span> <span class="o">-</span> <span class="mf">5e-8</span> <span class="o">*</span> <span class="n">grad</span>          <span class="c1"># tiny step — cost is stiff in δ</span>
-        <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_new</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-        <span class="n">j</span> <span class="o">=</span> <span class="n">cost</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">best</span><span class="p">:</span>
-            <span class="n">best</span> <span class="o">=</span> <span class="n">j</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">deltas</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">*</span> <span class="n">N</span>
-            <span class="k">break</span>
-    <span class="k">return</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">best</span>
-
-<span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">18.0</span>
-<span class="n">seed</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-<span class="n">sol</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"seed </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">° → solved </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">°  J=</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"|Δδ|=</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">°  (often ~0 on road)"</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="apply-first-sample-limits-swa-pid-hca">
-<h3>6. Apply first sample → limits → SWA → PID → HCA<a class="headerlink" href="#apply-first-sample-limits-swa-pid-hca" title="Link to this heading">#</a></h3>
-<p>Take a command slightly ahead in the horizon (delay), then clamp:</p>
-<ol class="arabic simple">
-<li><p>angle cap growing with speed,</p></li>
-<li><p>per-frame slew / jerk limit,</p></li>
-<li><p><span class="math notranslate nohighlight">\(\delta \times\)</span> <code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> → steering-wheel angle,</p></li>
-<li><p>angle-PID → torque <span class="math notranslate nohighlight">\(\in[\pm 300]\)</span> cNm → <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> on CAN.</p></li>
-</ol>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">STEER_RATIO</span> <span class="o">=</span> <span class="mf">15.7</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">apply_limits</span><span class="p">(</span><span class="n">delta_cmd</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">max_slew_deg</span><span class="o">=</span><span class="mf">8.0</span><span class="p">):</span>
-    <span class="c1"># soft speed-growing angle cap [deg]</span>
-    <span class="n">cap</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">25.0</span><span class="p">,</span> <span class="mf">8.0</span> <span class="o">+</span> <span class="n">v</span><span class="p">)))</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="n">cap</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">cap</span><span class="p">,</span> <span class="n">delta_cmd</span><span class="p">))</span>
-    <span class="n">slew</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">max_slew_deg</span><span class="p">)</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">delta_prev</span> <span class="o">-</span> <span class="n">slew</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">delta_prev</span> <span class="o">+</span> <span class="n">slew</span><span class="p">,</span> <span class="n">d</span><span class="p">))</span>
-    <span class="n">swa</span> <span class="o">=</span> <span class="n">d</span> <span class="o">*</span> <span class="n">STEER_RATIO</span>
-    <span class="k">return</span> <span class="n">d</span><span class="p">,</span> <span class="n">swa</span>
-
-<span class="n">delta_plan</span> <span class="o">=</span> <span class="n">sol</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sol</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">sol</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># "look ahead" one sample</span>
-<span class="n">d_prev</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">apply_limits</span><span class="p">(</span><span class="n">delta_plan</span><span class="p">,</span> <span class="n">d_prev</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">18.0</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"wheel </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d_out</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°  SWA </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°  "</span>
-      <span class="sa">f</span><span class="s2">"(PID→torque happens in Control, CAN framing in Platform)"</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Saturation at ±300 cNm means the <strong>plant</strong> cannot follow — not that the cost wanted more. Debug flag / UI: steering-limit indication. The whole δ → torque half of this step has its own chapter: <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Angle control</span></a>.</p>
-</section>
-<section id="repeat-next-frame">
-<h3>7. Repeat next frame<a class="headerlink" href="#repeat-next-frame" title="Link to this heading">#</a></h3>
-<p>New <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (~42 ms median on the current phone) → new CTE/epsi/<span class="math notranslate nohighlight">\(\kappa\)</span> → back to step 1.
-MPC does <strong>not</strong> open-loop the whole second: only the first command is applied, then the plan is thrown away and rebuilt from the <strong>measured</strong> state.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">one_phone_frame</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Steps 4→6 for one camera frame (measure assumed already done)."""</span>
-    <span class="n">deltas</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-    <span class="c1"># real code runs gradient; seed≈solution on many bags</span>
-    <span class="n">d_plan</span> <span class="o">=</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">deltas</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">apply_limits</span><span class="p">(</span><span class="n">d_plan</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">swa</span>
-
-<span class="c1"># Structural MPC loop — new measurement every frame, plan discarded</span>
-<span class="n">delta_prev</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-    <span class="c1"># step 1 would refresh cte, epsi, kappa from vision here</span>
-    <span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">18.0</span>
-    <span class="n">delta_prev</span><span class="p">,</span> <span class="n">swa</span> <span class="o">=</span> <span class="n">one_phone_frame</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">epsi</span><span class="p">,</span> <span class="n">kappa</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delta_prev</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"frame </span><span class="si">{</span><span class="n">frame</span><span class="si">}</span><span class="s2">: δ=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">delta_prev</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°  SWA=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
-
-<span class="c1"># Why κ quality matters more than "more MPC iterations"</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">command vs measured κ (CTE=epsi=0):"</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">k_meas</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.020</span><span class="p">,</span> <span class="mf">0.013</span><span class="p">,</span> <span class="mf">0.008</span><span class="p">):</span>  <span class="c1"># truth, ×0.66, worse</span>
-    <span class="n">d</span> <span class="o">=</span> <span class="n">warm_start</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">k_meas</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  κ_meas=</span><span class="si">{</span><span class="n">k_meas</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> → δ_seed=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Only the first command is applied; the rest of the horizon is thrown away. If every frame’s <span class="math notranslate nohighlight">\(\kappa\)</span> is low, every seed undershoots — descent cannot invent curvature that step 1 never measured.</p>
-</section>
-</section>
-<hr class="docutils" />
-<section id="before-the-controller-the-reference-is-a-fusion">
-<h2>Before the controller: the reference is a fusion<a class="headerlink" href="#before-the-controller-the-reference-is-a-fusion" title="Link to this heading">#</a></h2>
-<p>Both <code class="docutils literal notranslate"><span class="pre">fp</span></code> and <code class="docutils literal notranslate"><span class="pre">pp</span></code> track the polyline on <code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, and that polyline is <strong>not</strong> raw paint or raw
-model plan — it is the σ-weighted fusion of both, built in <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code>. That fusion, the two
-failure modes it survives, and why it is where half the arc offset lives, is its own chapter:
-<a class="reference internal" href="LanePath.html"><span class="std std-doc">Lane path</span></a>. This chapter assumes the reference already exists.</p>
-</section>
+  <section class="tex2jax_ignore mathjax_ignore" id="fp-the-time-domain-mpc-that-drives">
+<h1>fp — the time-domain MPC that drives<a class="headerlink" href="#fp-the-time-domain-mpc-that-drives" title="Link to this heading">#</a></h1>
+<p>The <a class="reference internal" href="MpcToy.html"><span class="std std-doc">toy</span></a> optimised along the path. The shipped <code class="docutils literal notranslate"><span class="pre">fp</span></code> optimises along <strong>time</strong>: it predicts where
+the car will be in 0.01 … 2.5 s on flowpilot’s grid, pays for the reference error, the heading error and the
+steering rate, and — the part the toy could not do — compensates the 0.35 s the steering tract takes to
+answer. This chapter builds it in seven steps, then measures where the horizon does not help, lists the
+phone’s knobs, and closes the loop in MetaDrive.</p>
+<p>Code: <code class="docutils literal notranslate"><span class="pre">lateral/fp_planner.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">lateral/flowpilot_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, time grid → 2.5 s), the swappable
+numerical method <code class="docutils literal notranslate"><span class="pre">kappa_solver_grad</span></code> / <code class="docutils literal notranslate"><span class="pre">kappa_solver_acados</span></code>.</p>
 <section id="fp-model-flowpilot-time-domain-mpc">
 <h2><code class="docutils literal notranslate"><span class="pre">fp</span></code> model (flowpilot time-domain MPC)<a class="headerlink" href="#fp-model-flowpilot-time-domain-mpc" title="Link to this heading">#</a></h2>
 <p>Road default (<code class="docutils literal notranslate"><span class="pre">lane_keep_controller=fp</span></code>). Code: <code class="docutils literal notranslate"><span class="pre">lateral/fp_planner.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">lateral/flowpilot_mpc.cpp</span></code>,
@@ -1001,12 +667,12 @@ that is where the time grid works against you.</p>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">&gt;5</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;7.3f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">&gt;12.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">reach</span><span class="si">:</span><span class="s2">&gt;17.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<figure class="align-default" id="id3">
+<figure class="align-default" id="id1">
 <a class="reference internal image-reference" href="../_images/mpc_timegrid.png"><img alt="../_images/mpc_timegrid.png" src="../_images/mpc_timegrid.png" style="width: 80%;" />
 </a>
 <figcaption>
 <p><span class="caption-number">Fig. 20 </span><span class="caption-text">The quadratic time grid samples the near field densely, but in the first few nodes the car physically
-cannot move sideways — so a steady offset there is nearly free in the cost.</span><a class="headerlink" href="#id3" title="Link to this image">#</a></p>
+cannot move sideways — so a steady offset there is nearly free in the cost.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <p>Read the reach column. Over the first four nodes the car cannot move sideways by more than a few
@@ -1125,7 +791,7 @@ latency. A controller that wins here and loses on a bag is the expected order of
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />
-<p><strong>Next:</strong> <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Vehicle model (understeer)</span></a></p>
+<p><strong>Next:</strong> <a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Longitudinal planner</span></a></p>
 </section>
 </section>
 
@@ -1160,20 +826,20 @@ latency. A controller that wins here and loses on a bag is the expected order of
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="LanePath.html"
+       href="MpcToy.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Lane path — from two lines and a plan to one reference</p>
+        <p class="prev-next-title">MPC as a toy — seven steps along the path</p>
       </div>
     </a>
     <a class="right-next"
-       href="../Control/VehicleModel.html"
+       href="Longitudinal.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Vehicle Model (Understeer)</p>
+        <p class="prev-next-title">Longitudinal planner — speed and the gap</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -1195,18 +861,6 @@ latency. A controller that wins here and loses on a bag is the expected order of
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#state-symbols">State symbols</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#seven-steps-a-path-domain-mpc-as-a-toy">Seven steps (a path-domain MPC, as a toy)</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#measure-cte-epsi-kappa">1. Measure CTE, epsi, <span class="math notranslate nohighlight">\(\kappa\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict-trajectories-for-trial-delta">2. Predict trajectories for trial <span class="math notranslate nohighlight">\(\delta\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#score-with-j">3. Score with <span class="math notranslate nohighlight">\(J\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#build-delta-mathrm-ff">4. Build <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#solve-warm-start-gradient">5. Solve (warm start + gradient)</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#apply-first-sample-limits-swa-pid-hca">6. Apply first sample → limits → SWA → PID → HCA</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#repeat-next-frame">7. Repeat next frame</a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#before-the-controller-the-reference-is-a-fusion">Before the controller: the reference is a fusion</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-model-flowpilot-time-domain-mpc"><code class="docutils literal notranslate"><span class="pre">fp</span></code> model (flowpilot time-domain MPC)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-1-reference-in-time">fp-1. Reference in time</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fp-2-dynamics-state">fp-2. Dynamics (state)</a></li>

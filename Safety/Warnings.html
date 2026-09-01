@@ -217,7 +217,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
@@ -231,6 +231,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -238,12 +241,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -479,7 +485,7 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code class="docutils literal notranslate"><span class="pre">LongPlanService</span></code> may also read <code class="docutils literal notranslate"><span class="pre">model_long</span></code> for ACC-like <strong>desired accel</strong>.
+<p>The <a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">longitudinal planner</span></a> reads the same <code class="docutils literal notranslate"><span class="pre">model_long</span></code> leads for its plan and its own FCW.
 Warnings do <strong>not</strong> use that IDM accel anymore (it false-triggered on empty highways).</p>
 </div>
 </section>
@@ -565,7 +571,7 @@ refuses to compile a config it cannot parse.</p>
 <a class="reference internal image-reference" href="../_images/fcw_thresholds.png"><img alt="../_images/fcw_thresholds.png" src="../_images/fcw_thresholds.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 27 </span><span class="caption-text">The two triggers: time-to-collision below 2.5 s, or required deceleration above 3.5 m/s².</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+<p><span class="caption-number">Fig. 34 </span><span class="caption-text">The two triggers: time-to-collision below 2.5 s, or required deceleration above 3.5 m/s².</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -635,7 +641,7 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
 <a class="reference internal image-reference" href="../_images/path_relative_y.png"><img alt="../_images/path_relative_y.png" src="../_images/path_relative_y.png" style="width: 70%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 28 </span><span class="caption-text">On a bend the ego lane’s own edge crosses a straight-ahead line — comparing to the axis flags a departure
+<p><span class="caption-number">Fig. 35 </span><span class="caption-text">On a bend the ego lane’s own edge crosses a straight-ahead line — comparing to the axis flags a departure
 that is not there.</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>

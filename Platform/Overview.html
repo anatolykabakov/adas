@@ -67,7 +67,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Warnings: FCW, AEB, LDW" href="../Safety/Warnings.html" />
-    <link rel="prev" title="Angle control — the loop where feedback actually ends" href="../Control/AngleControl.html" />
+    <link rel="prev" title="Longitudinal control — read the plan where the actuator will be" href="../Control/LongControl.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -215,7 +215,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
@@ -229,6 +229,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -236,12 +239,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="current nav bd-sidenav">
@@ -413,6 +419,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decode-from-frames-to-a-carstateview">Decode: from frames to a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-building-a-legal-hca-01">Encode: building a legal HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-the-acceleration-frames">Encode: the acceleration frames</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#allowed-the-panda-supervisor">Allowed: the panda supervisor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates-and-where-it-all-runs">Rates, and where it all runs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>
@@ -443,7 +450,7 @@ that holds.</p>
 <p><code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code> (<code class="docutils literal notranslate"><span class="pre">include/adas/platform/car_platform.h</span></code>) is a pure virtual class with four
 groups of methods, and reading its shape tells you the whole contract:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>read the bus     isAllowedRxAddress · update(frames) · carState · stateView
-write the bus    apply(CarControl) → frames · setCruiseIntent · steerLimits
+write the bus    apply(CarControl) → frames · steerLimits · longLimits
 what's allowed   configureSafety · safetyTick · ignition · safetyModelOk · lateralActuationAllowed
 lifecycle        init · dbcAssetName · defaults · resetPandaState
 </pre></div>
@@ -574,18 +581,36 @@ silently dropped by the EPS.</p></li>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"which is constant for HCA_01. A wrong or wrongly-varying secret (GRA_ACC_01) drops every frame."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (the dashboard lane HUD) and <code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code> (cruise buttons, its own secret) are built the same
-way. The cruise-button frame carries a wrinkle worth knowing: a press is <strong>held until the stock
-counter moves</strong>, because that is how this bus acknowledges a button — release too early and the press
-is never seen, too late and it repeats.</p>
+<p><code class="docutils literal notranslate"><span class="pre">LDW_02</span></code> (the dashboard lane HUD) and the three ACC frames — <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> — are built
+the same way; the two acceleration frames are the MQB messages whose secret genuinely changes with the
+counter, so a table of sixteen bytes replaces the constant. They go out only when <code class="docutils literal notranslate"><span class="pre">vehicle.long_control</span></code>
+is on, together with the panda’s longitudinal flag — see <a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Longitudinal planner</span></a>.</p>
 <figure class="align-default" id="id1">
 <a class="reference internal image-reference" href="../_images/hca01_bits.png"><img alt="../_images/hca01_bits.png" src="../_images/hca01_bits.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Fig. 26 </span><span class="caption-text">HCA_01: torque magnitude and sign split across a 14-bit field and a sign bit, with the rolling counter
+<p><span class="caption-number">Fig. 33 </span><span class="caption-text">HCA_01: torque magnitude and sign split across a 14-bit field and a sign bit, with the rolling counter
 and CRC the EPS validates.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
+</section>
+<section id="encode-the-acceleration-frames">
+<h2>Encode: the acceleration frames<a class="headerlink" href="#encode-the-acceleration-frames" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Control</span></code> publishes the acceleration in the same <code class="docutils literal notranslate"><span class="pre">SteerCommand</span></code> message as the torque. The platform gates
+it on the panda’s <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code> — there is no always-on longitudinal the way there is always-on
+lateral — and the VW port lays it into <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> (0x122, for the motor), <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> (0x12E, for the ESP)
+at 50 Hz and <code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> (0x30C, the cluster) at 16.7 Hz. The field <code class="docutils literal notranslate"><span class="pre">ACC_Sollbeschleunigung_02</span></code> carries the
+request in 0.005 m/s² steps from −7.22; <strong>3.01</strong> is the bus’s word for “nothing asked”, and the panda
+checks that <code class="docutils literal notranslate"><span class="pre">ACC_Folgebeschl</span></code> reads exactly 3.02 in every <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>. Counter and CRC follow <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>’s
+recipe, with per-message secret tables (<code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> and <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> are the two MQB frames whose secret varies
+with the counter).</p>
+<p>One flag ties it together: <code class="docutils literal notranslate"><span class="pre">FLAG_VOLKSWAGEN_LONG_CONTROL</span></code> in the panda’s safety parameter. With it the
+panda accepts our three frames <strong>and stops forwarding the radar’s own</strong> — the takeover is one switch, so
+<code class="docutils literal notranslate"><span class="pre">vehicle.long_control:</span> <span class="pre">true</span></code> sets both the flag and the frames, and off leaves the stock ACC untouched.
+What the flag needs on the car is honest to state: a panda at the gateway harness (at the camera harness
+the radar’s frames never pass through it), a car with an ACC radar for the motor and ESP to be coded for
+the request, and a panda firmware built with <code class="docutils literal notranslate"><span class="pre">ALLOW_DEBUG</span></code>. Our own Golf has no radar, which is why this
+chapter’s road data comes from a simulator.</p>
 </section>
 <section id="allowed-the-panda-supervisor">
 <h2>Allowed: the panda supervisor<a class="headerlink" href="#allowed-the-panda-supervisor" title="Link to this heading">#</a></h2>
@@ -602,8 +627,8 @@ sent — a wrong mode is treated as a fault, not worked around;</p></li>
 </ul>
 <p>This is also what makes the panda survivable across a phone sleep. When a re-opened USB descriptor is
 seated into the running native layer, <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> forgets <strong>board</strong> state — safety model and
-alt-exp live on the board and must be re-asserted — while keeping decoded <strong>car</strong> state and the cruise
-latch. Two failed reseats in a row escalate to a full restart; a single one is invisible to the
+alt-exp live on the board and must be re-asserted — while keeping decoded <strong>car</strong> state and the set
+speed. Two failed reseats in a row escalate to a full restart; a single one is invisible to the
 controllers.</p>
 </section>
 <section id="rates-and-where-it-all-runs">
@@ -619,8 +644,8 @@ this chapter is called from those three callbacks and nowhere else — which is 
 <ul class="simple">
 <li><p>the DBC miniature loads the good signals and counts the bad line instead of failing;</p></li>
 <li><p>the HCA builder produces a different checksum at two counters — and you can state <em>why</em>: the counter is
-part of the CRC payload, while the secret itself is constant for <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> and varies only for
-<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>;</p></li>
+part of the CRC payload, while the secret itself is constant for <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> and varies by counter for
+<code class="docutils literal notranslate"><span class="pre">GRA_ACC_01</span></code>, <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> and <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>;</p></li>
 <li><p>one sentence each: why <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> is brand-neutral, and why <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> forgets board
 state but keeps car state.</p></li>
 </ul>
@@ -670,12 +695,12 @@ limiter it must respect.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Control/AngleControl.html"
+       href="../Control/LongControl.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Angle control — the loop where feedback actually ends</p>
+        <p class="prev-next-title">Longitudinal control — read the plan where the actuator will be</p>
       </div>
     </a>
     <a class="right-next"
@@ -708,6 +733,7 @@ limiter it must respect.</p></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-interface">The interface</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#decode-from-frames-to-a-carstateview">Decode: from frames to a <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-building-a-legal-hca-01">Encode: building a legal HCA_01</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#encode-the-acceleration-frames">Encode: the acceleration frames</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#allowed-the-panda-supervisor">Allowed: the panda supervisor</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rates-and-where-it-all-runs">Rates, and where it all runs</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#acceptance">Acceptance</a></li>

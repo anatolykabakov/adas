@@ -70,7 +70,7 @@
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
     <link rel="next" title="Кинематическая велосипедная модель" href="BicycleModel.html" />
-    <link rel="prev" title="Локализация: собираем оценщик по одному датчику" href="../Localization/Overview.html" />
+    <link rel="prev" title="Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение" href="../Localization/ParamsLearner.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -232,6 +232,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="current nav bd-sidenav">
@@ -239,12 +242,15 @@
 <li class="toctree-l1"><a class="reference internal" href="BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -435,9 +441,9 @@
 <strong>Planner</strong> решает <em>какую форму ехать</em> (план в кривизне), <strong>Control</strong> решает <em>какая команда её даёт</em>
 (момент), <strong>Platform</strong> кладёт команду на шину и единственный знает, что машина — Volkswagen. Эта часть —
 Planner; две следующие — Control и <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a>.</p>
-<p>Продольное управление вне рамок: на MQB Golf без радара оно остаётся штатным круизом, а наш путь через
-HCA — поперечный актуатор под присмотром (история штатных кнопок круиза живёт в git;
-в <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code> остался её след — ограничение скорости по кривизне впереди).</p>
+<p>Большая часть этой части — о поперечном контуре, который этот стек водил по дороге; последняя глава —
+продольная: те же три сервиса, ускорение вместо момента, — пока доказанная только в симуляторе, потому что
+у нашего Golf нет ACC-радара, чтобы мотор и тормоза принимали запрос.</p>
 <p>Главы опираются друг на друга — каждая существует потому, что предыдущая ломается на чём-то измеримом, и
 интересна именно поломка:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -464,10 +470,20 @@ HCA — поперечный актуатор под присмотром (ис�
 <td><p>слить две линии и план модели в одну опору</p></td>
 <td><p>линии лгут, когда пропадают; план срезает дуги; какую получишь — решает σ</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a></p></td>
 <td><p>Planner</p></td>
-<td><p>оптимизировать короткую будущую траекторию</p></td>
+<td><p>оптимизировать короткую будущую траекторию вдоль пути, семь шагов</p></td>
+<td><p>у игрушки нет понятия времени — а значит, и задержки актуатора</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a></p></td>
+<td><p>Planner</p></td>
+<td><p>MPC в области времени с компенсацией задержки</p></td>
 <td><p>горизонт стоит денег, у плана своё смещение, а на крутых дугах актуатор насыщается</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a></p></td>
+<td><p>Planner</p></td>
+<td><p>план скорости с ограниченным рывком за лидом или на уставке</p></td>
+<td><p>P-закон по зазору звенит; превью кривизны принимает шум пути за поворот; лид — зрение, не радар</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a></p></td>
 <td><p>Control</p></td>
@@ -479,7 +495,12 @@ HCA — поперечный актуатор под присмотром (ис�
 <td><p>δ → момент против рейки</p></td>
 <td><p>трение съедает P, ограничитель панды накручивает интегратор, упреждение — единицы cNm</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a></p></td>
+<td><p>Control</p></td>
+<td><p>план скорости → ускорение, чтение на 0.15 с вперёд</p></td>
+<td><p>P-закон по скорости ползёт на остановке; флага стоянки штатного ACC нет, когда осью владеем мы</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a></p></td>
 <td><p>Platform</p></td>
 <td><p>момент → легальный HCA_01, если панда разрешит</p></td>
 <td><p>счётчик, секрет контрольной суммы, режим безопасности, дебаунс зажигания</p></td>
@@ -509,7 +530,7 @@ HCA — поперечный актуатор под присмотром (ис�
 </table>
 </div>
 <p>Третья, MPC в области пути (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, VisionPilot), была средней ступенью между этими двумя и удалена
-2026-08-21, когда <code class="docutils literal notranslate"><span class="pre">fp</span></code> вытеснил её с дороги; глава <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> по-прежнему строит её
+2026-08-21, когда <code class="docutils literal notranslate"><span class="pre">fp</span></code> вытеснил её с дороги; глава <a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> по-прежнему строит её
 семишаговую мысленную модель — это самый ясный способ понять, что делает любой MPC.</p>
 </section>
 <section id="id3">
@@ -625,10 +646,12 @@ HCA — поперечный актуатор под присмотром (ис�
 <li><p><a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> — <span class="math notranslate nohighlight">\(\delta\)</span>, мгновенный центр вращения, <span class="math notranslate nohighlight">\(\kappa = \tan\delta/L\)</span>.</p></li>
 <li><p><a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — одношаговый геометрический закон и то, что скрывает дальность взгляда.</p></li>
 <li><p><a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a> — откуда берётся опора, которую отслеживают контроллеры.</p></li>
-<li><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> — оптимизация на горизонте, веса стоимости и дорожные значения по умолчанию.</p></li>
+<li><p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> и <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a> — оптимизация на горизонте, веса стоимости, компенсация задержки и дорожные значения по умолчанию.</p></li>
+<li><p><a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> — план скорости за лидом или на уставке.</p></li>
 </ol>
 <p>Затем часть <strong>Control</strong> превращает этот план в момент: <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a>
-(почему кинематика врёт выше 15 м/с) и <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> (внутренний PID).</p>
+(почему кинематика врёт выше 15 м/с), <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> (внутренний PID) и
+<a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a> (план скорости в ускорение).</p>
 <div class="admonition tip">
 <p class="admonition-title">Совет</p>
 <p>Единственное диагностическое правило, которое стоит запомнить: <strong>плохой темп зрения или плохая калибровка не
@@ -681,12 +704,12 @@ HCA — поперечный актуатор под присмотром (ис�
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../Localization/Overview.html"
+       href="../Localization/ParamsLearner.html"
        title="предыдущая страница">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">Локализация: собираем оценщик по одному датчику</p>
+        <p class="prev-next-title">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</p>
       </div>
     </a>
     <a class="right-next"

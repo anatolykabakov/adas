@@ -62,6 +62,8 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Pipeline';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/lang-switch.js?v=29098906"></script>
@@ -230,6 +232,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -237,12 +242,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -411,7 +419,7 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Проследите один кадр, с часами</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Бюджет времени одного кадра</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит между кадрами</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">По этапам</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">1. Съёмка</a></li>
@@ -441,35 +449,65 @@
 <p><img alt="Упрощённая схема конвейера" src="../_images/pipeline_simple.png" /></p>
 <p>Инженерная версия с деталями реализации: <code class="docutils literal notranslate"><span class="pre">docs/IMAGE_TO_CAN_PIPELINE.md</span></code>.</p>
 <section id="id1">
-<h2>Проследите один кадр, с часами<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
+<h2>Бюджет времени одного кадра<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
 <p>Этапы ниже держать в голове проще, если смотреть, как через них движется один кадр. Каждое число — измеренная
-медиана с ночного заезда длиной 29 минут. Медианы по этапам не обязаны складываться в накопленные медианы —
-эти подобраны так, чтобы попасть в две накопленные величины, которые <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> реально печатает: 22 мс до
-выхода модели и <strong>52 мс до команды</strong>, — чтобы арифметику можно было проверить, а не принять на слово.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured medians, run 2026_08_16_23_59_45, OnePlus 7T, thneed runner.</span>
-<span class="c1"># "own" is the stage's own cost; the clock accumulates.</span>
-<span class="n">STAGES</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="p">(</span><span class="s2">"capture (Camera2 YUV, capture_ts stamped)"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"delivery to VisionPipeline"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>           <span class="c1"># median 0, p95 0 — instrumented since 2026-08</span>
-    <span class="p">(</span><span class="s2">"wait in the inference queue"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>          <span class="c1"># median 0, mean 1.0 — nothing is queueing up</span>
-    <span class="p">(</span><span class="s2">"geometric warp to 6x128x256 (OpenCL)"</span><span class="p">,</span> <span class="mf">4.6</span><span class="p">),</span> <span class="c1"># prep_ms; was 12.1 on the CPU</span>
-    <span class="p">(</span><span class="s2">"Supercombo inference (thneed, GPU)"</span><span class="p">,</span> <span class="mf">17.6</span><span class="p">),</span>  <span class="c1"># was 45.6 through ONNX Runtime</span>
-    <span class="p">(</span><span class="s2">"parse heads -&gt; vision/lanes"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Java -&gt; ZMQ -&gt; ZmqBridge -&gt; proto_convert"</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Planner -&gt; control/lat_plan, control/lane_keep"</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Control -&gt; controls/steer"</span><span class="p">,</span> <span class="mf">21.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Platform -&gt; HCA_01 on the wire"</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>      <span class="c1"># its own 10 ms TX timer</span>
-<span class="p">)</span>
-
-<span class="n">clock</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'stage'</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'own'</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'clock'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'car has moved'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">own</span> <span class="ow">in</span> <span class="n">STAGES</span><span class="p">:</span>
-    <span class="n">clock</span> <span class="o">+=</span> <span class="n">own</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">own</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">At 22 m/s the command that reaches the rack was computed for a road position </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m back."</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety."</span><span class="p">)</span>
-</pre></div>
+медиана с ночного заезда длиной 29 минут (OnePlus 7T, раннер thneed); две опорные величины, которые
+<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> реально печатает, — <strong>22 мс до выхода модели</strong> и <strong>52 мс до команды на руль</strong>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>этап</p></th>
+<th class="head"><p>своё [мс]</p></th>
+<th class="head"><p>часы [мс]</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>съёмка (Camera2 YUV, ставится <code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>)</p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>доставка в <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-even"><td><p>ожидание в очереди инференса</p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>геометрический варп в 6×128×256 (OpenCL)</p></td>
+<td><p>4.6</p></td>
+<td><p>4.6</p></td>
+</tr>
+<tr class="row-even"><td><p>инференс Supercombo (thneed, GPU)</p></td>
+<td><p>17.6</p></td>
+<td><p><strong>22.2</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>разбор голов → <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
+<td><p>0.0</p></td>
+<td><p>22.2</p></td>
+</tr>
+<tr class="row-even"><td><p>Java → ZMQ → <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> → <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code></p></td>
+<td><p>4.0</p></td>
+<td><p>26.2</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> → <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code></p></td>
+<td><p>5.0</p></td>
+<td><p>31.2</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Control</span></code> → <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
+<td><p>21.0</p></td>
+<td><p><strong>52.2</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> → <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> в проводе</p></td>
+<td><p>10.0</p></td>
+<td><p>62.2</p></td>
+</tr>
+</tbody>
+</table>
 </div>
+<p>Почему эти часы важны — одна строка физики: дорога не ждёт, <span class="math notranslate nohighlight">\(d = v\,t\)</span>. На <span class="math notranslate nohighlight">\(v = 22\)</span> м/с команда, дошедшая до
+рейки, посчитана для положения на дороге <span class="math notranslate nohighlight">\(22 \cdot 0.052 \approx 1.1\)</span> м назад — и ровно этот метр
+компенсирует <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>, предсказывая состояние вперёд; поэтому он вход планировщика, а не
+косметика.</p>
 <p>Три строки в этом списке заслуживают внимания.</p>
 <p><strong>Инференс занимает 17.6 мс, потому что модель считается на GPU.</strong> Та же сеть через ONNX Runtime стоит на
 этом телефоне 45.6 мс. Оба пути везут supercombo 0.9.7 — один и тот же файл, переведённый в другой формат, —
@@ -490,30 +528,15 @@
 <p>Зрение идёт на 30.0 Гц — по кадру на период камеры, без пропусков. Актуатор — на 100 Гц, потому что HCA нужен
 строгий такт, иначе EPS отбрасывает команду. Значит примерно два тика из трёх панда передаёт команду,
 построенную на <em>эталоне, который уже использовался</em>.</p>
-<p>Это правильное поведение, и оно создаёт ловушку для того, кто читает логи:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">VISION_HZ</span> <span class="o">=</span> <span class="mf">30.01</span>
-<span class="n">TX_HZ</span> <span class="o">=</span> <span class="mf">100.0</span>
-<span class="n">FRESH_WINDOW_MS</span> <span class="o">=</span> <span class="mf">50.0</span>        <span class="c1"># tools/latency.py keeps commands within this of their vision timestamp</span>
-
-<span class="n">vision_period_ms</span> <span class="o">=</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
-<span class="n">per_frame</span> <span class="o">=</span> <span class="n">TX_HZ</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"vision period </span><span class="si">{</span><span class="n">vision_period_ms</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms, </span><span class="si">{</span><span class="n">per_frame</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> actuator ticks per vision frame"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"only the first tick uses a brand-new reference; the rest reuse it"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">()</span>
-<span class="c1"># The freshness filter is a time window, not "one tick per frame" — so what it keeps is the fraction of</span>
-<span class="c1"># the vision period that falls inside the window.</span>
-<span class="n">kept_predicted</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">FRESH_WINDOW_MS</span> <span class="o">/</span> <span class="n">vision_period_ms</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"predicted share passing a </span><span class="si">{</span><span class="n">FRESH_WINDOW_MS</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ms freshness filter: </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">kept_predicted</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"measured on the run: 171 097 kept of 175 573 = </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">171097</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">175573</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Compute e2e latency over the raw stream instead and the republishes drag the number up, because"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"their vision_ts is older than the command that carries it."</span><span class="p">)</span>
-</pre></div>
-</div>
+<p>Это правильное поведение, и оно создаёт ловушку для того, кто читает логи. Арифметика: <span class="math notranslate nohighlight">\(100/30 \approx 3.3\)</span>
+тика актуатора на кадр зрения, то есть только первый тик использует свежую опору, а следующие два повторяют
+её. Поэтому <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> фильтрует команды по <strong>свежести</strong> — окном 50 мс от метки самого кадра. При
+периоде зрения 33 мс любая команда первого использования проходит, и фильтр режет только по-настоящему
+несвежие переиздания: 171 097 из 175 573 на этом заезде, 97 %. Посчитайте сквозную задержку по сырому потоку
+— и переиздания утянут число вверх, потому что их <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code> старше команды, которая их несёт.</p>
 <p>На 13 Гц — темпе, который эта глава приводила до переезда модели на GPU, — этот фильтр не проходила треть
-команд, и само окно свежести делало заметную работу. На 30 Гц период зрения короче окна, поэтому фильтр
-отбрасывает только по-настоящему несвежие переиздания: 4 476 из 175 573. Урок улучшение пережил: «команда
-свежая» и «картинка свежая» — разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт
+команд, и само окно делало заметную работу. Урок улучшение пережил: «команда свежая» и «картинка свежая» —
+разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт
 устаревания привязан к метке съёмки кадра, а не к возрасту команды, и поэтому таймаут команды HCA в 250 мс не
 защитил от плана возраста 75 секунд.</p>
 <p>Быстрый контур — не пустая работа: это угловой PID, замыкающийся на <em>измеренный</em> угол руля 100 раз в секунду,
@@ -574,7 +597,7 @@ middleware; <code class="docutils literal notranslate"><span class="pre">utils/p
 области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
 одинаков, какой бы ни работал. Публикует <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) — закон управления и ничего больше: кривизна и шасси превращаются в
-момент, признак включения, пиктограммы приборки и желание нажать кнопку круиза. Он не знает ни адреса CAN,
+момент и запрос ускорения, признак включения, пиктограммы приборки. Он не знает ни адреса CAN,
 ни сигнала, ни счётчика кадра. Публикует <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Platform</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) выносит это намерение на шину и не называет ни одной марки: какая
 машина за шиной, решается один раз по <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code> и достигается через <code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code>. См.
@@ -654,26 +677,11 @@ middleware; <code class="docutils literal notranslate"><span class="pre">utils/p
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./app/src/main/cpp/build_cpp.sh<span class="w"> </span>-t<span class="w"> </span>linux<span class="w"> </span>--test<span class="w">    </span><span class="c1"># host build + ~230 gtest cases; pyadas core into scripts/</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyadas</span><span class="w"> </span><span class="kn">import</span> <span class="n">require_core</span>
-<span class="n">pyadas</span> <span class="o">=</span> <span class="n">require_core</span><span class="p">()</span>
-
-<span class="n">app</span> <span class="o">=</span> <span class="n">pyadas</span><span class="o">.</span><span class="n">AdasApp</span><span class="p">()</span>                      <span class="c1"># simulated mode: no threads, you own the clock</span>
-<span class="n">app</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="s2">"lane_keep_controller"</span><span class="p">,</span> <span class="s2">"fp"</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">ts</span><span class="p">,</span> <span class="n">lanes_msg</span><span class="p">,</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">lanes</span><span class="p">:</span>            <span class="c1"># your session, from step 8</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="n">raw</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vehicle/state"</span><span class="p">,</span> <span class="n">chassis_at</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>    <span class="c1"># your synthetic chassis, or a real one</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">payload</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">pop_messages</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">topic</span> <span class="o">==</span> <span class="s2">"control/lane_keep"</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>             <span class="c1"># the shipped stack's steering, frame by frame</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> оборачивает ровно этот цикл, им уже пользуются симулятор и визуализатор —
-прочтите его раз, и офлайновый инструментарий перестанет быть магией. Это же честный способ сравнить
-собственный регулятор с боевыми <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code> на одинаковых кадрах: один бег на входе, три команды на
-выходе, один график.</p>
+<p>Весь цикл — четыре вызова: создать <code class="docutils literal notranslate"><span class="pre">pyadas.AdasApp()</span></code> в симулируемом режиме, опубликовать сообщения кадра,
+позвать <code class="docutils literal notranslate"><span class="pre">step()</span></code>, прочитать, что опубликовали сервисы. <code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> оборачивает ровно это, и
+симулятор с визуализатором уже им пользуются — прочитайте его один раз, и офлайн-инструменты перестанут быть
+магией. Это же честный способ сравнить собственный контроллер с боевыми <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code>: один бег на входе, три
+команды на выходе, один график.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение — обзор</span></a></p>
@@ -746,7 +754,7 @@ middleware; <code class="docutils literal notranslate"><span class="pre">utils/p
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Проследите один кадр, с часами</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Бюджет времени одного кадра</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Что происходит между кадрами</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">По этапам</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">1. Съёмка</a></li>

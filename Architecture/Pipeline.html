@@ -61,6 +61,8 @@
     <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
     <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
     <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'Architecture/Pipeline';</script>
     <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
     <script src="../_static/lang-switch.js?v=29098906"></script>
@@ -215,7 +217,7 @@
     <div class="bd-toc-item navbar-nav active">
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="Overview.html">System Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">System overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Middleware.html">Middleware (C++ bus)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="JavaLayer.html">Java layer (phone shell)</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">From Frame to CAN</a></li>
@@ -229,6 +231,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -236,12 +241,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC and fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -410,7 +418,7 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#follow-one-frame-with-a-clock">Follow one frame, with a clock</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-frames-time-budget">One frame’s time budget</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-between-frames">What happens between frames</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-by-stage">Stage by stage</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>
@@ -439,36 +447,66 @@
 <h1>From Frame to CAN<a class="headerlink" href="#from-frame-to-can" title="Link to this heading">#</a></h1>
 <p><img alt="Simplified pipeline diagram" src="../_images/pipeline_simple.png" /></p>
 <p>Engineering version with implementation details: <code class="docutils literal notranslate"><span class="pre">docs/IMAGE_TO_CAN_PIPELINE.md</span></code>.</p>
-<section id="follow-one-frame-with-a-clock">
-<h2>Follow one frame, with a clock<a class="headerlink" href="#follow-one-frame-with-a-clock" title="Link to this heading">#</a></h2>
-<p>The stages below are easier to hold onto if you watch a single frame move through them. Each number is a
-measured median from a 29-minute night run. Per-stage medians do not have to add up to cumulative medians —
-these are chosen to land on the two cumulative figures <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> actually reports, 22 ms to the model
-output and <strong>52 ms to the command</strong>, so the arithmetic is checkable rather than decorative.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured medians, run 2026_08_16_23_59_45, OnePlus 7T, thneed runner.</span>
-<span class="c1"># "own" is the stage's own cost; the clock accumulates.</span>
-<span class="n">STAGES</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="p">(</span><span class="s2">"capture (Camera2 YUV, capture_ts stamped)"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"delivery to VisionPipeline"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>           <span class="c1"># median 0, p95 0 — instrumented since 2026-08</span>
-    <span class="p">(</span><span class="s2">"wait in the inference queue"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>          <span class="c1"># median 0, mean 1.0 — nothing is queueing up</span>
-    <span class="p">(</span><span class="s2">"geometric warp to 6x128x256 (OpenCL)"</span><span class="p">,</span> <span class="mf">4.6</span><span class="p">),</span> <span class="c1"># prep_ms; was 12.1 on the CPU</span>
-    <span class="p">(</span><span class="s2">"Supercombo inference (thneed, GPU)"</span><span class="p">,</span> <span class="mf">17.6</span><span class="p">),</span>  <span class="c1"># was 45.6 through ONNX Runtime</span>
-    <span class="p">(</span><span class="s2">"parse heads -&gt; vision/lanes"</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Java -&gt; ZMQ -&gt; ZmqBridge -&gt; proto_convert"</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Planner -&gt; control/lat_plan, control/lane_keep"</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Control -&gt; controls/steer"</span><span class="p">,</span> <span class="mf">21.0</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">"Platform -&gt; HCA_01 on the wire"</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">),</span>      <span class="c1"># its own 10 ms TX timer</span>
-<span class="p">)</span>
-
-<span class="n">clock</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'stage'</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'own'</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'clock'</span><span class="si">:</span><span class="s2">&gt;7</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'car has moved'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">own</span> <span class="ow">in</span> <span class="n">STAGES</span><span class="p">:</span>
-    <span class="n">clock</span> <span class="o">+=</span> <span class="n">own</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;46</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">own</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">clock</span><span class="si">:</span><span class="s2">&gt;6.1f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">At 22 m/s the command that reaches the rack was computed for a road position </span><span class="si">{</span><span class="mf">22.0</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">clock</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mf">1e-3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m back."</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"That is what fp_steer_delay_s compensates, and why it is a feedforward input rather than a nicety."</span><span class="p">)</span>
-</pre></div>
+<section id="one-frames-time-budget">
+<h2>One frame’s time budget<a class="headerlink" href="#one-frames-time-budget" title="Link to this heading">#</a></h2>
+<p>The stages below are easier to hold onto if you watch a single frame move through them. Every number is a
+measured median from a 29-minute night run (OnePlus 7T, thneed runner); the two anchors <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>
+actually reports are <strong>22 ms to the model output</strong> and <strong>52 ms to the steering command</strong>.</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>stage</p></th>
+<th class="head"><p>own [ms]</p></th>
+<th class="head"><p>clock [ms]</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>capture (Camera2 YUV, <code class="docutils literal notranslate"><span class="pre">capture_ts</span></code> stamped)</p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>delivery to <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-even"><td><p>wait in the inference queue</p></td>
+<td><p>0.0</p></td>
+<td><p>0.0</p></td>
+</tr>
+<tr class="row-odd"><td><p>geometric warp to 6×128×256 (OpenCL)</p></td>
+<td><p>4.6</p></td>
+<td><p>4.6</p></td>
+</tr>
+<tr class="row-even"><td><p>Supercombo inference (thneed, GPU)</p></td>
+<td><p>17.6</p></td>
+<td><p><strong>22.2</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p>parse heads → <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></p></td>
+<td><p>0.0</p></td>
+<td><p>22.2</p></td>
+</tr>
+<tr class="row-even"><td><p>Java → ZMQ → <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> → <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code></p></td>
+<td><p>4.0</p></td>
+<td><p>26.2</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> → <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code></p></td>
+<td><p>5.0</p></td>
+<td><p>31.2</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Control</span></code> → <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code></p></td>
+<td><p>21.0</p></td>
+<td><p><strong>52.2</strong></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> → <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> on the wire</p></td>
+<td><p>10.0</p></td>
+<td><p>62.2</p></td>
+</tr>
+</tbody>
+</table>
 </div>
+<p>Why the clock matters is one line of physics: the road does not wait, <span class="math notranslate nohighlight">\(d = v\,t\)</span>. At <span class="math notranslate nohighlight">\(v = 22\)</span> m/s the
+command that reaches the rack was computed for a road position <span class="math notranslate nohighlight">\(22 \cdot 0.052 \approx 1.1\)</span> m back — and
+that metre is exactly what <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> compensates by predicting the state forward, which is why it
+is a feedforward input to the planner rather than a nicety.</p>
 <p>Three of those lines deserve attention.</p>
 <p><strong>Inference is 17.6 ms because the model runs on the GPU.</strong> The same network through ONNX Runtime costs
 45.6 ms on this phone. Both paths carry supercombo 0.9.7 — the same file, converted — so the choice is a
@@ -489,31 +527,16 @@ and the other is the CAN egress. Everything between them is notified, not polled
 <p>Vision runs at 30.0 Hz — one frame per camera period, nothing skipped. The actuator runs at 100 Hz, because
 HCA needs a strict cadence or the EPS drops the command. So for roughly two ticks out of three, the panda
 transmits a command derived from a <em>reference it has already used</em>.</p>
-<p>That is correct behaviour and it creates a trap for anyone reading logs:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">VISION_HZ</span> <span class="o">=</span> <span class="mf">30.01</span>
-<span class="n">TX_HZ</span> <span class="o">=</span> <span class="mf">100.0</span>
-<span class="n">FRESH_WINDOW_MS</span> <span class="o">=</span> <span class="mf">50.0</span>        <span class="c1"># tools/latency.py keeps commands within this of their vision timestamp</span>
-
-<span class="n">vision_period_ms</span> <span class="o">=</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
-<span class="n">per_frame</span> <span class="o">=</span> <span class="n">TX_HZ</span> <span class="o">/</span> <span class="n">VISION_HZ</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"vision period </span><span class="si">{</span><span class="n">vision_period_ms</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms, </span><span class="si">{</span><span class="n">per_frame</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> actuator ticks per vision frame"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"only the first tick uses a brand-new reference; the rest reuse it"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">()</span>
-<span class="c1"># The freshness filter is a time window, not "one tick per frame" — so what it keeps is the fraction of</span>
-<span class="c1"># the vision period that falls inside the window.</span>
-<span class="n">kept_predicted</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">FRESH_WINDOW_MS</span> <span class="o">/</span> <span class="n">vision_period_ms</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"predicted share passing a </span><span class="si">{</span><span class="n">FRESH_WINDOW_MS</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ms freshness filter: </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">kept_predicted</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"measured on the run: 171 097 kept of 175 573 = </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">171097</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">175573</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> %"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"Compute e2e latency over the raw stream instead and the republishes drag the number up, because"</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">"their vision_ts is older than the command that carries it."</span><span class="p">)</span>
-</pre></div>
-</div>
+<p>That is correct behaviour and it creates a trap for anyone reading logs. The arithmetic: <span class="math notranslate nohighlight">\(100/30 \approx 3.3\)</span>
+actuator ticks per vision frame, so only the first tick uses a brand-new reference and the next two reuse it.
+<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> therefore filters commands by <strong>freshness</strong> — a 50 ms window against the frame’s own
+timestamp. With a 33 ms vision period every first-use command passes, and the filter cuts only the genuinely
+stale republishes: 171 097 kept of 175 573 on this run, 97 %. Compute end-to-end latency over the raw stream
+instead and the republishes drag the number up, because their <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code> is older than the command that
+carries it.</p>
 <p>At 13 Hz — the rate this chapter reported before the model moved to the GPU — a third of the commands failed
-that filter, and the freshness window itself was doing visible work. At 30 Hz the vision period is shorter
-than the window, so the filter now drops only the genuinely stale republishes: 4 476 of 175 573. The lesson
-survives the improvement: “the command is fresh” and “the picture is fresh” are different claims, and only
-the second one matters for safety. That is why the staleness gate is keyed on the frame’s capture timestamp
+that filter, and the window itself was doing visible work. The lesson survives the improvement: “the command
+is fresh” and “the picture is fresh” are different claims, and only the second one matters for safety. That is why the staleness gate is keyed on the frame’s capture timestamp
 rather than on the command’s age, and why a 250 ms HCA command timeout did not protect against a
 75-second-old plan.</p>
 <p>The fast loop is not idle work — it is the angle PID closing on the <em>measured</em> steering angle at 100 Hz,
@@ -576,7 +599,7 @@ two.</p>
 road) — and the interface is identical whichever runs. Publishes <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>,
 <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) is the control law and nothing else: curvature plus the chassis
-become a torque command, engagement, HUD pictograms, and the wish to press a cruise button. It knows no
+become a torque command and an acceleration request, engagement, HUD pictograms. It knows no
 CAN address, no signal, no frame counter. Publishes <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Platform</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) carries that intent onto the bus, and it names no brand — which
 car is behind the CAN is decided once, by <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>, and reached through <code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code>.
@@ -655,26 +678,11 @@ publish protobuf messages, call <code class="docutils literal notranslate"><span
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./app/src/main/cpp/build_cpp.sh<span class="w"> </span>-t<span class="w"> </span>linux<span class="w"> </span>--test<span class="w">    </span><span class="c1"># host build + ~230 gtest cases; pyadas core into scripts/</span>
 </pre></div>
 </div>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — needs the host build; run from scripts/. core/lane_keep.py is the full version.</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyadas</span><span class="w"> </span><span class="kn">import</span> <span class="n">require_core</span>
-<span class="n">pyadas</span> <span class="o">=</span> <span class="n">require_core</span><span class="p">()</span>
-
-<span class="n">app</span> <span class="o">=</span> <span class="n">pyadas</span><span class="o">.</span><span class="n">AdasApp</span><span class="p">()</span>                      <span class="c1"># simulated mode: no threads, you own the clock</span>
-<span class="n">app</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="s2">"lane_keep_controller"</span><span class="p">,</span> <span class="s2">"fp"</span><span class="p">)</span>
-
-<span class="k">for</span> <span class="n">ts</span><span class="p">,</span> <span class="n">lanes_msg</span><span class="p">,</span> <span class="n">raw</span> <span class="ow">in</span> <span class="n">lanes</span><span class="p">:</span>            <span class="c1"># your session, from step 8</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vision/lanes"</span><span class="p">,</span> <span class="n">raw</span><span class="o">.</span><span class="n">SerializeToString</span><span class="p">())</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"vehicle/state"</span><span class="p">,</span> <span class="n">chassis_at</span><span class="p">(</span><span class="n">ts</span><span class="p">))</span>    <span class="c1"># your synthetic chassis, or a real one</span>
-    <span class="n">app</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">topic</span><span class="p">,</span> <span class="n">payload</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="n">pop_messages</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">topic</span> <span class="o">==</span> <span class="s2">"control/lane_keep"</span><span class="p">:</span>
-            <span class="n">record</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>             <span class="c1"># the shipped stack's steering, frame by frame</span>
-</pre></div>
-</div>
-<p><code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> wraps exactly this loop, and the simulator and visualizer already use it —
-read it once and the offline toolchain stops being magic. It is also the honest way to compare your own
-controller against the shipped <code class="docutils literal notranslate"><span class="pre">pp</span></code> and <code class="docutils literal notranslate"><span class="pre">fp</span></code> on identical frames: same bag in, three commands out, one
-plot.</p>
+<p>The loop is four calls: create <code class="docutils literal notranslate"><span class="pre">pyadas.AdasApp()</span></code> in simulated mode, publish the frame’s messages, call
+<code class="docutils literal notranslate"><span class="pre">step()</span></code>, read what the services published. <code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> wraps exactly that, and the
+simulator and the visualizer already use it — read it once and the offline toolchain stops being magic. It
+is also the honest way to compare your own controller against the shipped <code class="docutils literal notranslate"><span class="pre">pp</span></code> and <code class="docutils literal notranslate"><span class="pre">fp</span></code>: the same bag in,
+three commands out, one plot.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Next:</strong> <a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Vision — overview</span></a></p>
@@ -747,7 +755,7 @@ plot.</p>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#follow-one-frame-with-a-clock">Follow one frame, with a clock</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#one-frames-time-budget">One frame’s time budget</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#what-happens-between-frames">What happens between frames</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stage-by-stage">Stage by stage</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#capture">1. Capture</a></li>

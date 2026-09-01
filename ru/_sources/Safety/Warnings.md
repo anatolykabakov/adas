@@ -26,7 +26,7 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 ```
 
 ```{note}
-`LongPlanService` тоже может читать `model_long` для желаемого ускорения в духе ACC.
+[Продольный планировщик](../Planner/Longitudinal.md) читает те же лиды `model_long` для своего плана и собственного FCW.
 Предупреждения этим ускорением IDM **больше не пользуются** — оно ложно срабатывало на пустом шоссе.
 ```
 

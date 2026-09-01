@@ -1,0 +1,1011 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Localization/ParamsLearner';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The lateral loop — planner, control, platform" href="../Planner/Overview.html" />
+    <link rel="prev" title="GPS — local metres, what it buys, and making a correction survive" href="Gps.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1"><a class="reference internal" href="GyroFusion.html">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Localization/ParamsLearner.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-what-is-still-missing">Step 5: what is still missing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-6-learning-the-parameters-and-what-the-measurement-said-about-it">Step 6: learning the parameters, and what the measurement said about it</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-premise-and-how-to-check-a-premise">The premise, and how to check a premise</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-estimator">The estimator</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-trap-upstreams-code-sets-for-you">The trap upstream’s code sets for you</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#two-failures-the-synthetic-tests-could-not-have-found">Two failures the synthetic tests could not have found</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-the-road-bank-is-not-used-after-all-that-work">Why the road bank is not used, after all that work</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-drive-actually-said">What the drive actually said</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#so-it-ships-behind-two-flags-both-off">So it ships behind two flags, both off</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">How this relates to lane-keep</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#on-your-own-recording">On your own recording</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="learning-the-cars-parameters-paramsd-the-roads-bank-and-what-the-measurement-said">
+<h1>Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said<a class="headerlink" href="#learning-the-cars-parameters-paramsd-the-roads-bank-and-what-the-measurement-said" title="Link to this heading">#</a></h1>
+<p>Everything so far assumed the car’s numbers — steering ratio, tyre stiffness, the steering zero — are
+known. They are not, and they drift. This chapter is upstream’s <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> ported and measured: the
+parameters become states of the filter, the road’s bank becomes an input it needs, and the drive tells us
+which of the assumptions survived. It closes the Localization part with the config checklist and the
+exercises for all its steps.</p>
+<section id="step-5-what-is-still-missing">
+<h2>Step 5: what is still missing<a class="headerlink" href="#step-5-what-is-still-missing" title="Link to this heading">#</a></h2>
+<ul>
+<li><p><strong>Road roll exists now; grade does not.</strong> <code class="docutils literal notranslate"><span class="pre">RoadRollEstimator</span></code> reads it from the lateral accelerometer —
+<code class="docutils literal notranslate"><span class="pre">sin(φ)</span> <span class="pre">=</span> <span class="pre">(a_y</span> <span class="pre">−</span> <span class="pre">f_y)/g</span></code> with <code class="docutils literal notranslate"><span class="pre">a_y</span> <span class="pre">=</span> <span class="pre">−v·yaw_rate</span></code> — subtracts the measured +3 °/g of suspension roll, and
+publishes it on <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> with its own uncertainty: 2.2° per sample, 0.65° after ten seconds of
+averaging, and no better than that because the residual is the road’s camber changing. Gate on
+<code class="docutils literal notranslate"><span class="pre">road_roll_std_deg</span></code>, which starts at the same 10° <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> uses for “no usable roll”. Longitudinal grade
+is the same construction with <code class="docutils literal notranslate"><span class="pre">f_x</span></code> and is not built.</p>
+<p>Two things that cost time and are worth carrying: the sign of <code class="docutils literal notranslate"><span class="pre">chassis.yaw_rate</span></code> is ISO (z up,
+left-positive) while the estimator frame is z down, and getting it backwards reports a body-roll gradient
+of 116 °/g rather than an error; and the standstill orientation lock used to overwrite the mount heading
+with a gravity-derived rotation, which is fine for yaw rate and destroys anything lateral.</p>
+</li>
+<li><p><strong>The wheel-speed scale is still hand-entered.</strong> GPS velocity is used and speed is a state, and that was
+not enough (step 4): the frequent biased measurement wins between GPS samples, and no noise assumption
+separates a constant bias from the truth. The scale needs a state of its own.</p></li>
+<li><p><strong>Learned vehicle parameters</strong> — built, and the result is step 6 below. It is not in this list of gaps
+because it is no longer one: the port exists, it is measured, and the measurement is why it ships disabled.</p></li>
+</ul>
+<p>The dependency order is worth stating because it is easy to get backwards: GPS velocity into the filter →
+an orientation and roll estimate → <code class="docutils literal notranslate"><span class="pre">paramsd</span></code>. Porting <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> first leaves its roll input pinned at
+zero, which works but gives up the one thing that separates road bank from vehicle understeer. That order
+was followed, and step 6 is what happened when the roll input it insisted on met the error budget it had to
+fit inside.</p>
+<hr class="docutils" />
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/understeer_speed.png"><img alt="../_images/understeer_speed.png" src="../_images/understeer_speed.png" style="width: 75%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 8 </span><span class="caption-text">The achieved-vs-commanded curvature ratio slides with speed, so no single <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> fits —
+the reason paramsd exists (and why it needs more than one observable).</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="step-6-learning-the-parameters-and-what-the-measurement-said-about-it">
+<h2>Step 6: learning the parameters, and what the measurement said about it<a class="headerlink" href="#step-6-learning-the-parameters-and-what-the-measurement-said-about-it" title="Link to this heading">#</a></h2>
+<p>Everything so far estimated <em>where the car is</em>. This step estimates <em>what the car is</em> — and it is in this
+chapter, not in the lateral-control one, because the estimator’s inputs are the localizer’s inputs and its
+one non-obvious input is the road bank we built in step 5.</p>
+<p>It is also the most honest thing in the book, because it ends with the feature switched off.</p>
+<section id="the-premise-and-how-to-check-a-premise">
+<h3>The premise, and how to check a premise<a class="headerlink" href="#the-premise-and-how-to-check-a-premise" title="Link to this heading">#</a></h3>
+<p>Here is the reasoning that started the work. Comparing the curvature the steering angle implies against the
+curvature the yaw rate reveals, on one real drive:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>speed</p></th>
+<th class="head"><p><span class="math notranslate nohighlight">\(\kappa_{\text{fact}}/\kappa_{\text{kin}}\)</span></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>5–9 m/s</p></td>
+<td><p>0.89</p></td>
+</tr>
+<tr class="row-odd"><td><p>9–12</p></td>
+<td><p>0.84</p></td>
+</tr>
+<tr class="row-even"><td><p>12–16</p></td>
+<td><p>0.84</p></td>
+</tr>
+<tr class="row-odd"><td><p>16–21</p></td>
+<td><p>0.65</p></td>
+</tr>
+<tr class="row-even"><td><p>21–26</p></td>
+<td><p>0.58</p></td>
+</tr>
+<tr class="row-odd"><td><p>26–32</p></td>
+<td><p>0.46</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The car turns steadily less than kinematics predicts as it goes faster. <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> is one
+number in a config file. One number cannot be 0.89 and 0.46. Therefore, the reasoning goes, it must become a
+state — which is what upstream’s <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> does.</p>
+<p>Every step of that is true except the “therefore”. The constant does not carry the speed dependence; the
+<em>model around it</em> does. Recall from the lateral-control chapter:</p>
+<div class="math notranslate nohighlight">
+\[\kappa = \frac{\tan\delta}{L\,(1 - \text{slip}\cdot v^2)}\]</div>
+<p>with <span class="math notranslate nohighlight">\(\text{slip} &lt; 0\)</span> for an understeering car, so the denominator grows with <span class="math notranslate nohighlight">\(v^2\)</span> and the same steering
+angle buys less curvature at speed. That is exactly the observed effect. So the question is not “does the
+ratio fall with speed” — it does — but “does it still fall after the model has had its say”.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">WHEELBASE_M</span> <span class="o">=</span> <span class="mf">2.636</span>
+<span class="n">C2F_FRAC</span> <span class="o">=</span> <span class="mf">0.45</span>
+<span class="n">MASS_KG</span> <span class="o">=</span> <span class="mf">1533.0</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">slip_factor</span><span class="p">(</span><span class="n">tsf</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Transcribed from utils/vehicle_model.h. Negative for an understeering car."""</span>
+    <span class="n">civic_mass</span><span class="p">,</span> <span class="n">civic_wb</span> <span class="o">=</span> <span class="mf">1326.0</span> <span class="o">+</span> <span class="mf">136.0</span><span class="p">,</span> <span class="mf">2.70</span>
+    <span class="n">civic_c2f</span> <span class="o">=</span> <span class="n">civic_wb</span> <span class="o">*</span> <span class="mf">0.4</span>
+    <span class="n">a_f</span> <span class="o">=</span> <span class="n">WHEELBASE_M</span> <span class="o">*</span> <span class="n">C2F_FRAC</span>
+    <span class="n">a_r</span> <span class="o">=</span> <span class="n">WHEELBASE_M</span> <span class="o">-</span> <span class="n">a_f</span>
+    <span class="n">c_f</span> <span class="o">=</span> <span class="mf">192150.0</span> <span class="o">*</span> <span class="n">tsf</span> <span class="o">*</span> <span class="n">MASS_KG</span> <span class="o">/</span> <span class="n">civic_mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">a_r</span> <span class="o">/</span> <span class="n">WHEELBASE_M</span><span class="p">)</span> <span class="o">/</span> <span class="p">((</span><span class="n">civic_wb</span> <span class="o">-</span> <span class="n">civic_c2f</span><span class="p">)</span> <span class="o">/</span> <span class="n">civic_wb</span><span class="p">)</span>
+    <span class="n">c_r</span> <span class="o">=</span> <span class="mf">202500.0</span> <span class="o">*</span> <span class="n">tsf</span> <span class="o">*</span> <span class="n">MASS_KG</span> <span class="o">/</span> <span class="n">civic_mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">a_f</span> <span class="o">/</span> <span class="n">WHEELBASE_M</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">civic_c2f</span> <span class="o">/</span> <span class="n">civic_wb</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">MASS_KG</span> <span class="o">*</span> <span class="p">(</span><span class="n">C2F_FRAC</span> <span class="o">*</span> <span class="n">c_f</span> <span class="o">-</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">C2F_FRAC</span><span class="p">)</span> <span class="o">*</span> <span class="n">c_r</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">WHEELBASE_M</span> <span class="o">*</span> <span class="n">c_f</span> <span class="o">*</span> <span class="n">c_r</span><span class="p">)</span>
+
+
+<span class="c1"># The measured ratio of actual to kinematic curvature, at the mid-speed of each band.</span>
+<span class="n">bands</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">7.0</span><span class="p">,</span> <span class="mf">10.5</span><span class="p">,</span> <span class="mf">14.0</span><span class="p">,</span> <span class="mf">18.5</span><span class="p">,</span> <span class="mf">23.5</span><span class="p">,</span> <span class="mf">29.0</span><span class="p">])</span>
+<span class="n">ratio_kin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.89</span><span class="p">,</span> <span class="mf">0.84</span><span class="p">,</span> <span class="mf">0.84</span><span class="p">,</span> <span class="mf">0.65</span><span class="p">,</span> <span class="mf">0.58</span><span class="p">,</span> <span class="mf">0.46</span><span class="p">])</span>
+
+<span class="c1"># What the model already explains, with the shipped constant.</span>
+<span class="n">sf</span> <span class="o">=</span> <span class="n">slip_factor</span><span class="p">(</span><span class="mf">0.64</span><span class="p">)</span>
+<span class="n">model_gain</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">sf</span> <span class="o">*</span> <span class="n">bands</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">ratio_model</span> <span class="o">=</span> <span class="n">ratio_kin</span> <span class="o">/</span> <span class="n">model_gain</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"slip_factor(0.64) = </span><span class="si">{</span><span class="n">sf</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">rk</span><span class="p">,</span> <span class="n">rm</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bands</span><span class="p">,</span> <span class="n">ratio_kin</span><span class="p">,</span> <span class="n">ratio_model</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">4.1f</span><span class="si">}</span><span class="s2"> m/s   fact/kin </span><span class="si">{</span><span class="n">rk</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">   fact/model </span><span class="si">{</span><span class="n">rm</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  spread: fact/kin </span><span class="si">{</span><span class="n">ratio_kin</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ratio_kin</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">, "</span>
+      <span class="sa">f</span><span class="s2">"fact/model </span><span class="si">{</span><span class="n">ratio_model</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ratio_model</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The spread collapses from 0.43 to 0.16, and what remains has no monotone trend. (That run uses each band’s
+mid-speed; computed per sample off the bag the residual ratios are 0.95, 0.94, 0.99, 0.87, 0.89, 0.80 — same
+picture.) A flat ~10 % shortfall is not a speed-dependent stiffness.
+It is a scale error, and a scale error is one number, which is exactly what a constant can be.</p>
+<p>That did not stop the port — a filter that reports its own uncertainty is still worth having, and the 10 %
+still wants explaining. But it changes what success would look like.</p>
+</section>
+<section id="the-estimator">
+<h3>The estimator<a class="headerlink" href="#the-estimator" title="Link to this heading">#</a></h3>
+<p>Three states, and the measurement is the yaw rate:</p>
+<div class="math notranslate nohighlight">
+\[
+x = [\text{tsf},\ \text{steer ratio},\ \text{angle offset}], \qquad
+\dot\psi_{\text{pred}} = v\,\kappa(x) + \frac{g\sin\phi}{v}
+\]</div>
+<p>Two details carry most of the value.</p>
+<p><strong>Use the controller’s own curvature function.</strong> Not a re-derivation of it, the same function. A parameter
+learned against a slightly different model than the one that consumes it is worse than a hand-tuned
+constant, because it looks principled.</p>
+<p><strong>Differentiate it numerically.</strong> Three states at CAN rate cost nothing, and the analytic derivative through
+<code class="docutils literal notranslate"><span class="pre">slip_factor</span></code> — which divides by products of stiffnesses that themselves depend on the state — is the kind
+of expression that is wrong for a month before anyone notices. The measurement function is the single source
+of truth; a central difference cannot disagree with it.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">G</span> <span class="o">=</span> <span class="mf">9.81</span>
+<span class="n">STEER_SIGN</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>     <span class="c1"># positive CAN angle is a LEFT turn on this car; this frame is z-down</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">predict_yaw</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">swa_deg</span><span class="p">,</span> <span class="n">roll_deg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Yaw rate in the z-down frame. The controller's own model, evaluated at the state x."""</span>
+    <span class="n">tsf</span><span class="p">,</span> <span class="n">ratio</span><span class="p">,</span> <span class="n">offset</span> <span class="o">=</span> <span class="n">x</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">STEER_SIGN</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">swa_deg</span> <span class="o">-</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="n">ratio</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span>
+    <span class="n">kappa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">WHEELBASE_M</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">slip_factor</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">tsf</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">))</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">v</span> <span class="o">*</span> <span class="n">kappa</span> <span class="o">+</span> <span class="n">G</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">roll_deg</span><span class="p">))</span> <span class="o">/</span> <span class="n">v</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ParamsLearner</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ratio_std</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">use_roll</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.64</span><span class="p">,</span> <span class="mf">15.7</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">ratio_std</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.005</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.00005</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.02</span> <span class="o">**</span> <span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.5</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">ratio_std</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">10.0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">r</span> <span class="o">=</span> <span class="mf">0.02</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_roll</span> <span class="o">=</span> <span class="n">use_roll</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">swa_deg</span><span class="p">,</span> <span class="n">yaw_rate_can</span><span class="p">,</span> <span class="n">roll_deg</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="o">&lt;</span> <span class="mf">5.0</span> <span class="ow">or</span> <span class="nb">abs</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">45.0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">yaw</span> <span class="o">=</span> <span class="o">-</span><span class="n">yaw_rate_can</span>                       <span class="c1"># ISO in (left-positive), z-down inside</span>
+        <span class="n">roll</span> <span class="o">=</span> <span class="n">roll_deg</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_roll</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">dt</span>
+
+        <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1e-4</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">xp</span><span class="p">,</span> <span class="n">xm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">xp</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="n">eps</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">xm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-=</span> <span class="n">eps</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">h</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">predict_yaw</span><span class="p">(</span><span class="n">xp</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">swa_deg</span><span class="p">,</span> <span class="n">roll</span><span class="p">)</span> <span class="o">-</span> <span class="n">predict_yaw</span><span class="p">(</span><span class="n">xm</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">swa_deg</span><span class="p">,</span> <span class="n">roll</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">eps</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="n">k</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">*</span> <span class="n">h</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">h</span> <span class="o">@</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">*</span> <span class="n">h</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">k</span> <span class="o">*</span> <span class="p">(</span><span class="n">yaw</span> <span class="o">-</span> <span class="n">predict_yaw</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">swa_deg</span><span class="p">,</span> <span class="n">roll</span><span class="p">)),</span> <span class="bp">self</span><span class="o">.</span><span class="n">lo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">hi</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">k</span> <span class="o">*</span> <span class="n">h</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_max</span><span class="p">)</span>   <span class="c1"># a ceiling, not a pseudo-measurement — see below</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">valid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Count, sigma, AND bounds. Each catches what the others miss."""</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">&gt;=</span> <span class="mi">500</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">0.15</span>
+                <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">lo</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">hi</span> <span class="o">-</span> <span class="mf">1e-9</span><span class="p">)))</span>
+</pre></div>
+</div>
+</section>
+<section id="the-trap-upstreams-code-sets-for-you">
+<h3>The trap upstream’s code sets for you<a class="headerlink" href="#the-trap-upstreams-code-sets-for-you" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> keeps its slow parameters’ uncertainty from growing on long straights, and writes it as <em>observe
+the state with its own current value, at high noise</em>. Copy that literally and you have a bug. The innovation
+<span class="math notranslate nohighlight">\(z - x\)</span> is identically zero, so the update cannot move the estimate — it can only shrink the covariance.
+Applied once per localizer message it is a harmless bound. Applied on every CAN sample at 100 Hz it shrinks
+the covariance a hundred times a second while no information arrives, the real measurement loses all gain,
+and the filter freezes near wherever it started. Measured on the synthetic recovery test: a true stiffness
+of 0.45 came out as 0.515, pinned by the 0.64 it began at — and <code class="docutils literal notranslate"><span class="pre">valid()</span></code> read the shrunken sigma as
+convergence after ten minutes of straight road.</p>
+<p>So it is a ceiling: sigma may never exceed a bound, and only real measurements may reduce it. That is the
+<code class="docutils literal notranslate"><span class="pre">np.minimum</span></code> line above.</p>
+</section>
+<section id="two-failures-the-synthetic-tests-could-not-have-found">
+<h3>Two failures the synthetic tests could not have found<a class="headerlink" href="#two-failures-the-synthetic-tests-could-not-have-found" title="Link to this heading">#</a></h3>
+<p>Both were found by replaying the shipped filter over a recorded drive, which is the argument for building
+the replay harness at the same time as the filter.</p>
+<p><strong>The steering sign.</strong> The port negated the yaw rate on the way in — ISO to z-down, correct — and never
+applied this car’s <code class="docutils literal notranslate"><span class="pre">vehicle.steer_sign</span></code>, which the controller had always applied. On this car positive CAN
+angle is a <em>left</em> turn: regressing the measured ISO yaw rate against the kinematic prediction gives a slope
+of <span class="math notranslate nohighlight">\(+0.824\)</span> at a correlation of <span class="math notranslate nohighlight">\(0.987\)</span> over 28 636 cornering samples. So the prediction opposed the
+measurement on every corner.</p>
+<p><strong>And <code class="docutils literal notranslate"><span class="pre">valid()</span></code> said yes anyway.</strong> The filter ran to whichever bounds shrink the predicted magnitude —
+stiffness on its 0.200 floor, steer ratio on its 20.0 ceiling, identical in all four quarters of the drive.
+A saturated state has stopped moving, so its sigma is small, so it looks exactly like convergence. The
+<code class="docutils literal notranslate"><span class="pre">valid()</span></code> of the day checked the stiffness bounds and not the ratio’s, and let it through.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">drive</span><span class="p">(</span><span class="n">learner</span><span class="p">,</span> <span class="n">corners</span><span class="p">,</span> <span class="n">truth_tsf</span><span class="o">=</span><span class="mf">0.64</span><span class="p">,</span> <span class="n">truth_ratio</span><span class="o">=</span><span class="mf">15.7</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="n">STEER_SIGN</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Feed steady corners generated by a known car, in the ISO convention the CAN decoder produces."""</span>
+    <span class="k">for</span> <span class="n">swa</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">corners</span><span class="p">:</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">sign</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">swa</span><span class="p">)</span> <span class="o">/</span> <span class="n">truth_ratio</span>
+        <span class="n">kappa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">WHEELBASE_M</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">slip_factor</span><span class="p">(</span><span class="n">truth_tsf</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span> <span class="o">*</span> <span class="n">v</span><span class="p">))</span>
+        <span class="n">yaw_iso</span> <span class="o">=</span> <span class="o">-</span><span class="n">v</span> <span class="o">*</span> <span class="n">kappa</span>                      <span class="c1"># z-down truth back to ISO, as ESP_02 reports it</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">60</span><span class="p">):</span>
+            <span class="n">learner</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">swa</span><span class="p">,</span> <span class="n">yaw_iso</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">)</span>
+
+
+<span class="n">corners</span> <span class="o">=</span> <span class="p">[(</span><span class="n">swa</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+           <span class="k">for</span> <span class="n">swa</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">[(</span><span class="mi">6</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">),</span> <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">),</span>
+                          <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mf">22.0</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="mf">22.0</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">)]]</span>
+
+<span class="n">good</span> <span class="o">=</span> <span class="n">ParamsLearner</span><span class="p">()</span>
+<span class="n">drive</span><span class="p">(</span><span class="n">good</span><span class="p">,</span> <span class="n">corners</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"right sign: tsf </span><span class="si">{</span><span class="n">good</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  ratio </span><span class="si">{</span><span class="n">good</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  valid </span><span class="si">{</span><span class="n">good</span><span class="o">.</span><span class="n">valid</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="c1"># The same data, the filter's model given the wrong steering sign, and the loose ratio prior it shipped with.</span>
+<span class="n">flipped</span> <span class="o">=</span> <span class="n">ParamsLearner</span><span class="p">(</span><span class="n">ratio_std</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">drive</span><span class="p">(</span><span class="n">flipped</span><span class="p">,</span> <span class="n">corners</span><span class="p">,</span> <span class="n">sign</span><span class="o">=-</span><span class="n">STEER_SIGN</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"wrong sign: tsf </span><span class="si">{</span><span class="n">flipped</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  ratio </span><span class="si">{</span><span class="n">flipped</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  valid </span><span class="si">{</span><span class="n">flipped</span><span class="o">.</span><span class="n">valid</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"            sigma </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flipped</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> — small, because saturation looks like convergence"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">valid()</span></code> above reports <code class="docutils literal notranslate"><span class="pre">False</span></code> for the flipped run — that is the <em>fixed</em> check, the one that
+tests every state against its bounds. The check of the day tested only the count and the sigma, and the
+third <code class="docutils literal notranslate"><span class="pre">print</span></code> is why that passed: the sigma of the saturated stiffness is 0.010, comfortably under the 0.15
+threshold, because a state that has stopped moving has a small covariance.</p>
+<p>So bounds are not a safety net added for tidiness. They are the only thing that distinguishes a saturated
+estimate from a converged one, and a validity check that omits any state’s bounds has a hole in it exactly
+where the worst failure lives.</p>
+</section>
+<section id="why-the-road-bank-is-not-used-after-all-that-work">
+<h3>Why the road bank is not used, after all that work<a class="headerlink" href="#why-the-road-bank-is-not-used-after-all-that-work" title="Link to this heading">#</a></h3>
+<p>Step 5 built a road-bank estimate specifically because a banked road and an understeering car produce the
+same lateral-acceleration signature, and <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> cannot separate them without it. That argument is sound.
+It is also, on this hardware, irrelevant — and the arithmetic that shows it is two lines.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> m/s: 1 deg of bank = </span><span class="si">{</span><span class="n">G</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">1.0</span><span class="p">))</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> rad/s of yaw"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"flat-model yaw residual on the real drive: 0.0065 rad/s"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"bank estimate accuracy from a windscreen phone, at its floor: 0.65 deg"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>One degree of bank at 15 m/s is 0.0114 rad/s — nearly twice the entire residual the flat model already has.
+Our bank estimate is good to 0.65° after ten seconds of averaging and no better, because past that the
+residual is the road’s camber genuinely changing. So the input carries more error than the error it was
+meant to remove. Feeding it in raised the residual from 0.0065 to 0.0104 rad/s, a 60 % degradation, and
+<code class="docutils literal notranslate"><span class="pre">params_use_roll</span></code> ships <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p>
+<p>This is worth sitting with. The dependency argument — “the learner needs roll, so build roll first” — was
+correct about interfaces and silent about accuracy. Whether <span class="math notranslate nohighlight">\(B\)</span> is good enough for <span class="math notranslate nohighlight">\(A\)</span> has an answer only
+after <span class="math notranslate nohighlight">\(B\)</span> exists and is measured against <span class="math notranslate nohighlight">\(A\)</span>’s error budget. Here the budget was 0.0065 rad/s and the input
+carried 0.0114.</p>
+</section>
+<section id="what-the-drive-actually-said">
+<h3>What the drive actually said<a class="headerlink" href="#what-the-drive-actually-said" title="Link to this heading">#</a></h3>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>configuration</p></th>
+<th class="head"><p>learned tsf</p></th>
+<th class="head"><p>drift across quarters</p></th>
+<th class="head"><p>yaw residual vs shipped constants</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ratio prior 0.5, bank fed in</p></td>
+<td><p>0.374</p></td>
+<td><p>—</p></td>
+<td><p><strong>3 % worse</strong>, and <code class="docutils literal notranslate"><span class="pre">valid()</span></code> said yes</p></td>
+</tr>
+<tr class="row-odd"><td><p>ratio prior 0.1, bank fed in</p></td>
+<td><p>0.517 ± 0.026</p></td>
+<td><p>0.462 → 0.368</p></td>
+<td><p>0 %</p></td>
+</tr>
+<tr class="row-even"><td><p>ratio prior 0.1, flat road</p></td>
+<td><p>0.342 ± 0.022</p></td>
+<td><p>0.411 → 0.360</p></td>
+<td><p>14 % worse</p></td>
+</tr>
+<tr class="row-odd"><td><p>best single constant, 0.55</p></td>
+<td><p>—</p></td>
+<td><p>—</p></td>
+<td><p>4.1 % better</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The degeneracy is the story of the first two rows. Stiffness and steer ratio both scale predicted curvature,
+and over one drive’s speed range their signatures differ too little for a yaw-rate measurement to separate
+them — so with a loose prior the filter slides along the ridge rather than picking a point on it. Tightening
+the prior to 0.1 is not timidity: a steering rack’s ratio is a mechanical fact known to a few percent, and
+that knowledge belongs in the prior. <strong>A state the data cannot separate from another state does not become
+observable by being declared a state.</strong></p>
+<p>And the last row is the humbling one. The best single constant on this drive is 0.55 against the shipped
+0.64, worth 4.1 %, and the curve around it is flat: 0.50 → 0.00636, 0.55 → 0.00625, 0.64 → 0.00652 rad/s.
+The shipped hand-tuned number was already nearly optimal.</p>
+</section>
+<section id="so-it-ships-behind-two-flags-both-off">
+<h3>So it ships behind two flags, both off<a class="headerlink" href="#so-it-ships-behind-two-flags-both-off" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">localization.learn_vehicle_params</span></code> runs the estimator. <code class="docutils literal notranslate"><span class="pre">lane_keep.use_learned_params</span></code> lets the controller
+read it. Separate, on purpose: the learner can publish for an entire drive while the controller keeps its
+constants, which is how a learned value earns the right to be used. One flag for both would make the first
+drive that tests the estimator also the first drive that trusts it.</p>
+<p>Even with both on, the controller takes the estimate only while <code class="docutils literal notranslate"><span class="pre">learned_params_valid</span></code> holds, and falls back
+to the configured constants the moment it does not — so losing validity walks the parameters back rather
+than freezing them at whatever the estimator last believed.</p>
+<p>That is the whole feature: built, tested, instrumented, published, replayable, and disabled. A negative
+result you can point at with numbers is a finished piece of work.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="how-this-relates-to-lane-keep">
+<h2>How this relates to lane-keep<a class="headerlink" href="#how-this-relates-to-lane-keep" title="Link to this heading">#</a></h2>
+<p>The lateral MPC and Pure Pursuit <strong>do not</strong> need global ENU to steer — they track <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> in the
+device frame. Localization matters for:</p>
+<ul class="simple">
+<li><p>bag maps and track overlays in the visualizer (the offline map-match vertical was deleted on
+2026-08-21; the <code class="docutils literal notranslate"><span class="pre">.admap</span></code> reader survives as the visualizer backdrop);</p></li>
+<li><p>sanity checks — GPS against pure odometry divergence;</p></li>
+<li><p>any future map-relative feature;</p></li>
+<li><p>learning the vehicle parameters the controller uses — step 6, and the one consumer that turned out not to
+want the roll estimate after all.</p></li>
+</ul>
+<p>A wrong IMU sign will not invert the steering while lane-keep ignores pose — but it will poison every
+consumer of <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> and quietly corrupt offline forensics.</p>
+</section>
+<hr class="docutils" />
+<section id="config-checklist">
+<h2>Config checklist<a class="headerlink" href="#config-checklist" title="Link to this heading">#</a></h2>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>key / node</p></th>
+<th class="head"><p>role</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">nodes.localization</span></code> / <code class="docutils literal notranslate"><span class="pre">nodes.imu_calib</span></code></p></td>
+<td><p>enable services</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.wheelbase_m</span></code></p></td>
+<td><p>bicycle <span class="math notranslate nohighlight">\(L\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.wheel_speed_factor</span></code></p></td>
+<td><p>wheel-radius correction (1.0 shipped, 0.988 measured)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle.speed_accel_process_noise</span></code> / <code class="docutils literal notranslate"><span class="pre">speed_measurement_noise</span></code></p></td>
+<td><p>speed filter tuning</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code></p></td>
+<td><p>IMU mount prior (and camera warp prior)</p></td>
+</tr>
+<tr class="row-odd"><td><p>(code defaults)</p></td>
+<td><p>GPS <span class="math notranslate nohighlight">\(R_{\text{pos}} = 0.5\)</span> m, update every 0.2 s, camera odometry on</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<hr class="docutils" />
+<section id="exercises">
+<h2>Exercises<a class="headerlink" href="#exercises" title="Link to this heading">#</a></h2>
+<ol class="arabic simple">
+<li><p>Project two GPS fixes 1° apart in latitude at your city’s <span class="math notranslate nohighlight">\(\phi\)</span>; compare <span class="math notranslate nohighlight">\(y\)</span> with 111 km. Then do it
+in longitude and explain the <span class="math notranslate nohighlight">\(\cos\phi_0\)</span>.</p></li>
+<li><p>Convert bearings <span class="math notranslate nohighlight">\(\{0,90,180,270\}\)</span> to ENU yaw and sketch them. Now deliberately use <span class="math notranslate nohighlight">\(b - 90°\)</span> instead
+of <span class="math notranslate nohighlight">\(90° - b\)</span> and see what a plot of a real drive looks like.</p></li>
+<li><p>Derive <span class="math notranslate nohighlight">\(K_2\)</span> for the yaw-rate update analytically, then run the covariance recursion numerically for
+200 steps with <span class="math notranslate nohighlight">\(Q_{44}=0.05^2\)</span>, <span class="math notranslate nohighlight">\(R=0.02^2\)</span>. Explain the factor of seven.</p></li>
+<li><p>In the arc simulation, sweep <code class="docutils literal notranslate"><span class="pre">r_model</span></code> from <span class="math notranslate nohighlight">\(0.02^2\)</span> to <span class="math notranslate nohighlight">\(1.0^2\)</span> and plot the final heading error. At
+what point does the model stop mattering, and what have you given up when it does?</p></li>
+<li><p>Add a GPS course update every 100 steps to the old (<code class="docutils literal notranslate"><span class="pre">as_state=False</span></code>) filter and show that the heading
+error stops growing. This is the masking effect — reproduce it, then remove GPS and watch it return.</p></li>
+<li><p>On a bag: measure the time from start until <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> first appears, and correlate it with the
+windows where speed is about zero.</p></li>
+<li><p>Take a bag, feed <code class="docutils literal notranslate"><span class="pre">v_ego_raw</span></code> through <code class="docutils literal notranslate"><span class="pre">SpeedFilter</span></code> with <code class="docutils literal notranslate"><span class="pre">factor</span> <span class="pre">=</span> <span class="pre">1.0</span></code> and <code class="docutils literal notranslate"><span class="pre">0.988</span></code>, and compare the
+integrated distance against the GPS track length. Which factor gets you closer?</p></li>
+</ol>
+</section>
+<section id="on-your-own-recording">
+<h2>On your own recording<a class="headerlink" href="#on-your-own-recording" title="Link to this heading">#</a></h2>
+<p>Everything above runs unchanged on a bag you record yourself (see
+<a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Bags</span></a>, <em>Record your own bag</em>) — and gains from it: your GPS has <em>your</em> multipath
+and your tunnels, your IMU carries the phone’s real mounting, and every claim is checked against a
+track you can verify from memory. Load your topics and walk the five steps again:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — the loading pattern; the estimator code is the chapter's own</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">vis.bag_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_topic_messages</span>
+
+<span class="n">session</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">"../adas_logs/&lt;your-session&gt;"</span><span class="p">)</span>
+<span class="n">gps</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/gps/data"</span><span class="p">)</span>
+<span class="n">imu</span> <span class="o">=</span> <span class="n">load_topic_messages</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="s2">"sensors/imu"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gps</span><span class="p">),</span> <span class="s2">"GPS fixes,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">imu</span><span class="p">),</span> <span class="s2">"IMU samples"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Two expectations to calibrate first: a phone GPS in the open is a few metres of scatter at 1 Hz — good
+enough to bound drift, useless for lane-level anything. And a passenger recording has no wheel
+odometry, so step 1 runs on GPS-differenced speed instead — the substitution this chapter already
+discusses when it makes speed a state. If you recorded on foot, the “vehicle frame” assumption is
+gloriously violated, and the yaw-lock step shows exactly how the calibrator copes, or refuses.</p>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Camera calibration</span></a></p>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Localization"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Gps.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">GPS — local metres, what it buys, and making a correction survive</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../Planner/Overview.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">The lateral loop — planner, control, platform</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-5-what-is-still-missing">Step 5: what is still missing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-6-learning-the-parameters-and-what-the-measurement-said-about-it">Step 6: learning the parameters, and what the measurement said about it</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-premise-and-how-to-check-a-premise">The premise, and how to check a premise</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-estimator">The estimator</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-trap-upstreams-code-sets-for-you">The trap upstream’s code sets for you</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#two-failures-the-synthetic-tests-could-not-have-found">Two failures the synthetic tests could not have found</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#why-the-road-bank-is-not-used-after-all-that-work">Why the road bank is not used, after all that work</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-drive-actually-said">What the drive actually said</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#so-it-ships-behind-two-flags-both-off">So it ships behind two flags, both off</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-this-relates-to-lane-keep">How this relates to lane-keep</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-checklist">Config checklist</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exercises">Exercises</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#on-your-own-recording">On your own recording</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

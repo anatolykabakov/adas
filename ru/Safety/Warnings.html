@@ -232,6 +232,9 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Localization/Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/GyroFusion.html">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Localization/ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
 <ul class="nav bd-sidenav">
@@ -239,12 +242,15 @@
 <li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">MPC и fp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
 <ul class="nav bd-sidenav">
@@ -480,7 +486,7 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 </div>
 <div class="admonition note">
 <p class="admonition-title">Примечание</p>
-<p><code class="docutils literal notranslate"><span class="pre">LongPlanService</span></code> тоже может читать <code class="docutils literal notranslate"><span class="pre">model_long</span></code> для желаемого ускорения в духе ACC.
+<p><a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> читает те же лиды <code class="docutils literal notranslate"><span class="pre">model_long</span></code> для своего плана и собственного FCW.
 Предупреждения этим ускорением IDM <strong>больше не пользуются</strong> — оно ложно срабатывало на пустом шоссе.</p>
 </div>
 </section>
@@ -566,7 +572,7 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 <a class="reference internal image-reference" href="../_images/fcw_thresholds.png"><img alt="../_images/fcw_thresholds.png" src="../_images/fcw_thresholds.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 31 </span><span class="caption-text">Два триггера: время до столкновения ниже 2.5 с или требуемое замедление выше 3.5 м/с².</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 38 </span><span class="caption-text">Два триггера: время до столкновения ниже 2.5 с или требуемое замедление выше 3.5 м/с².</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -636,7 +642,7 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
 <a class="reference internal image-reference" href="../_images/path_relative_y.png"><img alt="../_images/path_relative_y.png" src="../_images/path_relative_y.png" style="width: 70%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 32 </span><span class="caption-text">На дуге край собственной полосы пересекает линию «прямо вперёд» — сравнение с осью помечает выезд,
+<p><span class="caption-number">Рис. 39 </span><span class="caption-text">На дуге край собственной полосы пересекает линию «прямо вперёд» — сравнение с осью помечает выезд,
 которого нет.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>

@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Gyro fusion — the phone’s gyroscope and the mistake worth studying &#8212; Algorithms for Phone ADAS</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Click to show';</script>
+    <script>let toggleHintHide = 'Click to hide';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Localization/GyroFusion';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="GPS — local metres, what it buys, and making a correction survive" href="Gps.html" />
+    <link rel="prev" title="Localization: building an estimator one sensor at a time" href="Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Algorithms for Phone ADAS - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Algorithms for Phone ADAS - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">System overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (C++ bus)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Java layer (phone shell)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">From Frame to CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Vision — Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Coordinate Systems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo on Device</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Localization: building an estimator one sensor at a time</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Gyro fusion — the phone’s gyroscope and the mistake worth studying</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Gps.html">GPS — local metres, what it buys, and making a correction survive</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ParamsLearner.html">Learning the car’s parameters — paramsd, the road’s bank, and what the measurement said</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">The lateral loop — planner, control, platform</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Kinematic Bicycle Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Lane path — from two lines and a plan to one reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC as a toy — seven steps along the path</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — the time-domain MPC that drives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Longitudinal planner — speed and the gap</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Vehicle Model (Understeer)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Angle control — the loop where feedback actually ends</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Longitudinal control — read the plan where the actuator will be</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">The platform layer — one car behind an interface</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Warnings: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Camera Calibration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Three calibrations, not one: intrinsics, vanishing point, model warp</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Latency and Thermal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Bag and Offline Analysis</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Projects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Reading List and Internal Docs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Attribution</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Localization/GyroFusion.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Gyro fusion — the phone’s gyroscope and the mistake worth studying</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2a-making-the-phone-gyro-usable">Step 2a: making the phone gyro usable</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lock-procedure-imucalibrator">Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mount-prior">Mount prior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2b-fusing-the-gyro-and-the-mistake-worth-studying">Step 2b: fusing the gyro, and the mistake worth studying</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict">Predict</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-filter-used-to-do-and-why-it-was-wrong">What the filter used to do, and why it was wrong</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-it-does-now">What it does now</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reproduce-both-in-twenty-lines">Reproduce both, in twenty lines</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#every-gate-in-one-table">Every gate in one table</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="gyro-fusion-the-phones-gyroscope-and-the-mistake-worth-studying">
+<h1>Gyro fusion — the phone’s gyroscope and the mistake worth studying<a class="headerlink" href="#gyro-fusion-the-phones-gyroscope-and-the-mistake-worth-studying" title="Link to this heading">#</a></h1>
+<p>Wheel speed and a steering angle gave the cheapest heading estimate — and the previous chapter ended with
+its limit: the bicycle model does not know what the tyres actually did. The phone carries a gyroscope that
+measures the yaw rate directly. This chapter makes it usable (bias, mount orientation, the yaw that gravity
+cannot see) and fuses it into the filter — and then studies the one mistake in that fusion carefully,
+because it is the kind that looks like it works.</p>
+<section id="step-2a-making-the-phone-gyro-usable">
+<h2>Step 2a: making the phone gyro usable<a class="headerlink" href="#step-2a-making-the-phone-gyro-usable" title="Link to this heading">#</a></h2>
+<p>The phone is clamped at whatever angle the mount allows. Raw gyro is in <strong>phone axes</strong>; the bicycle
+model needs <strong>vehicle yaw rate</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span>.</p>
+<section id="lock-procedure-imucalibrator">
+<h3>Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)<a class="headerlink" href="#lock-procedure-imucalibrator" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Need chassis speed. <strong>Stationary:</strong> <span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> km/h.</p></li>
+<li><p><strong>Quiet:</strong> <span class="math notranslate nohighlight">\(\big|\|a\| - g\big| \le 1.5\)</span> m/s² and <span class="math notranslate nohighlight">\(\|\omega\| \le 0.08\)</span> rad/s.</p></li>
+<li><p>Collect ≥ 50 accel and gyro samples →</p>
+<ul class="simple">
+<li><p>orientation <span class="math notranslate nohighlight">\(R\)</span>: rotate measured gravity onto vehicle <strong>down</strong> <span class="math notranslate nohighlight">\((-Z)\)</span>;</p></li>
+<li><p>bias <span class="math notranslate nohighlight">\(b\)</span>: mean gyro.</p></li>
+</ul>
+</li>
+<li><p>While still quiet: bias EMA with <span class="math notranslate nohighlight">\(\alpha = 0.02\)</span>.</p></li>
+<li><p>Output (default <code class="docutils literal notranslate"><span class="pre">invert_yaw_rate=true</span></code> on Android):</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+\dot\psi = \pm \big(R(\omega - b)\big)_z.
+\]</div>
+<p>Note what this procedure can and cannot give you. Gravity fixes two of the three angles — roll and
+pitch of the phone relative to the car. <strong>Yaw is not observable from gravity at all</strong>, which is why the
+mount prior exists and why the camera and the IMU share it.</p>
+</section>
+<section id="mount-prior">
+<h3>Mount prior<a class="headerlink" href="#mount-prior" title="Link to this heading">#</a></h3>
+<p>If <code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code> is set, the same roll/pitch/yaw seeds</p>
+<div class="math notranslate nohighlight">
+\[
+R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
+\]</div>
+<p>and the service can publish yaw rate <strong>before</strong> a standstill lock (<code class="docutils literal notranslate"><span class="pre">ready</span> <span class="pre">=</span> <span class="pre">has_prior</span> <span class="pre">∨</span> <span class="pre">orientation_locked</span></code>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="mf">9.81</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rotation_from_gravity</span><span class="p">(</span><span class="n">accel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Rotate the measured gravity direction onto vehicle +down (-Z), Rodrigues from two vectors."""</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">accel</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">vx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">@</span> <span class="n">vx</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">c</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">R</span> <span class="o">@</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gyro</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bias</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="o">-</span><span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">if</span> <span class="n">invert</span> <span class="k">else</span> <span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+<span class="n">R</span> <span class="o">=</span> <span class="n">rotation_from_gravity</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">g</span><span class="p">])</span>       <span class="c1"># nearly upright, slight pitch</span>
+<span class="n">bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">])</span>
+<span class="n">gyro</span> <span class="o">=</span> <span class="n">bias</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"R =</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"yaw_rate ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="s2">"rad/s"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Until <code class="docutils literal notranslate"><span class="pre">ready</span></code>, there is <strong>no</strong> <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> and localization falls back to the chassis yaw rate, or
+to pure bicycle if there is none.</p>
+<div class="tip admonition">
+<p class="admonition-title">Drive-off tip</p>
+<p>Sit still for a few seconds after ignition so orientation can lock. A bad prior plus no lock gives a
+wrong sign or a huge bias, and then the EKF’s agreement gate rejects the IMU outright
+(<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> rad/s) — the filter goes quiet exactly when you needed it.</p>
+</div>
+<hr class="docutils" />
+<div class="note admonition">
+<p class="admonition-title">If you have not met a Kalman filter</p>
+<p>From here the estimator is an <strong>EKF</strong>, in two half-steps per tick. <strong>Predict:</strong> push the state forward
+with the motion model and <em>grow</em> its uncertainty (covariance <span class="math notranslate nohighlight">\(P\)</span>). <strong>Update:</strong> compare a sensor reading
+to what the state predicts (the <em>innovation</em>), and correct the state by a fraction of that gap — the
+<em>gain</em> <span class="math notranslate nohighlight">\(K\)</span>, which is large when the sensor is trusted more than the prediction and small when less. “EKF”
+just means the models are non-linear and are linearised (a Jacobian <span class="math notranslate nohighlight">\(F\)</span>) at each step. You do not need
+the derivation to follow this chapter — only: predict grows uncertainty, a measurement shrinks it, and
+the gain is how much you believe the measurement.</p>
+</div>
+</section>
+</section>
+<section id="step-2b-fusing-the-gyro-and-the-mistake-worth-studying">
+<h2>Step 2b: fusing the gyro, and the mistake worth studying<a class="headerlink" href="#step-2b-fusing-the-gyro-and-the-mistake-worth-studying" title="Link to this heading">#</a></h2>
+<p>State <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> in ENU. Ticks on <strong>chassis</strong>, roughly every 10 ms.</p>
+<section id="predict">
+<h3>Predict<a class="headerlink" href="#predict" title="Link to this heading">#</a></h3>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+x &amp;\leftarrow x + v\cos\psi\,dt,\\
+y &amp;\leftarrow y + v\sin\psi\,dt,\\
+\psi &amp;\leftarrow \psi + \dot\psi\,dt,\\
+v &amp;\leftarrow v_{\text{measured}}.
+\end{aligned}
+\end{split}\]</div>
+<p>The interesting question is: <strong>which <span class="math notranslate nohighlight">\(\dot\psi\)</span>?</strong></p>
+</section>
+<section id="what-the-filter-used-to-do-and-why-it-was-wrong">
+<h3>What the filter used to do, and why it was wrong<a class="headerlink" href="#what-the-filter-used-to-do-and-why-it-was-wrong" title="Link to this heading">#</a></h3>
+<p>The original code advanced heading with the bicycle model, <span class="math notranslate nohighlight">\(\dot\psi_{\text{pred}} = v\tan\delta/L\)</span>, and
+then <strong>overwrote the yaw-rate state</strong> with that same value. Every step. So whatever the gyro had taught
+the filter was thrown away before the next measurement arrived, and the measurement could only reach
+heading through the cross-covariance <span class="math notranslate nohighlight">\(P_{\psi\dot\psi}\)</span> in a single step.</p>
+<p>How much is “only through the cross-covariance”? It is easy to guess <span class="math notranslate nohighlight">\(dt\)</span> and be wrong — I did. Work it
+out: the yaw-rate update has gain <span class="math notranslate nohighlight">\(K_4 = P_{44}/(P_{44}+R)\)</span>, and heading receives
+<span class="math notranslate nohighlight">\(K_2 = P_{24}/(P_{44}+R)\)</span>. With <span class="math notranslate nohighlight">\(F_{24} = dt\)</span> the predicted cross term is <span class="math notranslate nohighlight">\(P_{24} \approx dt\,P_{44}\)</span>, so</p>
+<div class="math notranslate nohighlight">
+\[
+K_2 \approx dt\,\frac{P_{44}}{P_{44}+R} = dt\,K_4 .
+\]</div>
+<p>That is the wrong answer, and the reason is that <span class="math notranslate nohighlight">\(P_{44}\)</span> is itself shrunk by the previous update. Run
+the recursion numerically with the real <span class="math notranslate nohighlight">\(Q_{44} = 0.05^2\)</span> and <span class="math notranslate nohighlight">\(R_{\text{imu}} = 0.02^2\)</span> and the
+steady-state weight is <span class="math notranslate nohighlight">\(dt\,(1-K_4) \approx 0.12\,dt\)</span> — so heading came out as</p>
+<div class="math notranslate nohighlight">
+\[
+\psi \approx 0.88 \cdot (\text{bicycle}) + 0.12 \cdot (\text{measured}).
+\]</div>
+<p><strong>Simulate before you assert.</strong> The analytic hand-wave and the recursion disagree by a factor of seven.</p>
+<p>That split would be fine if the bicycle model were right. On this car it is not: the measured understeer
+transfer is <span class="math notranslate nohighlight">\(\kappa_{\text{fact}}/\kappa_{\text{kin}} = 0.54\)</span> at 22 m/s, so the kinematic prediction
+over-turns by <span class="math notranslate nohighlight">\(1/0.54 = 1.85\)</span>, and heading rotated about <strong>1.75× faster than truth</strong>. On a 30-second arc
+at 0.15 rad/s that is 450° instead of 258°.</p>
+<p>Why did no run ever show it? Because <code class="docutils literal notranslate"><span class="pre">updateGpsYaw</span></code> hard-snaps the heading whenever the GPS course
+disagrees by more than 0.5 rad. The filter was being dragged back into line by GPS several times a
+minute, and the logs looked healthy. <strong>A defect masked by a correction is still a defect</strong> — it surfaces
+the moment the correction is unavailable, which for GPS means tunnels, urban canyons, and cold starts.</p>
+</section>
+<section id="what-it-does-now">
+<h3>What it does now<a class="headerlink" href="#what-it-does-now" title="Link to this heading">#</a></h3>
+<p>Yaw rate is a state with its own random walk, heading integrates the state, and the bicycle model enters
+as a <em>weak measurement</em> with <span class="math notranslate nohighlight">\(R_{\text{model}} = 0.15^2\)</span> against the gyro’s <span class="math notranslate nohighlight">\(0.02^2\)</span>. Weak because
+0.15 rad/s is roughly how far apart the two are at 20 m/s and 10° of wheel. So:</p>
+<ul class="simple">
+<li><p>the gyro is trusted, and its correction survives to the next step;</p></li>
+<li><p>the model still fills gaps — if the IMU goes invalid while CAN keeps reporting steering, heading keeps
+moving instead of freezing;</p></li>
+<li><p>model updates are counted separately (<code class="docutils literal notranslate"><span class="pre">model_update_count</span></code>) so the diagnostics still say which sensor
+produced the heading.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">setYawRateIsAState(false)</span></code> restores the old behaviour exactly, which is how the two were compared.</p>
+</section>
+<section id="reproduce-both-in-twenty-lines">
+<h3>Reproduce both, in twenty lines<a class="headerlink" href="#reproduce-both-in-twenty-lines" title="Link to this heading">#</a></h3>
+<p>This is the whole chapter in one runnable block: drive a steady arc where the gyro tells the truth and
+the steering angle claims 1.85× as much, and watch the heading.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">L</span><span class="p">,</span> <span class="n">DT</span> <span class="o">=</span> <span class="mf">2.636</span><span class="p">,</span> <span class="mf">0.01</span>
+<span class="n">UNDERSTEER</span> <span class="o">=</span> <span class="mf">0.54</span>          <span class="c1"># measured kappa_fact / kappa_kin at 22 m/s</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Ekf</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""[x, y, yaw, v, yaw_rate] in ENU. yaw_rate_is_state=False is the old behaviour."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaw_rate_is_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">r_model</span><span class="o">=</span><span class="mf">0.15</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">r_imu</span><span class="o">=</span><span class="mf">0.02</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.01</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_imu</span> <span class="o">=</span> <span class="n">yaw_rate_is_state</span><span class="p">,</span> <span class="n">r_model</span><span class="p">,</span> <span class="n">r_imu</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_meas</span><span class="p">,</span> <span class="n">steer</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">model_rate</span> <span class="o">=</span> <span class="n">v_meas</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-3</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v_meas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.01</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span> <span class="k">else</span> <span class="n">model_rate</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">yaw</span> <span class="o">+</span> <span class="n">rate</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_meas</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_rate</span>                       <span class="c1"># &lt;-- the mistake</span>
+
+        <span class="n">F</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">F</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">F</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">Q</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span> <span class="ow">and</span> <span class="n">model_rate</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">observe_yaw_rate</span><span class="p">(</span><span class="n">model_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_model</span><span class="p">)</span>   <span class="c1"># model as a weak measurement</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">observe_yaw_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="nb">float</span><span class="p">((</span><span class="n">H</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span> <span class="o">+</span> <span class="n">r</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">K</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+        <span class="n">IKH</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">H</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">IKH</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">IKH</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">observe_gyro</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observe_yaw_rate</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_imu</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">22.0</span><span class="p">,</span> <span class="n">steer</span><span class="o">=</span><span class="mf">0.04</span><span class="p">,</span> <span class="n">feed_gyro</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">ekf</span> <span class="o">=</span> <span class="n">Ekf</span><span class="p">(</span><span class="n">yaw_rate_is_state</span><span class="o">=</span><span class="n">as_state</span><span class="p">)</span>
+    <span class="n">ekf</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="n">model_rate</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span>
+    <span class="n">truth_rate</span> <span class="o">=</span> <span class="n">UNDERSTEER</span> <span class="o">*</span> <span class="n">model_rate</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">seconds</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">ekf</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">steer</span><span class="p">,</span> <span class="n">DT</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">feed_gyro</span><span class="p">:</span>
+            <span class="n">ekf</span><span class="o">.</span><span class="n">observe_gyro</span><span class="p">(</span><span class="n">truth_rate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">ekf</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">truth_rate</span> <span class="o">*</span> <span class="n">seconds</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">model_rate</span> <span class="o">*</span> <span class="n">seconds</span><span class="p">)</span>
+
+<span class="n">now</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">before</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"truth heading after 5 s : </span><span class="si">{</span><span class="n">truth</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   (gyro, the only honest witness)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bicycle model would say : </span><span class="si">{</span><span class="n">model</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   (over-turns by 1/0.54)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"yaw rate as a state     : </span><span class="si">{</span><span class="n">now</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   &lt;- tracks the gyro"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"old, overwritten        : </span><span class="si">{</span><span class="n">before</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   &lt;- tracks the model"</span><span class="p">)</span>
+
+<span class="c1"># And the gyro-less case: the model must still drive heading, not freeze it.</span>
+<span class="n">no_gyro</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">model5</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">feed_gyro</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">no gyro, as a state     : </span><span class="si">{</span><span class="n">no_gyro</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">° against the model's </span><span class="si">{</span><span class="n">model5</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Run it and you get 51.7° of truth, 52.4° from the new filter, and 90.2° from the old one chasing the
+model’s 95.7°. One flag, <strong>38° of heading error in five seconds</strong> — about 0.13 rad/s of error rate, which
+over a minute without GPS is the difference between being on your road and being on the next one. The
+gyro-less case comes out at 95.2° against the model’s 95.7°, so the fallback works: heading keeps moving
+rather than freezing.</p>
+</section>
+<section id="every-gate-in-one-table">
+<h3>Every gate in one table<a class="headerlink" href="#every-gate-in-one-table" title="Link to this heading">#</a></h3>
+<p>Measurements are cheap to add and expensive to trust, so each one is gated. These are the numbers as
+shipped:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>measurement</p></th>
+<th class="head"><p>source</p></th>
+<th class="head"><p>gate</p></th>
+<th class="head"><p>noise</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>yaw rate</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code></p></td>
+<td><p>agrees with bicycle within 0.35 rad/s, or <span class="math notranslate nohighlight">\(v&lt;0.5\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.02^2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>yaw rate</p></td>
+<td><p>bicycle model</p></td>
+<td><p><span class="math notranslate nohighlight">\(\vert\delta\vert&gt;0.001\)</span> and <span class="math notranslate nohighlight">\(\vert v\vert&gt;0.01\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.15^2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>yaw rate</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> <code class="docutils literal notranslate"><span class="pre">rot[2]</span></code></p></td>
+<td><p>small <code class="docutils literal notranslate"><span class="pre">rot_std</span></code>, <span class="math notranslate nohighlight">\(v&gt;1\)</span>, same agreement gate</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 0.05^2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>position</p></td>
+<td><p>GPS ENU</p></td>
+<td><p>innovation &lt; 25 m; reseed above 50 m; 4 consecutive rejects also reseed</p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.5\)</span> m, softened when innovation is large</p></td>
+</tr>
+<tr class="row-even"><td><p>course</p></td>
+<td><p>GPS bearing</p></td>
+<td><p><span class="math notranslate nohighlight">\(v&gt;2\)</span> m/s; reject <span class="math notranslate nohighlight">\(\vert\Delta\psi\vert&gt;1.2\)</span> rad unless forced; hard snap above 0.5 rad</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 0.05\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>velocity</p></td>
+<td><p>GPS <span class="math notranslate nohighlight">\(v_x,v_y\)</span></p></td>
+<td><p>innovation &lt; 15 m/s</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 1.0\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Two things to notice. First, the reseed path exists because a rejected measurement that keeps being
+rejected is not noise, it is a filter that has lost the plot — after four rejects it accepts reality
+rather than defending its estimate.</p>
+<p>Second, the velocity row is the weakest of the six, and step 4 is about why. Its noise was assumed rather
+than measured (1.0 against a Doppler that is good to 0.1), and until speed became a state the prediction
+overwrote it about twenty times per GPS sample. Both are fixed now, and the scale is <em>still</em> not
+learnable — see step 4 for the reason, which is more interesting than the bug.</p>
+<hr class="docutils" />
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="../_images/frames.png"><img alt="../_images/frames.png" src="../_images/frames.png" style="width: 60%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Fig. 7 </span><span class="caption-text">Three frames the chapter keeps straight: ENU axes, the GPS bearing (clockwise from North), and the
+vehicle heading — related by ψ = π/2 − b.</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+</figcaption>
+</figure>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Next:</strong> <a class="reference internal" href="Gps.html"><span class="std std-doc">GPS</span></a></p>
+</section>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Localization"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Overview.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Localization: building an estimator one sensor at a time</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Gps.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">GPS — local metres, what it buys, and making a correction survive</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2a-making-the-phone-gyro-usable">Step 2a: making the phone gyro usable</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lock-procedure-imucalibrator">Lock procedure (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#mount-prior">Mount prior</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#step-2b-fusing-the-gyro-and-the-mistake-worth-studying">Step 2b: fusing the gyro, and the mistake worth studying</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#predict">Predict</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-the-filter-used-to-do-and-why-it-was-wrong">What the filter used to do, and why it was wrong</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#what-it-does-now">What it does now</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#reproduce-both-in-twenty-lines">Reproduce both, in twenty lines</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#every-gate-in-one-table">Every gate in one table</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Atom ADAS / student course notes
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Inspired by <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Project-specific chapters document the Android ADAS stack of the ADAS repository.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

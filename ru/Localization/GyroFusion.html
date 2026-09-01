@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+
+
+<html data-adas-bilingual lang="ru" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить &#8212; Алгоритмы ADAS на телефоне</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=55c26ed414f5f8a31ebb" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=3c74b3bc" />
+    <link rel="stylesheet" type="text/css" href="../_static/togglebutton.css?v=9c3e77be" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.11b39860a7a0cbfd473a3ad8a317855267ff0bd372690045ca344a6b62be495e.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-thebe.css?v=4fa983c6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/lang-switch.css?v=e8f41be8" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=55c26ed414f5f8a31ebb"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb" />
+
+    <script src="../_static/documentation_options.js?v=576a2c22"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
+    <script>let toggleHintShow = 'Нажмите, чтобы показать';</script>
+    <script>let toggleHintHide = 'Нажмите, чтобы скрыть';</script>
+    <script>let toggleOpenOnPrint = 'true';</script>
+    <script src="../_static/togglebutton.js?v=b8b12719"></script>
+    <script src="../_static/translations.js?v=9bfe3ffa"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script async="async" src="../_static/sphinx-thebe.js?v=c100c467"></script>
+    <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script>const THEBE_JS_URL = "https://unpkg.com/thebe@0.8.2/lib/index.js"; const thebe_selector = ".thebe,.cell"; const thebe_selector_input = "pre"; const thebe_selector_output = ".output, .cell_output"</script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Localization/GyroFusion';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/lang-switch.js?v=29098906"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+    <link rel="next" title="GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила" href="Gps.html" />
+    <link rel="prev" title="Локализация: собираем оценщик по одному датчику" href="Overview.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="ru"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Перейти к основному содержанию</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search this book..."
+         aria-label="Search this book..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Навигация по сайту">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="На этой странице">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../Introduction/intro.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.svg" class="logo__image only-light" alt="Алгоритмы ADAS на телефоне - Home"/>
+    <img src="../_static/logo.svg" class="logo__image only-dark pst-js-only" alt="Алгоритмы ADAS на телефоне - Home"/>
+  
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Поиск</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Architecture</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Overview.html">Обзор системы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Middleware.html">Middleware (шина на C++)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/JavaLayer.html">Слой Java (обвязка телефона)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Architecture/Pipeline.html">От кадра до CAN</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Vision</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Overview.html">Зрение — обзор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Coordinates.html">Системы координат</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Vision/Supercombo.html">Supercombo на устройстве</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Localization</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="Overview.html">Локализация: собираем оценщик по одному датчику</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Gps.html">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ParamsLearner.html">Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Planner</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Overview.html">Поперечный контур — планировщик, управление, платформа</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/BicycleModel.html">Кинематическая велосипедная модель</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/PurePursuit.html">Pure Pursuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/LanePath.html">Путь разметки — из двух линий и плана в одну опору</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MpcToy.html">MPC как игрушка — семь шагов вдоль пути</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/MPC_and_FP.html">fp — MPC в области времени, который едет</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Planner/Longitudinal.html">Продольный планировщик — скорость и дистанция</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Platform/Overview.html">Платформенный слой — одна машина за интерфейсом</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Safety</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Safety/Warnings.html">Предупреждения: FCW, AEB, LDW</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Calibration and latency</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/Overview.html">Калибровка камеры</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html">Три калибровки, а не одна</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Latency/Overview.html">Задержки и нагрев</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Logging/Bags.html">Беги и офлайн-анализ</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Practice</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Exercises/StudentProjects.html">Задания</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Setup.html">Установка и запуск</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/ReadingList.html">Что читать дальше и внутренние документы</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Appendix/Glossary.html">Глоссарий</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../ATTRIBUTION.html">Атрибуция</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Загрузите эту страницу">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Localization/GyroFusion.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Скачать исходный файл"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Распечатать в PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button pst-navbar-icon"
+  title="Полноэкранный режим"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="светлая"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="темная"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button>
+
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Поиск" aria-label="Поиск" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button>
+<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Содержание </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a">Шаг 2a: сделать гироскоп телефона пригодным</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#imucalibrator">Процедура захвата (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prior">Prior крепления</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#b">Шаг 2b: слияние с гироскопом и ошибка, которую стоит изучить</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Предсказание</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Что фильтр делал раньше и почему это было неверно</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Что он делает теперь</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Воспроизвести оба, в двадцати строках</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Все гейты в одной таблице</a></li>
+</ul>
+</li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Скорость колёс и угол руля дали самую дешёвую оценку курса — и предыдущая глава закончилась её пределом:
+велосипедная модель не знает, что на самом деле сделали шины. В телефоне есть гироскоп, который измеряет
+скорость рыскания напрямую. Эта глава делает его пригодным (смещение, ориентация крепления, рыскание,
+которого не видит гравитация) и вливает в фильтр — а затем внимательно разбирает одну ошибку в этом
+слиянии, потому что она из тех, что выглядят работающими.</p>
+<section id="a">
+<h2>Шаг 2a: сделать гироскоп телефона пригодным<a class="headerlink" href="#a" title="Ссылка на этот заголовок">#</a></h2>
+<p>Телефон зажат под тем углом, какой позволяет крепление. Сырой гироскоп — в <strong>осях телефона</strong>; велосипедной
+модели нужна <strong>скорость рыска машины</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span>.</p>
+<section id="imucalibrator">
+<h3>Процедура захвата (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)<a class="headerlink" href="#imucalibrator" title="Ссылка на этот заголовок">#</a></h3>
+<ol class="arabic simple">
+<li><p>Нужна скорость с шасси. <strong>Стоим:</strong> <span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> км/ч.</p></li>
+<li><p><strong>Тихо:</strong> <span class="math notranslate nohighlight">\(\big|\|a\| - g\big| \le 1.5\)</span> м/с² и <span class="math notranslate nohighlight">\(\|\omega\| \le 0.08\)</span> рад/с.</p></li>
+<li><p>Собрать ≥ 50 отсчётов акселерометра и гироскопа →</p>
+<ul class="simple">
+<li><p>ориентация <span class="math notranslate nohighlight">\(R\)</span>: повернуть измеренную гравитацию на <strong>вниз</strong> машины <span class="math notranslate nohighlight">\((-Z)\)</span>;</p></li>
+<li><p>смещение <span class="math notranslate nohighlight">\(b\)</span>: среднее гироскопа.</p></li>
+</ul>
+</li>
+<li><p>Пока по-прежнему тихо: экспоненциальное сглаживание смещения с <span class="math notranslate nohighlight">\(\alpha = 0.02\)</span>.</p></li>
+<li><p>Выход (на Android по умолчанию <code class="docutils literal notranslate"><span class="pre">invert_yaw_rate=true</span></code>):</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[
+\dot\psi = \pm \big(R(\omega - b)\big)_z.
+\]</div>
+<p>Отметьте, что эта процедура может дать, а что нет. Гравитация фиксирует два угла из трёх — крен и тангаж
+телефона относительно машины. <strong>Рыск по гравитации не наблюдаем вообще</strong>, поэтому и существует prior крепления,
+и поэтому камера с IMU его делят.</p>
+</section>
+<section id="prior">
+<h3>Prior крепления<a class="headerlink" href="#prior" title="Ссылка на этот заголовок">#</a></h3>
+<p>Если <code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code> задан, те же крен, тангаж и рыск засевают</p>
+<div class="math notranslate nohighlight">
+\[
+R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
+\]</div>
+<p>и сервис может публиковать скорость рыска <strong>до</strong> захвата на месте (<code class="docutils literal notranslate"><span class="pre">ready</span> <span class="pre">=</span> <span class="pre">has_prior</span> <span class="pre">∨</span> <span class="pre">orientation_locked</span></code>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="mf">9.81</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rotation_from_gravity</span><span class="p">(</span><span class="n">accel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Rotate the measured gravity direction onto vehicle +down (-Z), Rodrigues from two vectors."""</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">accel</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">target</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">vx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">]])</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">+</span> <span class="n">vx</span> <span class="o">@</span> <span class="n">vx</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">c</span><span class="p">))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">,</span> <span class="n">invert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">R</span> <span class="o">@</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gyro</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bias</span><span class="p">))</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="o">-</span><span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">if</span> <span class="n">invert</span> <span class="k">else</span> <span class="n">w</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+<span class="n">R</span> <span class="o">=</span> <span class="n">rotation_from_gravity</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="n">g</span><span class="p">])</span>       <span class="c1"># nearly upright, slight pitch</span>
+<span class="n">bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.01</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">])</span>
+<span class="n">gyro</span> <span class="o">=</span> <span class="n">bias</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"R =</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"yaw_rate ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="s2">"rad/s"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Пока не <code class="docutils literal notranslate"><span class="pre">ready</span></code>, топика <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> <strong>нет</strong>, и локализация откатывается на скорость рыска с шасси, а если
+и её нет — на чистую велосипедную модель.</p>
+<div class="tip admonition">
+<p class="admonition-title">Подсказка перед выездом</p>
+<p>Постойте несколько секунд после запуска двигателя, чтобы ориентация захватилась. Плохой prior плюс отсутствие
+захвата дают неверный знак или огромное смещение, и тогда гейт согласия в EKF отбрасывает IMU целиком
+(<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> рад/с) — фильтр замолкает именно тогда, когда он был нужен.</p>
+</div>
+<hr class="docutils" />
+<div class="note admonition">
+<p class="admonition-title">Если вы не встречали фильтр Калмана</p>
+<p>Дальше оцениватель — это <strong>EKF</strong>, в два полушага на тик. <strong>Предсказание:</strong> толкнуть состояние вперёд по
+модели движения и <em>увеличить</em> его неопределённость (ковариацию <span class="math notranslate nohighlight">\(P\)</span>). <strong>Обновление:</strong> сравнить показание
+датчика с тем, что предсказывает состояние (<em>innovation</em>), и поправить состояние на долю этого разрыва —
+<em>усиление</em> <span class="math notranslate nohighlight">\(K\)</span>: большое, когда датчику верят больше, чем предсказанию, и малое — когда меньше. «EKF»
+значит лишь, что модели нелинейны и линеаризуются (якобиан <span class="math notranslate nohighlight">\(F\)</span>) на каждом шаге. Для этой главы вывод не
+нужен — только: предсказание растит неопределённость, измерение её уменьшает, а усиление — это насколько
+вы верите измерению.</p>
+</div>
+</section>
+</section>
+<section id="b">
+<h2>Шаг 2b: слияние с гироскопом и ошибка, которую стоит изучить<a class="headerlink" href="#b" title="Ссылка на этот заголовок">#</a></h2>
+<p>Состояние <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> в ENU. Тик по <strong>шасси</strong>, примерно каждые 10 мс.</p>
+<section id="id2">
+<h3>Предсказание<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\begin{aligned}
+x &amp;\leftarrow x + v\cos\psi\,dt,\\
+y &amp;\leftarrow y + v\sin\psi\,dt,\\
+\psi &amp;\leftarrow \psi + \dot\psi\,dt,\\
+v &amp;\leftarrow v_{\text{measured}}.
+\end{aligned}
+\end{split}\]</div>
+<p>Интересный вопрос: <strong>какая <span class="math notranslate nohighlight">\(\dot\psi\)</span>?</strong></p>
+</section>
+<section id="id3">
+<h3>Что фильтр делал раньше и почему это было неверно<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
+<p>Исходный код двигал курс велосипедной моделью, <span class="math notranslate nohighlight">\(\dot\psi_{\text{pred}} = v\tan\delta/L\)</span>, и затем
+<strong>перезатирал состояние скорости рыска</strong> этим же значением. Каждый шаг. То есть всё, чему научил фильтр
+гироскоп, выбрасывалось до прихода следующего измерения, а само измерение могло дойти до курса только через
+взаимную ковариацию <span class="math notranslate nohighlight">\(P_{\psi\dot\psi}\)</span> за один шаг.</p>
+<p>Сколько это — «только через взаимную ковариацию»? Легко угадать <span class="math notranslate nohighlight">\(dt\)</span> и ошибиться; я так и сделал. Разберём:
+обновление скорости рыска имеет усиление <span class="math notranslate nohighlight">\(K_4 = P_{44}/(P_{44}+R)\)</span>, а курс получает
+<span class="math notranslate nohighlight">\(K_2 = P_{24}/(P_{44}+R)\)</span>. При <span class="math notranslate nohighlight">\(F_{24} = dt\)</span> предсказанный перекрёстный член равен <span class="math notranslate nohighlight">\(P_{24} \approx dt\,P_{44}\)</span>,
+поэтому</p>
+<div class="math notranslate nohighlight">
+\[
+K_2 \approx dt\,\frac{P_{44}}{P_{44}+R} = dt\,K_4 .
+\]</div>
+<p>Это неверный ответ, и причина в том, что сама <span class="math notranslate nohighlight">\(P_{44}\)</span> сжата предыдущим обновлением. Прогоните рекурсию
+численно с настоящими <span class="math notranslate nohighlight">\(Q_{44} = 0.05^2\)</span> и <span class="math notranslate nohighlight">\(R_{\text{imu}} = 0.02^2\)</span>, и установившийся вес окажется
+<span class="math notranslate nohighlight">\(dt\,(1-K_4) \approx 0.12\,dt\)</span> — то есть курс выходил как</p>
+<div class="math notranslate nohighlight">
+\[
+\psi \approx 0.88 \cdot (\text{велосипедная модель}) + 0.12 \cdot (\text{измерение}).
+\]</div>
+<p><strong>Смоделируйте, прежде чем утверждать.</strong> Аналитическая прикидка и рекурсия расходятся в семь раз.</p>
+<p>Такое разделение было бы нормально, будь велосипедная модель верна. На этой машине она неверна: измеренная
+передача недокрута <span class="math notranslate nohighlight">\(\kappa_{\text{fact}}/\kappa_{\text{kin}} = 0.54\)</span> при 22 м/с, значит кинематическое
+предсказание перекручивает в <span class="math notranslate nohighlight">\(1/0.54 = 1.85\)</span> раза, и курс вращался примерно <strong>в 1.75 раза быстрее правды</strong>. На
+30-секундной дуге при 0.15 рад/с это 450° вместо 258°.</p>
+<p>Почему ни один заезд этого не показал? Потому что <code class="docutils literal notranslate"><span class="pre">updateGpsYaw</span></code> жёстко защёлкивает курс всякий раз, когда курс
+GPS расходится больше чем на 0.5 рад. Фильтр несколько раз в минуту затягивало обратно в строй, и логи
+выглядели здоровыми. <strong>Дефект, замаскированный коррекцией, остаётся дефектом</strong> — он всплывает в момент, когда
+коррекция недоступна, а для GPS это тоннели, городские каньоны и холодный старт.</p>
+</section>
+<section id="id4">
+<h3>Что он делает теперь<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>Скорость рыска — состояние со своим случайным блужданием, курс интегрирует состояние, а велосипедная модель
+входит <em>слабым измерением</em> с <span class="math notranslate nohighlight">\(R_{\text{model}} = 0.15^2\)</span> против <span class="math notranslate nohighlight">\(0.02^2\)</span> у гироскопа. Слабым потому, что
+0.15 рад/с — это примерно то, насколько они расходятся при 20 м/с и 10° руля. Итого:</p>
+<ul class="simple">
+<li><p>гироскопу доверяют, и его коррекция доживает до следующего шага;</p></li>
+<li><p>модель всё равно затыкает дыры — если IMU станет невалидным, а CAN продолжит сообщать угол руля, курс
+продолжит двигаться, а не замрёт;</p></li>
+<li><p>обновления от модели считаются отдельно (<code class="docutils literal notranslate"><span class="pre">model_update_count</span></code>), поэтому диагностика по-прежнему говорит,
+каким датчиком получен курс.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">setYawRateIsAState(false)</span></code> в точности возвращает старое поведение — именно так эти два и сравнивали.</p>
+</section>
+<section id="id5">
+<h3>Воспроизвести оба, в двадцати строках<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
+<p>Это вся глава в одном запускаемом блоке: катим установившуюся дугу, где гироскоп говорит правду, а угол руля
+заявляет в 1.85 раза больше, и смотрим на курс.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="n">L</span><span class="p">,</span> <span class="n">DT</span> <span class="o">=</span> <span class="mf">2.636</span><span class="p">,</span> <span class="mf">0.01</span>
+<span class="n">UNDERSTEER</span> <span class="o">=</span> <span class="mf">0.54</span>          <span class="c1"># measured kappa_fact / kappa_kin at 22 m/s</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Ekf</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""[x, y, yaw, v, yaw_rate] in ENU. yaw_rate_is_state=False is the old behaviour."""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaw_rate_is_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">r_model</span><span class="o">=</span><span class="mf">0.15</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">r_imu</span><span class="o">=</span><span class="mf">0.02</span><span class="o">**</span><span class="mi">2</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.1</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.01</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.05</span><span class="o">**</span><span class="mi">2</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_imu</span> <span class="o">=</span> <span class="n">yaw_rate_is_state</span><span class="p">,</span> <span class="n">r_model</span><span class="p">,</span> <span class="n">r_imu</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v_meas</span><span class="p">,</span> <span class="n">steer</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="n">model_rate</span> <span class="o">=</span> <span class="n">v_meas</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1e-3</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="n">v_meas</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">0.01</span> <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span> <span class="k">else</span> <span class="n">model_rate</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">yaw</span> <span class="o">+</span> <span class="n">rate</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v_meas</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_rate</span>                       <span class="c1"># &lt;-- the mistake</span>
+
+        <span class="n">F</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">F</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">yaw</span><span class="p">)</span> <span class="o">*</span> <span class="n">dt</span>
+        <span class="n">F</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">F</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">F</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">Q</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">as_state</span> <span class="ow">and</span> <span class="n">model_rate</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">observe_yaw_rate</span><span class="p">(</span><span class="n">model_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_model</span><span class="p">)</span>   <span class="c1"># model as a weak measurement</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">observe_yaw_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">r</span><span class="p">):</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="nb">float</span><span class="p">((</span><span class="n">H</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">())</span> <span class="o">+</span> <span class="n">r</span>
+        <span class="n">K</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">K</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+        <span class="n">IKH</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">H</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">IKH</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">@</span> <span class="n">IKH</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">K</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">observe_gyro</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observe_yaw_rate</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">r_imu</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="p">,</span> <span class="n">seconds</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">22.0</span><span class="p">,</span> <span class="n">steer</span><span class="o">=</span><span class="mf">0.04</span><span class="p">,</span> <span class="n">feed_gyro</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">ekf</span> <span class="o">=</span> <span class="n">Ekf</span><span class="p">(</span><span class="n">yaw_rate_is_state</span><span class="o">=</span><span class="n">as_state</span><span class="p">)</span>
+    <span class="n">ekf</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="n">model_rate</span> <span class="o">=</span> <span class="n">v</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">steer</span><span class="p">)</span> <span class="o">/</span> <span class="n">L</span>
+    <span class="n">truth_rate</span> <span class="o">=</span> <span class="n">UNDERSTEER</span> <span class="o">*</span> <span class="n">model_rate</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">seconds</span> <span class="o">/</span> <span class="n">DT</span><span class="p">)):</span>
+        <span class="n">ekf</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">steer</span><span class="p">,</span> <span class="n">DT</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">feed_gyro</span><span class="p">:</span>
+            <span class="n">ekf</span><span class="o">.</span><span class="n">observe_gyro</span><span class="p">(</span><span class="n">truth_rate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">ekf</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">truth_rate</span> <span class="o">*</span> <span class="n">seconds</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">model_rate</span> <span class="o">*</span> <span class="n">seconds</span><span class="p">)</span>
+
+<span class="n">now</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">model</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">before</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"truth heading after 5 s : </span><span class="si">{</span><span class="n">truth</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   (gyro, the only honest witness)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bicycle model would say : </span><span class="si">{</span><span class="n">model</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   (over-turns by 1/0.54)"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"yaw rate as a state     : </span><span class="si">{</span><span class="n">now</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   &lt;- tracks the gyro"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"old, overwritten        : </span><span class="si">{</span><span class="n">before</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°   &lt;- tracks the model"</span><span class="p">)</span>
+
+<span class="c1"># And the gyro-less case: the model must still drive heading, not freeze it.</span>
+<span class="n">no_gyro</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">model5</span> <span class="o">=</span> <span class="n">drive_arc</span><span class="p">(</span><span class="n">as_state</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">feed_gyro</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">no gyro, as a state     : </span><span class="si">{</span><span class="n">no_gyro</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">° against the model's </span><span class="si">{</span><span class="n">model5</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Запустите — и получите 51.7° правды, 52.4° от нового фильтра и 90.2° от старого, гонящегося за 95.7° модели.
+Один флаг — <strong>38° ошибки курса за пять секунд</strong>, то есть около 0.13 рад/с скорости накопления ошибки, а за
+минуту без GPS это разница между «на своей дороге» и «на соседней». Вариант без гироскопа даёт 95.2° против
+95.7° модели, то есть откат работает: курс продолжает двигаться, а не замирает.</p>
+</section>
+<section id="id6">
+<h3>Все гейты в одной таблице<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
+<p>Измерения дёшево добавлять и дорого им доверять, поэтому у каждого есть гейт. Числа — как поставляется:</p>
+<div class="pst-scrollable-table-container"><table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>измерение</p></th>
+<th class="head"><p>источник</p></th>
+<th class="head"><p>гейт</p></th>
+<th class="head"><p>шум</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>скорость рыска</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code></p></td>
+<td><p>согласуется с велосипедной моделью в пределах 0.35 рад/с, или <span class="math notranslate nohighlight">\(v&lt;0.5\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.02^2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>скорость рыска</p></td>
+<td><p>велосипедная модель</p></td>
+<td><p><span class="math notranslate nohighlight">\(\vert\delta\vert&gt;0.001\)</span> и <span class="math notranslate nohighlight">\(\vert v\vert&gt;0.01\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.15^2\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>скорость рыска</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">model/camera_odometry</span></code> <code class="docutils literal notranslate"><span class="pre">rot[2]</span></code></p></td>
+<td><p>малая <code class="docutils literal notranslate"><span class="pre">rot_std</span></code>, <span class="math notranslate nohighlight">\(v&gt;1\)</span>, тот же гейт согласия</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 0.05^2\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>позиция</p></td>
+<td><p>GPS в ENU</p></td>
+<td><p>невязка &lt; 25 м; пересев выше 50 м; 4 подряд отказа тоже дают пересев</p></td>
+<td><p><span class="math notranslate nohighlight">\(R = 0.5\)</span> м, размягчается при большой невязке</p></td>
+</tr>
+<tr class="row-even"><td><p>курс</p></td>
+<td><p>пеленг GPS</p></td>
+<td><p><span class="math notranslate nohighlight">\(v&gt;2\)</span> м/с; отбрасывать <span class="math notranslate nohighlight">\(\vert\Delta\psi\vert&gt;1.2\)</span> рад, если не принудительно; жёсткая защёлка выше 0.5 рад</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 0.05\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>скорость</p></td>
+<td><p>GPS <span class="math notranslate nohighlight">\(v_x,v_y\)</span></p></td>
+<td><p>невязка &lt; 15 м/с</p></td>
+<td><p><span class="math notranslate nohighlight">\(R \approx 1.0\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Две вещи, на которые стоит обратить внимание. Во-первых, путь пересева существует потому, что измерение,
+которое отбрасывается снова и снова, — это не шум, а фильтр, потерявший связь с реальностью; после четырёх
+отказов он принимает реальность, а не защищает свою оценку.</p>
+<p>Во-вторых, строка про скорость — самая слабая из шести, и о причине шаг 4. Её шум был предположен, а не
+измерен (1.0 против доплера, точного до 0.1), и пока скорость не стала состоянием, предсказание перезатирало
+это обновление примерно двадцать раз на каждую посылку GPS. Обе беды исправлены, а масштаб <em>всё равно</em> не
+выучивается — причина в шаге 4, и она интереснее самой ошибки.</p>
+<hr class="docutils" />
+<figure class="align-default" id="id7">
+<a class="reference internal image-reference" href="../_images/frames.png"><img alt="../_images/frames.png" src="../_images/frames.png" style="width: 60%;" />
+</a>
+<figcaption>
+<p><span class="caption-number">Рис. 7 </span><span class="caption-text">Три кадра, которые глава держит раздельно: оси ENU, азимут GPS (по часовой от Севера) и курс машины,
+связанные ψ = π/2 − b.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
+</figcaption>
+</figure>
+<!-- next-chapter -->
+<hr class="docutils" />
+<p><strong>Дальше:</strong> <a class="reference internal" href="Gps.html"><span class="std std-doc">GPS</span></a></p>
+</section>
+</section>
+</section>
+
+    <script type="text/x-thebe-config">
+    {
+        requestKernel: true,
+        binderOptions: {
+            repo: "binder-examples/jupyter-stacks-datascience",
+            ref: "master",
+        },
+        codeMirrorConfig: {
+            theme: "abcdef",
+            mode: "python"
+        },
+        kernelOptions: {
+            name: "python3",
+            path: "./Localization"
+        },
+        predefinedOutput: true
+    }
+    </script>
+    <script>kernelName = 'python3'</script>
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Overview.html"
+       title="предыдущая страница">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">назад</p>
+        <p class="prev-next-title">Локализация: собираем оценщик по одному датчику</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Gps.html"
+       title="следующая страница">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">вперёд</p>
+        <p class="prev-next-title">GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item"><div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Содержание
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#a">Шаг 2a: сделать гироскоп телефона пригодным</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#imucalibrator">Процедура захвата (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#prior">Prior крепления</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#b">Шаг 2b: слияние с гироскопом и ошибка, которую стоит изучить</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Предсказание</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Что фильтр делал раньше и почему это было неверно</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Что он делает теперь</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Воспроизвести оба, в двадцати строках</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Все гейты в одной таблице</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+Автор: Atom ADAS / конспект студенческого курса
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+<div class="extra_footer">
+  Вдохновлено курсом <a href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a> (CC BY 4.0). Главы про конкретную реализацию описывают Android-стек ADAS из этого репозитория.
+
+</div>
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=55c26ed414f5f8a31ebb"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=55c26ed414f5f8a31ebb"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
