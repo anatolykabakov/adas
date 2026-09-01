@@ -167,4 +167,4 @@ for sig in (0.12, 0.20, 0.37, 0.55):
 <!-- next-chapter -->
 ---
 
-**Дальше:** [MPC и fp](./MPC_and_FP.md)
+**Дальше:** [MPC как игрушка](./MpcToy.md)

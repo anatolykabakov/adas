@@ -1,150 +1,72 @@
-# System Overview
+# System overview
 
-We want a phone on the windshield to keep a Golf 7 near lane center by commanding MQB **HCA** through a USB **Panda**.
-This chapter is the map of the repository before we dive into vision and control math.
+A phone on the windshield keeps a Golf 7 near the lane centre. The camera sees the road, a neural network turns
+the picture into lane lines and a path, C++ code turns the path into a steering torque, and a small USB
+adapter to the car's CAN bus — the **panda** — puts that torque on the wire as `HCA_01`, the same frame the
+factory lane assist would have sent, so the car obeys. This chapter is the map of the project: what the app
+does, what it is made of, and how to work with it.
 
-## Purpose
+## What the app does
 
-The ADAS app:
+For every camera frame, the app:
 
-1. captures the road with the camera (and supporting IMU / GPS);
-2. runs **Supercombo** inference on device — on the GPU through a generated `.thneed`, with ONNX Runtime as
-   the fallback;
-3. plans in curvature and computes a lateral command in native **C++**;
-4. publishes `HCA_01` on VW MQB CAN via Panda — through a platform interface, so the brand is one
-   implementation rather than the architecture;
-5. writes a full **bag** for offline analysis.
+1. captures the road, and reads the phone's IMU and GPS alongside;
+2. runs the **Supercombo** network on the phone's GPU through a generated `.thneed` (ONNX Runtime is the
+   slower fallback);
+3. fuses the network's lane lines and plan into one "drive here" line, computes the curvature and speed to
+   follow it, and then the commands — a steering torque and an acceleration — all in C++;
+4. packs the commands into the car's own CAN frames (`HCA_01` for steering, `ACC_06/07` for speed) and hands
+   them to the panda, which checks them against its safety model before anything reaches the bus;
+5. writes everything it saw and decided into a **bag** — the drive's journal file, for analysis on a computer.
 
-This is a research / teaching stack, not an "autopilot" product: the lateral loop has road time, the
-longitudinal one (planner → acceleration → the car's ACC frames) has been proven in the simulator only.
+One honest caveat. This is a research and teaching stack, not an "autopilot": steering is proven on the road
+on this very Golf; speed control (plan → acceleration → the car's ACC frames) is proven in the simulator
+only, because this car has no radar and its motor and brakes do not accept the request.
 
 ```{figure} figures/pipeline_simple.png
 ---
 width: 95%
 ---
-End-to-end path you will learn to trace: sensors → model → path → control → CAN.
+The end-to-end path you will learn to trace: sensors → network → path → control → CAN.
 ```
 
-## Layers
+## What it is made of
 
-| layer | components | role |
+Three languages, each with its own job:
+
+| layer | what lives there | responsible for |
 |---|---|---|
-| **Java** | Camera / IMU / GPS, VisionPipeline, Logger, ZMQ | sensors, inference, UI, bag I/O |
-| **C++** | `AdasApp`, `Planner`, `Control`, `Platform`, calibration, … | algorithms and actuation |
-| **Python** | vis, latency, sweeps, MetaDrive, `pyadas` | analysis and host-sim |
+| **Java** | camera, IMU, GPS, `VisionPipeline`, logger, ZMQ | sensors, running the network, UI, writing bags |
+| **C++** | `AdasApp`, `Planner`, `Control`, `Platform`, localization, calibration | every algorithm, and driving the car |
+| **Python** | bag viewer, `tools/latency.py`, parameter sweeps, MetaDrive, `pyadas` | analysis and simulation on a computer |
 
-**Design rule:** lateral algorithms live in C++. Python either analyzes a bag or drives the **same** native code through `pyadas` (`publish → step → pop_messages`). That keeps lab sweeps honest relative to the phone.
+The main rule: **all algorithms are written in C++, and only there**. Python never re-implements a
+controller — it either reads a bag or runs the *same* C++ code through the `pyadas` module (feed data →
+step → collect results). The controller itself sees only two inputs, a path polyline in the car's frame and
+a speed, and cannot tell whether they came from the live camera, a recording or the simulator — so a
+parameter sweep on a laptop means exactly what it would mean on the phone, and most of this book's work
+happens on recordings, with no car needed.
 
-The C++ side splits the lateral loop three ways on purpose — `Planner` decides *what shape to drive*,
-`Control` decides *what command produces it*, `Platform` puts that command on the bus and is the only one
-that knows the car is a Volkswagen. Adding a second make (Toyota TSS2) changed no line of the first two;
-`docs/PORTING.md` is the procedure.
+Inside the C++, control is split into three services, each answering its own question:
 
-Next in this part: [Middleware](./Middleware.md) (native bus) → [Java layer](./JavaLayer.md) (camera /
-inference / ZMQ) → [Pipeline](./Pipeline.md) (frame → HCA). Also [FCW / AEB / LDW](../Safety/Warnings.md) for
-warnings without actuation.
+- `Planner` — *what trajectory to drive*: a curvature and a speed plan;
+- `Control` — *what command produces it*: a steering torque and an acceleration;
+- `Platform` — *how to put the command on the bus*. This is the only service that knows the car is a
+  Volkswagen: CAN addresses, counters, checksums and the panda's safety model live here and nowhere else.
 
-## How this was built, in the order it was built
+The interface between `Control` and `Platform` has seventeen methods and, today, one implementation — the
+VW MQB platform with its seventeen car models. A second make would change neither `Planner` nor `Control`
+(`docs/PORTING.md` describes the procedure). The book's parts follow the same cut: Vision → Localization →
+Planner → Control → Platform.
 
-The layer table above is what the system looks like now. It is not the order anyone would build it in, and
-following the table as a plan is how people get stuck. The order that works — and the order this book
-follows — is to close a loop as early as possible and then improve one link at a time.
+Everything is configured by one file, `app/src/main/assets/config.json`: which car (`vehicle.name`), which
+controller steers (`vehicle.lane_keep_controller`: `pp` or `fp`), which runner executes the network
+(`vision.model_runner`), whether to take the longitudinal axis (`vehicle.long_control`). Each key is
+introduced in the chapter where it matters, not listed here.
 
-| stage | what you can do at the end of it | what you cannot yet |
-|---|---|---|
-| 1. bag replay | run the real C++ lane-keep code on recorded frames | trust the numbers, since the recording came from a different controller |
-| 2. sensors on the phone | see live lanes, a live path, live latency | steer |
-| 3. a native bus | services that talk without knowing about each other | know why something arrived late |
-| 4. Panda, receive only | see the car's speed, steering angle, and whether HCA is even allowed | send anything |
-| 5. Panda, transmit | actually steer, with the panda's safety model in the way | know whether it steered *well* |
-| 6. measurement | answer that question with a bag and a script | stop, because now the real work starts |
+One habit this book insists on: measure before you touch code. On one real drive the car did not steer at
+all while the app logged no error — the panda was sending a 57-byte health packet where the code expected
+58, so every field after the third, the "controls allowed" flag among them, was read from the wrong offset.
+No amount of controller reading would have found that; comparing two independent measurements of the same
+thing found it in an evening, and the [Bags](../Logging/Bags.md) chapter teaches exactly that skill.
 
-Walked with an instructor, the same table is the safe bring-up order for a new phone, car, or student —
-each stage adds one irreversible thing, and each has a check *before* the next: stage 2 wants stable
-overlays and sane latency (`tools/latency.py`), stage 3 wants `middleware/stats` clean under road rates,
-stage 4 wants `vehicle/state` plausible against the dashboard, and stage 5 is one line here and a whole
-document in practice — `docs/PREDRIVE.md`, which fixes the drive's one question *before* looking at the
-data. On-road work is supervised, always.
-
-Stage 6 is where a course usually ends and where this project spends most of its time. Two illustrations of
-why, both from real runs:
-
-* the car did not steer for an entire drive, and the app logged nothing wrong. The panda was reporting a
-  57-byte health packet where the code expected 58, so every field after the third was read from the wrong
-  offset — including `controls_allowed`;
-* the first drive with longitudinal actuation enabled worked exactly as designed and was still a
-  regression: the plan asked for a set speed 4.8 m/s below the current one, all drive, and the bus
-  collected 715 button presses in 28 minutes.
-
-Neither is a control-theory problem. Both were found by comparing two independent measurements, which is
-what [Bags](../Logging/Bags.md) teaches.
-
-```python
-# The contract that makes stage 1 possible, and why it is worth building first: the controller cannot tell
-# where its path came from.
-def lane_keep_step(path_xy, speed_ms):
-    """Stand-in for the real service: it sees a polyline and a speed. Nothing else."""
-    x = [p[0] for p in path_xy]
-    y = [p[1] for p in path_xy]
-    # Curvature of a quadratic fit at the vehicle, the same quantity the real feedforward uses.
-    n = len(x)
-    sx = sum(x); sxx = sum(v * v for v in x); sxxx = sum(v ** 3 for v in x)
-    sxxxx = sum(v ** 4 for v in x)
-    sy = sum(y); sxy = sum(a * b for a, b in zip(x, y)); sxxy = sum(a * a * b for a, b in zip(x, y))
-    # Solve the 3x3 normal equations for y = a x^2 + b x + c
-    import numpy as np
-    A = np.array([[sxxxx, sxxx, sxx], [sxxx, sxx, sx], [sxx, sx, n]], dtype=float)
-    a, b, c = np.linalg.solve(A, np.array([sxxy, sxy, sy], dtype=float))
-    return {"cte_m": float(c), "epsi_rad": float(b), "kappa": float(2 * a), "speed": speed_ms}
-
-live = [(i * 1.5, 0.5 * 0.004 * (i * 1.5) ** 2 + 0.20) for i in range(20)]     # from the camera
-replay = list(live)                                                             # from a bag
-simulated = list(live)                                                          # from MetaDrive
-
-for name, path in (("live", live), ("bag replay", replay), ("simulator", simulated)):
-    out = lane_keep_step(path, 15.0)
-    print(f"{name:>11}: cte {out['cte_m']:+.3f} m, kappa {out['kappa']:.4f} 1/m")
-print("\nIdentical, by construction. That is what lets a lab sweep mean something.")
-```
-
-## Configuration you will touch
-
-`app/src/main/assets/config.json` (optional override in app `filesDir`).
-
-Vehicle knobs (`vehicle.*`):
-
-```json
-"lane_keep_controller": "fp",
-"lat_use_vehicle_model": true,
-"tire_stiffness_factor": 0.64,
-"fp_steer_delay_s": 0.35
-```
-
-Feature flags (`nodes.*`), e.g. `"vision_traffic": false`, `"phone_stats": true`,
-`"safety_warn": true`.
-
-| key | purpose |
-|---|---|
-| `vision.model_runner` | `thneed` (GPU, default) \| `onnx` (fallback) |
-| `vehicle.name` | which `CarPlatform` is instantiated |
-| `vehicle.lane_keep_controller` | `pp` \| `fp` |
-| `vehicle.lat_use_vehicle_model` | $\kappa\to$ SWA via understeer model |
-| `vehicle.fp_steer_delay_s` | state lookahead for pipeline delay |
-| `nodes.vision_traffic` | YOLO; keep `false` when measuring lane-keep |
-| `nodes.phone_stats` | 1 Hz CPU / thermal into the bag |
-
-## Typical student workflow
-
-1. Record or download a session under `adas_logs/...`.
-2. Run `tools/latency.py`, bag visualizer, PlotJuggler — establish Hz / e2e.
-3. Sweep parameters (`bag/bag_config_sweep.py`) at a **fixed** assumed vision latency.
-4. Only then open `services/planner.cpp` / `lateral/pp_planner.cpp` with the Control chapters in hand.
-
-```{tip}
-If CTE looks terrible, ask three questions in order: Is vision ≥ ~9 Hz? Is $y$ / `steer_sign` consistent? Is calib sane? Gains come fourth.
-```
-
-<!-- next-chapter -->
----
-
-**Next:** [Middleware](./Middleware.md)

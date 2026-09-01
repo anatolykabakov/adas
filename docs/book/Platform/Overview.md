@@ -139,6 +139,25 @@ HCA_01: torque magnitude and sign split across a 14-bit field and a sign bit, wi
 and CRC the EPS validates.
 ```
 
+## Encode: the acceleration frames
+
+`Control` publishes the acceleration in the same `SteerCommand` message as the torque. The platform gates
+it on the panda's `controls_allowed` — there is no always-on longitudinal the way there is always-on
+lateral — and the VW port lays it into `ACC_06` (0x122, for the motor), `ACC_07` (0x12E, for the ESP)
+at 50 Hz and `ACC_02` (0x30C, the cluster) at 16.7 Hz. The field `ACC_Sollbeschleunigung_02` carries the
+request in 0.005 m/s² steps from −7.22; **3.01** is the bus's word for "nothing asked", and the panda
+checks that `ACC_Folgebeschl` reads exactly 3.02 in every `ACC_07`. Counter and CRC follow `HCA_01`'s
+recipe, with per-message secret tables (`ACC_06` and `ACC_07` are the two MQB frames whose secret varies
+with the counter).
+
+One flag ties it together: `FLAG_VOLKSWAGEN_LONG_CONTROL` in the panda's safety parameter. With it the
+panda accepts our three frames **and stops forwarding the radar's own** — the takeover is one switch, so
+`vehicle.long_control: true` sets both the flag and the frames, and off leaves the stock ACC untouched.
+What the flag needs on the car is honest to state: a panda at the gateway harness (at the camera harness
+the radar's frames never pass through it), a car with an ACC radar for the motor and ESP to be coded for
+the request, and a panda firmware built with `ALLOW_DEBUG`. Our own Golf has no radar, which is why this
+chapter's road data comes from a simulator.
+
 ## Allowed: the panda supervisor
 
 A correctly built frame still must not leave unless the car is on and the panda is in the right safety

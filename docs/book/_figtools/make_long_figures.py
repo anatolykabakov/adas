@@ -122,6 +122,9 @@ st=np.where(v>1.0,1,np.where(t<9,2,3)); st[t<0.5]=1
 axs[1].plot(t,v,"tab:blue",lw=2,label="v_ego"); ax2=axs[1].twinx(); ax2.step(t,st,"tab:red",lw=1.5,where="post"); ax2.set_yticks([1,2,3]); ax2.set_yticklabels(["pid","stopping","starting"],color="tab:red",fontsize=8)
 axs[1].set_xlabel("t [s]"); axs[1].set_ylabel("v [m/s]"); axs[1].grid(alpha=.3); axs[1].set_title("pid → stopping (v<1, plan at rest) → starting (plan goes) → pid (v>1)",fontsize=9)
 save(fig,"Planner/figures/long_control_law.png")
+import shutil
+for t in (EN, EN.parent/"book_ru"):
+    (t/"Control/figures").mkdir(parents=True, exist_ok=True); shutil.copy(t/"Planner/figures/long_control_law.png", t/"Control/figures/long_control_law.png")
 
 # === sim results table figure ===
 scen=["cruise","lead 15 m/s","lead brakes 20→5","lead stops","stopped car"]

@@ -242,4 +242,4 @@ assert ff_cnm(5.0, 6.0) < T_FRICTION / 3, "at city speed the feedforward is buri
 <!-- next-chapter -->
 ---
 
-**Дальше:** [Платформа](../Platform/Overview.md)
+**Дальше:** [Продольное управление](./LongControl.md)

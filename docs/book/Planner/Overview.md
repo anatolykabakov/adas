@@ -19,10 +19,12 @@ and the failure is the interesting part:
 | [Bicycle model](./BicycleModel.md) | Planner | $\kappa = \tan\delta / L$ — pure geometry | the tyres do not go exactly where they point: real curvature is **0.54** of geometric at 22 m/s |
 | [Pure Pursuit](./PurePursuit.md) | Planner | steer at one look-ahead point | one point cannot represent a path whose curvature changes inside the look-ahead |
 | [Lane path](./LanePath.md) | Planner | fuse two lane lines and the model plan into one reference | lines lie when they vanish; the plan cuts arcs; σ decides which you get |
-| [MPC and fp](./MPC_and_FP.md) | Planner | optimise a short future trajectory | the horizon costs money, the plan has a bias, and on tight arcs the actuator saturates |
+| [MPC as a toy](./MpcToy.md) | Planner | optimise a short future trajectory along the path, seven steps | the toy has no notion of time — and so no notion of the actuator's delay |
+| [fp](./MPC_and_FP.md) | Planner | the time-domain MPC with delay compensation | the horizon costs money, the plan has a bias, and on tight arcs the actuator saturates |
 | [Longitudinal planner](./Longitudinal.md) | Planner | a jerk-limited speed plan behind the lead or at the set speed | a P law on the gap rings; the curvature preview reads path noise as a bend; the lead is vision, not radar |
 | [Vehicle model](../Control/VehicleModel.md) | Control | κ → δ through tyre slip and delay | the slip coefficient varies with speed, 0.97 → 0.54 |
 | [Angle control](../Control/AngleControl.md) | Control | δ → torque against the rack | friction eats P, the panda rate limiter winds the integrator, feedforward is single-digit cNm |
+| [Longitudinal control](../Control/LongControl.md) | Control | speed plan → acceleration, read 0.15 s ahead | a P law on speed creeps at a stop; the stock ACC's hold flag does not exist once we own the axis |
 | [Platform](../Platform/Overview.md) | Platform | torque → a legal HCA_01, if the panda allows | counter, checksum secret, safety mode, ignition debounce |
 
 ## What goes in, what comes out
@@ -37,7 +39,7 @@ normalised torque for `HCA_01` → EPS.
 | `fp` | **default on road** — time domain, delay compensation, vehicle model |
 
 A third, path-domain MPC (`vp`, VisionPilot) was the middle step between the two and was deleted on
-2026-08-21 once `fp` had displaced it on the road; [MPC and fp](./MPC_and_FP.md) still builds its
+2026-08-21 once `fp` had displaced it on the road; [MPC as a toy](./MpcToy.md) still builds its
 seven-step mental model, because it is the clearest way to learn what any MPC does.
 
 ## Why one number is worth carrying through the whole loop
@@ -144,10 +146,12 @@ perception work begins.
 1. [Bicycle model](./BicycleModel.md) — $\delta$, the instantaneous centre of rotation, $\kappa = \tan\delta/L$.
 2. [Pure Pursuit](./PurePursuit.md) — the one-step geometric law, and what the look-ahead hides.
 3. [Lane path](./LanePath.md) — where the reference the controllers track actually comes from.
-4. [MPC and fp](./MPC_and_FP.md) — horizon optimisation, cost weights, and the road defaults.
+4. [MPC as a toy](./MpcToy.md) and [fp](./MPC_and_FP.md) — horizon optimisation, cost weights, delay compensation, and the road defaults.
+5. [Longitudinal planner](./Longitudinal.md) — the speed plan behind the lead or at the set speed.
 
 Then the **Control** part turns that plan into torque: [Vehicle model](../Control/VehicleModel.md)
-(why kinematics lies above 15 m/s) and [Angle control](../Control/AngleControl.md) (the inner PID).
+(why kinematics lies above 15 m/s), [Angle control](../Control/AngleControl.md) (the inner PID) and
+[Longitudinal control](../Control/LongControl.md) (the speed plan into an acceleration).
 
 ```{tip}
 The one diagnostic rule worth memorising: **bad vision rate or bad calibration is not a reason to raise

@@ -15,18 +15,23 @@ parts:
 - caption: Localization
   chapters:
   - file: Localization/Overview.md
+  - file: Localization/GyroFusion.md
+  - file: Localization/Gps.md
+  - file: Localization/ParamsLearner.md
 - caption: Planner
   chapters:
   - file: Planner/Overview.md
   - file: Planner/BicycleModel.md
   - file: Planner/PurePursuit.md
   - file: Planner/LanePath.md
+  - file: Planner/MpcToy.md
   - file: Planner/MPC_and_FP.md
   - file: Planner/Longitudinal.md
 - caption: Control
   chapters:
   - file: Control/VehicleModel.md
   - file: Control/AngleControl.md
+  - file: Control/LongControl.md
 - caption: Platform
   chapters:
   - file: Platform/Overview.md

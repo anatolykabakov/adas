@@ -55,13 +55,15 @@ the same idea. The order below is therefore also a build order, and what you con
    [Bicycle model](../Planner/BicycleModel.md) — simulate it, try the obvious controller, watch it
    oscillate, fix it with heading; [Pure Pursuit](../Planner/PurePursuit.md) — your own pursuit on a
    polyline, the trade-off measured; [Lane path](../Planner/LanePath.md) — fuse two noisy lines and the
-   model plan into one reference, meet σ and its lies; [MPC / fp](../Planner/MPC_and_FP.md) — a
-   path-domain MPC as a teaching toy, then the shipped **time-domain** `fp`, closed-loop in MetaDrive;
+   model plan into one reference, meet σ and its lies; [MPC as a toy](../Planner/MpcToy.md) — a
+   path-domain MPC in seven steps; [fp](../Planner/MPC_and_FP.md) — the shipped **time-domain** MPC with
+   delay compensation, closed-loop in MetaDrive;
    [Longitudinal planner](../Planner/Longitudinal.md) — a P law on the gap that rings, then upstream's
    jerk-limited MPC on the same cost in numpy, closed-loop against a scripted lead. **Control** (what command):
    [Vehicle model](../Control/VehicleModel.md) — sabotage the toy with slip and delay, then measure
    $G(v)$ on the real car; [Angle control](../Control/AngleControl.md) — the inner loop against a toy
-   rack: friction, the panda rate limiter, the winding integrator. **Platform** (onto the bus):
+   rack: friction, the panda rate limiter, the winding integrator; [Longitudinal control](../Control/LongControl.md) —
+   the speed plan into an acceleration, the stop states. **Platform** (onto the bus):
    [Platform](../Platform/Overview.md) — decode CAN through a DBC, build a legal HCA_01 with counter and
    checksum secret, and the panda supervisor that gates it.
 2. [Vision](../Vision/Overview.md) — build a reference path from two noisy lines, meet σ and its lies;
@@ -72,8 +74,9 @@ the same idea. The order below is therefore also a build order, and what you con
    same services running on your laptop through `pyadas`.
 4. [Bags](../Logging/Bags.md) — build the format in forty lines, **record your own bag** (no car
    needed), run your own controller on your own frames.
-5. [Localization](../Localization/Overview.md) — an estimator built one sensor at a time, then repeated
-   on your own recording.
+5. Localization, one sensor per chapter: [wheels and a steering angle](../Localization/Overview.md),
+   [the gyro and the mistake worth studying](../Localization/GyroFusion.md), [GPS](../Localization/Gps.md),
+   [learning the car's parameters](../Localization/ParamsLearner.md) — then repeated on your own recording.
 6. [FCW / AEB / LDW](../Safety/Warnings.md), [Calibration](../Calibration/Overview.md) →
    [Latency](../Latency/Overview.md).
 7. [Exercises](../Exercises/StudentProjects.md) — capstones; the small labs live inside the chapters.

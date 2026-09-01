@@ -168,4 +168,4 @@ error.
 <!-- next-chapter -->
 ---
 
-**Next:** [MPC and fp](./MPC_and_FP.md)
+**Next:** [MPC as a toy](./MpcToy.md)

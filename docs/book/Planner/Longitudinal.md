@@ -48,6 +48,45 @@ for v in (10, 20, 30):
 assert abs(desired_gap(20, 20) - (T_FOLLOW * 20 + STOP_DISTANCE)) < 1e-9
 ```
 
+Spelled out, the first function is
+
+$$
+d_{\mathrm{safe}}(v_{\mathrm{ego}}) = \underbrace{\frac{v_{\mathrm{ego}}^{2}}{2\,a_{\mathrm{brake}}}}_{\text{braking distance}}
+\;+\; \underbrace{t_{\mathrm{follow}}\, v_{\mathrm{ego}}}_{\text{time gap}}
+\;+\; \underbrace{d_{\mathrm{stop}}}_{\text{standstill margin}},
+\qquad a_{\mathrm{brake}} = 2.5\ \mathrm{m/s^2},\; t_{\mathrm{follow}} = 1.45\ \mathrm{s},\; d_{\mathrm{stop}} = 6\ \mathrm{m}.
+$$
+
+* **Braking distance** $v^2 / (2a)$ comes from $v^2 - v_0^2 = 2as$ with $v = 0$: the road a car covers while
+  decelerating from $v_{\mathrm{ego}}$ to rest at a *comfortable* $2.5\ \mathrm{m/s^2}$ — not the tyres' limit,
+  the passengers'. At 20 m/s that is 80 m; at 30 m/s, 180 m — the term that makes the curve quadratic.
+* **Time gap** $t_{\mathrm{follow}} \cdot v_{\mathrm{ego}}$ is the road covered in 1.45 s at the current speed:
+  the reaction time the plan reserves for the human and for the actuator, and the part that scales the
+  gap with speed the way a driver feels it — 29 m at 20 m/s.
+* **Standstill margin** $d_{\mathrm{stop}}$ is what must remain between the bumpers once both cars stand:
+  6 m, so that a stop never ends nose-to-tail.
+
+The second function is the same physics seen from the lead's side:
+
+$$
+d_{\mathrm{stopped}}(v_{\mathrm{lead}}) = \frac{v_{\mathrm{lead}}^{2}}{2\,a_{\mathrm{brake}}} .
+$$
+
+A lead moving at $v_{\mathrm{lead}}$ will not stop where it is now: braking at the same comfortable $a_{\mathrm{brake}}$
+it comes to rest $d_{\mathrm{stopped}}$ further down the road. That is why the MPC's *obstacle* is the lead's
+position **plus** $d_{\mathrm{stopped}}$ — the point where it could stand, not where it is — and why the plan
+may sit closer behind a moving car than behind a wall. Subtracting one from the other gives the gap the
+plan settles at:
+
+$$
+d_{\mathrm{gap}}(v_{\mathrm{ego}}, v_{\mathrm{lead}}) = d_{\mathrm{safe}}(v_{\mathrm{ego}}) - d_{\mathrm{stopped}}(v_{\mathrm{lead}})
+= \frac{v_{\mathrm{ego}}^{2} - v_{\mathrm{lead}}^{2}}{2\,a_{\mathrm{brake}}} + t_{\mathrm{follow}}\, v_{\mathrm{ego}} + d_{\mathrm{stop}} .
+$$
+
+At equal speeds the quadratic terms cancel and $d_{\mathrm{gap}} = 1.45\,v + 6$: 35 m at 20 m/s. Closing on
+a slower lead, the difference of squares is what demands the extra room — at 25 m/s behind a 15 m/s car it
+adds $(625 - 225)/5 = 80$ m, which is exactly the braking the sim run at the end of the chapter shows.
+
 Two things to hold. First, the **safe distance** is a stopping distance — it grows with $v^2$, and at 30 m/s
 it is 230 m. Second, a lead that is *moving* buys you its own stopping distance back, so behind a car at your
 speed the gap collapses to the linear part: $1.45\,v + 6$. The whole planner is a way of living between
@@ -114,6 +153,20 @@ $$
 It is integrated over **twelve intervals on a quadratic grid** $t_i = 10\,(i/12)^2$: 0.07 s at the
 wheel, 1.6 s at the end of a 10 s horizon. Near-term decisions get resolution, the far end gets reach.
 
+With the jerk held constant over an interval of length $\Delta t$ the three equations integrate exactly —
+each is the antiderivative of the one below it:
+
+$$
+a_{k+1} = a_k + j_k\,\Delta t,\qquad
+v_{k+1} = v_k + a_k\,\Delta t + \tfrac{1}{2}\, j_k\,\Delta t^{2},\qquad
+x_{k+1} = x_k + v_k\,\Delta t + \tfrac{1}{2}\, a_k\,\Delta t^{2} + \tfrac{1}{6}\, j_k\,\Delta t^{3}.
+$$
+
+These are the school kinematics with one more level: $\tfrac12 a t^2$ becomes $\tfrac16 j t^3$. Because the
+plant is linear, the whole 10 s trajectory is a *linear* function of the twelve jerks — which is what makes
+the solve below cheap: only the cost is nonlinear, never the physics. A worked node: from $v = 20$, $a = 0$,
+one interval of 1 s at $j = -1\ \mathrm{m/s^3}$ ends at $a = -1$, $v = 19.5$, $x = 19.83$ m.
+
 ```python
 N = 12
 T = np.array([10.0 * (i / N) ** 2 for i in range(N + 1)])
@@ -152,9 +205,23 @@ r_{\mathrm{obs},i} = \frac{(x_{\mathrm{obs},i} - x_i) - d_{\mathrm{safe}}(v_i)}{
 J = \sum_i \Delta t_i \Big[\,3\,r_{\mathrm{obs},i}^2 + 5\,j_i^2 + 200\,w_i\,(a_i - a^{\mathrm{prev}}_i)^2 + \text{penalties}\Big].
 $$
 
-Dividing by $v+10$ is upstream's normalisation: a 10 m error matters more at 5 m/s than at 30. The
-"obstacle" $x_{\mathrm{obs}}$ is where the lead's *stopping point* will be — its predicted position plus
-`stopped_equivalence` — so the plan aims at $g = 0$: exactly the safe distance from where the lead could stop.
+Reading the cost term by term:
+
+* $r_{\mathrm{obs},i}$ is the **gap error in units of seconds**: the numerator $g = (x_{\mathrm{obs}} - x) - d_{\mathrm{safe}}(v)$
+  is how many metres the ego is short of (or beyond) the safe distance, and dividing by $v + 10$ turns metres
+  into roughly "seconds of headway" — a 10 m error is a lot at 5 m/s (0.67 s) and little at 30 m/s (0.25 s).
+  The $+10$ keeps the term finite at standstill. The plan aims at $g = 0$: exactly the safe distance from where
+  the lead could stop, because $x_{\mathrm{obs}}$ is the lead's position **plus** $d_{\mathrm{stopped}}$.
+* $5\,j_i^2$ prices **jerk**: comfort is the derivative of acceleration, and the square makes one big jolt
+  dearer than two small ones — the reason the plan below ramps its braking instead of stepping it.
+* $200\,w_i\,(a_i - a^{\mathrm{prev}}_i)^2$ says **do not contradict what you asked a tick ago**, with $w_i$
+  fading from 1 at $t \le 1$ s to 0 at 2 s: the near future is committed, the far future is free to change.
+  It is what stops the request from jittering between re-solves.
+* $\Delta t_i$ in front of every stage is acados' **integral** interpretation of the sum — a 1.6 s stage
+  counts 23 times a 0.07 s one — without which the same weights give a plan three times gentler.
+* The **penalties** are one-sided squares: $10^6\,\max(0, a_{\min} - a_i)^2$ and the like — a wall the solver
+  may lean on but not cross — and $100\,\max(0, -h_{\mathrm{danger}})^2$ on entering $0.75\,d_{\mathrm{safe}}$, a
+  softer wall that says "this close only when it cannot be helped".
 
 ```python
 def residuals(u, v0, a0, x_obs, a_min=ACCEL_MIN, a_max=1.2):
@@ -212,6 +279,20 @@ assert np.all(x < x_lead), "the plan must never cross the lead"
 assert a.min() >= ACCEL_MIN - 0.3
 ```
 
+The lead's own future is extrapolated with a decaying acceleration:
+
+$$
+a_{\mathrm{lead}}(t) = a_{\mathrm{lead},0}\, e^{-\tau t^{2}/2},\qquad
+v_{\mathrm{lead}}(t) = \max\!\Big(0,\ v_{\mathrm{lead},0} + \int_0^{t} a_{\mathrm{lead}}\,\mathrm{d}t\Big),\qquad
+\tau = 1.5\ \mathrm{s^{-2}} .
+$$
+
+A car that is braking now will not brake forever, and the Gaussian decay says so gracefully: the total
+speed a lead can lose is $\int_0^\infty a_0 e^{-\tau t^2/2}\,\mathrm{d}t = a_0\sqrt{\pi / 2\tau} \approx 1.02\,a_0$ —
+braking at $-3\ \mathrm{m/s^2}$ costs it about 3 m/s in total, most of it inside the first second. The
+$\max(0, \cdot)$ is the one non-physical fact the model needs: cars do not reverse. The snippet's lead at
+15 m/s braking at −3 ends the horizon near 12 m/s, not stopped.
+
 ```{figure} figures/long_mpc_plan.png
 ---
 width: 100%
@@ -255,6 +336,20 @@ print(f"from 10 m/s toward a 25 m/s set speed: a(0.6 s) = {a[3]:.2f}, a(2.5 s) =
 assert 0.7 < a[6] <= 1.25, "cruising accelerates at the ceiling, not above it"
 ```
 
+In symbols, with $T_i$ the grid times and $\Delta T_i$ their differences:
+
+$$
+v_{c,i} = \mathrm{clip}\big(v_{\mathrm{cruise}},\ v_{\mathrm{ego}} + 1.05\,a_{\min} T_i,\ v_{\mathrm{ego}} + 1.05\,a_{\max} T_i\big),\qquad
+x_{\mathrm{cruise},i} = \sum_{k \le i} v_{c,k}\,\Delta T_k + d_{\mathrm{safe}}(v_{c,i}) .
+$$
+
+The clip is the phantom car's honesty: it may only be where the ego could be after accelerating at the
+comfort ceiling ($1.2\ \mathrm{m/s^2}$, plus 5 % of slack so the bound is never active at the start) — otherwise
+the obstacle term would demand an acceleration the bounds forbid and the solver would start in the penalty.
+Adding $d_{\mathrm{safe}}(v_c)$ puts the obstacle a full safe distance ahead of that phantom, so following it
+with $g = 0$ *is* driving at the set speed. At $v_{\mathrm{ego}} = 10$, set 25: $v_c$ rises as $10 + 1.26\,T_i$
+until it reaches 25 at $T \approx 11.9$ s — beyond the horizon, so the whole 10 s plan is a ramp at the ceiling.
+
 ```{figure} figures/long_cruise_obstacle.png
 ---
 width: 95%
@@ -263,6 +358,28 @@ No lead: the set speed is a phantom car; the plan chases it at the speed-depende
 from rest, 0.6 at 40 m/s) and settles on its speed.
 ```
 
+Two more formulas live around the MPC. The in-turn limit shares one acceleration budget between the axes:
+
+$$
+a_y = v^{2}\kappa = \frac{v^{2}\,\delta_{\mathrm{wheel}}}{\mathrm{steer\_ratio}\cdot L},\qquad
+a_x \le \sqrt{a_{\mathrm{total}}^{2} - a_y^{2}},\qquad a_{\mathrm{total}} = 1.7 \to 3.2\ \mathrm{m/s^2}\ (20 \to 40\ \mathrm{m/s}).
+$$
+
+$a_y = v^2\kappa$ is centripetal acceleration with the bicycle model's $\kappa = \tan\delta/L \approx \delta/L$ and
+the wheel-angle-to-road-wheel ratio folded in; the square root is Pythagoras on the friction circle — the
+tyre has one total grip, and what the turn uses the throttle cannot. At 15 m/s and 10° of wheel:
+$a_y = 225 \cdot 0.1745 / (15.6 \cdot 2.636) \approx 0.95$, so $a_x \le \sqrt{1.7^2 - 0.95^2} \approx 1.4\ \mathrm{m/s^2}$
+— not binding. At 20 m/s and 20°: $a_y \approx 3.4$, the budget is gone, no acceleration this tick.
+
+The curvature preview turns a bend ahead into a speed cap by the same centripetal relation:
+
+$$
+v_{\mathrm{curv}} = \sqrt{\frac{a_{\mathrm{lat,max}}}{\kappa_{\mathrm{ahead}}}} = \sqrt{a_{\mathrm{lat,max}}\, R},\qquad a_{\mathrm{lat,max}} = 1.8\ \mathrm{m/s^2} .
+$$
+
+$R = 150$ m gives 16.4 m/s; $R = 250$ m, the deadband edge, gives 21.2 m/s — which is why the cap never acts
+on the highway track's 391–699 m arcs at 25 m/s (their $a_y$ is 0.9–1.6).
+
 The planner around the MPC (`long_planner.cpp`) does four more things upstream does: it filters the
 desired speed with a 2 s time constant and integrates it forward by the plan, it bounds the acceleration
 by speed and by the **turn** (a 20 m/s bend at 60° of wheel leaves almost nothing longitudinal), it
@@ -270,65 +387,6 @@ believes a model lead only above `prob 0.5` and only when it is on our path, and
 the plan has predicted a crash inside 5 s for three ticks running. This stack adds one thing of its own:
 the curvature preview on the fused path caps the *set speed* — never the current one — so a bend ahead is
 approached, not discovered.
-
-## Build 4: the control law — read the plan where the actuator will be
-
-The plan is a speed trajectory on the model's 33-point grid, 17 points of it (2.5 s) handed to `Control`.
-The car's motor and brake controllers answer an acceleration request about 0.15 s late, so the law reads
-the plan **0.15 s ahead** and turns the speed slope over that delay into the acceleration to ask for:
-
-```python
-T_MODEL = np.array([10.0 * (i / 32) ** 2 for i in range(33)])[:17]
-DELAY = 0.15
-
-def long_control(speeds, accels, v_ego, t_since_plan=0.0, kp=0.1):
-    v_now = np.interp(t_since_plan, T_MODEL, speeds)
-    a_now = np.interp(t_since_plan, T_MODEL, accels)
-    v_target = np.interp(DELAY + t_since_plan, T_MODEL, speeds)
-    a_target = 2.0 * (v_target - v_now) / DELAY - a_now       # the slope over the delay, minus what we have
-    accel = kp * (v_target - v_ego) + a_target                 # VW: kp 0.1, ki 0, kf 1
-    return float(np.clip(accel, ACCEL_MIN, ACCEL_MAX)), v_target, a_target
-
-speeds = np.maximum(0.0, 20.0 - 1.5 * T_MODEL)
-accels = np.full(17, -1.5)
-cmd, v_t, a_t = long_control(speeds, accels, v_ego=20.0)
-print(f"braking plan at -1.5: v_target {v_t:.2f} m/s, feedforward {a_t:.2f}, command {cmd:.2f} m/s^2")
-assert abs(a_t + 1.5) < 1e-9, "on a plan of constant acceleration the slope gives back that acceleration"
-```
-
-```{figure} figures/long_control_law.png
----
-width: 100%
----
-Left: the plan read at the actuator delay. Right: the four states — `pid` while moving, `stopping` once
-the plan is at rest below 1 m/s (the request ramps to −2 m/s² and holds), `starting` when the plan leaves
-(+1 m/s² until 1 m/s), then `pid` again.
-```
-
-The **state machine** is what makes a stop a stop: below 1 m/s with a plan at rest the law leaves the
-proportional world and ramps to a hold of −2 m/s² at 0.8 m/s³ — upstream's `stopAccel` and
-`stoppingDecelRate` — because a P law on a speed of 0.3 m/s would creep. A subtlety that cost an evening:
-upstream's `stay_stopped` reads the *stock ACC's* standstill flag, which does not exist once we own the
-axis; feeding the plain speed there made `starting` and `stopping` trade places every tick.
-
-## The platform: three frames and one flag
-
-`Control` publishes the acceleration in the same `SteerCommand` message as the torque. The platform gates
-it on the panda's `controls_allowed` — there is no always-on longitudinal the way there is always-on
-lateral — and the VW port lays it into `ACC_06` (0x122, for the motor), `ACC_07` (0x12E, for the ESP)
-at 50 Hz and `ACC_02` (0x30C, the cluster) at 16.7 Hz. The field `ACC_Sollbeschleunigung_02` carries the
-request in 0.005 m/s² steps from −7.22; **3.01** is the bus's word for "nothing asked", and the panda
-checks that `ACC_Folgebeschl` reads exactly 3.02 in every `ACC_07`. Counter and CRC follow `HCA_01`'s
-recipe, with per-message secret tables (`ACC_06` and `ACC_07` are the two MQB frames whose secret varies
-with the counter).
-
-One flag ties it together: `FLAG_VOLKSWAGEN_LONG_CONTROL` in the panda's safety parameter. With it the
-panda accepts our three frames **and stops forwarding the radar's own** — the takeover is one switch, so
-`vehicle.long_control: true` sets both the flag and the frames, and off leaves the stock ACC untouched.
-What the flag needs on the car is honest to state: a panda at the gateway harness (at the camera harness
-the radar's frames never pass through it), a car with an ACC radar for the motor and ESP to be coded for
-the request, and a panda firmware built with `ALLOW_DEBUG`. Our own Golf has no radar, which is why this
-chapter's road data comes from a simulator.
 
 ## Close the loop in MetaDrive
 
@@ -383,7 +441,6 @@ Five encounters in MetaDrive: no contact, the panda envelope never touched, stan
 * Toy 1 reproduces: the gap-only law dips closer to the lead than the damped one;
 * the MPC snippet brakes within 1.2 s behind a braking lead and never plans across it;
 * the cruise snippet accelerates at the ceiling, not above it;
-* the control-law snippet gives back a constant plan acceleration exactly;
 * one sentence each on why the set speed is an obstacle and why `stay_stopped` must not read the speed.
 
 ## Exercise
@@ -395,7 +452,8 @@ Five encounters in MetaDrive: no contact, the panda envelope never touched, stan
 
 ## For depth
 
-* [MPC and fp](./MPC_and_FP.md) — the lateral optimiser; the horizon idea is the same, the plant is not.
+* [Longitudinal control](../Control/LongControl.md) — the law that turns this plan into an acceleration, and its stop states.
+* [fp](./MPC_and_FP.md) — the lateral optimiser; the horizon idea is the same, the plant is not.
 * [Platform](../Platform/Overview.md) — the frames, counters and the panda supervisor the ACC path shares.
 * [Warnings](../Safety/Warnings.md) — the FCW this planner raises and the one `safety_warn` raises independently.
 
