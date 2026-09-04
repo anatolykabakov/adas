@@ -2,7 +2,7 @@
 
 ## Репозиторий
 
-Склонируйте и соберите — остальное одна команда сделает сама:
+Склонируйте и соберите — всё остальное одна команда сделает сама:
 
 ```bash
 git clone https://github.com/anatolykabakov/adas.git
@@ -12,18 +12,18 @@ cd adas
 
 `<корень репозитория>` в остальной книге — это и есть каталог `adas/`.
 
-**Пререквизиты**, которые сборка предполагает (на чистой Linux/macOS их нужно поставить первыми —
-`scripts/install_dependencies.sh` делает это на Debian/Ubuntu): JDK (17+), Android SDK и NDK
+**Что сборка ожидает уже установленным** (на чистой Linux/macOS это нужно поставить заранее —
+на Debian/Ubuntu за вас это сделает `scripts/install_dependencies.sh`): JDK (17+), Android SDK и NDK
 (`ANDROID_HOME` должен указывать на SDK, где уже есть платформа `compileSdk`), Conan 2 и CMake для C++,
-Python 3.10+ с `numpy`. Всё офлайновое — разбор бегов, симулятор, `pyadas` — требует только Python-части
-и работает **без телефона и машины** (см. [Беги](../Logging/Bags.md), *Запишите собственный бег*, — самый
-короткий путь по железу).
+Python 3.10+ с `numpy`. Всё офлайновое — разбор бегов, симулятор, `pyadas` — обходится одной Python-частью
+и работает **без телефона и машины** (см. [Беги](../Logging/Bags.md), *Запишите собственный бег*, — это самый
+короткий путь, не требующий железа).
 
 Моделей в репозитории нет. `scripts/fetch_models.sh` (сборка запускает его сама) скачивает fp16-supercombo
-из релиза comma и выводит из неё fp32- и `.thneed`-варианты, сверяя каждый sha256 с
-`scripts/models.manifest`. Запускайте его отдельно, когда нужны только файлы.
+из релиза comma и выводит из неё варианты fp32 и `.thneed`, сверяя каждый sha256 с
+`scripts/models.manifest`. Запускайте его отдельно, если нужны только файлы.
 
-Смотрите также `README.md` в корне репозитория: сборка APK, `run_bag_vis.sh`, `run_sim.sh`, раскладка Java / C++ / скриптов.
+См. также `README.md` в корне репозитория: сборка APK, `run_bag_vis.sh`, `run_sim.sh`, раскладка Java / C++ / скриптов.
 
 ## Сборка книги (HTML)
 
@@ -37,9 +37,9 @@ pip install -r book/requirements.txt
 # Живой сайт: https://anatolykabakov.github.io/adas/ (CI deploy-book на main)
 ```
 
-Кнопка **ENG/RU** сверху переводит на ту же страницу в другой языковой версии. Раскладка `_site` и `_site/ru`
-— это контракт, на который опирается кнопка, а не деталь реализации; скрипт сборки отдельно проверяет, что у
-каждой страницы есть пара, иначе переключатель приводил бы в 404.
+Кнопка **ENG/RU** сверху открывает ту же страницу в другой языковой версии. Раскладка `_site` и `_site/ru`
+— это не деталь реализации, а контракт, на который опирается кнопка; скрипт сборки отдельно проверяет, что у
+каждой страницы есть пара, — иначе переключатель уводил бы в 404.
 
 ## Python для бегов
 
@@ -57,15 +57,15 @@ python3 tools/latency.py /путь/к/adas_logs/СЕССИЯ
 
 [Algorithms for Automated Driving](https://github.com/thomasfermi/Algorithms-for-Automated-Driving)
 
-Рекомендуемый порядок: обзор Lane Detection и Control/PP в AAD → эта книга (Архитектура → Управление → Задержки) → задания A1/B1.
+Рекомендуемый порядок: обзор Lane Detection и Control/PP в AAD → эта книга (Архитектура → Управление → Задержки) → задания A1 и B1.
 
 ## Телефон
 
 * Android arm64, USB OTG и Panda;
-* модели берутся из ассетов APK (`supercombo.onnx`, `supercombo.thneed`); `/sdcard/adas_models/` перекрывает
+* модели берутся из ассетов APK (`supercombo.onnx`, `supercombo.thneed`); каталог `/sdcard/adas_models/` перекрывает
   их, когда нужно проверить другой файл без пересборки;
 * новый телефон: сначала `python3 tools/model_device_probe.py --iters 50` — см. `docs/NEW_PHONE.md`;
-* логи → `/sdcard/adas_logs/…`;
+* логи пишутся в `/sdcard/adas_logs/…`;
 * для учебных измерений: `vision_traffic: false`, `phone_stats: true`.
 
 <!-- next-chapter -->
