@@ -250,7 +250,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -438,22 +438,22 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="adas">
 <h1>Алгоритмы ADAS на телефоне<a class="headerlink" href="#adas" title="Ссылка на этот заголовок">#</a></h1>
-<p>Эта (мини-)книга ведёт вас по стеку <strong>Android ADAS</strong>, который используется в нашем проекте: телефон на лобовом стекле, Panda по USB, Volkswagen MQB (Golf 7) и поперечное удержание полосы через HCA.</p>
+<p>Эта (мини-)книга проведёт вас по стеку <strong>Android ADAS</strong> из нашего проекта: телефон на лобовом стекле, Panda через USB, Volkswagen MQB (Golf 7) и поперечное удержание полосы через HCA.</p>
 <p>Учебная линия следует курсу <a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving (AAD)</a>: <strong>геометрия → модель → алгоритм → измерение на данных</strong>.
-Главы про велосипедную модель и Pure Pursuit используют рисунки и выводы AAD (CC BY 4.0). Архитектура, Supercombo, <code class="docutils literal notranslate"><span class="pre">fp</span></code> / MPC, задержки и работа с бегами — специфика именно этого проекта.</p>
+Главы про велосипедную модель и Pure Pursuit опираются на рисунки и выкладки AAD (CC BY 4.0). Архитектура, Supercombo, <code class="docutils literal notranslate"><span class="pre">fp</span></code> / MPC, задержки и работа с бегами — это уже специфика нашего проекта.</p>
 <section id="id1">
 <h2>Цели курса<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Проработав книгу, вы должны уметь:</p>
+<p>Проработав книгу, вы сможете:</p>
 <ul class="simple">
-<li><p>проследить кадр камеры <span class="math notranslate nohighlight">\(1280\times 720\)</span> до CAN-кадра <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>;</p></li>
-<li><p>объяснить publish/subscribe в Middleware, таймеры и живые параметры;</p></li>
+<li><p>проследить путь кадра камеры <span class="math notranslate nohighlight">\(1280\times 720\)</span> до CAN-кадра <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>;</p></li>
+<li><p>объяснить, как в Middleware устроены publish/subscribe, таймеры и живые параметры;</p></li>
 <li><p>понимать, где кончается Java-обвязка (камера, ORT, ZMQ, беги) и начинаются алгоритмы на C++;</p></li>
 <li><p>отличать угол поворота колеса <span class="math notranslate nohighlight">\(\delta\)</span> от угла рулевого колеса (SWA) на шине;</p></li>
 <li><p>реализовать и настроить Pure Pursuit и объяснить, чем <code class="docutils literal notranslate"><span class="pre">fp</span></code> отличается от одношаговой геометрии;</p></li>
 <li><p>учитывать недокрут (<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>) и транспортное запаздывание (<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>);</p></li>
 <li><p>проецировать GPS в локальный ENU, объяснить захват ориентации IMU телефона и читать <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>;</p></li>
-<li><p>считать TTC и <span class="math notranslate nohighlight">\(a_{\mathrm{req}}\)</span> для FCW/AEB и условия LDW со всеми гейтами;</p></li>
-<li><p>отделять деградацию зрения (нагрев, конкурирующий YOLO) от ошибки контроллера при чтении бега.</p></li>
+<li><p>вычислять TTC и <span class="math notranslate nohighlight">\(a_{\mathrm{req}}\)</span> для FCW/AEB и условия LDW со всеми гейтами;</p></li>
+<li><p>при чтении бега отделять деградацию зрения (нагрев, конкурирующий YOLO) от ошибки контроллера.</p></li>
 </ul>
 </section>
 <section id="id2">
@@ -501,47 +501,47 @@
 </tbody>
 </table>
 </div>
-<p>Берите AAD, если хотите реализовать детектор и Pure Pursuit <strong>с нуля</strong>.
-Берите эту книгу, если хотите <strong>близкий к промышленному телефонный конвейер</strong> и дисциплину работы с настоящими логами.</p>
+<p>Берите AAD, если хотите написать детектор и Pure Pursuit <strong>с нуля</strong>.
+Берите эту книгу, если хотите <strong>близкий к промышленному телефонный конвейер</strong> и навык работы с настоящими логами.</p>
 </section>
 <section id="id3">
 <h2>Рекомендуемый порядок<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Главы устроены по образцу AAD: каждая идёт <strong>от маленькой работающей вещи к настоящей</strong> — вы строите
-игрушку внутри главы, смотрите, как она ломается с числом в руках, и затем встречаете боевую версию той
-же идеи. Порядок ниже — поэтому ещё и порядок стройки, и построенное накапливается:</p>
+<p>Главы устроены по образцу AAD: каждая идёт <strong>от маленькой работающей вещи к настоящей</strong> — вы собираете
+внутри главы игрушку, на конкретных числах видите, как она ломается, и лишь затем встречаете боевую версию той
+же идеи. Поэтому порядок ниже — это ещё и порядок сборки: сделанное раньше идёт в дело дальше.</p>
 <ol class="arabic simple">
-<li><p>Поперечный контур, разделённый как код на три части. <strong>Planner</strong> (какую форму ехать):
-<a class="reference internal" href="../Planner/BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> — просимулируйте, попробуйте очевидный регулятор,
-посмотрите на раскачку, почините курсом; <a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — собственный
-pursuit на полилинии, компромисс измерен; <a class="reference internal" href="../Planner/LanePath.html"><span class="std std-doc">Путь разметки</span></a> — слить две шумные
-линии и план модели в одну опору, встретить σ и её ложь; <a class="reference internal" href="../Planner/MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> — MPC в
+<li><p>Поперечный контур мы делим, как и код, на три части. <strong>Planner</strong> (какой формы держаться):
+<a class="reference internal" href="../Planner/BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a> — просимулируйте её, возьмите очевидный регулятор,
+поглядите на раскачку и уймите её курсом; <a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a> — свой
+pursuit по полилинии, где компромисс уже измерен; <a class="reference internal" href="../Planner/LanePath.html"><span class="std std-doc">Путь разметки</span></a> — сведите две шумные
+линии и план модели к одной опоре и столкнитесь с σ и её обманом; <a class="reference internal" href="../Planner/MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> — MPC в
 области пути за семь шагов; <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">fp</span></a> — боевой <strong>time-domain</strong> MPC с компенсацией
-задержки, замкнутый контур в MetaDrive;
-<a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> — P-закон по зазору, который звенит, затем
-upstream’овский MPC с ограниченным рывком на той же стоимости в numpy, замкнутый контур против
-скриптованного лида. <strong>Control</strong> (какая команда):
-<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a> — испортите игрушку сносом и задержкой, затем измерьте
+задержки и замкнутым контуром в MetaDrive;
+<a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> — сначала P-закон по зазору, который звенит, потом
+upstream’овский MPC с ограниченным рывком на той же функции стоимости в numpy и с замкнутым контуром против
+скриптованного лидера. <strong>Control</strong> (какую команду выдать):
+<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a> — испортите игрушку сносом и задержкой, а затем измерьте
 <span class="math notranslate nohighlight">\(G(v)\)</span> на настоящей машине; <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> — внутренний контур против
 игрушечной рейки: трение, ограничитель панды, накручивающийся интегратор; <a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a> —
-план скорости в ускорение, состояния остановки. <strong>Platform</strong> (на шину):
-<a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a> — декод CAN через DBC, сборка легального HCA_01 со счётчиком и
-секретом контрольной суммы, и супервизор панды, который его пропускает.</p></li>
-<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение</span></a> — постройте опорный путь из двух шумных линий, встретьте σ и её
-ложь; <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p></li>
+перевод плана скорости в ускорение и состояния остановки. <strong>Platform</strong> (вывод на шину):
+<a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a> — разбор CAN по DBC, сборка легального HCA_01 со счётчиком и
+секретом контрольной суммы и супервизор панды, который его пропускает.</p></li>
+<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение</span></a> — постройте опорный путь из двух шумных линий и встретьте σ и её
+обман; <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a> → <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p></li>
 <li><p><a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a> — напишите шину в шестьдесят строк, воспроизведите
-болезнь backlog, затем читайте настоящую. <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Архитектура</span></a> →
+болезнь backlog, а потом прочтите настоящую. <a class="reference internal" href="../Architecture/Overview.html"><span class="std std-doc">Архитектура</span></a> →
 <a class="reference internal" href="../Architecture/JavaLayer.html"><span class="std std-doc">Java</span></a> → <a class="reference internal" href="../Architecture/Pipeline.html"><span class="std std-doc">Конвейер</span></a> — с финалом «те же
 сервисы на вашем ноутбуке через <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>».</p></li>
 <li><p><a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a> — постройте формат в сорок строк, <strong>запишите собственный бег</strong> (машина
-не нужна), прогоните собственный регулятор по собственным кадрам.</p></li>
+не понадобится) и прогоните свой регулятор по своим же кадрам.</p></li>
 <li><p>Локализация, по сенсору на главу: <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">колёса и угол руля</span></a>,
 <a class="reference internal" href="../Localization/GyroFusion.html"><span class="std std-doc">гироскоп и ошибка, которую стоит изучить</span></a>, <a class="reference internal" href="../Localization/Gps.html"><span class="std std-doc">GPS</span></a>,
-<a class="reference internal" href="../Localization/ParamsLearner.html"><span class="std std-doc">учим параметры машины</span></a> — затем повтор на вашей собственной записи.</p></li>
+<a class="reference internal" href="../Localization/ParamsLearner.html"><span class="std std-doc">учим параметры машины</span></a> — а потом повторите всё это на своей записи.</p></li>
 <li><p><a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>, <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка</span></a> →
 <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержки</span></a>.</p></li>
 <li><p><a class="reference internal" href="../Exercises/StudentProjects.html"><span class="std std-doc">Задания</span></a> — капстоны; мелкие лаборатории живут внутри глав.</p></li>
 </ol>
-<p>Дорожные эксперименты с HCA требуют присутствия преподавателя. Режим курса по умолчанию — <strong>бег и скрипты</strong>.</p>
+<p>Дорожные эксперименты с HCA идут только в присутствии преподавателя. По умолчанию курс работает в режиме <strong>бегов и скриптов</strong>.</p>
 </section>
 <section id="id4">
 <h2>Что нужно знать заранее<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
@@ -550,7 +550,7 @@ upstream’овский MPC с ограниченным рывком на той
 <li><p>Python (<code class="docutils literal notranslate"><span class="pre">numpy</span></code>), чтение protobuf и CSV; умение читать C++ желательно.</p></li>
 <li><p>CNN и ONNX на уровне пользователя (обучать Supercombo вы не будете).</p></li>
 </ul>
-<p>Незнакомая аббревиатура? <a class="reference internal" href="../Appendix/Glossary.html"><span class="std std-doc">Глоссарий</span></a> собирает все термины, на которые опираются главы.</p>
+<p>Встретили незнакомую аббревиатуру? В <a class="reference internal" href="../Appendix/Glossary.html"><span class="std std-doc">Глоссарии</span></a> собраны все термины, на которые опираются главы.</p>
 <p>Инженерные заметки команды лежат в <code class="docutils literal notranslate"><span class="pre">docs/*.md</span></code>. Эта книга — <strong>учебная дорожка</strong> к тому материалу.</p>
 <!-- next-chapter -->
 <hr class="docutils" />

@@ -70,7 +70,7 @@
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
     <link rel="next" title="Платформенный слой — одна машина за интерфейсом" href="../Platform/Overview.html" />
-    <link rel="prev" title="Угловой контур — то место, где обратная связь действительно кончается" href="AngleControl.html" />
+    <link rel="prev" title="Угловой контур — там, где обратная связь и вправду заканчивается" href="AngleControl.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
   <meta name="docsearch:version" content="" />
@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -435,12 +435,13 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Продольное управление — читать план там, где будет актуатор<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p><a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> отдаёт траекторию скорости; этот контур превращает её в
-запрос ускорения — так же, как <a class="reference internal" href="AngleControl.html"><span class="std std-doc">угловой контур</span></a> превращает кривизну в момент. Это
-<code class="docutils literal notranslate"><span class="pre">LongControl</span></code> upstream: пропорциональный закон с ускорением плана в качестве feedforward, чтение на 0.15 с
-вперёд, чтобы покрыть актуатор, и автомат из четырёх состояний, который делает остановку остановкой.</p>
-<p>Код: <code class="docutils literal notranslate"><span class="pre">longitudinal/long_control.cpp</span></code>; тик живёт в <code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code> рядом с поперечным законом.</p>
-<p>Общие константы для фрагмента, как в главе планировщика:</p>
+<p><a class="reference internal" href="../Planner/Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a> отдаёт траекторию скорости, а этот контур превращает её
+в запрос ускорения — так же, как <a class="reference internal" href="AngleControl.html"><span class="std std-doc">угловой контур</span></a> превращает кривизну в момент. Это тот
+самый <code class="docutils literal notranslate"><span class="pre">LongControl</span></code> из upstream: пропорциональный закон, где ускорение плана идёт как feedforward, чтение
+плана на 0.15 с вперёд, чтобы покрыть задержку актуатора, и автомат из четырёх состояний, благодаря которому
+остановка получается настоящей остановкой.</p>
+<p>Код: <code class="docutils literal notranslate"><span class="pre">longitudinal/long_control.cpp</span></code>; сам тик живёт в <code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code> рядом с поперечным законом.</p>
+<p>Общие константы для примера — те же, что и в главе про планировщик:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">ACCEL_MIN</span><span class="p">,</span> <span class="n">ACCEL_MAX</span> <span class="o">=</span> <span class="o">-</span><span class="mf">3.5</span><span class="p">,</span> <span class="mf">2.0</span>   <span class="c1"># the panda's envelope for a VW MQB [m/s^2]</span>
@@ -448,9 +449,10 @@
 </div>
 <section id="id2">
 <h2>Закон<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>План — траектория скорости на 33-точечной сетке модели, 17 её точек (2.5 с) отдаются в <code class="docutils literal notranslate"><span class="pre">Control</span></code>. Моторный
-и тормозной контроллеры машины отвечают на запрос ускорения с опозданием около 0.15 с, поэтому закон читает
-план <strong>на 0.15 с вперёд</strong> и превращает наклон скорости на этой задержке в ускорение, которое просит:</p>
+<p>План — это траектория скорости на 33-точечной сетке модели, из которой 17 точек (2.5 с) отдаются в
+<code class="docutils literal notranslate"><span class="pre">Control</span></code>. Моторный и тормозной контроллеры машины отвечают на запрос ускорения с опозданием около 0.15 с,
+поэтому закон читает план <strong>на 0.15 с вперёд</strong> и переводит наклон скорости на этой задержке в то ускорение,
+которое запрашивает:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">T_MODEL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">10.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">/</span> <span class="mi">32</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">33</span><span class="p">)])[:</span><span class="mi">17</span><span class="p">]</span>
 <span class="n">DELAY</span> <span class="o">=</span> <span class="mf">0.15</span>
 
@@ -469,40 +471,40 @@
 <span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">a_t</span> <span class="o">+</span> <span class="mf">1.5</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">,</span> <span class="s2">"on a plan of constant acceleration the slope gives back that acceleration"</span>
 </pre></div>
 </div>
-<p>Откуда <span class="math notranslate nohighlight">\(2(\cdot)/\Delta\)</span>: за задержку <span class="math notranslate nohighlight">\(\Delta = 0.15\)</span> с скорость должна пройти от <span class="math notranslate nohighlight">\(v_{\mathrm{now}}\)</span> до
-<span class="math notranslate nohighlight">\(v_{\mathrm{target}}\)</span>, пока ускорение линейно растёт от того, что у машины сейчас, <span class="math notranslate nohighlight">\(a_{\mathrm{now}}\)</span>, до того, что мы
-просим, <span class="math notranslate nohighlight">\(a_{\mathrm{target}}\)</span>. Среднее ускорение на рампе — <span class="math notranslate nohighlight">\(\tfrac12(a_{\mathrm{now}} + a_{\mathrm{target}})\)</span>, откуда</p>
+<p>Откуда берётся <span class="math notranslate nohighlight">\(2(\cdot)/\Delta\)</span>: за задержку <span class="math notranslate nohighlight">\(\Delta = 0.15\)</span> с скорость должна пройти от <span class="math notranslate nohighlight">\(v_{\mathrm{now}}\)</span> до
+<span class="math notranslate nohighlight">\(v_{\mathrm{target}}\)</span>, пока ускорение линейно нарастает от нынешнего у машины <span class="math notranslate nohighlight">\(a_{\mathrm{now}}\)</span> до того, что мы
+запрашиваем, <span class="math notranslate nohighlight">\(a_{\mathrm{target}}\)</span>. Среднее ускорение на этой рампе — <span class="math notranslate nohighlight">\(\tfrac12(a_{\mathrm{now}} + a_{\mathrm{target}})\)</span>, откуда</p>
 <div class="math notranslate nohighlight">
 \[
 v_{\mathrm{target}} - v_{\mathrm{now}} = \tfrac{1}{2}\,(a_{\mathrm{now}} + a_{\mathrm{target}})\,\Delta
 \quad\Longrightarrow\quad
 a_{\mathrm{target}} = \frac{2\,(v_{\mathrm{target}} - v_{\mathrm{now}})}{\Delta} - a_{\mathrm{now}} .
 \]</div>
-<p>На плане с постоянным ускорением формула возвращает это ускорение ровно (фрагмент это утверждает). На плане,
-который <em>изгибается</em> — машина в <span class="math notranslate nohighlight">\(a = 0\)</span>, а план хочет <span class="math notranslate nohighlight">\(-1.5\)</span> через 0.15 с, — она просит <span class="math notranslate nohighlight">\(-3.0\)</span> на один тик и
-отпускает: запрос опережает план на задержку, и машина не отстаёт от него. Пропорциональный член
-<span class="math notranslate nohighlight">\(0.1\,(v_{\mathrm{target}} - v_{\mathrm{ego}})\)</span> мал намеренно: при kp 0.1 ошибка скорости 2 м/с добавляет лишь
-<span class="math notranslate nohighlight">\(0.2\)</span> м/с² — ведёт feedforward, P-член только правит дрейф.</p>
+<p>На плане с постоянным ускорением формула возвращает ровно это ускорение (что фрагмент и проверяет). А на
+плане, который <em>изгибается</em> — машина в <span class="math notranslate nohighlight">\(a = 0\)</span>, а план через 0.15 с хочет <span class="math notranslate nohighlight">\(-1.5\)</span>, — она на один тик просит
+<span class="math notranslate nohighlight">\(-3.0\)</span> и тут же отпускает: запрос опережает план ровно на задержку, и машина за ним поспевает.
+Пропорциональный член <span class="math notranslate nohighlight">\(0.1\,(v_{\mathrm{target}} - v_{\mathrm{ego}})\)</span> мал намеренно: при kp 0.1 ошибка скорости
+2 м/с добавляет всего <span class="math notranslate nohighlight">\(0.2\)</span> м/с² — ведёт feedforward, а P-член лишь подправляет дрейф.</p>
 <figure class="align-default" id="id5">
 <a class="reference internal image-reference" href="../_images/long_control_law.png"><img alt="../_images/long_control_law.png" src="../_images/long_control_law.png" style="width: 100%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 36 </span><span class="caption-text">Слева: план, прочитанный на задержке актуатора. Справа: четыре состояния — <code class="docutils literal notranslate"><span class="pre">pid</span></code> в движении, <code class="docutils literal notranslate"><span class="pre">stopping</span></code>,
-когда план стоит ниже 1 м/с (запрос уходит к −2 м/с² и держится), <code class="docutils literal notranslate"><span class="pre">starting</span></code>, когда план трогается (+1 м/с²
-до 1 м/с), затем снова <code class="docutils literal notranslate"><span class="pre">pid</span></code>.</span><a class="headerlink" href="#id5" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 36 </span><span class="caption-text">Слева: план, прочитанный с упреждением на задержку актуатора. Справа: четыре состояния — <code class="docutils literal notranslate"><span class="pre">pid</span></code> в движении;
+<code class="docutils literal notranslate"><span class="pre">stopping</span></code>, когда план стоит ниже 1 м/с (запрос уходит к −2 м/с² и удерживается); <code class="docutils literal notranslate"><span class="pre">starting</span></code>, когда план
+трогается (+1 м/с² до 1 м/с); затем снова <code class="docutils literal notranslate"><span class="pre">pid</span></code>.</span><a class="headerlink" href="#id5" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p><strong>Автомат состояний</strong> — то, что делает остановку остановкой: ниже 1 м/с при стоящем плане закон покидает
-пропорциональный мир и уходит к удержанию −2 м/с² со скоростью 0.8 м/с³ — <code class="docutils literal notranslate"><span class="pre">stopAccel</span></code> и
-<code class="docutils literal notranslate"><span class="pre">stoppingDecelRate</span></code> upstream, — потому что P-закон на скорости 0.3 м/с ползёт. Тонкость, стоившая вечера:
-<code class="docutils literal notranslate"><span class="pre">stay_stopped</span></code> upstream читает флаг стоянки <em>штатного ACC</em>, которого нет, как только осью владеем мы;
-подача туда простой скорости заставляла <code class="docutils literal notranslate"><span class="pre">starting</span></code> и <code class="docutils literal notranslate"><span class="pre">stopping</span></code> меняться местами каждый тик.</p>
+<p><strong>Автомат состояний</strong> — вот что превращает остановку в настоящую остановку: ниже 1 м/с при стоящем плане
+закон покидает пропорциональный режим и переходит к удержанию −2 м/с² с темпом 0.8 м/с³ — это <code class="docutils literal notranslate"><span class="pre">stopAccel</span></code> и
+<code class="docutils literal notranslate"><span class="pre">stoppingDecelRate</span></code> из upstream, — потому что на 0.3 м/с P-закон только ползёт. Тонкость, которая стоила нам
+вечера: <code class="docutils literal notranslate"><span class="pre">stay_stopped</span></code> в upstream читает флаг стоянки <em>штатного ACC</em>, а его нет, как только осью владеем мы;
+подача туда простой скорости заставляла <code class="docutils literal notranslate"><span class="pre">starting</span></code> и <code class="docutils literal notranslate"><span class="pre">stopping</span></code> меняться местами на каждом тике.</p>
 </section>
 <section id="id3">
 <h2>Приёмка<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p>фрагмент возвращает постоянное ускорение плана ровно и добавляет <span class="math notranslate nohighlight">\(0.1\)</span> м/с² на каждый м/с ошибки скорости;</p></li>
-<li><p>автомат проходит pid → stopping → starting → pid на плане «стоп и трогание», удерживая −2 м/с² на месте;</p></li>
+<li><p>фрагмент точно возвращает постоянное ускорение плана и добавляет <span class="math notranslate nohighlight">\(0.1\)</span> м/с² на каждый м/с ошибки скорости;</p></li>
+<li><p>автомат проходит pid → stopping → starting → pid на плане «остановка и трогание», удерживая −2 м/с² на месте;</p></li>
 <li><p>одно предложение о том, почему <code class="docutils literal notranslate"><span class="pre">stay_stopped</span></code> не должен читать простую скорость.</p></li>
 </ul>
 </section>
@@ -555,7 +557,7 @@ a_{\mathrm{target}} = \frac{2\,(v_{\mathrm{target}} - v_{\mathrm{now}})}{\Delta}
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">назад</p>
-        <p class="prev-next-title">Угловой контур — то место, где обратная связь действительно кончается</p>
+        <p class="prev-next-title">Угловой контур — там, где обратная связь и вправду заканчивается</p>
       </div>
     </a>
     <a class="right-next"

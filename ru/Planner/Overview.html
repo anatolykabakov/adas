@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -437,15 +437,15 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Поперечный контур — планировщик, управление, платформа<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Нативный код делит поперечный контур на три сервиса — намеренно, — и части книги следуют этому делению:
-<strong>Planner</strong> решает <em>какую форму ехать</em> (план в кривизне), <strong>Control</strong> решает <em>какая команда её даёт</em>
-(момент), <strong>Platform</strong> кладёт команду на шину и единственный знает, что машина — Volkswagen. Эта часть —
-Planner; две следующие — Control и <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a>.</p>
-<p>Большая часть этой части — о поперечном контуре, который этот стек водил по дороге; последняя глава —
-продольная: те же три сервиса, ускорение вместо момента, — пока доказанная только в симуляторе, потому что
-у нашего Golf нет ACC-радара, чтобы мотор и тормоза принимали запрос.</p>
-<p>Главы опираются друг на друга — каждая существует потому, что предыдущая ломается на чём-то измеримом, и
-интересна именно поломка:</p>
+<p>Нативный код намеренно делит поперечный контур на три сервиса, и части книги повторяют это деление.
+<strong>Planner</strong> решает, <em>какой формы траекторию ехать</em> (план в кривизне), <strong>Control</strong> решает, <em>какая команда
+её задаёт</em> (момент), а <strong>Platform</strong> выкладывает команду на шину — и только она знает, что машина
+Volkswagen. Эта часть посвящена Planner; две следующие — Control и <a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Platform</span></a>.</p>
+<p>В основном здесь речь о поперечном контуре, на котором этот стек и ездил по дороге. Последняя глава —
+про продольный контур: те же три сервиса, только вместо момента ускорение. Он пока проверен лишь в
+симуляторе: у нашего Golf нет ACC-радара, через который мотор и тормоза принимали бы запрос.</p>
+<p>Главы вырастают одна из другой. Каждая существует потому, что предыдущая ломается на чём-то измеримом, —
+и интересна именно поломка:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>глава</p></th>
@@ -458,47 +458,47 @@ Planner; две следующие — Control и <a class="reference internal" 
 <tr class="row-even"><td><p><a class="reference internal" href="BicycleModel.html"><span class="std std-doc">Велосипедная модель</span></a></p></td>
 <td><p>Planner</p></td>
 <td><p><span class="math notranslate nohighlight">\(\kappa = \tan\delta / L\)</span> — чистая геометрия</p></td>
-<td><p>колёса едут не точно туда, куда смотрят: реальная кривизна <strong>0.54</strong> от геометрической при 22 м/с</p></td>
+<td><p>колёса едут не туда, куда смотрят: при 22 м/с реальная кривизна — <strong>0.54</strong> от геометрической</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a></p></td>
 <td><p>Planner</p></td>
 <td><p>рулить на одну точку взгляда</p></td>
-<td><p>одна точка не представит путь, чья кривизна меняется внутри взгляда</p></td>
+<td><p>одна точка не передаёт путь, чья кривизна меняется в пределах взгляда</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a></p></td>
 <td><p>Planner</p></td>
 <td><p>слить две линии и план модели в одну опору</p></td>
-<td><p>линии лгут, когда пропадают; план срезает дуги; какую получишь — решает σ</p></td>
+<td><p>линии врут, когда пропадают; план срезает дуги; чему верить — решает σ</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a></p></td>
 <td><p>Planner</p></td>
-<td><p>оптимизировать короткую будущую траекторию вдоль пути, семь шагов</p></td>
-<td><p>у игрушки нет понятия времени — а значит, и задержки актуатора</p></td>
+<td><p>оптимизировать короткий отрезок будущей траектории вдоль пути, семь шагов</p></td>
+<td><p>у игрушки нет понятия времени, а значит, и задержки актуатора</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp</span></a></p></td>
 <td><p>Planner</p></td>
-<td><p>MPC в области времени с компенсацией задержки</p></td>
-<td><p>горизонт стоит денег, у плана своё смещение, а на крутых дугах актуатор насыщается</p></td>
+<td><p>MPC во временно́й области с компенсацией задержки</p></td>
+<td><p>горизонт стоит дорого, у плана своё смещение, а на крутых дугах актуатор упирается в потолок</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="Longitudinal.html"><span class="std std-doc">Продольный планировщик</span></a></p></td>
 <td><p>Planner</p></td>
-<td><p>план скорости с ограниченным рывком за лидом или на уставке</p></td>
-<td><p>P-закон по зазору звенит; превью кривизны принимает шум пути за поворот; лид — зрение, не радар</p></td>
+<td><p>план скорости с ограниченным рывком за лидером или по уставке</p></td>
+<td><p>P-закон по зазору звенит; превью кривизны принимает шум пути за поворот; лидер — от зрения, не от радара</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a></p></td>
 <td><p>Control</p></td>
 <td><p>κ → δ через скольжение шин и задержку</p></td>
-<td><p>коэффициент скольжения меняется со скоростью, 0.97 → 0.54</p></td>
+<td><p>коэффициент скольжения зависит от скорости, 0.97 → 0.54</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a></p></td>
 <td><p>Control</p></td>
-<td><p>δ → момент против рейки</p></td>
+<td><p>δ → момент вокруг рейки</p></td>
 <td><p>трение съедает P, ограничитель панды накручивает интегратор, упреждение — единицы cNm</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a></p></td>
 <td><p>Control</p></td>
-<td><p>план скорости → ускорение, чтение на 0.15 с вперёд</p></td>
-<td><p>P-закон по скорости ползёт на остановке; флага стоянки штатного ACC нет, когда осью владеем мы</p></td>
+<td><p>план скорости → ускорение с чтением на 0.15 с вперёд</p></td>
+<td><p>P-закон по скорости ползёт на остановке; флага стоянки от штатного ACC нет, когда осью управляем мы</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../Platform/Overview.html"><span class="std std-doc">Платформа</span></a></p></td>
 <td><p>Platform</p></td>
@@ -510,7 +510,7 @@ Planner; две следующие — Control и <a class="reference internal" 
 </div>
 <section id="id2">
 <h2>Что на входе, что на выходе<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p><strong>Входы</strong> (после топиков зрения и шасси): метрическая полилиния пути, скорость <span class="math notranslate nohighlight">\(v\)</span>, фактический угол
+<p><strong>Входы</strong> (уже после топиков зрения и шасси): метрическая полилиния пути, скорость <span class="math notranslate nohighlight">\(v\)</span>, фактический угол
 рулевого колеса и метки времени. <strong>Выход:</strong> желаемый угол рулевого колеса, который <code class="docutils literal notranslate"><span class="pre">LatControlPID</span></code>
 превращает в нормированный момент для <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> → EPS.</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -524,19 +524,19 @@ Planner; две следующие — Control и <a class="reference internal" 
 <td><p>геометрическая база — ближе всего к классическому Pure Pursuit</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fp</span></code></p></td>
-<td><p><strong>по умолчанию на дороге</strong> — область времени, компенсация задержки, модель машины</p></td>
+<td><p><strong>по умолчанию на дороге</strong> — временна́я область, компенсация задержки, модель машины</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Третья, MPC в области пути (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, VisionPilot), была средней ступенью между этими двумя и удалена
-2026-08-21, когда <code class="docutils literal notranslate"><span class="pre">fp</span></code> вытеснил её с дороги; глава <a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> по-прежнему строит её
-семишаговую мысленную модель — это самый ясный способ понять, что делает любой MPC.</p>
+<p>Был и третий — MPC в области пути (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, VisionPilot), промежуточная ступень между этими двумя. Его
+удалили 2026-08-21, когда <code class="docutils literal notranslate"><span class="pre">fp</span></code> вытеснил его с дороги. Глава <a class="reference internal" href="MpcToy.html"><span class="std std-doc">MPC как игрушка</span></a> всё же строит
+его семишаговую мысленную модель: это самый ясный способ понять, что вообще делает любой MPC.</p>
 </section>
 <section id="id3">
 <h2>Почему одно число стоит пронести через все четыре главы<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Всё в этой части можно проверить об одну измеренную величину: отношение кривизны, которой машина реально
-достигает, к кривизне, которую предсказывает геометрия. Установившиеся дуги на этой машине дают</p>
+<p>Всё в этой части проверяется об одну измеренную величину — отношение кривизны, которую машина реально
+выдаёт, к кривизне, которую предсказывает геометрия. Установившиеся дуги на этой машине дают вот что:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>скорость</p></th>
@@ -564,12 +564,12 @@ Planner; две следующие — Control и <a class="reference internal" 
 <a class="reference internal image-reference" href="../_images/understeer_bars.png"><img alt="../_images/understeer_bars.png" src="../_images/understeer_bars.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 9 </span><span class="caption-text">Достигнутая кривизна против командной по скорости — измеренно ниже даже учебникового ожидания на каждой корзине.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 9 </span><span class="caption-text">Достигнутая кривизна против командной по скорости — в каждой корзине измерение ниже даже учебникового ожидания.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Прочитайте первую строку — велосипедная модель отлична. Прочитайте последнюю — она перекручивает вдвое. Эта
-одна таблица и есть причина, по которой существуют остальные три главы, и причина, по которой постоянный
-<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> не может быть окончательным ответом.</p>
+<p>Первая строка: велосипедная модель безупречна. Последняя: та же модель промахивается вдвое. Одна эта
+таблица и объясняет, зачем нужны остальные три главы и почему постоянный <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> не может
+быть окончательным ответом.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="n">L</span> <span class="o">=</span> <span class="mf">2.636</span>                       <span class="c1"># wheelbase, m</span>
@@ -599,16 +599,16 @@ Planner; две следующие — Control и <a class="reference internal" 
           <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">kappa_kinematic</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;11.5f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">achieved</span><span class="si">:</span><span class="s2">&gt;10.5f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">err</span><span class="si">:</span><span class="s2">&gt;+7.0f</span><span class="si">}</span><span class="s2">%"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Запустите: при 7.5 м/с геометрическая команда попадает в пределах пары процентов, а при 23.5 м/с даёт едва
-половину запрошенной кривизны. На дуге 200 м этот недобор и выталкивает машину наружу поворота — ровно тот
+<p>Запустите: при 7.5 м/с геометрическая команда попадает с точностью до пары процентов, а при 23.5 м/с даёт
+едва половину запрошенной кривизны. На дуге 200 м этот недобор и выносит машину наружу поворота — ровно тот
 симптом, который берётся исправлять глава <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">про модель машины</span></a>.</p>
 </section>
 <section id="id4">
 <h2>И чего стоит компенсация<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p>Очевидная правка — просить больше. Она работает до двух пределов, которые никаким коэффициентом не сдвинуть:
-настроенное ограничение угла и сам актуатор.</p>
-<p>Дуги ниже — те, что реально проезжались на измеренных бегах, каждая на своей скорости. Придумать радиус 70 м
-при 22 м/с значило бы 6.9 м/с² поперечного ускорения, за пределами сцепления дорожной шины, и полученное
+настроенного ограничения угла и самого актуатора.</p>
+<p>Дуги ниже — те, что реально проезжались в измеренных бегах, каждая на своей скорости. Взять радиус 70 м
+при 22 м/с означало бы 6.9 м/с² поперечного ускорения — за пределом сцепления дорожной шины, и полученное
 число ничему бы не научило.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MAX_STEER_DEG</span> <span class="o">=</span> <span class="mf">20.0</span>            <span class="c1"># vehicle.max_steer_deg, our own limit</span>
 
@@ -627,18 +627,18 @@ Planner; две следующие — Control и <a class="reference internal" 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">radius</span><span class="si">:</span><span class="s2">&gt;6.0f</span><span class="si">}</span><span class="s2"> m </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">a_lat</span><span class="si">:</span><span class="s2">&gt;6.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">swa</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">swa</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">clamped</span><span class="si">:</span><span class="s2">&gt;9</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Из этого вывода важны два чтения.</p>
-<p>Компенсация мала. Снижение <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> с 0.64 до 0.50 просит на этих дугах <strong>на 3–9 % больше
-угла</strong> — градус-два рулевого колеса, а не десятки. Это стоит усвоить до того, как трогать параметр: это
-подстройка, а не рычаг. И измеренное на дороге дало ровно то, что подстройка и должна давать, — ошибка
-слежения на левой дуге сдвинулась с +0.29 м до +0.21 м.</p>
-<p>Заметьте также, что ограничение угла ни разу не срабатывает. <code class="docutils literal notranslate"><span class="pre">max_steer_deg</span></code> — это предел <strong>колеса</strong>, то
-есть 20° его дают больше 300° рулевого колеса, а самая большая команда на этих дугах — 38°. Останавливает
-нас не ограничение, а момент. На измеренных правых дугах руль доезжает до заданного угла на левых (просили
-+13.8°, получили +13.5°), но момент сидел на потолке ±300 cNm в <strong>65 % кадров правых дуг</strong>. Пока момент
-насыщен, обратной связи нет вовсе: команда больше — и ничего не меняется, кроме числа в логе. Поэтому план
-для крутых дуг — <em>запрашивать меньше кривизны</em>, а не поднимать коэффициент; и это граница, на которой вся
-эта часть курса заканчивается и начинается работа с восприятием.</p>
+<p>В этом выводе важны два наблюдения.</p>
+<p>Компенсация мала. Снижение <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> с 0.64 до 0.50 требует на этих дугах <strong>на 3–9 % больше
+угла</strong> — градус-два рулевого колеса, а не десятки. Это стоит усвоить, прежде чем трогать параметр: это
+подстройка, а не рычаг. И на дороге она дала ровно то, что подстройка и должна давать: ошибка слежения на
+левой дуге сдвинулась с +0.29 м до +0.21 м.</p>
+<p>Заметьте и другое: ограничение угла ни разу не срабатывает. <code class="docutils literal notranslate"><span class="pre">max_steer_deg</span></code> — это предел <strong>колеса</strong>, то
+есть его 20° дают больше 300° рулевого колеса, а самая большая команда на этих дугах — 38°. Останавливает
+нас не ограничение, а момент. На левых дугах руль доезжает до заданного угла (просили +13.8°, получили
++13.5°), но на правых момент сидел на потолке ±300 cNm в <strong>65 % кадров</strong>. Пока момент насыщен,
+обратной связи нет вообще: команда больше — а не меняется ничего, кроме числа в логе. Поэтому на крутых
+дугах правильно <em>запрашивать меньше кривизны</em>, а не поднимать коэффициент. На этой границе вся эта часть
+курса и заканчивается, а начинается работа с восприятием.</p>
 </section>
 <section id="id5">
 <h2>Порядок чтения<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
@@ -651,21 +651,21 @@ Planner; две следующие — Control и <a class="reference internal" 
 </ol>
 <p>Затем часть <strong>Control</strong> превращает этот план в момент: <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a>
 (почему кинематика врёт выше 15 м/с), <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a> (внутренний PID) и
-<a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a> (план скорости в ускорение).</p>
+<a class="reference internal" href="../Control/LongControl.html"><span class="std std-doc">Продольное управление</span></a> (план скорости → ускорение).</p>
 <div class="admonition tip">
 <p class="admonition-title">Совет</p>
-<p>Единственное диагностическое правило, которое стоит запомнить: <strong>плохой темп зрения или плохая калибровка не
-являются поводом поднимать веса CTE.</strong> Ошибка калибровки 1.5° — это 0.52 м поперечной ошибки на 20 м, втрое
+<p>Единственное диагностическое правило, которое стоит запомнить: <strong>низкий темп зрения или плохая калибровка —
+не повод поднимать веса CTE.</strong> Ошибка калибровки в 1.5° — это 0.52 м поперечной ошибки на 20 м, втрое
 больше целевой, и никакой коэффициент контроллера не отличит её от настоящего смещения.</p>
 </div>
 </section>
 <section id="id6">
 <h2>Целевое качество<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>На здоровых окнах с включённым HCA медиана абсолютного смещения в полосе <strong>0.10–0.15 м</strong> при <span class="math notranslate nohighlight">\(v \approx 20\)</span>
-м/с сравнима с аккуратным человеком на тех же дорогах. Это стоит знать точно, потому что задаёт, когда
-останавливаться: измеренный на тех же дугах водитель без всякой помощи держит 0.15–0.17 м, а наш контроллер
-на прямых уже плавнее человека (0.12 против 0.16). Цель — не ноль, цель — человек.</p>
-<p>Отклонение масштаба метра на том же участке означает, что проверять надо <strong>сначала</strong> темп зрения, задержки и
+<p>На здоровых окнах с включённым HCA медиана абсолютного смещения в полосе — <strong>0.10–0.15 м</strong> при <span class="math notranslate nohighlight">\(v \approx 20\)</span>
+м/с, на уровне аккуратного человека на тех же дорогах. Знать это точно важно, потому что отсюда понятно,
+когда останавливаться: тот же водитель без всякой помощи на тех же дугах держит 0.15–0.17 м, а наш
+контроллер на прямых уже плавнее человека (0.12 против 0.16). Цель — не ноль, цель — человек.</p>
+<p>Если на том же участке смещение уходит на метр, значит, проверять надо <strong>сначала</strong> темп зрения, задержки и
 калибровку, и только потом параметры контроллера.</p>
 <!-- next-chapter -->
 <hr class="docutils" />

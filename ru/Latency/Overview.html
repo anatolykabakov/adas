@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -446,7 +446,7 @@
 <a class="reference internal image-reference" href="../_images/latency_chain.png"><img alt="../_images/latency_chain.png" src="../_images/latency_chain.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 44 </span><span class="caption-text">Разбейте сквозной путь на измеримые отрезки — тогда сессии можно честно сравнивать.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 44 </span><span class="caption-text">Разбейте сквозной путь на измеримые отрезки — только так сессии можно честно сравнивать.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <section id="id2">
@@ -521,16 +521,16 @@ python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/
 </tbody>
 </table>
 </div>
-<p>YOLO на том же SoC <strong>конкурирует</strong> с Supercombo. Отдельно от этого, многоминутный тепловой троттлинг
-проявляется как растущий <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> и обваливающийся темп. Первая строка — тот же маршрут и тот же телефон,
-что и остальные, только сеть переехала на GPU; четыре строки с ONNX оставлены, потому что режимы деградации,
-которые они показывают, вам всё равно встретятся, и потому что скачок между строками — предмет следующего
-раздела.</p>
+<p>YOLO на том же SoC <strong>конкурирует</strong> с Supercombo. Помимо этого, многоминутный тепловой троттлинг
+проявляется как растущий <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> и обваливающийся темп. Первая строка снята на том же маршруте и том же
+телефоне, что и остальные, — сеть лишь переехала на GPU; четыре строки с ONNX мы оставили потому, что режимы
+деградации, которые в них видны, вам всё равно встретятся, а ещё потому, что скачок между строками — тема
+следующего раздела.</p>
 <figure class="align-default" id="id10">
 <a class="reference internal image-reference" href="../_images/60_run0801_straights.png"><img alt="../_images/60_run0801_straights.png" src="../_images/60_run0801_straights.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 45 </span><span class="caption-text">Толковать качество контроллера можно только на окнах, где зрение оставалось здоровым.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 45 </span><span class="caption-text">Судить о качестве контроллера можно только по окнам, где зрение оставалось здоровым.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
@@ -538,10 +538,9 @@ python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/path/to/
 <h2>Темп задаётся периодом камеры, а не объёмом работы<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p>Вот результат, который удивил всех, кто на него смотрел, и ради которого этот раздел существует.</p>
 <p>Пусть один цикл работы — warp плюс инференс — занимает <span class="math notranslate nohighlight">\(W\)</span> миллисекунд, а камера отдаёт кадр каждые <span class="math notranslate nohighlight">\(T\)</span> мс.
-Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его в тот же момент, как
-освободился, — то есть по своей воле не простаивает. И всё равно достижимый темп не равен <span class="math notranslate nohighlight">\(1000/W\)</span>: цикл
-может начаться только когда кадр есть, поэтому на один обработанный кадр уходит <span class="math notranslate nohighlight">\(\lceil W/T \rceil\)</span> периодов
-камеры.</p>
+Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его сразу, как только освобождается, —
+то есть сам по себе не простаивает. И всё равно достижимый темп не равен <span class="math notranslate nohighlight">\(1000/W\)</span>: цикл может начаться, только
+когда кадр уже есть, поэтому на один обработанный кадр уходит <span class="math notranslate nohighlight">\(\lceil W/T \rceil\)</span> периодов камеры.</p>
 <div class="math notranslate nohighlight">
 \[
 f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
@@ -594,30 +593,30 @@ f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 </tbody>
 </table>
 </div>
-<p>Первая строка — модель, работающая в точности. Вторая на 12 % ниже предсказания, и этот зазор — честный
-незакрытый конец: значит работа иногда заходит в третий период, что хвост распределения подготовки кадра
-(медиана 7 мс, среднее 11.4, p95 35.7) вполне делает.</p>
-<p>Третья строка — это обналиченное предсказание самого раздела. Абзац ниже раньше говорил, что экономия 19 мс
+<p>Первая строка — модель, сбывшаяся в точности. Вторая на 12 % ниже предсказания, и этот зазор мы честно
+оставляем незакрытым: значит, работа иногда заходит в третий период, а хвост распределения подготовки кадра
+(медиана 7 мс, среднее 11.4, p95 35.7) это вполне позволяет.</p>
+<p>Третья строка — то самое предсказание раздела, обратившееся в факт. Ниже мы раньше писали, что экономия 19 мс
 поднимет темп с 15 Гц до 30, а экономия 10 мс не даст ничего. Эти 19 мс нашлись — в GPU, а не в точности, — и
-темп встал ровно на 30.01 Гц, кадр вошёл — кадр вышел. Модель, предсказывающая двукратный выигрыш <strong>до</strong> того,
-как работа сделана, стоит больше модели, объясняющей его после.</p>
+темп встал ровно на 30.01 Гц: кадр вошёл — кадр вышел. Модель, предсказывающая двукратный выигрыш <strong>до</strong> того,
+как работа сделана, стоит больше модели, которая объясняет его задним числом.</p>
 <div class="tip admonition">
 <p class="admonition-title">Почему это важно для решений об оптимизации</p>
-<p>Отсюда видно, какие сокращения имеют смысл. При периоде 33 мс и работе 52 мс экономия 19 мс уводит вас в один
-период и поднимает темп с 15 Гц до 30, а экономия 10 мс не даёт ничего вовсе, и срезание 2.5 мс с интервала
-опроса — шум.</p>
+<p>Отсюда видно, какие сокращения имеют смысл. При периоде 33 мс и работе 52 мс экономия 19 мс переводит вас в один
+период и поднимает темп с 15 Гц до 30, а экономия 10 мс не даёт вообще ничего, и срезать 2.5 мс с интервала
+опроса — это шум.</p>
 <p>Откуда взялись эти 19 мс — отдельный урок. Очевидным кандидатом была половинная точность, и она оказалась
-ловушкой: ONNX Runtime считает fp16-модель на ARM <strong>неверно</strong> и молча, и на процессоре, и через NNAPI
-(см. <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>). Вместо этого 19 мс дал переезд сети на GPU через собранный
-<code class="docutils literal notranslate"><span class="pre">.thneed</span></code> (45.6 → 17.6 мс) и варпа — в ядро OpenCL (7.0 → 4.6 мс). Оба считаются в fp16: проблемой была не
-точность, а среда исполнения.</p>
+ловушкой: ONNX Runtime молча и неверно считает fp16-модель на ARM — и на процессоре, и через NNAPI
+(см. <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>). Вместо этого 19 мс дали перенос сети на GPU через собранный
+<code class="docutils literal notranslate"><span class="pre">.thneed</span></code> (45.6 → 17.6 мс) и перенос варпа в ядро OpenCL (7.0 → 4.6 мс). Оба считаются в fp16: дело было не в
+точности, а в среде исполнения.</p>
 </div>
 </section>
 <section id="id5">
 <h2>Куда уходит время и что осталось срезать<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Измерено на ночном заезде длиной 29 минут при 30.01 Гц. Каждое число ниже — медиана из <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code>, а
-накопленная колонка — то, что этот инструмент печатает; это стоит держать раздельно, потому что длительности
-этапов и накопленные метки — разные измерения, и складываться в точности они не обязаны.</p>
+накопленную колонку этот инструмент печатает сам; одно от другого стоит отделять, потому что длительности
+этапов и накопленные метки — разные измерения и складываться в точности не обязаны.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>этап</p></th>
@@ -655,10 +654,10 @@ f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 </tbody>
 </table>
 </div>
-<p>Прошлая редакция этой таблицы держала инференс на 45.6 мс, всё остальное на 38 и заключала, что атаковать
-стоит только инференс. Это было верно, и действие по этому выводу таблицу перевернуло: модель теперь меньшая
-половина, а 28 мс между выходом модели и командой на руль — опрос на входе ZMQ, планировщик, закон
-управления — самый крупный оставшийся блок. Заметьте и то, что <strong>не</strong> изменилось: 10 мс панды, потому что это
+<p>В прошлой редакции этой таблицы инференс стоял на 45.6 мс, всё остальное — на 38, и вывод был такой: браться
+стоит только за инференс. Он был верен, и работа по этому выводу таблицу перевернула: модель теперь меньшая
+половина, а самый крупный из оставшихся блоков — те 28 мс между выходом модели и командой на руль (опрос на
+входе ZMQ, планировщик, закон управления). Обратите внимание и на то, что <strong>не</strong> изменилось: 10 мс панды — это
 требование такта, а не неэффективность.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># What the delay costs in metres, and what half precision would buy if it gives the usual 1.5-2x here.</span>
 <span class="n">TO_COMMAND_MS</span> <span class="o">=</span> <span class="mf">52.0</span>        <span class="c1"># measured capture -&gt; steer command</span>
@@ -681,7 +680,7 @@ f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 <h2>Как отличить поздний кадр от медленного<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <p>До 6 августа 2026 самой ранней меткой на кадре была <code class="docutils literal notranslate"><span class="pre">capture_ts_ms</span></code>, из-за чего два совершенно разных отказа
 выглядели одинаково: кадр, пришедший через 40 мс после экспозиции, и кадр, простоявший 40 мс в буфере, пока
-инференс был занят. <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> теперь несёт ещё <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, а
+инференс был занят. <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> теперь содержит ещё <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, а
 <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> их печатает.</p>
 <p>Диагноз — таблица два на два:</p>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -703,16 +702,17 @@ f_{\text{achieved}} = \frac{1}{T\lceil W/T\rceil}
 </tbody>
 </table>
 </div>
-<p>Именно это различение и нужно дневным зависаниям — эталон старше 300 мс 15.9 % времени одного бега, с одной
-дырой в 75 секунд — и до сих пор его сделать было нельзя.</p>
-<p>На текущем конвейере оба показания скучные, и в этом всё дело: доставка 0 мс медианно, очередь 0 мс, <strong>ноль
-потерянных кадров из 52 690</strong>. Это левая верхняя клетка таблицы, и это первый бег, где утверждение «узкое
-место не камера и не инференс» — измерение, а не допущение.</p>
+<p>Именно такого различения и требуют дневные зависания — эталон старше 300 мс 15.9 % времени одного бега, с одной
+дырой в 75 секунд, — а сделать его до сих пор было нельзя.</p>
+<p>На текущем конвейере оба показания скучны, и в этом всё дело: медианная доставка 0 мс, очередь 0 мс, <strong>ноль
+потерянных кадров из 52 690</strong>. Это левая верхняя клетка таблицы и первый бег, где утверждение «узкое место — не
+камера и не инференс» — измерение, а не допущение.</p>
 </section>
 <section id="phone-stats">
 <h2><code class="docutils literal notranslate"><span class="pre">phone/stats</span></code><a class="headerlink" href="#phone-stats" title="Ссылка на этот заголовок">#</a></h2>
-<p>Раз в секунду бег может нести <code class="docutils literal notranslate"><span class="pre">cpu_pct</span></code>, <code class="docutils literal notranslate"><span class="pre">cpu_app_pct</span></code>, <code class="docutils literal notranslate"><span class="pre">thermal_status</span></code>, температуры, <code class="docutils literal notranslate"><span class="pre">cpu0_freq_khz</span></code>.
-Совмещайте их с <code class="docutils literal notranslate"><span class="pre">latency/vision/*</span></code> в PlotJuggler, когда утверждаете «нагрев», а не «плохой MPC».</p>
+<p>Раз в секунду в беге могут присутствовать <code class="docutils literal notranslate"><span class="pre">cpu_pct</span></code>, <code class="docutils literal notranslate"><span class="pre">cpu_app_pct</span></code>, <code class="docutils literal notranslate"><span class="pre">thermal_status</span></code>, температуры,
+<code class="docutils literal notranslate"><span class="pre">cpu0_freq_khz</span></code>. Накладывайте их на <code class="docutils literal notranslate"><span class="pre">latency/vision/*</span></code> в PlotJuggler, когда утверждаете «нагрев», а не
+«плохой MPC».</p>
 </section>
 <section id="id7">
 <h2>Требования к отчёту (курс)<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>

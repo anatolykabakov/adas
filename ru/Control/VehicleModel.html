@@ -69,7 +69,7 @@
     <script src="../_static/lang-switch.js?v=29098906"></script>
     <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
     <link rel="search" title="Поиск" href="../search.html" />
-    <link rel="next" title="Угловой контур — то место, где обратная связь действительно кончается" href="AngleControl.html" />
+    <link rel="next" title="Угловой контур — там, где обратная связь и вправду заканчивается" href="AngleControl.html" />
     <link rel="prev" title="Продольный планировщик — скорость и дистанция" href="../Planner/Longitudinal.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="ru"/>
@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -453,20 +453,20 @@
 \[
 \kappa_{\mathrm{kin}} = \frac{\tan\delta}{L}.
 \]</div>
-<p>Если бы машина ей действительно следовала, скорость рыска удовлетворяла бы <span class="math notranslate nohighlight">\(\dot\psi = v\,\kappa_{\mathrm{kin}}\)</span>.
-Определим <strong>измеренную</strong> кривизну по датчикам:</p>
+<p>Если бы машина и вправду ей следовала, скорость рыска подчинялась бы уравнению <span class="math notranslate nohighlight">\(\dot\psi = v\,\kappa_{\mathrm{kin}}\)</span>.
+Определим теперь <strong>измеренную</strong> кривизну — ту, что видно по датчикам:</p>
 <div class="math notranslate nohighlight">
 \[
 \kappa_{\mathrm{fact}} = \frac{\dot\psi}{v}.
 \]</div>
 <p>На парковочных скоростях <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}} \approx \kappa_{\mathrm{kin}}\)</span>.
-На шоссе шины скользят: при <strong>том же</strong> <span class="math notranslate nohighlight">\(\delta\)</span> вы получаете <strong>меньше</strong> кривизны,</p>
+На шоссе шины уже проскальзывают: при <strong>том же</strong> <span class="math notranslate nohighlight">\(\delta\)</span> кривизны получается <strong>меньше</strong>,</p>
 <div class="math notranslate nohighlight">
 \[
 \frac{\kappa_{\mathrm{fact}}}{\kappa_{\mathrm{kin}}} &lt; 1.
 \]</div>
 <p><img alt="Недокрут: кинематика против факта" src="../_images/understeer_idea.png" /></p>
-<p>Если упреждающая часть использует только <span class="math notranslate nohighlight">\(\kappa_{\mathrm{kin}}\)</span>, она <strong>недозаказывает</strong> SWA на дугах → снос наружу; обратная связь вступает поздно, после задержки зрения.</p>
+<p>Если упреждающая часть опирается только на <span class="math notranslate nohighlight">\(\kappa_{\mathrm{kin}}\)</span>, на дугах она <strong>запрашивает слишком малый</strong> SWA → снос наружу; а обратная связь вступает поздно, уже после задержки зрения.</p>
 </section>
 <section id="id3">
 <h2>Простая формула недокрута<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
@@ -474,17 +474,17 @@
 <a class="reference internal image-reference" href="../_images/understeer_command.png"><img alt="../_images/understeer_command.png" src="../_images/understeer_command.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 31 </span><span class="caption-text">Чтобы держать тот же радиус, модель командует больший угол с ростом скорости — и сильнее при меньшем
-факторе жёсткости.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 31 </span><span class="caption-text">Чтобы удержать тот же радиус, с ростом скорости модель командует всё больший угол — и тем больший, чем
+меньше фактор жёсткости.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Однопараметрическая модель, используемая в стеках вроде openpilot (и наш <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>), выглядит так:</p>
+<p>Однопараметрическая модель, которую применяют в стеках вроде openpilot (и наш <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>), выглядит так:</p>
 <div class="math notranslate nohighlight">
 \[
 \kappa_{\mathrm{fact}} \approx \frac{\kappa_{\mathrm{kin}}}{1 - c\, v^{2}}
 \quad\text{с коэффициентом недокрута } c &lt; 0 \text{ в обычной договорённости о скольжении,}
 \]</div>
-<p>или равносильно: чтобы <strong>получить</strong> желаемую <span class="math notranslate nohighlight">\(\kappa_{\mathrm{des}}\)</span>, нужно скомандовать угол колеса больше, чем <span class="math notranslate nohighlight">\(\arctan(L\kappa_{\mathrm{des}})\)</span>.</p>
+<p>или, что то же самое: чтобы <strong>получить</strong> желаемую <span class="math notranslate nohighlight">\(\kappa_{\mathrm{des}}\)</span>, нужно скомандовать угол колеса больше, чем <span class="math notranslate nohighlight">\(\arctan(L\kappa_{\mathrm{des}})\)</span>.</p>
 <p>Операционально в коде:</p>
 <div class="math notranslate nohighlight">
 \[
@@ -494,15 +494,15 @@
 \]</div>
 <div class="tip admonition">
 <p class="admonition-title">Интуиция</p>
-<p>Шины делают машину «длиннее» в пространстве кривизны: тот же <span class="math notranslate nohighlight">\(\delta\)</span>, меньшая <span class="math notranslate nohighlight">\(\kappa\)</span>.
-Модель машины <strong>масштабирует команду вверх</strong>, чтобы умственный велосипед совпал с настоящим Golf.</p>
+<p>В пространстве кривизны шины как бы удлиняют машину: тот же <span class="math notranslate nohighlight">\(\delta\)</span> даёт меньшую <span class="math notranslate nohighlight">\(\kappa\)</span>.
+Модель машины <strong>завышает команду</strong>, чтобы воображаемый велосипед совпал с настоящим Golf.</p>
 </div>
 </section>
 <section id="id4">
 <h2>Сначала прочувствуйте оба дефекта на игрушке<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Прежде чем измерять настоящую машину, испортите игрушечный объект теми двумя дефектами, о которых эта
-глава: колёса больше не едут туда, куда смотрят, а команды приходят через 0.35 с. Три опорные точки
-<span class="math notranslate nohighlight">\(G(v)\)</span> — измерение этой машины (таблица ниже); задержка — <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>:</p>
+<p>Прежде чем измерять настоящую машину, внесите в игрушечный объект те два дефекта, которым посвящена эта
+глава: колёса больше не едут туда, куда смотрят, а команды приходят с задержкой 0.35 с. Три опорные точки
+<span class="math notranslate nohighlight">\(G(v)\)</span> взяты из замеров этой машины (таблица ниже), а задержка — это <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">deque</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -528,8 +528,8 @@
     <span class="k">return</span> <span class="n">step</span><span class="p">,</span> <span class="n">q</span>
 </pre></div>
 </div>
-<p><strong>Дефект 1 — дуга, которая убегает.</strong> Подайте упреждение на дугу R = 210 м на 23.5 м/с ровно так, как
-велит велосипедная модель, и смотрите:</p>
+<p><strong>Дефект 1 — дуга, которая убегает.</strong> Подайте упреждение на дугу R = 210 м при 23.5 м/с ровно так, как
+велит велосипедная модель, и посмотрите, что выйдет:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KAPPA</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="mf">210.0</span>
 <span class="n">V</span> <span class="o">=</span> <span class="mf">23.5</span>
 
@@ -549,10 +549,10 @@
 <span class="k">assert</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fixed</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"acceptance: dividing the curvature by G(v) holds the arc"</span>
 </pre></div>
 </div>
-<p>Одно деление чинит всё — <em>если вы знаете <span class="math notranslate nohighlight">\(G\)</span></em>. Остаток главы — про то, как его знать: из физической
-модели, а не по таблице, потому что таблица с сухого асфальта неверна на мокром.</p>
-<p><strong>Дефект 2 — задержка, превращающая хороший регулятор в осциллятор.</strong> Прямая дорога, регулятор
-«курс + смещение», державший 7 см на синусоиде, — и 0.35 с задержки:</p>
+<p>Одно деление исправляет всё — <em>если вы знаете <span class="math notranslate nohighlight">\(G\)</span></em>. Остаток главы — про то, как его узнать: из физической
+модели, а не по таблице, потому что таблица, снятая на сухом асфальте, врёт на мокром.</p>
+<p><strong>Дефект 2 — задержка, превращающая хороший регулятор в генератор колебаний.</strong> Прямая дорога, регулятор
+«курс + смещение», который держал 7 см на синусоиде, — и добавим 0.35 с задержки:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">drive_straight</span><span class="p">(</span><span class="n">delay_s</span><span class="p">,</span> <span class="n">predict</span><span class="p">,</span> <span class="n">kp</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">12.0</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">23.5</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Straight road, start 1 m off centre; returns (settled |CTE| p95, worst |CTE|)."""</span>
     <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">,</span> <span class="n">spsi</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span>
@@ -591,14 +591,15 @@
 <a class="reference internal image-reference" href="../_images/slip_delay.png"><img alt="../_images/slip_delay.png" src="../_images/slip_delay.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 32 </span><span class="caption-text">Слева: нескомпенсированный недокрут выносит из дуги; деление кривизны на G(v) держит её. Справа: 0.35 с
-задержки раскачивают контур, а досчёт сквозь команды в полёте его возвращает.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 32 </span><span class="caption-text">Слева: нескомпенсированный недокрут выносит из дуги, а деление кривизны на G(v) её удерживает. Справа:
+0.35 с задержки раскачивают контур, а досчёт сквозь команды в полёте возвращает его в норму.</span><a class="headerlink" href="#id15" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Лекарство — не меньший коэффициент (попробуйте: раскачка уменьшится, и отклик умрёт с ней). Лекарство —
-<strong>управлять тем состоянием, которое команда встретит, а не тем, которое вы измерили</strong>: досчитать через
-каждую команду в полёте и только потом решать. Боевой <code class="docutils literal notranslate"><span class="pre">lagAdjustedCurvature</span></code> — ровно этот цикл в
-пространстве кривизны (<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>, <em>fp-5</em>).</p>
+<p>Лекарство — не меньший коэффициент (попробуйте: раскачка спадёт, но вместе с ней умрёт и отклик). Лекарство
+в другом: <strong>управлять тем состоянием, к которому команда придёт, а не тем, которое вы измерили сейчас</strong>, —
+досчитать вперёд через каждую команду в полёте и только потом принимать решение. Боевой
+<code class="docutils literal notranslate"><span class="pre">lagAdjustedCurvature</span></code> — это ровно тот же цикл, но в пространстве кривизны
+(<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>, <em>fp-5</em>).</p>
 </section>
 <section id="id5">
 <h2>Рецепт измерения (по бегу)<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
@@ -661,11 +662,12 @@
       <span class="sa">f</span><span class="s2">"ratio=</span><span class="si">{</span><span class="n">ratio_kin_vs_fact</span><span class="p">(</span><span class="n">swa</span><span class="p">,</span><span class="w"> </span><span class="n">yaw</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Сколько дополнительного SWA нужно упреждающей части? Чтобы вернуть ту <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}\)</span>, которую
-кинематика обещала на малой скорости, при 22 м/с пришлось бы масштабировать на <span class="math notranslate nohighlight">\(1/0.54 \approx 1.85\)</span>. Держите
-это число нежёстко: столько просит <em>наивное</em> обращение, а настоящая модель машины распределяет поправку по
-скорости плавно, а не применяет один множитель. Разрыв между 1.85 и теми 3–9 %, на которые поставляемый
-параметр реально меняет команду, — предмет остальной части главы.</p>
+<p>Сколько же дополнительного SWA нужно упреждающей части? Чтобы вернуть ту <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}\)</span>, которую
+кинематика обещала на малой скорости, при 22 м/с команду пришлось бы умножить на <span class="math notranslate nohighlight">\(1/0.54 \approx 1.85\)</span>.
+Но относитесь к этому числу без фанатизма: столько просит <em>наивное</em> обращение формулы, а настоящая модель
+машины распределяет поправку по скорости плавно, а не сводит всё к одному множителю. Зазор между этими
+1.85 и теми 3–9 %, на которые поставляемый параметр реально меняет команду, и есть предмет остальной
+части главы.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">k_des</span> <span class="o">=</span> <span class="mf">0.02</span>  <span class="c1"># 1/m, mild arc</span>
 <span class="n">delta_kin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">L</span> <span class="o">*</span> <span class="n">k_des</span><span class="p">)</span>
 <span class="c1"># crude high-speed correction: inflate the kappa request by the measured shortfall</span>
@@ -680,18 +682,18 @@
 <ul class="simple">
 <li><p>C++ <code class="docutils literal notranslate"><span class="pre">vehicle_model.h</span></code>, Python <code class="docutils literal notranslate"><span class="pre">scripts/core/vehicle_model.py</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">vehicle.lat_use_vehicle_model</span> <span class="pre">=</span> <span class="pre">true</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — <strong>поставляется 0.64</strong> (дефолт в коде, оверрайда в конфиге нет); остальная часть главы
-потому что путь к нему полезнее самого значения.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — <strong>поставляется значение 0.64</strong> (дефолт в коде, оверрайда в конфиге нет); ему
+посвящён остаток главы — потому что путь к этому числу полезнее самого числа.</p></li>
 </ul>
 </section>
 <section id="id7">
 <h2>Калибровка одного коэффициента и обнаружение, что одним он быть не может<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Здесь курс обычно останавливается: есть формула с одним свободным параметром, вы измеряете отношение по бегу,
-решаете уравнение относительно параметра. Мы так и сделали. Получилось противоречие, на разрешение которого
-ушло два заезда и третий датчик, и само противоречие — это и есть урок.</p>
+<p>Обычно курс на этом и заканчивается: есть формула с одним свободным параметром, вы измеряете отношение по
+бегу и решаете уравнение относительно параметра. Мы так и поступили — и упёрлись в противоречие, на
+разрешение которого ушло два заезда и третий датчик. Само это противоречие и есть главный урок.</p>
 <section id="id8">
 <h3>Противоречие<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
-<p>Два независимых источника расходились в <em>направлении</em> поправки:</p>
+<p>Два независимых источника расходились даже в <em>направлении</em> поправки:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>источник</p></th>
@@ -711,15 +713,15 @@
 </tbody>
 </table>
 </div>
-<p>Оба быть правы не могут, и отбросить нельзя ни один: их оценщик работал часами на наших дорогах с крошечным
-разбросом, а наш замер был прямой арифметикой по нашим же логам.</p>
+<p>Оба правы быть не могут, но и отбросить нельзя ни один: их оценщик часами работал на наших дорогах с
+крошечным разбросом, а наш замер — это прямая арифметика по нашим же логам.</p>
 </section>
 <section id="id9">
 <h3>Как это разрешилось: найти третий датчик<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h3>
-<p>Под подозрение попал вход, общий для обоих расчётов и не проверяемый ни одним из них, — скорость рыска. Наша
-приходит с датчика ESP машины по CAN. Если бы он был отмасштабирован, наши 0.54 были бы неверны ровно на этот
-масштаб, и спор кончился бы.</p>
-<p>Значит: сравнить его с двумя другими вещами, измеряющими ту же физическую величину.</p>
+<p>Под подозрение попал вход, общий для обоих расчётов и не проверяемый ни одним из них, — скорость рыска. К
+нам она приходит с датчика ESP машины по CAN. Будь он неверно отмасштабирован, наши 0.54 были бы искажены
+ровно на тот же масштаб — и спор бы разрешился.</p>
+<p>Значит, нужно сравнить его с двумя другими источниками, измеряющими ту же физическую величину.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Three sensors, one quantity. Ratios measured on run 2026_08_04_21_00_18.</span>
 <span class="n">PAIRS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"phone gyro / ESP"</span><span class="p">:</span> <span class="mf">1.017</span><span class="p">,</span> <span class="s2">"camera odometry / ESP"</span><span class="p">:</span> <span class="mf">0.849</span><span class="p">,</span> <span class="s2">"camera odometry / gyro"</span><span class="p">:</span> <span class="mf">0.788</span><span class="p">}</span>
 <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">ratio</span> <span class="ow">in</span> <span class="n">PAIRS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -731,14 +733,14 @@
 <span class="nb">print</span><span class="p">(</span><span class="s2">"0.54 measurement stands."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Это закрыло вопрос единственным способом, каким его можно было закрыть: не спором о том, чей оценщик лучше, а
-добавлением измерения, которое делает один из них проверяемым. Пока это не было сделано,
-<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> был заморожен — намеренно, потому что двигать коэффициент, пока его собственный вход
-под подозрением, значит получить число, подходящее одному заезду и ничему больше.</p>
+<p>Это закрыло вопрос единственным возможным способом: не спором о том, чей оценщик лучше, а добавлением
+измерения, которое делает один из входов проверяемым. Пока этого не было сделано,
+<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> держали замороженным — намеренно, потому что двигать коэффициент, пока его
+собственный вход под подозрением, — значит получить число, подходящее ровно одному заезду и больше ничему.</p>
 </section>
 <section id="id10">
 <h3>Что правка дала на самом деле<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h3>
-<p>С проверенным входом коэффициент сдвинулся с 0.64 до 0.50, и следующий заезд был измерен на той же дороге:</p>
+<p>С проверенным входом коэффициент сдвинулся с 0.64 до 0.50, а следующий заезд замерили на той же дороге:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p></p></th>
@@ -770,13 +772,13 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">radius</span><span class="si">:</span><span class="s2">&gt;6.0f</span><span class="si">}</span><span class="s2"> m </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">a</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">b</span><span class="si">:</span><span class="s2">&gt;9.1f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;+7.1f</span><span class="si">}</span><span class="s2">%"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Обратите внимание на величину: <strong>на 3–9 % больше угла руля</strong>. Подстройка, а не рычаг — и она убрала четверть
-ошибки слежения. Это хорошее отношение эффекта к вмешательству, и одновременно тревожный признак: если 3 %
-изменения команды двигают результат на 25 %, контур работает у предела.</p>
+<p>Обратите внимание на величину поправки: <strong>угол руля вырос всего на 3–9 %</strong>. Это тонкая подстройка, а не
+рычаг, — и она убрала четверть ошибки слежения. Отношение эффекта к вмешательству отличное, но это же и
+тревожный знак: если 3 % изменения команды сдвигают результат на 25 %, значит, контур работает у предела.</p>
 </section>
 <section id="id11">
 <h3>Почему это не может закончиться константой<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h3>
-<p>Заканчивается здесь потому, что само отношение непостоянно:</p>
+<p>Всё упирается в то, что само отношение непостоянно:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>скорость</p></th>
@@ -796,22 +798,23 @@
 </tbody>
 </table>
 </div>
-<p>Один <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> подходит одной строке. Выберите его для города — шоссе недозаказывает; выберите
-для шоссе — городские дуги срезаются. И 0.50 измеренно верен на городских дугах, но <strong>в реплее</strong> городскую
-дугу ухудшил (−0.44 → −0.52 м), а такое расхождение получается, когда один параметр тащит две работы.</p>
-<p>Структурный ответ — перестать подгонять константу и оценивать параметры непрерывно, с зависимостью от <span class="math notranslate nohighlight">\(v^2\)</span> в
-модели наблюдения, а не запечённой в число. Именно это делает <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> у upstream — фильтр из девяти
-состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги. В этом проекте порт
-<strong>существует, измерен и поставляется отключённым</strong>: <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a>, шаг 6 —
-это измерение того, почему. Крен дороги (поперечный уклон даёт ту же поперечную подпись, что и
-недокручивающая машина) теперь оценивается (шаг 5), но остаётся вырождение жёсткость↔передаточное, которое
-данные не разделяют, — оно и держит фичу выключенной.</p>
+<p>Один <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> подходит лишь одной строке таблицы. Настроите его под город — шоссе будет
+запрашивать слишком мало; настроите под шоссе — городские дуги начнёт срезать. И 0.50 по замерам верен на
+городских дугах, но <strong>в реплее</strong> одну из городских дуг он даже ухудшил (−0.44 → −0.52 м); такое расхождение
+и возникает, когда одному параметру приходится тянуть сразу две работы.</p>
+<p>Ответ по существу — перестать подгонять константу и оценивать параметры непрерывно, чтобы зависимость от
+<span class="math notranslate nohighlight">\(v^2\)</span> жила в модели наблюдения, а не была зашита в одно число. Именно так работает <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> у upstream —
+фильтр из девяти состояний по жёсткости, передаточному отношению, двум смещениям руля и уклону дороги. В
+нашем проекте этот порт <strong>есть, измерен и поставляется отключённым</strong>: <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a>,
+шаг 6 — это как раз замер того, почему. Крен дороги (поперечный уклон оставляет ту же поперечную подпись,
+что и недокручивающая машина) теперь оценивается (шаг 5), но остаётся вырождение жёсткость↔передаточное,
+которое данные не разделяют, — оно-то и держит фичу выключенной.</p>
 </section>
 </section>
 <section id="id12">
 <h2>Задержка конвейера и почему компенсация больше измерения<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
-<p>Второе, что должна знать упреждающая часть, — что её картина дороги устарела. Медианы, измеренные на ночном
-заезде длиной 28 минут:</p>
+<p>Второе, что должна знать упреждающая часть, — что её картина дороги уже устарела. Медианы, измеренные на
+ночном заезде длиной 28 минут:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>звено</p></th>
@@ -851,11 +854,12 @@
 </tbody>
 </table>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span> <span class="pre">=</span> <span class="pre">0.35</span></code> намеренно больше любой из этих сумм, и причину стоит проговорить, потому что выглядит
-это как небрежность. Первые три строки — <em>транспорт</em>, чистое запаздывание, и упреждение компенсирует их точно.
-Последние две — <em>динамика</em>: отклик примерно первого порядка, и компенсация его номинальной постоянной не
-оставляет запаса на то, что отклик окажется медленнее номинала на холодной рейке, изношенной шине или неровной
-поверхности. Недокомпенсация сносит, перекомпенсация раскачивает, и контур переносит первое куда легче второго.</p>
+<p><code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span> <span class="pre">=</span> <span class="pre">0.35</span></code> намеренно больше любой из этих сумм, и причину стоит проговорить вслух, потому
+что со стороны это похоже на небрежность. Первые три строки — это <em>транспорт</em>, чистое запаздывание, и
+упреждение компенсирует его точно. Последние две — это <em>динамика</em>: отклик примерно первого порядка, и если
+компенсировать его номинальной постоянной времени, не остаётся запаса на случай, когда отклик окажется
+медленнее номинала — на холодной рейке, изношенной шине или неровной дороге. Недокомпенсация уводит в снос,
+перекомпенсация раскачивает, а первое контур переносит куда легче второго.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">V</span> <span class="o">=</span> <span class="mf">22.0</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'delay'</span><span class="si">:</span><span class="s2">&gt;8</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'travel at 22 m/s'</span><span class="si">:</span><span class="s2">&gt;18</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="s1">'what it covers'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">delay</span><span class="p">,</span> <span class="n">what</span> <span class="ow">in</span> <span class="p">((</span><span class="mf">0.089</span><span class="p">,</span> <span class="s2">"to the wire"</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="s2">"to yaw rate"</span><span class="p">),</span> <span class="p">(</span><span class="mf">0.35</span><span class="p">,</span> <span class="s2">"shipped lookahead"</span><span class="p">)):</span>
@@ -873,9 +877,9 @@
 <section id="id13">
 <h2>Задания<a class="headerlink" href="#id13" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Запустите синтетический пример <code class="docutils literal notranslate"><span class="pre">ratio_kin_vs_fact</span></code>; замените <code class="docutils literal notranslate"><span class="pre">0.54</span></code> на <code class="docutils literal notranslate"><span class="pre">0.99</span></code> и посмотрите, как исчезает раздувание SWA.</p></li>
-<li><p>По бегу с рулением водителя постройте отношение по диапазонам <span class="math notranslate nohighlight">\(v\)</span>; сравните с таблицей.</p></li>
-<li><p>Объясните одним предложением, почему срезание <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> до <span class="math notranslate nohighlight">\(0.23\)</span> всё равно может ухудшить замкнутый контур.</p></li>
+<li><p>Запустите синтетический пример <code class="docutils literal notranslate"><span class="pre">ratio_kin_vs_fact</span></code>; замените <code class="docutils literal notranslate"><span class="pre">0.54</span></code> на <code class="docutils literal notranslate"><span class="pre">0.99</span></code> и посмотрите, как пропадает завышение SWA.</p></li>
+<li><p>По бегу с рулением водителя постройте отношение по диапазонам <span class="math notranslate nohighlight">\(v\)</span> и сравните с таблицей.</p></li>
+<li><p>Объясните одним предложением, почему укорочение <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> до <span class="math notranslate nohighlight">\(0.23\)</span> всё равно может ухудшить замкнутый контур.</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />
@@ -927,7 +931,7 @@
        title="следующая страница">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">вперёд</p>
-        <p class="prev-next-title">Угловой контур — то место, где обратная связь действительно кончается</p>
+        <p class="prev-next-title">Угловой контур — там, где обратная связь и вправду заканчивается</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

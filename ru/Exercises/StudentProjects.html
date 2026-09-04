@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -459,40 +459,40 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Задания<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Большинство заданий выполняется по бегу, без машины. Дорожный HCA — только под присмотром преподавателя.
-Каждый отчёт обязан содержать <strong>темп</strong> зрения и <strong>сквозную</strong> задержку съёмка→инференс (или объяснение, почему их нет).</p>
-<p>Мелкие потемные лаборатории теперь живут внутри своих глав — каждая глава строит собственную игрушку
-и кончается измеримой проверкой (проваленный P-регулятор в главе про велосипед, таблица компромисса в
-Pure Pursuit, шина в шестьдесят строк в Middleware, собственный бег в «Бегах»). Эта страница хранит
+<p>Большинство заданий делается по бегу, без машины. Дорожный HCA — только под присмотром преподавателя.
+В каждом отчёте обязательны <strong>темп</strong> зрения и <strong>сквозная</strong> задержка съёмка→инференс (либо объяснение, почему их нет).</p>
+<p>Мелкие лаборатории теперь живут внутри своих глав: каждая глава собирает собственную игрушку
+и завершается измеримой проверкой (проваленный P-регулятор в главе про велосипед, таблица компромисса в
+Pure Pursuit, шина в шестьдесят строк в Middleware, собственный бег в «Бегах»). А эта страница держит
 крупные, межглавные задания — капстоны.</p>
-<p>Работайте в духе AAD: прочитать главу → сделать небольшое измерение → написать, что увидели, включая случаи отказа.</p>
+<p>Работайте в духе AAD: прочитать главу → сделать небольшое измерение → описать увиденное, не пряча случаи отказа.</p>
 <div class="important admonition">
 <p class="admonition-title">Какой бег нужен каждому проекту</p>
-<p>В беге, который вы записали сами (Беги, <em>Запишите собственный бег</em>), есть зрение, GPS и IMU, но <strong>нет
-<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, CAN и момента</strong> — панды не было. Проекты, сравнивающие с рулением водителя или гоняющие
-контроллер против актуации (<strong>A2, A3, B1, B2</strong>), поэтому требуют <strong>инструкторского бега</strong> с CAN. Остальные
-работают на вашей записи.</p>
+<p>В беге, записанном вами самими (Беги, <em>Запишите собственный бег</em>), есть зрение, GPS и IMU, но <strong>нет
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, CAN и момента</strong> — панды не было. Поэтому проектам, где идёт сравнение с рулением водителя или
+контроллер гоняется против актуации (<strong>A2, A3, B1, B2</strong>), нужен <strong>инструкторский бег</strong> с CAN. Остальным
+хватает вашей записи.</p>
 </div>
 <section id="a">
 <h2>A — анализ данных<a class="headerlink" href="#a" title="Ссылка на этот заголовок">#</a></h2>
 <section id="a1">
 <h3>A1 Задержки<a class="headerlink" href="#a1" title="Ссылка на этот заголовок">#</a></h3>
 <p>Возьмите 2–3 сессии. Постройте таблицу темпа и сквозной задержки. Если есть окно нагрева или троттлинга, сопоставьте его с <code class="docutils literal notranslate"><span class="pre">infer_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">phone/stats</span></code>.
-<strong>Результат:</strong> график и абзац, разделяющий «контроллер плох» и «зрению не хватает кадров».</p>
+<strong>Результат:</strong> график и абзац, который разделяет «плох контроллер» и «зрению не хватает кадров».</p>
 </section>
 <section id="a2">
 <h3>A2 Недокрут<a class="headerlink" href="#a2" title="Ссылка на этот заголовок">#</a></h3>
 <p>На кадрах, где рулит водитель, постройте <span class="math notranslate nohighlight">\(\kappa_{\mathrm{fact}}/\kappa_{\mathrm{kin}}\)</span> по диапазонам <span class="math notranslate nohighlight">\(v\)</span> (см. <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">модель машины</span></a>).
-<strong>Результат:</strong> таблица против опорных диапазонов курса; комментарий при <span class="math notranslate nohighlight">\(v\sim 20\)</span> м/с.</p>
+<strong>Результат:</strong> таблица в сравнении с опорными диапазонами курса; комментарий при <span class="math notranslate nohighlight">\(v\sim 20\)</span> м/с.</p>
 </section>
 <section id="a3-hca">
 <h3>A3 Водитель против HCA<a class="headerlink" href="#a3-hca" title="Ссылка на этот заголовок">#</a></h3>
 <p>Воспроизведите метрики CTE на выданном преподавателем беге с прямой и дугой.
-<strong>Результат:</strong> |CTE| медиана/p95 на прямой против дуги; укажите темп зрения на этих окнах.</p>
+<strong>Результат:</strong> медиана и p95 для |CTE| на прямой и на дуге; укажите темп зрения на этих окнах.</p>
 </section>
 <section id="a4">
 <h3>A4 Локализация<a class="headerlink" href="#a4" title="Ссылка на этот заголовок">#</a></h3>
-<p>Прочитайте главу <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">про локализацию</span></a>. По бегу: (1) трек в ENU из GPS, (2) время до валидного <code class="docutils literal notranslate"><span class="pre">imu_yaw</span></code>, (3) наложение <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> на счисление пути.
+<p>Прочитайте главу <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">про локализацию</span></a>. По бегу постройте: (1) трек в ENU из GPS, (2) время до валидного <code class="docutils literal notranslate"><span class="pre">imu_yaw</span></code>, (3) наложение <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> на счисление пути.
 <strong>Результат:</strong> один график и заметка о том, где GPS защёлкивает курс.</p>
 </section>
 </section>
@@ -500,17 +500,17 @@ Pure Pursuit, шина в шестьдесят строк в Middleware, соб�
 <h2>B — офлайн-управление<a class="headerlink" href="#b" title="Ссылка на этот заголовок">#</a></h2>
 <section id="b1-pure-pursuit">
 <h3>B1 Перебор Pure Pursuit<a class="headerlink" href="#b1-pure-pursuit" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code> по <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
-<strong>Результат:</strong> точка изгиба, которую вы бы поставили, и почему.</p>
+<p><code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code> по <code class="docutils literal notranslate"><span class="pre">pp_*</span></code>. Постройте парето-фронт |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.
+<strong>Результат:</strong> точка изгиба, где вы бы остановились, и почему.</p>
 </section>
 <section id="b2">
 <h3>B2 Чувствительность к задержке<a class="headerlink" href="#b2" title="Ссылка на этот заголовок">#</a></h3>
-<p>Повторите B1 (или для <code class="docutils literal notranslate"><span class="pre">fp</span></code>) при <code class="docutils literal notranslate"><span class="pre">--vision-latency</span></code> ∈ <span class="math notranslate nohighlight">\(\{0,\ 0.07,\ 0.2\}\)</span>.
-<strong>Результат:</strong> какая задержка ломает какой контроллер первым.</p>
+<p>Повторите B1 (или то же для <code class="docutils literal notranslate"><span class="pre">fp</span></code>) при <code class="docutils literal notranslate"><span class="pre">--vision-latency</span></code> ∈ <span class="math notranslate nohighlight">\(\{0,\ 0.07,\ 0.2\}\)</span>.
+<strong>Результат:</strong> какая задержка первой ломает какой контроллер.</p>
 </section>
 <section id="b3">
 <h3>B3 Упреждение на дуге<a class="headerlink" href="#b3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Пользуясь главой <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> (разделы fp-3 и fp-5), отметьте упреждающую и обратную части на одной дуге.
+<p>Опираясь на главу <a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> (разделы fp-3 и fp-5), выделите упреждающую и обратную части на одной дуге.
 <strong>Результат:</strong> набросок или график с пометками; одно предложение о том, почему поднимать вес CTE — неверный первый рычаг.</p>
 </section>
 </section>
@@ -518,7 +518,7 @@ Pure Pursuit, шина в шестьдесят строк в Middleware, соб�
 <h2>C — платформа и безопасность<a class="headerlink" href="#c" title="Ссылка на этот заголовок">#</a></h2>
 <section id="c0-middleware">
 <h3>C0 Middleware<a class="headerlink" href="#c0-middleware" title="Ссылка на этот заголовок">#</a></h3>
-<p>Прочитайте главу <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a>. По <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code> перечислите: как параметр доходит до переменной сервиса; что делает <code class="docutils literal notranslate"><span class="pre">step()</span></code> в режиме <code class="docutils literal notranslate"><span class="pre">Simulated</span></code>.</p>
+<p>Прочитайте главу <a class="reference internal" href="../Architecture/Middleware.html"><span class="std std-doc">Middleware</span></a>. По <code class="docutils literal notranslate"><span class="pre">test_middleware.cpp</span></code> распишите: как параметр доходит до переменной сервиса; что делает <code class="docutils literal notranslate"><span class="pre">step()</span></code> в режиме <code class="docutils literal notranslate"><span class="pre">Simulated</span></code>.</p>
 </section>
 <section id="c1">
 <h3>C1 Отладочное поле<a class="headerlink" href="#c1" title="Ссылка на этот заголовок">#</a></h3>
@@ -530,27 +530,27 @@ Pure Pursuit, шина в шестьдесят строк в Middleware, соб�
 </section>
 <section id="c3-metadrive">
 <h3>C3 MetaDrive<a class="headerlink" href="#c3-metadrive" title="Ссылка на этот заголовок">#</a></h3>
-<p>Сравните <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code> на фиксированном сценарии (<code class="docutils literal notranslate"><span class="pre">sim.eval</span></code>); отчитайтесь теми же метриками, что в B1.</p>
+<p>Сравните <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code> на одном и том же сценарии (<code class="docutils literal notranslate"><span class="pre">sim.eval</span></code>); отчитайтесь теми же метриками, что и в B1.</p>
 </section>
 <section id="c4-fcw-aeb-ldw">
 <h3>C4 FCW / AEB / LDW<a class="headerlink" href="#c4-fcw-aeb-ldw" title="Ссылка на этот заголовок">#</a></h3>
-<p>Прочитайте главу <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">про предупреждения</span></a>. Прогоните юнит-тесты, задевающие <code class="docutils literal notranslate"><span class="pre">test_safety_warn</span></code>, затем:</p>
+<p>Прочитайте главу <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">про предупреждения</span></a>. Прогоните юнит-тесты, которые задевают <code class="docutils literal notranslate"><span class="pre">test_safety_warn</span></code>, затем:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">PYTHONPATH</span><span class="o">=</span>scripts<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>python3<span class="w"> </span>scripts/bag/bag_safety_warn.py<span class="w"> </span>adas_logs/&lt;session&gt;
 </pre></div>
 </div>
-<p><strong>Результат:</strong> таблица эпизодов и одно ложное срабатывание, которое правила с гейтами корректно подавляют (или объяснение, почему по этому бегу FCW показать нельзя).</p>
+<p><strong>Результат:</strong> таблица эпизодов и одно ложное срабатывание, которое правила с гейтами корректно гасят (либо объяснение, почему по этому бегу FCW показать нельзя).</p>
 </section>
 </section>
 <section id="d">
 <h2>D — исследование<a class="headerlink" href="#d" title="Ссылка на этот заголовок">#</a></h2>
 <section id="d1-yolo">
 <h3>D1 YOLO под нагрузкой<a class="headerlink" href="#d1-yolo" title="Ссылка на этот заголовок">#</a></h3>
-<p>Включите YOLO для знаков с жёстким ограничением так, чтобы зрение осталось <span class="math notranslate nohighlight">\(\ge 9\)</span> Гц, — либо задокументируйте, что это невозможно.</p>
+<p>Включите YOLO для знаков с жёстким ограничением так, чтобы зрение осталось <span class="math notranslate nohighlight">\(\ge 9\)</span> Гц, — либо задокументируйте, что этого добиться нельзя.</p>
 </section>
 <section id="d2">
 <h3>D2 Крен<a class="headerlink" href="#d2" title="Ссылка на этот заголовок">#</a></h3>
-<p>Наблюдаем ли крен в живой калибровке? Как он влияет на среднее смещение CTE?</p>
+<p>Виден ли крен в живой калибровке? Как он влияет на среднее смещение CTE?</p>
 </section>
 </section>
 <section id="id2">

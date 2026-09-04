@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -447,9 +447,9 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="paramsd">
 <h1>Учим параметры машины — paramsd, крен полотна и что об этом сказало измерение<a class="headerlink" href="#paramsd" title="Ссылка на этот заголовок">#</a></h1>
-<p>Всё до сих пор предполагало, что числа машины — передаточное руля, жёсткость шин, ноль руля — известны. Они
-не известны и уплывают. Эта глава — портированный и измеренный <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> upstream: параметры становятся
-состояниями фильтра, крен полотна — входом, который ему нужен, а заезд говорит, какие из допущений
+<p>До сих пор мы считали, что числа машины — передаточное руля, жёсткость шин, ноль руля — известны. Они
+неизвестны и вдобавок уплывают. Эта глава — портированный и измеренный <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> из upstream: параметры
+становятся состояниями фильтра, крен полотна — нужным ему входом, а заезд показывает, какие из допущений
 выжили. Она закрывает часть «Локализация» чеклистом конфига и заданиями по всем шагам.</p>
 <section id="id1">
 <h2>Шаг 5: чего до сих пор нет<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
@@ -457,25 +457,25 @@
 <li><p><strong>Крен дороги теперь есть, уклона нет.</strong> <code class="docutils literal notranslate"><span class="pre">RoadRollEstimator</span></code> читает его из поперечного акселерометра —
 <code class="docutils literal notranslate"><span class="pre">sin(φ)</span> <span class="pre">=</span> <span class="pre">(a_y</span> <span class="pre">−</span> <span class="pre">f_y)/g</span></code> при <code class="docutils literal notranslate"><span class="pre">a_y</span> <span class="pre">=</span> <span class="pre">−v·yaw_rate</span></code>, — вычитает измеренные +3 °/g крена кузова на подвеске и
 публикует на <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> вместе со своей неопределённостью: 2.2° на отсчёт, 0.65° после десяти
-секунд усреднения и не лучше, потому что остаток — это смена уклона дороги вдоль маршрута. Гейт ставьте на
-<code class="docutils literal notranslate"><span class="pre">road_roll_std_deg</span></code>, который начинается с тех же 10°, что <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> использует для «крена нет». Продольный
-уклон — та же конструкция с <code class="docutils literal notranslate"><span class="pre">f_x</span></code>, и он не сделан.</p>
-<p>Две вещи, которые стоили времени и стоят того, чтобы их унести: знак <code class="docutils literal notranslate"><span class="pre">chassis.yaw_rate</span></code> — ISO, с z вверх и
-плюсом влево, тогда как фрейм оценщика с z вниз, и перевёрнутый знак сообщает не ошибку, а градиент крена
-кузова 116 °/g; и захват ориентации на месте раньше перезаписывал курс крепления вращением из гравитации,
-что безвредно для скорости рыска и убивает всё поперечное.</p>
+секунд усреднения — и не лучше, потому что остаток — это изменение уклона дороги вдоль маршрута. Гейт ставьте
+по <code class="docutils literal notranslate"><span class="pre">road_roll_std_deg</span></code>, который стартует с тех же 10°, что <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> принимает за «крена нет». Продольный
+уклон — та же конструкция с <code class="docutils literal notranslate"><span class="pre">f_x</span></code>, но он не сделан.</p>
+<p>Две вещи, которые стоили времени и которые стоит унести с собой. Первая: знак <code class="docutils literal notranslate"><span class="pre">chassis.yaw_rate</span></code> — по ISO, с
+осью z вверх и плюсом влево, тогда как у оценщика фрейм с z вниз, и перевёрнутый знак выдаёт не ошибку, а
+градиент крена кузова 116 °/g. Вторая: захват ориентации на месте раньше перезаписывал курс крепления
+вращением из гравитации — для скорости рыска это безвредно, а всё поперечное убивает.</p>
 </li>
-<li><p><strong>Масштаб скорости колёс всё ещё вводится руками.</strong> Скорость GPS используется, скорость стала состоянием, и
-этого не хватило (шаг 4): частое смещённое измерение выигрывает между посылками GPS, и никакое предположение
-о шуме не отделяет постоянное смещение от истины. Масштабу нужно собственное состояние.</p></li>
-<li><p><strong>Выученные параметры машины</strong> — сделаны, и результат это шаг 6 ниже. В списке пробелов их больше нет:
-порт есть, он измерен, и измерение и есть причина, по которой он отгружается выключенным.</p></li>
+<li><p><strong>Масштаб скорости колёс всё ещё задаётся руками.</strong> Скорость GPS используется, скорость стала состоянием — и
+этого не хватило (шаг 4): частое смещённое измерение побеждает в промежутках между посылками GPS, и никакое
+допущение о шуме не отделит постоянное смещение от истины. Масштабу нужно собственное состояние.</p></li>
+<li><p><strong>Выученные параметры машины</strong> — сделаны, и результат — это шаг 6 ниже. В списке пробелов их больше нет:
+порт есть, он измерен, и само это измерение — причина, по которой он отгружается выключенным.</p></li>
 </ul>
 <p>Порядок зависимостей стоит проговорить, потому что его легко перевернуть: скорость GPS в фильтр → оценка
-ориентации и крена → <code class="docutils literal notranslate"><span class="pre">paramsd</span></code>. Портировать <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> первым значит оставить его вход по крену прижатым к нулю;
-это работает, но отдаёт единственное, что отличает поперечный уклон дороги от недокрута машины. Этот порядок
-был соблюдён, и шаг 6 — это то, что вышло, когда вход по крену, которого он требовал, встретился с бюджетом
-ошибок, в который обязан был поместиться.</p>
+ориентации и крена → <code class="docutils literal notranslate"><span class="pre">paramsd</span></code>. Портировать <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> первым — значит оставить его вход по крену прижатым к
+нулю; так тоже работает, но при этом теряется единственное, что отличает поперечный уклон дороги от недокрута
+машины. Порядок был соблюдён, и шаг 6 — это то, что получилось, когда нужный этому оценщику вход по крену
+столкнулся с бюджетом ошибок, в который обязан уместиться.</p>
 <hr class="docutils" />
 <figure class="align-default" id="id13">
 <a class="reference internal image-reference" href="../_images/understeer_speed.png"><img alt="../_images/understeer_speed.png" src="../_images/understeer_speed.png" style="width: 75%;" />
@@ -488,14 +488,14 @@
 </section>
 <section id="id2">
 <h2>Шаг 6: учим параметры машины — и что об этом сказало измерение<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Всё до сих пор оценивало, <em>где машина</em>. Этот шаг оценивает, <em>какая она</em> — и он в этой главе, а не в главе про
-поперечное управление, потому что входы оценщика — это входы локализатора, а его единственный неочевидный вход
-есть крен дороги из шага 5.</p>
-<p>Это же и самое честное место в книге, потому что заканчивается оно выключенной функцией.</p>
+<p>Всё до сих пор оценивало, <em>где машина</em>. Этот шаг оценивает, <em>какая она</em>, — и стоит он в этой главе, а не в
+главе про поперечное управление, потому что входы оценщика — это входы локализатора, а его единственный
+неочевидный вход — крен дороги из шага 5.</p>
+<p>И это самое честное место в книге — потому что заканчивается оно выключенной функцией.</p>
 <section id="id3">
 <h3>Посылка и как проверять посылку<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Вот рассуждение, с которого началась работа. Сравним кривизну, которую подразумевает угол руля, с кривизной,
-которую показывает рыск, на одном настоящем заезде:</p>
+<p>Вот рассуждение, с которого началась работа. Сравним на одном настоящем заезде кривизну, которую подразумевает
+угол руля, с кривизной, которую показывает рыск:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>скорость</p></th>
@@ -524,16 +524,17 @@
 </tbody>
 </table>
 </div>
-<p>Чем быстрее, тем устойчивее машина поворачивает меньше, чем предсказывает кинематика. <code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code>
-— одно число в файле конфига. Одно число не может быть и 0.89, и 0.46. Значит, говорит рассуждение, оно должно
-стать состоянием — что и делает <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> у upstream.</p>
-<p>Верно всё, кроме слова «значит». Скоростную зависимость несёт не константа, а <em>модель вокруг неё</em>. Вспомним из
-главы про поперечное управление:</p>
+<p>Чем быстрее, тем стабильнее машина недоворачивает по сравнению с тем, что предсказывает кинематика.
+<code class="docutils literal notranslate"><span class="pre">tire_stiffness_factor</span></code> — это одно число в файле конфига. Одно число не может быть одновременно и 0.89, и 0.46.
+Значит, говорит рассуждение, оно должно стать состоянием — что <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> в upstream и делает.</p>
+<p>Верно здесь всё, кроме слова «значит». Зависимость от скорости несёт не константа, а <em>модель вокруг неё</em>.
+Вспомним главу про поперечное управление:</p>
 <div class="math notranslate nohighlight">
 \[\kappa = \frac{\tan\delta}{L\,(1 - \text{slip}\cdot v^2)}\]</div>
-<p>где <span class="math notranslate nohighlight">\(\text{slip} &lt; 0\)</span> для недокручивающей машины, поэтому знаменатель растёт как <span class="math notranslate nohighlight">\(v^2\)</span> и тот же угол руля
-покупает меньше кривизны на скорости. Это ровно наблюдаемый эффект. Значит, вопрос не «падает ли отношение со
-скоростью» — падает, — а «падает ли оно по-прежнему после того, как модель сказала своё слово».</p>
+<p>где <span class="math notranslate nohighlight">\(\text{slip} &lt; 0\)</span> для недоворачивающей машины, так что знаменатель растёт как <span class="math notranslate nohighlight">\(v^2\)</span> и на скорости тот же
+угол руля даёт меньше кривизны. Это ровно тот эффект, что мы наблюдаем. Значит, вопрос не в том, «падает ли
+отношение со скоростью» — падает, — а в том, «падает ли оно по-прежнему после того, как своё слово сказала
+модель».</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">WHEELBASE_M</span> <span class="o">=</span> <span class="mf">2.636</span>
@@ -568,11 +569,11 @@
       <span class="sa">f</span><span class="s2">"fact/model </span><span class="si">{</span><span class="n">ratio_model</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">ratio_model</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Разброс сжимается с 0.43 до 0.16, и в остатке нет монотонного тренда. (Этот прогон берёт середину каждой
-полосы; посчитанные по отсчётам прямо из бага остаточные отношения дают 0.95, 0.94, 0.99, 0.87, 0.89, 0.80 —
-картина та же.) Ровная недостача около 10 % — это не скоростная зависимость жёсткости. Это ошибка масштаба, а
-ошибка масштаба есть одно число, то есть ровно то, чем константа быть умеет.</p>
-<p>Порт это не остановило — фильтр, сообщающий свою неопределённость, всё равно стоит иметь, и те 10 % всё равно
+<p>Разброс сжимается с 0.43 до 0.16, и монотонного тренда в остатке нет. (Этот прогон берёт середину каждой
+полосы; остаточные отношения, посчитанные по отсчётам прямо из бага, дают 0.95, 0.94, 0.99, 0.87, 0.89, 0.80 —
+картина та же.) Ровная недостача около 10 % — это не зависимость жёсткости от скорости. Это ошибка масштаба, а
+ошибка масштаба — одно число, то есть ровно то, чем константа и умеет быть.</p>
+<p>Порт это не остановило: фильтр, который сообщает свою неопределённость, всё равно полезен, и те 10 % всё равно
 требуют объяснения. Но это меняет то, как выглядел бы успех.</p>
 </section>
 <section id="id4">
@@ -583,14 +584,14 @@
 x = [\text{tsf},\ \text{передаточное},\ \text{смещение угла}], \qquad
 \dot\psi_{\text{пред}} = v\,\kappa(x) + \frac{g\sin\phi}{v}
 \]</div>
-<p>Две детали несут почти всю ценность.</p>
-<p><strong>Берите собственную функцию кривизны контроллера.</strong> Не её пересказ, а ту же самую функцию. Параметр,
-выученный против модели, чуть отличающейся от той, которая его потребляет, хуже настроенной руками константы,
-потому что выглядит принципиальным.</p>
-<p><strong>Дифференцируйте её численно.</strong> Три состояния на частоте CAN не стоят ничего, а аналитическая производная
-через <code class="docutils literal notranslate"><span class="pre">slip_factor</span></code> — которая делит на произведения жёсткостей, сами зависящие от состояния, — это ровно то
-выражение, которое месяц бывает неверным, прежде чем кто-нибудь заметит. Функция измерения есть единственный
-источник истины; центральная разность не может с ней разойтись.</p>
+<p>Почти всю ценность несут две детали.</p>
+<p><strong>Берите собственную функцию кривизны контроллера.</strong> Не её пересказ, а именно ту же функцию. Параметр,
+выученный по модели, хоть немного отличной от той, что его потом использует, хуже настроенной руками константы —
+потому что выглядит обоснованным.</p>
+<p><strong>Дифференцируйте её численно.</strong> Три состояния на частоте CAN не стоят почти ничего, а аналитическая
+производная через <code class="docutils literal notranslate"><span class="pre">slip_factor</span></code> — которая делит на произведения жёсткостей, а те сами зависят от состояния, —
+это как раз то выражение, что месяцами бывает неверным, пока кто-нибудь не заметит. Единственный источник
+истины — сама функция измерения; центральная разность с ней разойтись не может.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">G</span> <span class="o">=</span> <span class="mf">9.81</span>
 <span class="n">STEER_SIGN</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>     <span class="c1"># positive CAN angle is a LEFT turn on this car; this frame is z-down</span>
 
@@ -646,29 +647,29 @@ x = [\text{tsf},\ \text{передаточное},\ \text{смещение уг�
 </section>
 <section id="upstream">
 <h3>Ловушка, которую вам ставит код upstream<a class="headerlink" href="#upstream" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> не даёт неопределённости медленных параметров расти на длинных прямых и записывает это как
-<em>наблюдать состояние его же текущим значением при большом шуме</em>. Скопируйте буквально — получите баг.
-Невязка <span class="math notranslate nohighlight">\(z - x\)</span> тождественно нулевая, поэтому обновление не может сдвинуть оценку, оно может только сжать
-ковариацию. Применённое раз на сообщение локализатора это безвредная граница. Применённое на каждом отсчёте
-CAN на 100 Гц оно жмёт ковариацию сто раз в секунду, пока не приходит ни бита информации, настоящее измерение
-теряет весь вес, и фильтр замерзает возле того, откуда начал. Измерено на синтетическом тесте восстановления:
-истинная жёсткость 0.45 вышла как 0.515, прижатая к 0.64, с которых он стартовал, — а <code class="docutils literal notranslate"><span class="pre">valid()</span></code> прочёл сжатую
-сигму как сходимость после десяти минут прямой дороги.</p>
-<p>Поэтому это потолок: сигма не может превысить границу, а уменьшать её вправе только настоящие измерения. Это
-и есть строчка <code class="docutils literal notranslate"><span class="pre">np.minimum</span></code> выше.</p>
+<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> не даёт неопределённости медленных параметров расти на длинных прямых и оформляет это как
+<em>наблюдение состояния по его же текущему значению с большим шумом</em>. Скопируете буквально — получите баг.
+Невязка <span class="math notranslate nohighlight">\(z - x\)</span> тождественно нулевая, поэтому обновление не способно сдвинуть оценку — оно может лишь сжать
+ковариацию. Раз на сообщение локализатора это безвредная граница. А на каждом отсчёте CAN, на 100 Гц, оно жмёт
+ковариацию сто раз в секунду, притом что не приходит ни бита информации: настоящее измерение теряет весь вес, и
+фильтр застревает возле того, с чего начал. Проверено на синтетическом тесте восстановления: истинная жёсткость
+0.45 вышла как 0.515, прижатая к стартовым 0.64, — а <code class="docutils literal notranslate"><span class="pre">valid()</span></code> принял сжатую сигму за сходимость после десяти
+минут прямой дороги.</p>
+<p>Поэтому здесь — потолок: сигма не может превысить границу, а уменьшать её вправе только настоящие измерения.
+Это и есть строка <code class="docutils literal notranslate"><span class="pre">np.minimum</span></code> выше.</p>
 </section>
 <section id="id5">
 <h3>Два отказа, которые синтетика найти не могла<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
-<p>Оба нашлись при прогоне отгружаемого фильтра по записанному заезду — это и есть аргумент за то, чтобы строить
-офлайн-реплей одновременно с фильтром.</p>
-<p><strong>Знак руля.</strong> Порт менял знак рыска на входе — ISO в z-вниз, верно — и не применял <code class="docutils literal notranslate"><span class="pre">vehicle.steer_sign</span></code> этой
-машины, который контроллер применял всегда. На этой машине положительный угол на CAN есть поворот <em>влево</em>:
-регрессия измеренного ISO-рыска на кинематическое предсказание даёт наклон <span class="math notranslate nohighlight">\(+0.824\)</span> при корреляции <span class="math notranslate nohighlight">\(0.987\)</span> на
-28 636 отсчётах в дугах. То есть предсказание противостояло измерению в каждом повороте.</p>
-<p><strong>И <code class="docutils literal notranslate"><span class="pre">valid()</span></code> всё равно сказал «да».</strong> Фильтр ушёл в те границы, которые уменьшают предсказанную величину:
-жёсткость на пол 0.200, передаточное на потолок 20.0, одинаково во всех четырёх четвертях заезда. Насыщенное
-состояние перестало двигаться, значит его сигма мала, значит выглядит оно в точности как сходимость. Тогдашний
-<code class="docutils literal notranslate"><span class="pre">valid()</span></code> проверял границы жёсткости и не проверял границы передаточного — и пропустил.</p>
+<p>Оба обнаружились при прогоне отгружаемого фильтра по записанному заезду — и это довод в пользу того, чтобы
+строить офлайн-реплей одновременно с самим фильтром.</p>
+<p><strong>Знак руля.</strong> Порт менял знак рыска на входе — из ISO в z-вниз, всё верно — но не применял
+<code class="docutils literal notranslate"><span class="pre">vehicle.steer_sign</span></code> этой машины, который контроллер применял всегда. На этой машине положительный угол на CAN —
+это поворот <em>влево</em>: регрессия измеренного ISO-рыска на кинематическое предсказание даёт наклон <span class="math notranslate nohighlight">\(+0.824\)</span> при
+корреляции <span class="math notranslate nohighlight">\(0.987\)</span> на 28 636 отсчётах в дугах. То есть в каждом повороте предсказание шло против измерения.</p>
+<p><strong>И <code class="docutils literal notranslate"><span class="pre">valid()</span></code> всё равно сказал «да».</strong> Фильтр упёрся в те границы, что уменьшают предсказанную величину:
+жёсткость — в пол 0.200, передаточное — в потолок 20.0, и так во всех четырёх четвертях заезда. Насыщенное
+состояние перестало двигаться, значит, его сигма мала, значит, выглядит оно в точности как сходимость. Тогдашний
+<code class="docutils literal notranslate"><span class="pre">valid()</span></code> проверял границы жёсткости, но не проверял границы передаточного — и пропустил ошибку.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">drive</span><span class="p">(</span><span class="n">learner</span><span class="p">,</span> <span class="n">corners</span><span class="p">,</span> <span class="n">truth_tsf</span><span class="o">=</span><span class="mf">0.64</span><span class="p">,</span> <span class="n">truth_ratio</span><span class="o">=</span><span class="mf">15.7</span><span class="p">,</span> <span class="n">sign</span><span class="o">=</span><span class="n">STEER_SIGN</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Feed steady corners generated by a known car, in the ISO convention the CAN decoder produces."""</span>
     <span class="k">for</span> <span class="n">swa</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">corners</span><span class="p">:</span>
@@ -694,19 +695,19 @@ CAN на 100 Гц оно жмёт ковариацию сто раз в секу
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"            sigma </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flipped</span><span class="o">.</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> — small, because saturation looks like convergence"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Заметьте, что <code class="docutils literal notranslate"><span class="pre">valid()</span></code> выше сообщает <code class="docutils literal notranslate"><span class="pre">False</span></code> для прогона с перевёрнутым знаком — это <em>исправленная</em> проверка,
-та, что сверяет с границами каждое состояние. Тогдашняя проверяла только счётчик и сигму, и третий <code class="docutils literal notranslate"><span class="pre">print</span></code>
-объясняет, почему это проходило: сигма насыщенной жёсткости равна 0.010, спокойно под порогом 0.15, потому что
+<p>Заметьте: <code class="docutils literal notranslate"><span class="pre">valid()</span></code> выше возвращает <code class="docutils literal notranslate"><span class="pre">False</span></code> для прогона с перевёрнутым знаком — это уже <em>исправленная</em> проверка,
+та, что сверяет с границами каждое состояние. Прежняя проверяла только счётчик и сигму, и третий <code class="docutils literal notranslate"><span class="pre">print</span></code>
+объясняет, почему она это пропускала: сигма насыщенной жёсткости равна 0.010, спокойно ниже порога 0.15, ведь
 у состояния, которое перестало двигаться, ковариация мала.</p>
-<p>Так что границы — не подстраховка ради аккуратности. Они единственное, что отличает насыщенную оценку от
-сошедшейся, и проверка валидности, пропускающая границы хоть одного состояния, имеет дыру ровно там, где живёт
-худший отказ.</p>
+<p>Так что границы — не косметическая подстраховка. Это единственное, что отличает насыщенную оценку от
+сошедшейся, и проверка валидности, которая пропускает границы хотя бы одного состояния, имеет дыру ровно там,
+где живёт худший из отказов.</p>
 </section>
 <section id="id6">
 <h3>Почему крен дороги в итоге не используется<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
 <p>Шаг 5 строил оценку крена именно потому, что поперечный уклон дороги и недокрут машины дают одинаковую подпись
-поперечного ускорения, и <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> без неё их не разделит. Этот аргумент верен. Он же на этом железе не имеет
-значения — и арифметика, которая это показывает, занимает две строки.</p>
+в поперечном ускорении, и без неё <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> их не разделит. Аргумент верный. И он же на этом железе ничего не
+решает — а арифметика, которая это показывает, умещается в две строки.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> m/s: 1 deg of bank = </span><span class="si">{</span><span class="n">G</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">1.0</span><span class="p">))</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">v</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> rad/s of yaw"</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="s2">"flat-model yaw residual on the real drive: 0.0065 rad/s"</span><span class="p">)</span>
@@ -714,13 +715,14 @@ CAN на 100 Гц оно жмёт ковариацию сто раз в секу
 </pre></div>
 </div>
 <p>Один градус уклона на 15 м/с — это 0.0114 рад/с, почти вдвое больше всего остатка, который у плоской модели
-уже есть. Наша оценка крена верна до 0.65° после десяти секунд усреднения и не лучше, потому что дальше
-остаток — это реальная смена поперечного уклона дороги. То есть вход несёт больше ошибки, чем ошибка, которую
-он был призван убрать. Его подача поднимает остаток с 0.0065 до 0.0104 рад/с, деградация 60 %, и
+и так есть. Наша оценка крена точна до 0.65° после десяти секунд усреднения — и не лучше, потому что дальше
+остаток — это реальное изменение поперечного уклона дороги. Иначе говоря, вход несёт больше ошибки, чем та,
+которую он призван убрать. Его подача поднимает остаток с 0.0065 до 0.0104 рад/с — деградация 60 %, — и
 <code class="docutils literal notranslate"><span class="pre">params_use_roll</span></code> отгружается как <code class="docutils literal notranslate"><span class="pre">false</span></code>.</p>
-<p>С этим стоит посидеть. Аргумент про зависимости — «оценщику нужен крен, значит крен первым» — был верен
-насчёт интерфейсов и молчал насчёт точности. Достаточно ли <span class="math notranslate nohighlight">\(B\)</span> хорош для <span class="math notranslate nohighlight">\(A\)</span>, имеет ответ только после того,
-как <span class="math notranslate nohighlight">\(B\)</span> существует и измерен против бюджета ошибок <span class="math notranslate nohighlight">\(A\)</span>. Здесь бюджет был 0.0065 рад/с, а вход принёс 0.0114.</p>
+<p>Над этим стоит задуматься. Аргумент про зависимости — «оценщику нужен крен, значит, крен первым» — был верен
+насчёт интерфейсов и молчал насчёт точности. Достаточно ли <span class="math notranslate nohighlight">\(B\)</span> хорош для <span class="math notranslate nohighlight">\(A\)</span> — на этот вопрос есть ответ
+только после того, как <span class="math notranslate nohighlight">\(B\)</span> построен и измерен относительно бюджета ошибок <span class="math notranslate nohighlight">\(A\)</span>. Здесь бюджет был 0.0065 рад/с, а
+вход принёс 0.0114.</p>
 </section>
 <section id="id7">
 <h3>Что сказал заезд на самом деле<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h3>
@@ -756,43 +758,43 @@ CAN на 100 Гц оно жмёт ковариацию сто раз в секу
 </tbody>
 </table>
 </div>
-<p>Первые две строки — про вырождение. Жёсткость и передаточное обе масштабируют предсказанную кривизну, и на
-диапазоне скоростей одного заезда их подписи различаются слишком мало, чтобы измерение рыска их разделило, —
-поэтому при свободном приоре фильтр съезжает по гребню, вместо того чтобы выбрать на нём точку. Затянуть приор
-до 0.1 — не робость: передаточное отношение рейки есть механический факт, известный с точностью процентов, и
-это знание место в приоре. <strong>Состояние, которое данные не отделяют от другого состояния, не становится
-наблюдаемым от того, что его объявили состоянием.</strong></p>
+<p>Первые две строки — про вырождение. И жёсткость, и передаточное масштабируют предсказанную кривизну, а на
+диапазоне скоростей одного заезда их подписи различаются слишком слабо, чтобы измерение рыска их разделило, —
+поэтому при свободном приоре фильтр сползает вдоль гребня, вместо того чтобы выбрать на нём точку. Затянуть
+приор до 0.1 — не перестраховка: передаточное отношение рейки — механический факт, известный с точностью до
+процентов, и этому знанию место в приоре. <strong>Состояние, которое данные не отличают от другого состояния, не
+становится наблюдаемым оттого, что его объявили состоянием.</strong></p>
 <p>А последняя строка отрезвляет. Лучшая одиночная константа на этом заезде — 0.55 против отгружаемых 0.64, ценой
-4.1 %, и кривая вокруг плоская: 0.50 → 0.00636, 0.55 → 0.00625, 0.64 → 0.00652 рад/с. Настроенное руками
-число уже было почти оптимальным.</p>
+4.1 %, и кривая вокруг неё плоская: 0.50 → 0.00636, 0.55 → 0.00625, 0.64 → 0.00652 рад/с. Настроенное вручную
+число и так было почти оптимальным.</p>
 </section>
 <section id="id8">
 <h3>Поэтому оно отгружается за двумя флагами, и оба выключены<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">localization.learn_vehicle_params</span></code> запускает оценщик. <code class="docutils literal notranslate"><span class="pre">lane_keep.use_learned_params</span></code> разрешает контроллеру
-его читать. Раздельно, намеренно: оценщик может публиковать весь заезд, пока контроллер держится констант, — и
-именно так выученное значение получает право быть использованным. Один флаг на двоих сделал бы первый заезд,
-проверяющий оценщик, и первым заездом, ему доверяющим.</p>
-<p>Даже при обоих включённых контроллер берёт оценку только пока держится <code class="docutils literal notranslate"><span class="pre">learned_params_valid</span></code>, и откатывается
-к настроенным константам в тот момент, когда она перестаёт держаться, — то есть потеря валидности возвращает
-параметры назад, а не замораживает их на том, во что оценщик поверил последним.</p>
-<p>Вот и вся функция: собрана, оттестирована, проинструментирована, публикуется, воспроизводится офлайн и
-выключена. Отрицательный результат, на который можно показать с числами, есть законченная работа.</p>
+его читать. Разделены они намеренно: оценщик может публиковать весь заезд, пока контроллер держится констант, —
+и именно так выученное значение зарабатывает право быть использованным. Один общий флаг сделал бы первый же
+заезд, проверяющий оценщик, заодно и первым заездом, который ему доверяет.</p>
+<p>Даже при обоих включённых флагах контроллер берёт оценку только пока держится <code class="docutils literal notranslate"><span class="pre">learned_params_valid</span></code>, и
+откатывается к настроенным константам в тот же миг, когда она перестаёт держаться, — то есть потеря валидности
+возвращает параметры назад, а не замораживает их на том, во что оценщик поверил последним.</p>
+<p>Вот и вся функция: собрана, оттестирована, снабжена диагностикой, публикуется, воспроизводится офлайн — и
+выключена. Отрицательный результат, который можно подтвердить числами, — это законченная работа.</p>
 </section>
 </section>
 <hr class="docutils" />
 <section id="id9">
 <h2>Как это связано с удержанием полосы<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
-<p>Поперечным MPC и Pure Pursuit глобальный ENU для руления <strong>не нужен</strong> — они следят за <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> в системе
-device. Локализация важна для:</p>
+<p>Поперечному MPC и Pure Pursuit глобальный ENU для руления <strong>не нужен</strong> — они следят за <code class="docutils literal notranslate"><span class="pre">vision/path</span></code> в системе
+device. Локализация важна для другого:</p>
 <ul class="simple">
-<li><p>карт по бегам и подложек трека в визуализаторе (офлайновая вертикаль map-match удалена 2026-08-21;
-читалка <code class="docutils literal notranslate"><span class="pre">.admap</span></code> живёт как подложка визуализатора);</p></li>
-<li><p>проверок на разумность — расхождение GPS и чистого счисления пути;</p></li>
+<li><p>карт по бегам и подложек трека в визуализаторе (офлайновая ветка map-match удалена 2026-08-21;
+читалка <code class="docutils literal notranslate"><span class="pre">.admap</span></code> осталась как подложка визуализатора);</p></li>
+<li><p>проверок на вменяемость — расхождения между GPS и чистым счислением пути;</p></li>
 <li><p>любой будущей функции, привязанной к карте;</p></li>
-<li><p>обучение параметров машины, которыми пользуется контроллер, — шаг 6, и единственный потребитель, которому
-оценка крена в итоге не понадобилась.</p></li>
+<li><p>обучения параметров машины, которыми пользуется контроллер, — шаг 6, единственный потребитель, которому
+оценка крена в итоге так и не понадобилась.</p></li>
 </ul>
-<p>Неверный знак IMU не перевернёт руление, пока удержание полосы игнорирует позу, — но отравит каждого
+<p>Неверный знак IMU не перевернёт руление, пока удержание полосы игнорирует позу, — но отравит любого
 потребителя <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code> и тихо испортит офлайн-разбор.</p>
 </section>
 <hr class="docutils" />
@@ -838,10 +840,10 @@ device. Локализация важна для:</p>
 <li><p>Выведите <span class="math notranslate nohighlight">\(K_2\)</span> для обновления скорости рыска аналитически, затем прогоните рекурсию ковариации численно на
 200 шагов при <span class="math notranslate nohighlight">\(Q_{44}=0.05^2\)</span>, <span class="math notranslate nohighlight">\(R=0.02^2\)</span>. Объясните разницу в семь раз.</p></li>
 <li><p>В симуляции дуги переберите <code class="docutils literal notranslate"><span class="pre">r_model</span></code> от <span class="math notranslate nohighlight">\(0.02^2\)</span> до <span class="math notranslate nohighlight">\(1.0^2\)</span> и постройте итоговую ошибку курса. В какой
-точке модель перестаёт иметь значение, и что вы при этом отдали?</p></li>
+момент модель перестаёт влиять, и чем вы за это платите?</p></li>
 <li><p>Добавьте обновление курса от GPS каждые 100 шагов в старый фильтр (<code class="docutils literal notranslate"><span class="pre">as_state=False</span></code>) и покажите, что ошибка
 курса перестаёт расти. Это и есть эффект маскировки — воспроизведите его, затем уберите GPS и посмотрите,
-как он возвращается.</p></li>
+как ошибка возвращается.</p></li>
 <li><p>По бегу: измерьте время от старта до первого появления <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> и сопоставьте с окнами, где
 скорость около нуля.</p></li>
 <li><p>Возьмите бег, прогоните <code class="docutils literal notranslate"><span class="pre">v_ego_raw</span></code> через <code class="docutils literal notranslate"><span class="pre">SpeedFilter</span></code> с <code class="docutils literal notranslate"><span class="pre">factor</span> <span class="pre">=</span> <span class="pre">1.0</span></code> и <code class="docutils literal notranslate"><span class="pre">0.988</span></code> и сравните
@@ -850,10 +852,10 @@ device. Локализация важна для:</p>
 </section>
 <section id="id12">
 <h2>На собственной записи<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
-<p>Всё выше работает без изменений на беге, который вы записали сами (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>,
-<em>Запишите собственный бег</em>), — и выигрывает от этого: у вашего GPS <em>ваш</em> мультипуть и ваши тоннели, ваш
-IMU несёт настоящую установку телефона, и каждое утверждение сверяется с треком, который вы способны
-проверить по памяти. Загрузите свои топики и пройдите пять шагов ещё раз:</p>
+<p>Всё изложенное выше работает без изменений на беге, который вы записали сами (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>,
+<em>Запишите собственный бег</em>), — и только выигрывает от этого: у вашего GPS <em>ваш</em> мультипуть и ваши тоннели, ваш
+IMU несёт реальную установку телефона, а каждое утверждение сверяется с треком, который вы в состоянии
+проверить по памяти. Загрузите свои топики и пройдите пять шагов заново:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — the loading pattern; the estimator code is the chapter's own</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">vis.bag_io</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_topic_messages</span>
@@ -864,12 +866,12 @@ IMU несёт настоящую установку телефона, и каж
 <span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">gps</span><span class="p">),</span> <span class="s2">"GPS fixes,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">imu</span><span class="p">),</span> <span class="s2">"IMU samples"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Два ожидания, которые стоит откалибровать заранее: телефонный GPS на открытом месте — несколько метров
-разброса на 1 Гц, достаточно, чтобы ограничить дрейф, и бесполезно для уровня полосы. А в пассажирской
-записи нет колёсной одометрии — шаг 1 работает на скорости, раздифференцированной из GPS: подмена,
-которую глава уже обсуждает, делая скорость состоянием. Если вы записывали пешком, допущение «системы
-кузова» нарушено во всей красе, и шаг с захватом рыска покажет, как калибратор справляется — или
-отказывается.</p>
+<p>Два ожидания, которые стоит выставить заранее. Первое: телефонный GPS на открытом месте даёт несколько метров
+разброса на 1 Гц — этого хватает, чтобы ограничить дрейф, и мало для точности на уровне полосы. Второе: в
+пассажирской записи нет колёсной одометрии, поэтому шаг 1 работает на скорости, полученной дифференцированием
+GPS, — та самая подмена, которую глава уже обсуждает, делая скорость состоянием. А если вы записывали пешком,
+допущение о жёсткой связи с кузовом нарушено во всей красе, и шаг с захватом рыска покажет, как калибратор с
+этим справляется — или пасует.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">Калибровка камеры</span></a></p>

@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -440,12 +440,12 @@
 <li><p>Coursera <em>Introduction to Self-Driving Cars</em> (недели про поперечное управление)</p></li>
 <li><p>openpilot / flowpilot — Supercombo и штатное поперечное управление</p></li>
 </ul>
-<p><strong>Фон под пробелы, которые открывают главы</strong> (если глава тяжело идёт — сначала читать названное):</p>
+<p><strong>Что подтянуть, если глава вскрыла пробел</strong> (когда глава идёт тяжело, сначала прочтите названное):</p>
 <ul class="simple">
-<li><p>модель камеры / pinhole / гомография — Szeliski, <em>Computer Vision</em>, гл. 2 (под <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>);</p></li>
-<li><p>IDM (следование за лидером) — Treiber, Hennecke &amp; Helbing 2000, <em>Congested traffic states…</em> (под <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Safety</span></a>);</p></li>
-<li><p>Калман/EKF — Labbe, <em>Kalman and Bayesian Filters in Python</em> (под <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализацию</span></a>);</p></li>
-<li><p>protobuf и ZMQ — официальный туториал protobuf «Basics» и руководство ZeroMQ (под <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>, <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержки</span></a>).</p></li>
+<li><p>модель камеры / pinhole / гомография — Szeliski, <em>Computer Vision</em>, гл. 2 (к <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>);</p></li>
+<li><p>IDM (следование за лидером) — Treiber, Hennecke &amp; Helbing 2000, <em>Congested traffic states…</em> (к <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">Safety</span></a>);</p></li>
+<li><p>Калман/EKF — Labbe, <em>Kalman and Bayesian Filters in Python</em> (к <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализации</span></a>);</p></li>
+<li><p>protobuf и ZMQ — официальный туториал protobuf «Basics» и руководство ZeroMQ (к <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Бегам</span></a>, <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">Задержкам</span></a>).</p></li>
 </ul>
 </section>
 <section id="docs">
@@ -470,13 +470,13 @@
 <td><p>FCW / AEB / LDW</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">THNEED.md</span></code></p></td>
-<td><p>путь через GPU: что такое thneed, как наш собирается и проверяется</p></td>
+<td><p>путь через GPU: что такое thneed, как он у нас собирается и как проверяется</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NEW_PHONE.md</span></code></p></td>
-<td><p>подъём на новом телефоне и что замерить до выезда</p></td>
+<td><p>запуск на новом телефоне и что замерить до выезда</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PORTING.md</span></code></p></td>
-<td><p>подключение машины за <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
+<td><p>как подключить новую машину за интерфейсом <code class="docutils literal notranslate"><span class="pre">CarPlatform</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PARAMSD.md</span></code></p></td>
 <td><p>обучение параметров</p></td>
@@ -519,7 +519,7 @@
 <td><p>закон управления, ни одного упоминания CAN</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/platform.cpp</span></code> и <code class="docutils literal notranslate"><span class="pre">src/platform/</span></code></p></td>
-<td><p>шина и единственное место, где названа марка</p></td>
+<td><p>шина и единственное место, где вообще названа марка</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">src/services/safety_warn.cpp</span></code></p></td>
 <td><p>FCW / AEB / LDW</p></td>

@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -421,7 +421,7 @@
                 <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#swa">Угол колеса против SWA</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tan-delta-l-r">Почему <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Разобранный пример (руками)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Разбор примера (вручную)</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#x-y-theta">Состояние <span class="math notranslate nohighlight">\((x, y, \theta)\)</span></a></li>
@@ -429,7 +429,7 @@
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Поперечное скольжение (предварительно)</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Попробуйте им порулить — и посмотрите, как проваливается очевидный регулятор</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Порулите ей сами — и увидите, как проваливается очевидный регулятор</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Держится ли это на настоящей машине? Измерьте, прежде чем верить</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Чего стоит недобор, в метрах</a></li>
 </ul>
@@ -451,8 +451,8 @@
 <blockquote>
 <div><p>Геометрическая основа Pure Pursuit и части MPC. Рисунки — из <a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">AAD</a> (CC BY 4.0).</p>
 </div></blockquote>
-<p>При <strong>постоянном</strong> угле переднего колеса <span class="math notranslate nohighlight">\(\delta\)</span> задняя ось описывает в плоскости <strong>дугу окружности</strong>.
-Поперечное управление — это выбор <span class="math notranslate nohighlight">\(\delta\)</span> (а затем SWA на шине) так, чтобы эта дуга совпала с нужной вам дорогой.</p>
+<p>При <strong>постоянном</strong> угле переднего колеса <span class="math notranslate nohighlight">\(\delta\)</span> задняя ось вычерчивает на плоскости <strong>дугу окружности</strong>.
+Поперечное управление и сводится к выбору <span class="math notranslate nohighlight">\(\delta\)</span> (а затем SWA на шине) так, чтобы эта дуга легла на нужную дорогу.</p>
 <section id="swa">
 <h2>Угол колеса против SWA<a class="headerlink" href="#swa" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -476,12 +476,12 @@
 \[
 \mathrm{SWA} = \mathrm{steer\_sign} \cdot \delta \cdot \mathrm{steer\_ratio}.
 \]</div>
-<p>Числа для Golf MQB в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>: <span class="math notranslate nohighlight">\(L \approx 2.636\)</span> м, <code class="docutils literal notranslate"><span class="pre">steer_ratio</span> <span class="pre">≈</span> <span class="pre">15.7</span></code>, <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>. В ручных примерах ниже <span class="math notranslate nohighlight">\(L\)</span> округлён до 2.64 м для читаемости; исполняемые блоки управления используют точное 2.636.</p>
+<p>Числа для Golf MQB берутся из <code class="docutils literal notranslate"><span class="pre">config.json</span></code>: <span class="math notranslate nohighlight">\(L \approx 2.636\)</span> м, <code class="docutils literal notranslate"><span class="pre">steer_ratio</span> <span class="pre">≈</span> <span class="pre">15.7</span></code>, <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>. В примерах, которые считаются вручную, <span class="math notranslate nohighlight">\(L\)</span> для наглядности округлён до 2.64 м; в исполняемых блоках управления стоит точное 2.636.</p>
 <div class="tip admonition">
 <p class="admonition-title">Крошечный числовой пример</p>
 <p><span class="math notranslate nohighlight">\(\delta = +5°\)</span> (колёса поворачиваются в «модельно-положительную» сторону).
-Тогда <span class="math notranslate nohighlight">\(|\mathrm{SWA}| = 15.7 \times 5° = 78.5°\)</span>, а с <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code> команда на CAN — это <span class="math notranslate nohighlight">\(\mathrm{SWA} = -78.5°\)</span>.
-Один градус на колесе — это примерно шестнадцать градусов на рулевом колесе; вот почему SWA в бегах выглядит «большим».</p>
+Тогда <span class="math notranslate nohighlight">\(|\mathrm{SWA}| = 15.7 \times 5° = 78.5°\)</span>, а с <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code> команда на CAN равна <span class="math notranslate nohighlight">\(\mathrm{SWA} = -78.5°\)</span>.
+Один градус на колесе — это около шестнадцати градусов на рулевом колесе; вот почему SWA в бегах кажется «большим».</p>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
@@ -498,25 +498,25 @@
 </pre></div>
 </div>
 <p><img alt="Определение углов передних колёс" src="../_images/WheelAngle.png" /></p>
-<p>Левое и правое колёса поворачиваются на разные углы (Аккерман). Велосипедная модель заменяет переднюю ось <strong>одним</strong> эквивалентным <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
+<p>Левое и правое колёса поворачиваются на разные углы (Аккерман). Велосипедная модель сводит переднюю ось к <strong>одному</strong> эквивалентному <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
 </section>
 <section id="tan-delta-l-r">
 <h2>Почему <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span><a class="headerlink" href="#tan-delta-l-r" title="Ссылка на этот заголовок">#</a></h2>
 <p><img alt="Велосипедная модель на кузове" src="../_images/BicycleModel.png" /></p>
 <p><img alt="Дуга при постоянном δ" src="../_images/BicycleModelGeometry.png" /></p>
-<p>Предположим качение <strong>без поперечного скольжения</strong>. Скорость заднего колеса направлена вдоль кузова, скорость переднего — вдоль повёрнутого колеса.
-Мгновенное движение — это чистое вращение вокруг <strong>МЦВ</strong> (пересечения осей колёс).</p>
-<p>Посмотрите на прямоугольный треугольник МЦВ–заднее–переднее:</p>
+<p>Пусть качение идёт <strong>без поперечного скольжения</strong>. Тогда скорость заднего колеса направлена вдоль кузова, а скорость переднего — вдоль повёрнутого колеса.
+Мгновенное движение — это чистое вращение вокруг <strong>МЦВ</strong> (точки пересечения осей колёс).</p>
+<p>Рассмотрим прямоугольный треугольник МЦВ–заднее–переднее:</p>
 <ul class="simple">
-<li><p>против угла <span class="math notranslate nohighlight">\(\delta\)</span> лежит база <span class="math notranslate nohighlight">\(L\)</span>;</p></li>
-<li><p>прилежащий — радиус дуги <span class="math notranslate nohighlight">\(R\)</span> задней оси.</p></li>
+<li><p>напротив угла <span class="math notranslate nohighlight">\(\delta\)</span> лежит база <span class="math notranslate nohighlight">\(L\)</span>;</p></li>
+<li><p>прилежащий к нему катет — радиус дуги <span class="math notranslate nohighlight">\(R\)</span> задней оси.</p></li>
 </ul>
-<p>Следовательно</p>
+<p>Отсюда</p>
 <div class="math notranslate nohighlight">
 \[
 \tan\delta = \frac{L}{R}.
 \]</div>
-<p>Отсюда три равносильные формы, которые студент должен запомнить:</p>
+<p>Отсюда три равносильные формы — их стоит запомнить:</p>
 <div class="math notranslate nohighlight">
 \[
 \delta = \arctan\frac{L}{R},
@@ -525,9 +525,9 @@ R = \frac{L}{\tan\delta},
 \qquad
 \kappa = \frac{1}{R} = \frac{\tan\delta}{L}.
 \]</div>
-<p>Здесь <span class="math notranslate nohighlight">\(\kappa\)</span> — <strong>кривизна пути</strong> задней оси, 1/м. Прямая дорога: <span class="math notranslate nohighlight">\(\kappa = 0\)</span> <span class="math notranslate nohighlight">\(\Rightarrow\)</span> <span class="math notranslate nohighlight">\(\delta = 0\)</span>.</p>
+<p>Здесь <span class="math notranslate nohighlight">\(\kappa\)</span> — <strong>кривизна пути</strong> задней оси, 1/м. На прямой дороге <span class="math notranslate nohighlight">\(\kappa = 0\)</span>, а значит, <span class="math notranslate nohighlight">\(\delta = 0\)</span>.</p>
 <section id="id2">
-<h3>Разобранный пример (руками)<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
+<h3>Разбор примера (вручную)<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
 <p>Возьмём <span class="math notranslate nohighlight">\(L = 2.64\)</span> м и <span class="math notranslate nohighlight">\(\delta = 5° = 5\pi/180 \approx 0.08727\)</span> рад.</p>
 <div class="math notranslate nohighlight">
 \[
@@ -535,7 +535,7 @@ R = \frac{L}{\tan\delta},
 \qquad
 R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 \]</div>
-<p>То есть мягкие <span class="math notranslate nohighlight">\(5°\)</span> на колёсах — это уже радиус около 30 м, территория городской дуги.</p>
+<p>То есть скромные <span class="math notranslate nohighlight">\(5°\)</span> на колёсах — это уже радиус около 30 м, типичная городская дуга.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">kappa_from_delta</span><span class="p">(</span><span class="n">delta_rad</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">L</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.64</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -577,7 +577,7 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 </table>
 </div>
 <p><img alt="Состояние x, y, θ" src="../_images/BicycleModel_x_y_theta.png" /></p>
-<p>Без скольжения кинематические уравнения такие:</p>
+<p>Без скольжения кинематические уравнения выглядят так:</p>
 <div class="math notranslate nohighlight">
 \[
 \dot x = v\cos\theta,
@@ -613,29 +613,29 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 </section>
 <section id="id3">
 <h2>Мгновенный центр вращения (МЦВ)<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Для плоского движения твёрдого тела всегда существует МЦВ, такой что</p>
+<p>У плоского движения твёрдого тела всегда есть МЦВ — точка, для которой</p>
 <div class="math notranslate nohighlight">
 \[
 \dot{\mathbf{r}} = \boldsymbol{\Omega}\times(\mathbf{r}-\mathbf{r}_{\mathrm{ICR}}).
 \]</div>
 <p><img alt="МЦВ и ортогональность скорости" src="../_images/ICR.png" /></p>
 <p><img alt="Построение МЦВ по двум направлениям скорости" src="../_images/ICR_construction.png" /></p>
-<p>Отсутствие скольжения ⇒ скорость колеса перпендикулярна его оси. Проведите обе линии осей; они пересекаются в МЦВ. Рулевое управление по Аккерману — это ровно «сделать так, чтобы эти линии пересеклись в одной точке».</p>
+<p>Раз скольжения нет, скорость колеса перпендикулярна его оси. Проведите обе линии осей — они пересекутся в МЦВ. Рулевое управление по Аккерману как раз и означает «свести эти линии в одну точку».</p>
 <section id="id4">
 <h3>Поперечное скольжение (предварительно)<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>При больших <span class="math notranslate nohighlight">\(v\)</span> шины скользят боком. Настоящий МЦВ смещается, и</p>
+<p>На больших <span class="math notranslate nohighlight">\(v\)</span> шины уводит вбок. Настоящий МЦВ смещается, и</p>
 <div class="math notranslate nohighlight">
 \[
 \kappa_{\mathrm{fact}} = \frac{\dot\psi}{v} &lt; \frac{\tan\delta}{L} = \kappa_{\mathrm{kin}}.
 \]</div>
 <p><img alt="МЦВ со скольжением" src="../_images/ICR_Slip.png" /></p>
-<p>На шоссе кинематика <strong>завышает</strong> кривизну — об этом следующая глава.</p>
+<p>На шоссе кинематика <strong>завышает</strong> кривизну — этому и посвящена следующая глава.</p>
 </section>
 </section>
 <section id="id5">
-<h2>Попробуйте им порулить — и посмотрите, как проваливается очевидный регулятор<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель теперь — объект, которым можно ехать. Дайте ей дорогу и самый очевидный регулятор на свете —
-рулить против смещения, — и глава заработает себе следующую. Ниже только numpy:</p>
+<h2>Порулите ей сами — и увидите, как проваливается очевидный регулятор<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
+<p>Теперь модель — это объект, которым можно ехать. Дайте ей дорогу и самый очевидный регулятор на свете —
+рулить против смещения, — и глава сама подведёт к следующей. Ниже только numpy:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -651,7 +651,7 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
     <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span>
 </pre></div>
 </div>
-<p>Дорога — синусоида: пиковая кривизна <span class="math notranslate nohighlight">\(A(2\pi/\lambda)^2 \approx 0.0048\)</span> 1/м — радиус около 210 м,
+<p>Дорога — синусоида: пиковая кривизна <span class="math notranslate nohighlight">\(A(2\pi/\lambda)^2 \approx 0.0048\)</span> 1/м, то есть радиус около 210 м —
 класс «пологая дуга» из <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">A</span><span class="p">,</span> <span class="n">LAM</span> <span class="o">=</span> <span class="mf">1.75</span><span class="p">,</span> <span class="mf">120.0</span>
 
@@ -662,7 +662,7 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
     <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">atan</span><span class="p">(</span><span class="n">A</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">LAM</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">x</span> <span class="o">/</span> <span class="n">LAM</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>Смещение влево → руль вправо, пропорционально. Один коэффициент, одна строка:</p>
+<p>Сместились влево — руль вправо, пропорционально. Один коэффициент, одна строка:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">MAX_STEER</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span>   <span class="c1"># the same ceiling the phone enforces</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">p_controller</span><span class="p">(</span><span class="n">cte</span><span class="p">,</span> <span class="n">kp</span><span class="o">=</span><span class="mf">0.10</span><span class="p">):</span>
@@ -688,16 +688,16 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
       <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">crossings</span><span class="si">}</span><span class="s2"> zero crossings in 60 s"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Постройте <code class="docutils literal notranslate"><span class="pre">cte_p</span></code> против <code class="docutils literal notranslate"><span class="pre">t</span></code> и посмотрите: машина пересекает дорогу снова и снова, и <strong>размах не
-уменьшается</strong>. Это не проблема настройки. Руль задаёт <em>кривизну</em> траектории, кривизна интегрируется в
-курс, курс — в смещение, так что P-по-смещению — пружина без демпфера, незатухающий осциллятор. Любой
-<code class="docutils literal notranslate"><span class="pre">kp</span></code> меняет частоту, ни один не добавляет затухания. (Прямой Эйлер вдобавок подкачивает энергию, и
+<p>Постройте график <code class="docutils literal notranslate"><span class="pre">cte_p</span></code> от <code class="docutils literal notranslate"><span class="pre">t</span></code> и посмотрите: машина пересекает дорогу снова и снова, а <strong>размах не
+спадает</strong>. Это не вопрос настройки. Руль задаёт <em>кривизну</em> траектории, кривизна интегрируется в курс,
+курс — в смещение, поэтому P-по-смещению — это пружина без демпфера, незатухающий осциллятор. Любой
+<code class="docutils literal notranslate"><span class="pre">kp</span></code> меняет частоту, но ни один не добавляет затухания. (Прямой Эйлер вдобавок подкачивает энергию, и
 размах медленно растёт.)</p>
-<p>Затухание приходит из состояния, которое вы игнорировали, — из курса. Это <strong>контроллер Stanley</strong>:
-рулить так, чтобы погасить ошибку курса <span class="math notranslate nohighlight">\(\psi_{\text{ref}}-\psi\)</span> (угол носа против дороги), плюс член,
-вносящий смещение как <em>угол</em>. Член смещения — <span class="math notranslate nohighlight">\(\arctan(k\,\text{CTE}/v)\)</span>: угол, потому что команда руля
-и есть угол, и делённый на <span class="math notranslate nohighlight">\(v\)</span>, чтобы то же смещение просило более мягкой поправки на скорости (резкий
-рывок на 100 км/ч — это авария). Курс и есть то затухание, которого не хватало пружине по смещению:</p>
+<p>Затухание даёт то состояние, которое вы не учли, — курс. Это <strong>контроллер Stanley</strong>: рулить так, чтобы
+гасить ошибку курса <span class="math notranslate nohighlight">\(\psi_{\text{ref}}-\psi\)</span> (угол носа относительно дороги), плюс член, который подаёт
+смещение как <em>угол</em>. Член смещения — <span class="math notranslate nohighlight">\(\arctan(k\,\text{CTE}/v)\)</span>: это угол, потому что команда руля и есть
+угол, а деление на <span class="math notranslate nohighlight">\(v\)</span> нужно, чтобы то же смещение на скорости просило более мягкой поправки (резкий рывок
+на 100 км/ч — это авария). Курс и есть то затухание, которого недоставало пружине по смещению:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">heading_controller</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">cte</span><span class="p">,</span> <span class="n">kp</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
     <span class="c1"># Stanley: cancel heading error, and steer the offset in as a speed-scaled angle.</span>
     <span class="n">err</span> <span class="o">=</span> <span class="p">(</span><span class="n">psi_ref</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">psi</span><span class="p">)</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="n">kp</span> <span class="o">*</span> <span class="n">cte</span><span class="p">,</span> <span class="n">V</span><span class="p">)</span>
@@ -716,21 +716,21 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 <a class="reference internal image-reference" href="../_images/toycar_control.png"><img alt="../_images/toycar_control.png" src="../_images/toycar_control.png" style="width: 85%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 10 </span><span class="caption-text">Один объект под двумя регуляторами: P-по-смещению качается без затухания; курс + смещение устаканивает.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 10 </span><span class="caption-text">Один объект под двумя регуляторами: P-по-смещению качается без затухания; курс + смещение выводит на устойчивый режим.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Из этой стройки стоит унести два факта: рабочий регулятор держит синусоиду в 15 см — и у него два
-подобранных руками коэффициента, правильные значения которых меняются со скоростью и дорогой.
-Регулятор, у которого руль <em>выводится</em> из геометрии пути, без коэффициентов для номинального случая, —
-<a class="reference internal" href="PurePursuit.html"><span class="std std-doc">следующая глава</span></a>. А внутренний контур настоящего стека — ровно эта форма
-«курс + смещение»: угловой PID вокруг рейки.</p>
+<p>Из этого эксперимента стоит вынести два факта: рабочий регулятор держит синусоиду в пределах 15 см — но
+у него два подобранных вручную коэффициента, чьи верные значения зависят от скорости и дороги.
+Регулятор, у которого руль <em>выводится</em> из геометрии пути и для номинального случая не нужны никакие
+коэффициенты, — это <a class="reference internal" href="PurePursuit.html"><span class="std std-doc">следующая глава</span></a>. А внутренний контур настоящего стека устроен
+ровно по форме «курс + смещение»: угловой PID вокруг рейки.</p>
 </section>
 <section id="id6">
 <h2>Держится ли это на настоящей машине? Измерьте, прежде чем верить<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель — страница геометрии без свободных параметров, что делает её и надёжной, и легко переоцениваемой.
-Честный способ закончить главу — проверить её, и проверка доступна: на установившихся дугах можно сравнить
-достигнутую машиной кривизну, <span class="math notranslate nohighlight">\(\dot\psi / v\)</span> с датчика рыска ESP, с той <span class="math notranslate nohighlight">\(\tan\delta / L\)</span>, которую модель
-предсказывает по углу руля.</p>
+<p>Модель умещается на одну страницу геометрии и не имеет свободных параметров — оттого она и надёжна, и
+слишком легко переоценивается. Честно закончить главу — значит проверить её, а проверка под рукой: на
+установившихся дугах сравним достигнутую машиной кривизну <span class="math notranslate nohighlight">\(\dot\psi / v\)</span> (с датчика рыска ESP) с той
+<span class="math notranslate nohighlight">\(\tan\delta / L\)</span>, которую модель предсказывает по углу руля.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Measured on this Golf, steady arcs, binned by speed. Model expectation from the bicycle model plus a</span>
 <span class="c1"># textbook understeer gradient — the point is which column moves and how fast.</span>
 <span class="n">MEASURED</span> <span class="o">=</span> <span class="p">((</span><span class="mf">7.5</span><span class="p">,</span> <span class="mf">0.97</span><span class="p">,</span> <span class="mf">0.96</span><span class="p">),</span> <span class="p">(</span><span class="mf">13.5</span><span class="p">,</span> <span class="mf">0.80</span><span class="p">,</span> <span class="mf">0.87</span><span class="p">),</span> <span class="p">(</span><span class="mf">23.5</span><span class="p">,</span> <span class="mf">0.54</span><span class="p">,</span> <span class="mf">0.69</span><span class="p">))</span>
@@ -744,26 +744,26 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;5.1f</span><span class="si">}</span><span class="s2"> m/s </span><span class="si">{</span><span class="n">ratio</span><span class="si">:</span><span class="s2">&gt;17.2f</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">expected</span><span class="si">:</span><span class="s2">&gt;9.2f</span><span class="si">}</span><span class="s2">   </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Отсюда две вещи.</p>
-<p>На парковочных и городских скоростях модель практически точна — потому все учебные выводы на этом и
-останавливаются, и потому её правильно учить первой. На 23.5 м/с она даёт едва половину запрошенной кривизны.</p>
-<p>И заметьте, что измеренное отношение <strong>ниже книжного ожидания на каждой скорости</strong> — 0.54 против 0.69 при
-23.5 м/с. То есть скольжение не просто присутствует, оно сильнее, чем предсказывает стандартный градиент
-недокрута. Этот зазор — не погрешность, которую можно впитать в коэффициент; это причина, по которой
-существует <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">глава про модель машины</span></a>, и причина, по которой в списке этого проекта стоит
-обучаемый оценщик параметров, а не подобранная руками константа.</p>
+<p>Отсюда два вывода.</p>
+<p>На парковочных и городских скоростях модель почти точна — потому большинство учебников на этом и
+останавливается, и потому её правильно изучать первой. А на 23.5 м/с она даёт едва половину запрошенной кривизны.</p>
+<p>И обратите внимание: измеренное отношение <strong>ниже книжного ожидания на каждой скорости</strong> — 0.54 против 0.69
+при 23.5 м/с. Значит, скольжение не просто есть, оно сильнее, чем предсказывает стандартный градиент
+недокрута. Этот зазор — не погрешность, которую можно спрятать в коэффициент; это и есть причина, по
+которой существует <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">глава про модель машины</span></a>, и причина, по которой в планах
+проекта стоит обучаемый оценщик параметров, а не подобранная вручную константа.</p>
 <section id="id7">
 <h3>Чего стоит недобор, в метрах<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h3>
 <figure class="align-default" id="id10">
 <a class="reference internal image-reference" href="../_images/understeer_drift.png"><img alt="../_images/understeer_drift.png" src="../_images/understeer_drift.png" style="width: 70%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 11 </span><span class="caption-text">В разомкнутом контуре нескомпенсированный недобор выносит машину наружу как квадрат длины дуги.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 11 </span><span class="caption-text">В разомкнутом контуре нескомпенсированный недобор выносит машину наружу пропорционально квадрату длины дуги.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Абстрактным отношением легко пренебречь, поэтому переведём его. Если модель просит кривизну <span class="math notranslate nohighlight">\(\kappa\)</span>, а машина
-выдаёт <span class="math notranslate nohighlight">\(r\kappa\)</span>, то она поворачивает по большему радиусу, чем задумано, и уходит <strong>наружу</strong> поворота. На дуге
-длиной <span class="math notranslate nohighlight">\(s\)</span> поперечный недобор примерно равен</p>
+<p>Абстрактное отношение легко пропустить мимо ушей, поэтому переведём его в метры. Если модель просит кривизну
+<span class="math notranslate nohighlight">\(\kappa\)</span>, а машина выдаёт <span class="math notranslate nohighlight">\(r\kappa\)</span>, то она идёт по большему радиусу, чем задумано, и уходит <strong>наружу</strong>
+поворота. На дуге длиной <span class="math notranslate nohighlight">\(s\)</span> поперечный недобор примерно равен</p>
 <div class="math notranslate nohighlight">
 \[
 \Delta y \approx \tfrac{1}{2}(1 - r)\,\kappa\,s^2 .
@@ -784,9 +784,10 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
       <span class="s2">"exactly this effect."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Числа абсурдны намеренно: десятки метров. Столько сделала бы одна геометрия на длинной дуге, и потому ни одна
-система удержания полосы не работает в открытом контуре. Но это же показывает, почему упреждающая часть так
-важна: обратная связь, которой приходится вычитать десятки метров ошибки модели, ничего не оставляет на дорогу.</p>
+<p>Числа намеренно абсурдны — десятки метров. Столько на длинной дуге натворила бы одна геометрия, и потому ни
+одна система удержания полосы не работает в открытом контуре. Но эти же числа показывают, чем так важна
+упреждающая часть: если обратной связи приходится вычитать десятки метров ошибки модели, на саму дорогу у
+неё ничего не остаётся.</p>
 </section>
 </section>
 <section id="id8">
@@ -794,16 +795,16 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 <ol class="arabic simple">
 <li><p><span class="math notranslate nohighlight">\(\kappa = \tan\delta / L\)</span>, <span class="math notranslate nohighlight">\(R = 1/\kappa\)</span>.</p></li>
 <li><p><span class="math notranslate nohighlight">\(\mathrm{SWA} = \mathrm{steer\_sign}\cdot\delta\cdot\mathrm{steer\_ratio}\)</span>.</p></li>
-<li><p>МЦВ объясняет геометрию; скольжение ломает допущение об отсутствии скольжения на скорости.</p></li>
-<li><p><strong>Проверено об машину</strong>: точно ниже 9 м/с, 0.80 при 12–15, 0.54 при 21–26 — и хуже книжного градиента
-недокрута на каждой скорости. Верьте модели там, где её проверяли, а не везде.</p></li>
+<li><p>МЦВ объясняет геометрию; на скорости скольжение нарушает допущение об отсутствии скольжения.</p></li>
+<li><p><strong>Проверено об машину</strong>: точно ниже 9 м/с, 0.80 при 12–15, 0.54 при 21–26 — и на каждой скорости хуже
+книжного градиента недокрута. Верьте модели там, где её проверяли, а не везде подряд.</p></li>
 </ol>
 <div class="tip admonition">
 <p class="admonition-title">Задание</p>
 <ol class="arabic simple">
-<li><p>Для <span class="math notranslate nohighlight">\(L=2.64\)</span> м, <span class="math notranslate nohighlight">\(R=50\)</span> м: посчитайте <span class="math notranslate nohighlight">\(\delta\)</span> в градусах и <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\)</span> при отношении <span class="math notranslate nohighlight">\(15.7\)</span>.</p></li>
-<li><p>Измените цикл <code class="docutils literal notranslate"><span class="pre">bicycle_step</span></code> в примере: какой <span class="math notranslate nohighlight">\(y\)</span> получится через 2 с, если <span class="math notranslate nohighlight">\(\delta=0\)</span>? (Должен остаться около нуля.)</p></li>
-<li><p>Убедитесь по рисунку МЦВ, что нижний левый угол равен <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
+<li><p>Для <span class="math notranslate nohighlight">\(L=2.64\)</span> м, <span class="math notranslate nohighlight">\(R=50\)</span> м посчитайте <span class="math notranslate nohighlight">\(\delta\)</span> в градусах и <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\)</span> при отношении <span class="math notranslate nohighlight">\(15.7\)</span>.</p></li>
+<li><p>Измените цикл <code class="docutils literal notranslate"><span class="pre">bicycle_step</span></code> в примере: какой <span class="math notranslate nohighlight">\(y\)</span> выйдет через 2 с при <span class="math notranslate nohighlight">\(\delta=0\)</span>? (Должен остаться около нуля.)</p></li>
+<li><p>Проверьте по рисунку МЦВ, что нижний левый угол равен <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
 </ol>
 </div>
 <!-- next-chapter -->
@@ -880,7 +881,7 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#swa">Угол колеса против SWA</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tan-delta-l-r">Почему <span class="math notranslate nohighlight">\(\tan\delta = L/R\)</span></a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Разобранный пример (руками)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Разбор примера (вручную)</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#x-y-theta">Состояние <span class="math notranslate nohighlight">\((x, y, \theta)\)</span></a></li>
@@ -888,7 +889,7 @@ R = \frac{1}{\kappa} \approx 30.2~\mathrm{м}.
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Поперечное скольжение (предварительно)</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Попробуйте им порулить — и посмотрите, как проваливается очевидный регулятор</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Порулите ей сами — и увидите, как проваливается очевидный регулятор</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Держится ли это на настоящей машине? Измерьте, прежде чем верить</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Чего стоит недобор, в метрах</a></li>
 </ul>

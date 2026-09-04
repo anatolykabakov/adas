@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -450,9 +450,9 @@
 <p>Инженерная версия с деталями реализации: <code class="docutils literal notranslate"><span class="pre">docs/IMAGE_TO_CAN_PIPELINE.md</span></code>.</p>
 <section id="id1">
 <h2>Бюджет времени одного кадра<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Этапы ниже держать в голове проще, если смотреть, как через них движется один кадр. Каждое число — измеренная
-медиана с ночного заезда длиной 29 минут (OnePlus 7T, раннер thneed); две опорные величины, которые
-<code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> реально печатает, — <strong>22 мс до выхода модели</strong> и <strong>52 мс до команды на руль</strong>.</p>
+<p>Этапы ниже легче удержать в голове, если проследить, как через них проходит один кадр. Каждое число —
+измеренная медиана с ночного заезда длиной 29 минут (OnePlus 7T, раннер thneed); а две опорные величины,
+которые <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> печатает на самом деле, — это <strong>22 мс до выхода модели</strong> и <strong>52 мс до команды на руль</strong>.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>этап</p></th>
@@ -504,43 +504,43 @@
 </tbody>
 </table>
 </div>
-<p>Почему эти часы важны — одна строка физики: дорога не ждёт, <span class="math notranslate nohighlight">\(d = v\,t\)</span>. На <span class="math notranslate nohighlight">\(v = 22\)</span> м/с команда, дошедшая до
-рейки, посчитана для положения на дороге <span class="math notranslate nohighlight">\(22 \cdot 0.052 \approx 1.1\)</span> м назад — и ровно этот метр
-компенсирует <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>, предсказывая состояние вперёд; поэтому он вход планировщика, а не
-косметика.</p>
-<p>Три строки в этом списке заслуживают внимания.</p>
-<p><strong>Инференс занимает 17.6 мс, потому что модель считается на GPU.</strong> Та же сеть через ONNX Runtime стоит на
-этом телефоне 45.6 мс. Оба пути везут supercombo 0.9.7 — один и тот же файл, переведённый в другой формат, —
+<p>Почему эти часы важны, объясняет одна строчка физики: дорога не ждёт, <span class="math notranslate nohighlight">\(d = v\,t\)</span>. На <span class="math notranslate nohighlight">\(v = 22\)</span> м/с команда,
+дошедшая до рейки, посчитана для точки на дороге, оставшейся <span class="math notranslate nohighlight">\(22 \cdot 0.052 \approx 1.1\)</span> м позади — и ровно
+этот метр компенсирует <code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code>, предсказывая состояние на шаг вперёд; поэтому он вход планировщика,
+а не украшение.</p>
+<p>Три строки в этом списке стоят внимания.</p>
+<p><strong>Инференс занимает 17.6 мс, потому что модель считается на GPU.</strong> Та же сеть через ONNX Runtime обходится на
+этом телефоне в 45.6 мс. Оба пути везут supercombo 0.9.7 — один и тот же файл, переведённый в другой формат, —
 так что выбор пути это выбор скорости и ничего больше; см. <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
-<p><strong>Доставка и очередь обе равны нулю, и это самое интересное.</strong> Это два разных измерения (<code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>,
-<code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>), заведённые в августе 2026 именно потому, что кадр, пришедший на 40 мс
-позже, и кадр, простоявший 40 мс в ожидании занятого потока инференса, раньше выглядели одинаково. На этом
-заезде камера отдаёт вовремя, а инференс ни разу не оказывается тем, чего ждут: <strong>ноль потерянных кадров из
-52 690</strong>, 100 % циклов не потеряли ничего. Когда это перестанет быть правдой, два числа покажут, какая
-половина сломалась: много потерь при короткой доставке — инференс не успевает, мало потерь при долгой
-доставке — камера приходит поздно.</p>
+<p><strong>Доставка и очередь обе равны нулю — и это самое интересное.</strong> Это два разных измерения (<code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, <code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>), которые завели в августе 2026 именно потому, что кадр, пришедший на 40 мс
+позже, и кадр, простоявший 40 мс в ожидании занятого потока инференса, прежде выглядели одинаково. На этом
+заезде камера отдаёт кадры вовремя, а инференс ни разу не заставляет их ждать: <strong>ноль потерянных кадров из
+52 690</strong>, 100 % циклов ничего не потеряли. Когда это перестанет быть правдой, два числа покажут, какая
+половина сломалась: много потерь при короткой доставке — не успевает инференс; мало потерь при долгой
+доставке — поздно приходит камера.</p>
 <p><strong>Переход через ZMQ стоит примерно половину интервала опроса.</strong> Это одно из двух мест во всей цепочке, где
-вообще есть опрос, второе — выход на CAN. Всё между ними работает по извещению, а не по опросу; измерение в
+опрос вообще есть; второе — выход на CAN. Всё между ними работает по извещению, а не по опросу; измерение — в
 главе <a class="reference internal" href="Middleware.html"><span class="std std-doc">Middleware</span></a>.</p>
 </section>
 <section id="id2">
 <h2>Что происходит между кадрами<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <p>Зрение идёт на 30.0 Гц — по кадру на период камеры, без пропусков. Актуатор — на 100 Гц, потому что HCA нужен
-строгий такт, иначе EPS отбрасывает команду. Значит примерно два тика из трёх панда передаёт команду,
-построенную на <em>эталоне, который уже использовался</em>.</p>
-<p>Это правильное поведение, и оно создаёт ловушку для того, кто читает логи. Арифметика: <span class="math notranslate nohighlight">\(100/30 \approx 3.3\)</span>
-тика актуатора на кадр зрения, то есть только первый тик использует свежую опору, а следующие два повторяют
-её. Поэтому <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> фильтрует команды по <strong>свежести</strong> — окном 50 мс от метки самого кадра. При
-периоде зрения 33 мс любая команда первого использования проходит, и фильтр режет только по-настоящему
-несвежие переиздания: 171 097 из 175 573 на этом заезде, 97 %. Посчитайте сквозную задержку по сырому потоку
-— и переиздания утянут число вверх, потому что их <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code> старше команды, которая их несёт.</p>
-<p>На 13 Гц — темпе, который эта глава приводила до переезда модели на GPU, — этот фильтр не проходила треть
-команд, и само окно делало заметную работу. Урок улучшение пережил: «команда свежая» и «картинка свежая» —
-разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт
-устаревания привязан к метке съёмки кадра, а не к возрасту команды, и поэтому таймаут команды HCA в 250 мс не
-защитил от плана возраста 75 секунд.</p>
-<p>Быстрый контур — не пустая работа: это угловой PID, замыкающийся на <em>измеренный</em> угол руля 100 раз в секунду,
-и именно он делает движение рейки плавным.</p>
+строгий такт, иначе EPS отбросит команду. А значит, примерно два тика из трёх панда передаёт команду,
+построенную на <em>эталоне, который уже пошёл в дело раньше</em>.</p>
+<p>Так и должно быть, но здесь кроется ловушка для того, кто читает логи. Арифметика: <span class="math notranslate nohighlight">\(100/30 \approx 3.3\)</span>
+тика актуатора на кадр зрения, то есть свежую опору использует только первый тик, а следующие два её
+повторяют. Поэтому <code class="docutils literal notranslate"><span class="pre">tools/latency.py</span></code> фильтрует команды по <strong>свежести</strong> — окном 50 мс от метки самого кадра.
+При периоде зрения 33 мс любая команда первого использования проходит, и фильтр отсекает лишь по-настоящему
+несвежие переиздания: 171 097 из 175 573 на этом заезде, 97 %. Посчитаете сквозную задержку по сырому потоку —
+и переиздания утянут число вверх, ведь их <code class="docutils literal notranslate"><span class="pre">vision_ts</span></code> старше команды, которая их несёт.</p>
+<p>На 13 Гц — темпе, который эта глава приводила до переезда модели на GPU, — фильтр не проходила треть
+команд, и само окно делало заметную работу. Но урок пережил это улучшение: «команда свежая» и «картинка
+свежая» — разные утверждения, и для безопасности важно только второе. Ровно поэтому гейт устаревания
+привязан к метке съёмки кадра, а не к возрасту команды, и поэтому таймаут команды HCA в 250 мс не защитил от
+плана возрастом 75 секунд.</p>
+<p>Быстрый контур работает не вхолостую: это угловой PID, который 100 раз в секунду замыкается на <em>измеренный</em>
+угол руля, и именно он делает движение рейки плавным.</p>
 </section>
 <section id="id3">
 <h2>По этапам<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
@@ -559,12 +559,12 @@
 </section>
 <section id="warp">
 <h3>2. Геометрический warp<a class="headerlink" href="#warp" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> приводит кадр ко входу модели — два кадра по шесть плоскостей 128×256, — используя
-интринсики и калибровочные RPY. Ошибка тангажа или рыска сдвигает метрическую трактовку разметки и даёт
+<p><code class="docutils literal notranslate"><span class="pre">ModelCalibWarp</span></code> приводит кадр ко входу модели — два кадра по шесть плоскостей 128×256 — по интринсикам и
+калибровочным RPY. Ошибка тангажа или рыска сдвигает метрическую трактовку разметки и даёт
 систематическую CTE.</p>
-<p>Варп считается ядром OpenCL на GPU (4.6 мс против 12.1 на процессоре) и откатывается на процессор там, где
-OpenCL недоступен. Первый кадр после запуска считается <strong>обоими</strong> способами и сверяется побитово: неверный
-варп не падает — он отдаёт сети правдоподобную картинку не той дороги.</p>
+<p>Варп считает ядро OpenCL на GPU (4.6 мс против 12.1 на процессоре); там, где OpenCL недоступен, он
+откатывается на процессор. Первый кадр после запуска считается <strong>обоими</strong> способами и сверяется побитово:
+неверный варп не падает — он отдаёт сети правдоподобную картинку не той дороги.</p>
 </section>
 <section id="supercombo">
 <h3>3. Инференс Supercombo<a class="headerlink" href="#supercombo" title="Ссылка на этот заголовок">#</a></h3>
@@ -573,41 +573,41 @@ OpenCL недоступен. Первый кадр после запуска с�
 <li><p><code class="docutils literal notranslate"><span class="pre">SupercomboThneedRunner</span></code> — supercombo 0.9.7 в fp16 на GPU, <strong>17.6 мс</strong>, путь по умолчанию;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">SupercomboOnnxRunner</span></code> — та же сеть в fp32 через ONNX Runtime, 45.6 мс (медиана), запасной путь.</p></li>
 </ul>
-<p>В обоих случаях: временной стек из двух кадров и рекуррентное состояние, выход разбирается в топик
-<strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (плюс одометрия и <code class="docutils literal notranslate"><span class="pre">model_long</span></code>), ставятся <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p>
-<p><strong>30.0 Гц</strong> измерено при камере 30 к/с (dt 33.0 мс медианно) — темп теперь квантован периодом камеры и больше
-ничем. До переезда модели на GPU было 13.24 Гц, и поперечный метроном ломался при тепловом троттлинге или
+<p>В обоих случаях одно и то же: временной стек из двух кадров и рекуррентное состояние; выход разбирается в
+топик <strong><code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code></strong> (плюс одометрия и <code class="docutils literal notranslate"><span class="pre">model_long</span></code>), проставляются <code class="docutils literal notranslate"><span class="pre">infer_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">infer_duration_ms</span></code>.</p>
+<p><strong>30.0 Гц</strong> измерены при камере 30 к/с (dt 33.0 мс медианно) — темп теперь задаёт период камеры и больше
+ничто. До переезда модели на GPU было 13.24 Гц, и поперечный метроном сбивался при тепловом троттлинге или
 когда за SoC конкурировал YOLO. См. <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a>.</p>
-<p>Оба раннера проверяют себя при загрузке: сеть прогоняется на нулевых входах, и подпись выхода сверяется с
-эталоном, снятым офлайн. Раннер, который считает не то, отказывается стартовать, а не отдаёт правдоподобные
+<p>Оба раннера проверяют себя при загрузке: сеть прогоняется на нулевых входах, а подпись выхода сверяется с
+эталоном, снятым офлайн. Раннер, который считает не то, отказывается стартовать, а не выдаёт правдоподобные
 числа про другую дорогу.</p>
 </section>
 <section id="java">
 <h3>4. Мост Java → нативный код<a class="headerlink" href="#java" title="Ссылка на этот заголовок">#</a></h3>
-<p>Protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> публикуется PUB на <code class="docutils literal notranslate"><span class="pre">:5555</span></code>. <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> читает вход и публикует во внутренний
-middleware; <code class="docutils literal notranslate"><span class="pre">utils/proto_convert.cpp</span></code> переводит сообщения провода во внутренние. Разделение: Java — камера,
-модель, логи; C++ — планирование, управление, калибровка, панда.</p>
+<p>Protobuf <code class="docutils literal notranslate"><span class="pre">ZMQMessage</span></code> уходит через PUB на <code class="docutils literal notranslate"><span class="pre">:5555</span></code>. <code class="docutils literal notranslate"><span class="pre">ZmqBridge</span></code> читает вход и публикует его во внутренний
+middleware; <code class="docutils literal notranslate"><span class="pre">utils/proto_convert.cpp</span></code> переводит сообщения из формата провода во внутренний. Границы такие:
+Java — камера, модель, логи; C++ — планирование, управление, калибровка, панда.</p>
 </section>
 <section id="id5">
 <h3>5. План и команда<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
-<p>Поперечный контур разделён на три сервиса, и в разделении весь смысл: каждый проверяем без двух остальных.</p>
+<p>Поперечный контур разбит на три сервиса, и в этом весь смысл: каждый можно проверить без двух остальных.</p>
 <ul class="simple">
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">Planner</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code>) берёт полилинию пути и шасси и выдаёт план <strong>в кривизне</strong>, никогда
-не в угле руля. Каким алгоритмом он построен — выбор конфига: <code class="docutils literal notranslate"><span class="pre">pp</span></code> (pure pursuit) или <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC в
-области времени, как у штатных систем, по умолчанию на дороге), — и интерфейс
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Planner</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/planner.cpp</span></code>) берёт полилинию пути и шасси и выдаёт план <strong>в кривизне</strong>, но никогда
+не в угле руля. Каким алгоритмом он построен — дело конфига: <code class="docutils literal notranslate"><span class="pre">pp</span></code> (pure pursuit) или <code class="docutils literal notranslate"><span class="pre">fp</span></code> (MPC во
+временно́й области, как у штатных систем, по умолчанию на дороге); интерфейс при этом
 одинаков, какой бы ни работал. Публикует <code class="docutils literal notranslate"><span class="pre">control/lat_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>, <code class="docutils literal notranslate"><span class="pre">control/lane_keep</span></code>.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) — закон управления и ничего больше: кривизна и шасси превращаются в
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">Control</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code>) — закон управления и ничего больше: превращает кривизну и шасси в
 момент и запрос ускорения, признак включения, пиктограммы приборки. Он не знает ни адреса CAN,
 ни сигнала, ни счётчика кадра. Публикует <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code>.</p></li>
 <li><p><strong><code class="docutils literal notranslate"><span class="pre">Platform</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) выносит это намерение на шину и не называет ни одной марки: какая
-машина за шиной, решается один раз по <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code> и достигается через <code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code>. См.
+машина стоит за шиной, решается один раз по <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code> и делается через <code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code>. См.
 <span class="xref myst">подключение машины</span>.</p></li>
 </ul>
 </section>
 <section id="id6">
 <h3>6. Актуация<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> передаёт <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> около 100 раз в секунду. Гейты: зажигание, <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>, возраст команды
-не более ~250 мс.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> передаёт <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> около 100 раз в секунду. Гейты: зажигание, <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code>, возраст команды —
+не старше ~250 мс.</p>
 </section>
 </section>
 <section id="id7">
@@ -665,21 +665,21 @@ middleware; <code class="docutils literal notranslate"><span class="pre">utils/p
 </tbody>
 </table>
 </div>
-<p>Темп зрения задаёт период поперечных решений; контур 100 Гц только замыкает угол. Деградацию темпа и сквозной
-задержки надо фиксировать <strong>до</strong> сравнения контроллеров, потому что контроллер, оценённый на окне 3 Гц, — это
+<p>Темп зрения задаёт период поперечных решений; контур 100 Гц лишь замыкает угол. Просадку темпа и сквозной
+задержки надо зафиксировать <strong>до</strong> того, как сравнивать контроллеры: контроллер, оценённый на окне 3 Гц, — это
 не тот контроллер, который вы поставили.</p>
 <p>Иконки предупреждений (<code class="docutils literal notranslate"><span class="pre">safety/warn</span></code>) идут параллельно удержанию полосы — см. <a class="reference internal" href="../Safety/Warnings.html"><span class="std std-doc">FCW / AEB / LDW</span></a>.</p>
 </section>
 <section id="id9">
 <h2>Тот же конвейер на вашем ноутбуке<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
-<p>Сервисы выше работают и без телефона: <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> открывает нативный <code class="docutils literal notranslate"><span class="pre">AdasApp</span></code> в симулированном режиме —
-вы публикуете protobuf-сообщения, зовёте <code class="docutils literal notranslate"><span class="pre">step()</span></code>, читаете, что опубликовали сервисы:</p>
+<p>Сервисы выше работают и без телефона: <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> запускает нативный <code class="docutils literal notranslate"><span class="pre">AdasApp</span></code> в симулированном режиме — вы
+публикуете protobuf-сообщения, зовёте <code class="docutils literal notranslate"><span class="pre">step()</span></code> и читаете, что опубликовали сервисы:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./app/src/main/cpp/build_cpp.sh<span class="w"> </span>-t<span class="w"> </span>linux<span class="w"> </span>--test<span class="w">    </span><span class="c1"># host build + ~230 gtest cases; pyadas core into scripts/</span>
 </pre></div>
 </div>
-<p>Весь цикл — четыре вызова: создать <code class="docutils literal notranslate"><span class="pre">pyadas.AdasApp()</span></code> в симулируемом режиме, опубликовать сообщения кадра,
+<p>Весь цикл — это четыре вызова: создать <code class="docutils literal notranslate"><span class="pre">pyadas.AdasApp()</span></code> в симулируемом режиме, опубликовать сообщения кадра,
 позвать <code class="docutils literal notranslate"><span class="pre">step()</span></code>, прочитать, что опубликовали сервисы. <code class="docutils literal notranslate"><span class="pre">scripts/core/lane_keep.py</span></code> оборачивает ровно это, и
-симулятор с визуализатором уже им пользуются — прочитайте его один раз, и офлайн-инструменты перестанут быть
+симулятор с визуализатором уже им пользуются — прочтите его один раз, и офлайн-инструменты перестанут казаться
 магией. Это же честный способ сравнить собственный контроллер с боевыми <code class="docutils literal notranslate"><span class="pre">pp</span></code> и <code class="docutils literal notranslate"><span class="pre">fp</span></code>: один бег на входе, три
 команды на выходе, один график.</p>
 <!-- next-chapter -->

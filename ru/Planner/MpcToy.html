@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -444,8 +444,8 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="mpc">
 <h1>MPC как игрушка — семь шагов вдоль пути<a class="headerlink" href="#mpc" title="Ссылка на этот заголовок">#</a></h1>
-<p>Pure Pursuit выбирает <strong>один</strong> <span class="math notranslate nohighlight">\(\delta\)</span>, попадающий в точку взгляда.
-<strong>MPC</strong> оптимизирует <strong>короткую будущую траекторию</strong>, применяет первую команду и решает заново на следующем кадре.</p>
+<p>Pure Pursuit выбирает <strong>один</strong> <span class="math notranslate nohighlight">\(\delta\)</span> — тот, что ведёт в точку прицеливания.
+<strong>MPC</strong> оптимизирует <strong>короткий отрезок будущей траектории</strong>, применяет первую команду и пересчитывает всё заново на следующем кадре.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p><code class="docutils literal notranslate"><span class="pre">lane_keep_controller</span></code></p></th>
@@ -462,20 +462,20 @@
 </tbody>
 </table>
 </div>
-<p>Эта глава учит MPC как <strong>игрушку в области пути, которая помещается в голове</strong> — семь шагов ниже. Эта
-конструкция ездила как контроллер <code class="docutils literal notranslate"><span class="pre">vp</span></code> / VisionPilot до 2026-08-21, когда <code class="docutils literal notranslate"><span class="pre">fp</span></code> вытеснил её с дороги и она
-была удалена; код живёт в истории git, а урок остаётся здесь, потому что это самый ясный способ понять,
-что делает любой MPC. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">Следующая глава</span></a> — <strong><code class="docutils literal notranslate"><span class="pre">fp</span></code> в области времени</strong>, который и рулит на
-самом деле.</p>
-<p>Планировщики стоят за одним интерфейсом <code class="docutils literal notranslate"><span class="pre">IPlanner</span></code>, и сервис <code class="docutils literal notranslate"><span class="pre">Planner</span></code> держит ровно один из них:</p>
+<p>Здесь мы разберём MPC на <strong>игрушечной модели в области пути — такой, что целиком укладывается в голове</strong>;
+она уместилась в семь шагов ниже. Эта конструкция рулила как контроллер <code class="docutils literal notranslate"><span class="pre">vp</span></code> / VisionPilot вплоть до
+2026-08-21, пока <code class="docutils literal notranslate"><span class="pre">fp</span></code> не вытеснил её с дороги и её не убрали; код остался в истории git, а урок — здесь,
+потому что это самый наглядный способ понять, что вообще делает любой MPC. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">Следующая
+глава</span></a> посвящена <strong><code class="docutils literal notranslate"><span class="pre">fp</span></code> в области времени</strong> — тому, что рулит на самом деле.</p>
+<p>Все планировщики скрыты за общим интерфейсом <code class="docutils literal notranslate"><span class="pre">IPlanner</span></code>, а сервис <code class="docutils literal notranslate"><span class="pre">Planner</span></code> держит ровно один из них:</p>
 <ul class="simple">
 <li><p>pure pursuit <code class="docutils literal notranslate"><span class="pre">pp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/pp_planner.cpp</span></code>.</p></li>
 <li><p>flowpilot <code class="docutils literal notranslate"><span class="pre">fp</span></code>: <code class="docutils literal notranslate"><span class="pre">lateral/fp_planner.cpp</span></code> и <code class="docutils literal notranslate"><span class="pre">flowpilot_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, сетка по времени → 2.5 с), со
 сменным численным методом — <code class="docutils literal notranslate"><span class="pre">kappa_solver_grad</span></code> или <code class="docutils literal notranslate"><span class="pre">kappa_solver_acados</span></code>.</p></li>
 <li><p>Слияние пути (разметка ↔ план): <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> в <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code> / <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>.</p></li>
 </ul>
-<p>Все они выдают <strong>кривизну</strong>, а не угол. Именно это позволяет менять их на ходу и сравнивать на одном беге:
-перевод в угол руля происходит один раз, ниже по течению, в <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p>
+<p>Все они выдают <strong>кривизну</strong>, а не угол. Именно поэтому их можно менять на ходу и сравнивать на одном беге:
+в угол руля кривизна переводится один раз и дальше по цепочке — в <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p>
 <section id="id1">
 <h2>Обозначения состояния<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -538,7 +538,7 @@
 <li><p><span class="math notranslate nohighlight">\(\mathrm{epsi} \approx b\)</span> (курс относительно пути),</p></li>
 <li><p><span class="math notranslate nohighlight">\(\kappa \approx 2a\)</span> (кривизна подгонки).</p></li>
 </ul>
-<p>Если окно подгонки короткое или шумное, <span class="math notranslate nohighlight">\(\kappa\)</span> выходит <strong>малой и запоздавшей</strong>, и всю эту ошибку наследует вся упреждающая цепочка.</p>
+<p>Если окно подгонки короткое или зашумлённое, <span class="math notranslate nohighlight">\(\kappa\)</span> получается <strong>заниженной и запаздывающей</strong>, и эту ошибку наследует вся упреждающая цепочка.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">fit_lane_state</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Quadratic fit y≈a x²+b x+c → (CTE, epsi, kappa) at x=0."""</span>
     <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
@@ -553,11 +553,11 @@
       <span class="sa">f</span><span class="s2">"(true κ=</span><span class="si">{</span><span class="n">kappa_true</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Вы должны получить CTE ≈ 0.3 м и <span class="math notranslate nohighlight">\(\kappa\)</span> около 0.02. На настоящем беге сравните κ из <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> с <code class="docutils literal notranslate"><span class="pre">yaw_rate</span> <span class="pre">/</span> <span class="pre">v</span></code>.</p>
+<p>Должно получиться CTE ≈ 0.3 м и <span class="math notranslate nohighlight">\(\kappa\)</span> около 0.02. На реальном беге сравните κ из <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> с <code class="docutils literal notranslate"><span class="pre">yaw_rate</span> <span class="pre">/</span> <span class="pre">v</span></code>.</p>
 </section>
 <section id="delta">
 <h3>2. Предсказать траектории для пробного <span class="math notranslate nohighlight">\(\delta\)</span><a class="headerlink" href="#delta" title="Ссылка на этот заголовок">#</a></h3>
-<p>Игрушка катит <strong>по длине пути</strong>, а не по часам. Для кандидата <span class="math notranslate nohighlight">\(\delta\)</span>:</p>
+<p>Игрушка катится <strong>вдоль пути</strong>, а не по часам. Для кандидата <span class="math notranslate nohighlight">\(\delta\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}
 \begin{aligned}
@@ -599,7 +599,7 @@
 двигает затравку.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Меньше — лучше. Слагаемые, упрощённо (они из VisionPilot — оттуда игрушка и происходит):</p>
+<p>Чем меньше, тем лучше. Слагаемые, в упрощённом виде (они из VisionPilot — оттуда игрушка и берёт начало):</p>
 <div class="math notranslate nohighlight">
 \[
 J = \sum_s \Big(
@@ -640,11 +640,11 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"δ=</span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">delta_ff</span><span class="p">)</span><span class="si">:</span><span class="s2">5.2f</span><span class="si">}</span><span class="s2">°  J=</span><span class="si">{</span><span class="n">j</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Минимум ожидается около <code class="docutils literal notranslate"><span class="pre">scale=1</span></code> (<span class="math notranslate nohighlight">\(\delta\approx\delta_{\mathrm{ff}}\)</span>). Мысленно поставьте <code class="docutils literal notranslate"><span class="pre">W_DELTA=0</span></code>: порядок может перевернуться в сторону <span class="math notranslate nohighlight">\(\delta\)</span>, минимизирующего чистую CTE.</p>
+<p>Минимум ожидается около <code class="docutils literal notranslate"><span class="pre">scale=1</span></code> (<span class="math notranslate nohighlight">\(\delta\approx\delta_{\mathrm{ff}}\)</span>). Мысленно обнулите <code class="docutils literal notranslate"><span class="pre">W_DELTA</span></code> — и порядок может смениться в пользу <span class="math notranslate nohighlight">\(\delta\)</span>, который минимизирует чистую CTE.</p>
 </section>
 <section id="delta-mathrm-ff">
 <h3>4. Построить <span class="math notranslate nohighlight">\(\delta_{\mathrm{ff}}\)</span><a class="headerlink" href="#delta-mathrm-ff" title="Ссылка на этот заголовок">#</a></h3>
-<p>Упреждение — это руление, которое нужно, <strong>даже если вы уже по центру</strong>:</p>
+<p>Упреждение — это то руление, которое нужно, <strong>даже когда вы уже точно по центру</strong>:</p>
 <div class="math notranslate nohighlight">
 \[
 \delta_{\mathrm{ff}} = f_{\mathrm{scale}}\big(\arctan(L\kappa) + K_{\mathrm{us}} v^{2}\kappa\big).
@@ -664,13 +664,13 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
 </section>
 <section id="id3">
 <h3>5. Решить (тёплый старт и градиент)<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Затравка, затем шаги по конечным разностям или градиенту по последовательности <span class="math notranslate nohighlight">\(\delta\)</span> (в C++ около 80 итераций). На практике на дорожных бегах спуск почти не двигает затравку — <strong>качество затравки ≈ качество выхода</strong>.</p>
+<p>Сначала затравка, затем шаги по конечным разностям или градиенту вдоль последовательности <span class="math notranslate nohighlight">\(\delta\)</span> (в C++ около 80 итераций). На практике, на дорожных бегах, спуск почти не сдвигает затравку — <strong>какова затравка, таков и выход</strong>.</p>
 <div class="warning admonition">
 <p class="admonition-title">Игрушка схлопывает горизонт; настоящий солвер — нет</p>
 <p>Ради читаемости блок ниже оптимизирует <strong>один общий <span class="math notranslate nohighlight">\(\delta\)</span></strong> на все <span class="math notranslate nohighlight">\(N\)</span> узлов — скалярный line search,
 не настоящий MPC. Этого хватает, чтобы показать: спуск почти не уходит от хорошей затравки. Боевой солвер
-двигает всю <em>последовательность</em> <span class="math notranslate nohighlight">\(\delta_0\ldots\delta_{N-1}\)</span>; не читайте этот блок как то, сколько
-переменных у MPC на самом деле.</p>
+двигает всю <em>последовательность</em> <span class="math notranslate nohighlight">\(\delta_0\ldots\delta_{N-1}\)</span>; не принимайте этот блок за указание на то,
+сколько переменных у MPC в действительности.</p>
 </div>
 <div class="math notranslate nohighlight">
 \[
@@ -740,7 +740,7 @@ w_c\,\mathrm{CTE}_s^{2} + w_c\,s_4\,\mathrm{CTE}_s^{4} + w_e\,\mathrm{epsi}_s^{2
       <span class="sa">f</span><span class="s2">"(PID→torque happens in Control, CAN framing in Platform)"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Насыщение на ±300 cNm означает, что <strong>машина</strong> не может исполнить, а не что стоимость хотела больше. Отладочный флаг и индикация в интерфейсе: предел руления. Вся половина шага «δ → момент» имеет собственную главу: <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a>.</p>
+<p>Насыщение на ±300 cNm означает, что команду не может отработать <strong>сама машина</strong>, а не что стоимость просила больше. Отладочный флаг и индикация в интерфейсе — предел руления. Всей второй половине шага «δ → момент» посвящена отдельная глава: <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a>.</p>
 </section>
 <section id="id4">
 <h3>7. Повторить на следующем кадре<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
@@ -776,9 +776,9 @@ MPC <strong>не</strong> гонит всю секунду в открытом �
 <section id="id5">
 <h2>До контроллера: опора — это слияние<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>И <code class="docutils literal notranslate"><span class="pre">fp</span></code>, и <code class="docutils literal notranslate"><span class="pre">pp</span></code> следят за полилинией на <code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, и она — <strong>не</strong> сырая разметка и <strong>не</strong> сырой план
-модели, а их σ-взвешенное слияние, собранное в <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code>. Это слияние, два отказа, от которых
-оно спасает, и почему здесь живёт половина смещения на дуге — отдельная глава:
-<a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a>. Эта глава считает, что опора уже есть.</p>
+модели, а их σ-взвешенное слияние, собранное в <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code>. Самому слиянию, двум отказам, от которых
+оно спасает, и тому, почему здесь кроется половина смещения на дуге, посвящена отдельная глава:
+<a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a>. Эта глава исходит из того, что опора уже готова.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">fp — MPC в области времени</span></a></p>

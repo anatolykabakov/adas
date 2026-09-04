@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -441,15 +441,15 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Калибровка камеры<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p><strong>Warp входа</strong> для Supercombo зависит от экстринсиков камеры (крен, тангаж, рыск и положение крепления).
-Пара градусов ошибки тангажа «не выглядит драматично» на экране, но смещает вход сети и проявляется как <strong>систематическая CTE</strong> — машина привычно сидит левее или правее центра, даже когда контроллер здоров.</p>
-<p>Это телефонный аналог главы AAD про калибровку по точке сходимости: экстринсики нас по-прежнему волнуют, но основной живой путь — <strong>голова одометрии модели</strong>, а не шахматная доска перед каждым выездом.</p>
-<p>RPY камеры для Supercombo — это <strong>не</strong> поза машины в ENU. Тот же prior <code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> задаёт ещё и поворот крепления IMU телефона — см. <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">локализацию</span></a>.</p>
+<p><strong>Warp входа</strong> для Supercombo зависит от экстринсиков камеры — крена, тангажа, рыска и положения крепления.
+Пара градусов ошибки по тангажу «на экране не выглядит драматично», но она смещает вход сети и оборачивается <strong>систематической CTE</strong>: машина устойчиво идёт левее или правее центра, даже когда с контроллером всё в порядке.</p>
+<p>Это телефонный аналог главы AAD о калибровке по точке сходимости: экстринсики нам по-прежнему важны, но основной рабочий путь здесь — <strong>одометрическая голова модели</strong>, а не шахматная доска перед каждым выездом.</p>
+<p>RPY камеры для Supercombo — это <strong>не</strong> поза машины в ENU. Тот же prior <code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> задаёт заодно и поворот крепления IMU телефона — см. <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">локализацию</span></a>.</p>
 <div class="note admonition">
 <p class="admonition-title">Эта глава — карта, следующая — механизм</p>
 <p>Глава <a class="reference internal" href="IntrinsicsAndWarp.html"><span class="std std-doc">Три калибровки, а не одна</span></a> разбирает измерение интринсиков, онлайн-оценщик по
-точке сходимости и warp модели, с запускаемым кодом и измеренными числами. Эту страницу читайте про то,
-почему калибровка проявляется как симптом управления, а ту — про то, как каждая часть на самом деле работает.</p>
+точке сходимости и warp модели — с запускаемым кодом и измеренными числами. Эту страницу читайте, чтобы понять,
+почему калибровка проявляется как симптом управления, а ту — чтобы разобраться, как на самом деле устроена каждая часть.</p>
 </div>
 <section id="prior">
 <h2>Prior (поставляемый конфиг)<a class="headerlink" href="#prior" title="Ссылка на этот заголовок">#</a></h2>
@@ -458,33 +458,33 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">position_m</span></code> — камера в системе <strong>машины по ISO</strong> (см. <a class="reference internal" href="../Vision/Coordinates.html"><span class="std std-doc">системы координат</span></a>);</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> — prior крена, тангажа, рыска.</p></li>
 </ul>
-<p>Пример чисел для стенда (по порядку величины): около 0.1 м левее осевой, тангаж <span class="math notranslate nohighlight">\(\approx -1.8°\)</span>, рыск <span class="math notranslate nohighlight">\(\approx 0.5°\)</span>. Это <strong>начальные догадки</strong>, а не истина навсегда.</p>
+<p>Порядок величин для нашего стенда: примерно 0.1 м левее осевой, тангаж <span class="math notranslate nohighlight">\(\approx -1.8°\)</span>, рыск <span class="math notranslate nohighlight">\(\approx 0.5°\)</span>. Это <strong>начальные приближения</strong>, а не истина на все времена.</p>
 </section>
 <section id="id2">
 <h2>Онлайн-калибровка<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) гонит <strong>два оценивателя в одно состояние</strong>, потому что
+<p><code class="docutils literal notranslate"><span class="pre">CameraCalib</span></code> (<code class="docutils literal notranslate"><span class="pre">services/camera_calib.cpp</span></code>) сводит <strong>два оценивателя в одно состояние</strong>, потому что
 каждый закрывает слепое пятно другого:</p>
 <ul class="simple">
-<li><p><strong>одометрия камеры</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromPose</span></code>): на прямой дороге вектор переноса модели смотрит вдоль
-оптической оси, так что его направление и <em>есть</em> тангаж с рысканием. Замеры гейтуются скоростью и
-углом руля (<code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> в конфиге сервиса существует только чтобы отличить прямую от пологого
+<li><p><strong>одометрия камеры</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromPose</span></code>): на прямой дороге вектор переноса модели направлен вдоль
+оптической оси, поэтому его направление и <em>есть</em> тангаж с рысканием. Замеры отсеиваются по скорости и
+углу руля (<code class="docutils literal notranslate"><span class="pre">steer_ratio</span></code> в конфиге сервиса нужен лишь для того, чтобы отличить прямую от пологого
 поворота) и взвешиваются собственными поосевыми σ одометрии;</p></li>
-<li><p><strong>точка схода линий разметки</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromUv</span></code>): геометрия, знакомая читателям AAD, — с ограничением
-темпа и гейтом по остатку аппроксимации: на дуге линии не параллельны и их пересечение — не точка
-схода, поэтому изогнутая пара отклоняется.</p></li>
+<li><p><strong>точка схода линий разметки</strong> (<code class="docutils literal notranslate"><span class="pre">updateFromUv</span></code>): геометрия, знакомая читателям AAD, — но с ограничением
+темпа и отсевом по остатку аппроксимации. На дуге линии не параллельны, и их пересечение — уже не точка
+схода, поэтому изогнутую пару отбрасываем.</p></li>
 </ul>
-<p>Слитая оценка публикуется на <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code> с флагом сходимости (<code class="docutils literal notranslate"><span class="pre">history_len</span></code> замеров стоят за
-ответом). Оттуда она расходится всем потребителям вопроса «куда смотрит камера»: варпу в Java, который
+<p>Объединённая оценка публикуется в <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code> вместе с флагом сходимости (за ответом стоят
+<code class="docutils literal notranslate"><span class="pre">history_len</span></code> замеров). Оттуда она расходится всем, кому важно, «куда смотрит камера»: варпу в Java, который
 строит <strong>следующий</strong> вход Supercombo, наземной проекции на экране и отладочному топику
 <code class="docutils literal notranslate"><span class="pre">calibration/camera_debug</span></code>, который остаётся в беге.</p>
-<p>Сервис же отказывается от интринсиков, которым не верит: главная точка обязана лежать близко к середине
-кадра, который объявляет само сообщение. Эта проверка появилась из-за потерянного заезда — история в
-конце главы. Сами интринсики теперь по-устройственные (<code class="docutils literal notranslate"><span class="pre">intrinsics_from_device:</span> <span class="pre">true</span></code> спрашивает
-камерное API; прайор в конфиге несёт значения, измеренные для конкретного телефона) — и на Xiaomi 14
-измеренные интринсики и паспорт расходятся на ~4 %, тогда как масштаб камерной одометрии против скорости колёс всё ещё занижен на ~11 % — вопрос открыт, пока доска не закроет объектив (задача #51).</p>
+<p>А вот интринсики, которым он не доверяет, сервис отбраковывает: главная точка обязана лежать близко к середине
+того кадра, размеры которого объявляет само сообщение. Эта проверка появилась после потерянного заезда — история в
+конце главы. Сами интринсики теперь берутся от устройства (<code class="docutils literal notranslate"><span class="pre">intrinsics_from_device:</span> <span class="pre">true</span></code> опрашивает
+API камеры; prior в конфиге хранит значения, измеренные для конкретного телефона). На Xiaomi 14
+измеренные интринсики и паспортные расходятся на ~4 %, а масштаб камерной одометрии относительно скорости колёс всё ещё занижен на ~11 % — вопрос остаётся открытым, пока доска не закроет объектив (задача #51).</p>
 <div class="warning admonition">
 <p class="admonition-title">Крен наблюдаем слабо</p>
-<p>В живых оценках крен часто остаётся около <span class="math notranslate nohighlight">\(0\)</span>. Большие качания крена считайте подозрительными; не «настраивайте удержание полосы», чтобы скомпенсировать сломанное состояние крена.</p>
+<p>В живых оценках крен часто держится около <span class="math notranslate nohighlight">\(0\)</span>. Большие колебания крена считайте подозрительными и не пытайтесь «подкрутить удержание полосы», чтобы скомпенсировать сбитое состояние крена.</p>
 </div>
 </section>
 <section id="id3">
@@ -493,14 +493,14 @@
 <a class="reference internal image-reference" href="../_images/error_growth.png"><img alt="../_images/error_growth.png" src="../_images/error_growth.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 40 </span><span class="caption-text">Ошибка рыскания растёт вбок с дальностью; ошибка тангажа двигает кажущуюся точку земли как квадрат
-дальности на высоту камеры — потому градус и важен вдали.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 40 </span><span class="caption-text">Ошибка рыскания растёт вбок пропорционально дальности; ошибка тангажа смещает кажущуюся точку земли как квадрат
+дальности, делённый на высоту камеры, — вот почему вдали важен даже один градус.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Экстринсики важнее, чем кажется, по чистой геометрии: угловая ошибка превращается в поперечную, которая
+<p>Экстринсики важнее, чем кажется, — по одной лишь геометрии: угловая ошибка превращается в поперечную, а та
 растёт с расстоянием. Ошибка рыска <span class="math notranslate nohighlight">\(\Delta\psi\)</span> сдвигает точку на дальности <span class="math notranslate nohighlight">\(d\)</span> на <span class="math notranslate nohighlight">\(d\tan\Delta\psi\)</span>, а
-ошибка тангажа <span class="math notranslate nohighlight">\(\Delta\theta\)</span> смещает видимое пересечение с землёй, что для камеры на высоте <span class="math notranslate nohighlight">\(h\)</span> на
-дальности <span class="math notranslate nohighlight">\(d\)</span> масштабируется примерно как <span class="math notranslate nohighlight">\(d^2\Delta\theta / h\)</span>.</p>
+ошибка тангажа <span class="math notranslate nohighlight">\(\Delta\theta\)</span> смещает видимое пересечение с землёй — для камеры на высоте <span class="math notranslate nohighlight">\(h\)</span> и
+дальности <span class="math notranslate nohighlight">\(d\)</span> это масштабируется примерно как <span class="math notranslate nohighlight">\(d^2\Delta\theta / h\)</span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="n">H_CAM</span> <span class="o">=</span> <span class="mf">1.10</span>          <span class="c1"># camera height, m</span>
@@ -523,40 +523,40 @@
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">1 deg of pitch = </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">FY</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> px of vertical shift in the source frame"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Запустите: 1.5° рыска — это 0.52 м поперечной ошибки на 20 м, втрое больше тех 0.15 м, к которым стремится
-контроллер. И 1.5° — не гипотетика. Между двумя подряд идущими ночными заездами выученный рыск сместился с
-+1.67° до +0.10°, потому что телефон переставили, а тангаж — с −1.11° до −0.67°.</p>
+<p>Запустите код: 1.5° рыска дают 0.52 м поперечной ошибки на 20 м — втрое больше тех 0.15 м, к которым стремится
+контроллер. И 1.5° — не выдумка. Между двумя ночными заездами подряд выученный рыск ушёл с
++1.67° до +0.10° из-за того, что телефон переставили, а тангаж — с −1.11° до −0.67°.</p>
 <div class="warning admonition">
 <p class="admonition-title">Следствие для сравнения заездов</p>
-<p>Выученный RPY идёт в <strong>warp входа</strong>, поэтому сеть буквально видит другое изображение. Два заезда с разным
+<p>Выученный RPY уходит в <strong>warp входа</strong>, поэтому сеть буквально видит другую картинку. Два заезда с разным
 выученным рыском дают разные планы модели на одной и той же дороге. Любое сравнение смещения плана между
-заездами сравнивает две конфигурации восприятия, а не два контроллера — в эту ловушку проект попадал, прежде
-чем заметил.</p>
+заездами сравнивает две конфигурации восприятия, а не два контроллера, — в эту ловушку проект уже попадал, пока
+её не распознал.</p>
 </div>
 <figure class="align-default" id="id10">
 <a class="reference internal image-reference" href="../_images/calib_convergence.png"><img alt="../_images/calib_convergence.png" src="../_images/calib_convergence.png" style="width: 80%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 41 </span><span class="caption-text">Онлайн-оценка устаканивается за 30–60 с; подразумеваемое ею поперечное смещение на 20 м падает вместе с ней.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 41 </span><span class="caption-text">Онлайн-оценка выходит на режим за 30–60 с; заложенное в ней поперечное смещение на 20 м падает вместе с ней.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="id4">
 <h2>Сохранение оценки: что оно покупает, а чего не может<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Система <strong>сохраняет</strong> сошедшуюся калибровку: как только сервис рапортует сходимость,
+<p>Система <strong>сохраняет</strong> сошедшуюся калибровку: как только сервис сообщает о сходимости,
 <code class="docutils literal notranslate"><span class="pre">persistCalibrationIfSettled</span></code> записывает RPY (и позицию камеры) в сохранённый рабочий конфиг — не чаще
-раза в минуту и только когда оценка сдвинулась больше чем на 0.05°. Следующий старт читает её как prior.</p>
-<p>Знайте точно, что это покупает, — это было измерено до того, как построено. Через <strong>переустановку</strong>
-телефона сохранённый prior почти бесполезен: посадка не повторяема, и прошлонедельные углы не лучше
-заводского значения. Настоящая цель сохранения — <strong>перезапуск без переустановки</strong>: рестарт приложения,
-восстановление сторожем, смена батареи в держателе — события частые, раз сторож панды умеет
-эскалировать до полного перезапуска, — телефон не двигался, и сохранённый prior просто верен. Рядом
-едет эксплуатационная оговорка: сохранённый конфиг <strong>затеняет ассет</strong> (открытая задача #50), так что
+раза в минуту и только если оценка сдвинулась больше чем на 0.05°. Следующий запуск читает её как prior.</p>
+<p>Стоит чётко понимать, что это даёт: это измерили ещё до того, как реализовали. При <strong>переустановке</strong>
+телефона сохранённый prior почти бесполезен: посадка не повторяется, и прошлонедельные углы не лучше
+заводского значения. Настоящий смысл сохранения — <strong>перезапуск без переустановки</strong>: рестарт приложения,
+восстановление сторожем, замена батареи в держателе. Такие события случаются часто — сторож панды умеет
+доводить дело до полного перезапуска, — но телефон при этом не сдвигался, и сохранённый prior просто верен. Рядом
+стоит эксплуатационная оговорка: сохранённый конфиг <strong>перекрывает ассет</strong> (открытая задача #50), поэтому
 свежепоставленный ключ конфига не доходит до установленного телефона, пока сохранённую копию не
 сбросить.</p>
-<p>В любом случае онлайн-оцениватель продолжает работать и продолжает побеждать: на дороге важно, <strong>как
-быстро он сходится из любого доставшегося prior</strong>, и тут новости хорошие — на беге 08-06 оценка
-устоялась за 30–60 с, а поперечное смещение на прямых за первые 30 с составило 0.02 м.</p>
+<p>В любом случае онлайн-оцениватель продолжает работать — и продолжает выигрывать: на дороге важно, <strong>как
+быстро он сходится из любого доставшегося prior</strong>, и здесь новости хорошие. На беге 08-06 оценка
+вышла на режим за 30–60 с, а поперечное смещение на прямых за первые 30 с составило 0.02 м.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convergence as the online estimator actually behaved, from the bag: a first-order approach to the</span>
 <span class="c1"># true angle. The question a student should ask is not "what is the final value" but "how much distance</span>
 <span class="c1"># do I cover before it is good enough".</span>
@@ -570,16 +570,16 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">s </span><span class="si">{</span><span class="n">est</span><span class="si">:</span><span class="s2">&gt;8.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">lateral_error_from_yaw</span><span class="p">(</span><span class="mf">20.0</span><span class="p">,</span><span class="w"> </span><span class="n">est</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">truth</span><span class="p">)</span><span class="si">:</span><span class="s2">&gt;19.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Отсюда практическое правило, и оно скучное: <strong>не судите об удержании полосы в первую минуту</strong> и не гоняйтесь
+<p>Отсюда практическое правило — скучное, но важное: <strong>не судите об удержании полосы в первую минуту</strong> и не гоняйтесь
 за поперечным смещением, измеренным в это время.</p>
 </section>
 <section id="cte">
 <h2>Причинная цепочка (смещение → CTE)<a class="headerlink" href="#cte" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Ошибка крепления или prior → неверный warp.</p></li>
-<li><p>Неверный warp → смещённые поперечные величины разметки и плана.</p></li>
+<li><p>Неверный warp → смещённые поперечные координаты разметки и плана.</p></li>
 <li><p>Смещённый путь → ненулевая CTE на визуально «прямой» дороге.</p></li>
-<li><p>Обратная связь борется с постоянным смещением → лишняя активность руля, а среднее смещение всё равно остаётся.</p></li>
+<li><p>Обратная связь борется с постоянным смещением → лишние движения руля, а среднее смещение всё равно остаётся.</p></li>
 </ol>
 <p>Прежде чем поднимать коэффициенты Pure Pursuit или MPC, сравните в беге <strong>prior и живой RPY</strong> и проверьте <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code>.</p>
 </section>
@@ -587,8 +587,8 @@
 <h2>Практика<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>Не судите о качестве удержания полосы в первые минуты после холодного старта калибровки.</p></li>
-<li><p>Устойчивое поперечное смещение на прямой <strong>без</strong> включённого HCA — это кандидат на калибровку или смещение, а не на <code class="docutils literal notranslate"><span class="pre">pp_k_dd</span></code>.</p></li>
-<li><p>Интринсики по шахматной доске (<code class="docutils literal notranslate"><span class="pre">tools/camera_calib_chessboard.py</span></code>) уточняют <span class="math notranslate nohighlight">\(f_x,f_y\)</span>; экстринсики остаются отдельной историей.</p></li>
+<li><p>Устойчивое поперечное смещение на прямой <strong>без</strong> включённого HCA — это повод заподозрить калибровку или смещение, а не <code class="docutils literal notranslate"><span class="pre">pp_k_dd</span></code>.</p></li>
+<li><p>Интринсики по шахматной доске (<code class="docutils literal notranslate"><span class="pre">tools/camera_calib_chessboard.py</span></code>) уточняют <span class="math notranslate nohighlight">\(f_x,f_y\)</span>; экстринсики — это отдельная история.</p></li>
 </ul>
 </section>
 <section id="id6">
@@ -614,7 +614,7 @@
 <td><p>межквартильный разброс велик — лучше рулетка плюс <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code></p></td>
 </tr>
 <tr class="row-even"><td><p><strong>x (продольное)</strong></p></td>
-<td><p>не геометрично</p></td>
+<td><p>геометрией не берётся</p></td>
 <td><p>1.5</p></td>
 <td><p>только рулетка; <code class="docutils literal notranslate"><span class="pre">fp</span></code> его не использует</p></td>
 </tr>
@@ -634,53 +634,53 @@
 </section>
 <section id="id7">
 <h2>Три способа, которыми калибровка убила один заезд<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>16 августа 2026 три заезда подряд не поехали. Разбор дороже самой починки, потому что каждая причина по
-отдельности была невидима, а втроём они выглядели как «контроллер стал хуже».</p>
-<p><strong>Объектив был не в фокусе.</strong> Резкость входа — средний квадрат градиента по плоскости яркости входа модели —
-показывала <strong>9.9–14.9</strong> против 369–942 на исправных заездах тремя днями раньше, причём с первого же кадра
-каждого заезда и без деградации во времени. Приложение при этом делало всё правильно: автофокус выключен,
-расстояние фокуса на бесконечности, и то и другое подтверждено логом. Значит причина физическая — стекло,
-объектив или привод фокуса, — а следствия были повсюду: 82.6 % кадров без обеих линий, вероятности линий
+<p>16 августа 2026 три заезда подряд не состоялись. Разбор оказался ценнее самой починки: каждая причина по
+отдельности была незаметна, а вместе они выглядели как «контроллер стал хуже».</p>
+<p><strong>Объектив был не в фокусе.</strong> Резкость входа — средний квадрат градиента по плоскости яркости входного кадра модели —
+держалась на <strong>9.9–14.9</strong> против 369–942 на исправных заездах тремя днями раньше, причём с первого же кадра
+каждого заезда и без ухудшения со временем. Приложение при этом делало всё как надо: автофокус выключен,
+фокусировка на бесконечность — и то, и другое подтверждено логом. Значит, причина физическая: стекло,
+объектив или привод фокуса. А следствия были повсюду: 82.6 % кадров без обеих линий, вероятности линий
 0.11 и 0.20, поза модели без связи с колёсами, 60.4 % тиков на упоре по моменту.</p>
-<p>Теперь система говорит это вслух, раз в сотню кадров:</p>
+<p>Теперь система сообщает об этом прямо, раз в сотню кадров:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>РАСФОКУС: резкость входа 12.3 при пороге 60 — разметки в таком кадре нет, проверьте объектив и стекло
 </pre></div>
 </div>
-<p>Порог 60 стоит в пустом промежутке между 14.9 и 369. Промежуточных значений в данных нет, и это хороший
-случай для выбора порога: ставьте его там, где ничего не живёт.</p>
+<p>Порог 60 стоит в пустом промежутке между 14.9 и 369. Промежуточных значений в данных нет — и это удачный
+случай для выбора порога: ставьте его там, где ничего не встречается.</p>
 <p><strong>Интринсики уезжали вдвое.</strong> <code class="docutils literal notranslate"><span class="pre">camera/intrinsics</span></code> публиковались в единицах <em>уменьшенного кадра бега</em>
 (640×360: fx 475.5, главная точка 320/180), а служба калибровки читала их как параметры <em>полного</em> кадра
-(1280×720). Всё ниже по течению — <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code>, модельный варп — строило проекцию с половинным
-фокусом и главной точкой в углу. Сравнение двух бегов показывает это сразу: <code class="docutils literal notranslate"><span class="pre">fx=993.4</span> <span class="pre">fy=995.2</span> <span class="pre">cx=640</span> <span class="pre">cy=360</span></code> в хороший день и <code class="docutils literal notranslate"><span class="pre">fx=475.5</span> <span class="pre">fy=475.5</span> <span class="pre">cx=320</span> <span class="pre">cy=180</span></code> в плохой.</p>
-<p>Починено на публикующей стороне и закрыто проверкой на принимающей, потому что следующая ошибка в единицах
-будет другой. Сообщение, которое говорит «кадр 1280×720» и несёт главную точку в (320, 180), теперь
+(1280×720). Всё, что ниже по течению — <code class="docutils literal notranslate"><span class="pre">calibration/camera</span></code>, модельный варп, — строило проекцию с половинным
+фокусом и главной точкой в углу. Сравнение двух бегов выдаёт это сразу: <code class="docutils literal notranslate"><span class="pre">fx=993.4</span> <span class="pre">fy=995.2</span> <span class="pre">cx=640</span> <span class="pre">cy=360</span></code> в хороший день и <code class="docutils literal notranslate"><span class="pre">fx=475.5</span> <span class="pre">fy=475.5</span> <span class="pre">cx=320</span> <span class="pre">cy=180</span></code> в плохой.</p>
+<p>Починили на публикующей стороне и подстраховались проверкой на принимающей, потому что следующая ошибка в единицах
+будет уже другой. Сообщение, которое заявляет «кадр 1280×720», но несёт главную точку в (320, 180), теперь
 отвергается, а не принимается на веру.</p>
-<p><strong>Выученная калибровка была выброшена — мной, на столе.</strong> Рыскание весь заезд стояло на +0.03°, размах 0.00°
+<p><strong>Выученную калибровку выбросил я сам — на столе.</strong> Рыскание весь заезд стояло на +0.03° с размахом 0.00°
 за 1000 секунд, тогда как тремя днями раньше система сошлась к −1.40°. Выученная калибровка лежит в
-<code class="docutils literal notranslate"><span class="pre">files/config.json</span></code>; этот файл был удалён при отладке совсем другого, после чего приложение четверть часа
-простояло на столе и <strong>автоматически сохранило калибровку, выученную по комнате</strong>. На дороге исправиться оно
-не могло: онлайн-калибровке нужна разметка.</p>
-<p>Это не ошибка алгоритма, а отсутствующее предусловие: сохранение теперь разрешено только при
-<code class="docutils literal notranslate"><span class="pre">VisionPipeline.seesRoad()</span></code>. Удалять конфиг по-прежнему законно — просто это больше не затирает добытую
+<code class="docutils literal notranslate"><span class="pre">files/config.json</span></code>; этот файл я удалил, отлаживая совсем другое, после чего приложение четверть часа
+простояло на столе и <strong>автоматически сохранило калибровку, выученную по комнате</strong>. Исправиться на дороге оно
+уже не могло: онлайн-калибровке нужна разметка.</p>
+<p>Это не ошибка алгоритма, а недостающее предусловие: сохранение теперь разрешено только при
+<code class="docutils literal notranslate"><span class="pre">VisionPipeline.seesRoad()</span></code>. Удалять конфиг по-прежнему можно — просто это больше не затирает добытую
 трудом оценку мусором, выученным по стене.</p>
 <div class="tip admonition">
 <p class="admonition-title">Что общего у всех трёх</p>
-<p>Ни одна из трёх не дала ошибки. Расфокусированный кадр — валидный кадр, интринсики половинного масштаба —
-валидные числа, калибровка, выученная по столу, — валидная калибровка. Каждая нашлась сравнением двух
-измерений, которые обязаны были сойтись: этого заезда с прошлонедельным, единиц публикующей стороны с
-единицами принимающей, выученного угла с углом из предыдущего заезда.</p>
+<p>Ни одна из трёх не вызвала ошибки. Расфокусированный кадр — валидный кадр, интринсики половинного масштаба —
+валидные числа, калибровка, выученная по столу, — валидная калибровка. Каждую поймали сравнением двух
+измерений, которые обязаны были совпасть: этого заезда с прошлонедельным, единиц на публикующей стороне с
+единицами на принимающей, выученного угла с углом из предыдущего заезда.</p>
 </div>
 </section>
 <section id="id8">
 <h2>Задания<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>По бегу постройте живые тангаж и рыск против prior.</p></li>
+<li><p>По бегу постройте живые тангаж и рыск в сравнении с prior.</p></li>
 <li><p>На прямом окне с выключенным HCA оцените среднее смещение в полосе.</p></li>
 <li><p>Выдвиньте гипотезу, чем смещение объясняется лучше — калибровкой, <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code> или смещением плана, — и какое измерение опровергло бы каждую гипотезу.</p></li>
 </ol>
 <div class="note admonition">
 <p class="admonition-title">Обсуждение — против калибровки по точке сходимости в AAD</p>
-<p>AAD учит находить рыск и тангаж по точкам сходимости линий разметки в блокноте. Эту интуицию стоит прочитать. В телефонном стеке непрерывный путь — это <strong>одометрия из Supercombo</strong> плюс prior в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>, потому что многозадачную сеть мы и так гоняем каждый кадр.</p>
+<p>AAD учит находить рыск и тангаж по точкам сходимости линий разметки в блокноте. Эту интуицию стоит усвоить. В телефонном стеке непрерывный путь — это <strong>одометрия из Supercombo</strong> плюс prior в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>, ведь многозадачную сеть мы и так прогоняем каждый кадр.</p>
 </div>
 <!-- next-chapter -->
 <hr class="docutils" />

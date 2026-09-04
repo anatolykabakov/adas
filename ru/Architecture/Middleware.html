@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -443,17 +443,17 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="middleware-c">
 <h1>Middleware (шина на C++)<a class="headerlink" href="#middleware-c" title="Ссылка на этот заголовок">#</a></h1>
-<p>После зрения и до HCA почти всё в нативном коде разговаривает через один объект:
-<strong><code class="docutils literal notranslate"><span class="pre">adas::middleware::Manager</span></code></strong>. Если вы понимаете его, то сможете читать любой сервис (<code class="docutils literal notranslate"><span class="pre">Planner</span></code>, <code class="docutils literal notranslate"><span class="pre">Control</span></code>,
+<p>После зрения и до HCA почти весь нативный код общается через один объект —
+<strong><code class="docutils literal notranslate"><span class="pre">adas::middleware::Manager</span></code></strong>. Разберётесь в нём — и сможете читать любой сервис (<code class="docutils literal notranslate"><span class="pre">Planner</span></code>, <code class="docutils literal notranslate"><span class="pre">Control</span></code>,
 <code class="docutils literal notranslate"><span class="pre">Platform</span></code>, <code class="docutils literal notranslate"><span class="pre">SafetyWarn</span></code>, …), не утопая в Android.</p>
 <p>Источник истины: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/include/adas/middleware/manager.hpp</span></code>.
 Тесты, которые читаются как учебник: <code class="docutils literal notranslate"><span class="pre">app/src/main/cpp/tests/test_middleware.cpp</span></code>.</p>
 <section id="id1">
 <h2>Сначала постройте свою: шина в шестьдесят строк<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Быстрее всего читается та шина, маленькую версию которой вы уже написали. Свойств, которые важны, три,
-и они помещаются на один экран: <strong>топики</strong> отвязывают говорящего от слушающих; <strong>доставка
-детерминирована</strong> — опубликованное во время тика доставляется на следующем, так что прогон
-воспроизводим; и <strong>очередь наблюдаема</strong>, потому что очередь, которую не видно, — то место, где системы
+<p>Легче всего читается та шина, маленькую версию которой вы уже написали сами. Важных свойств три, и все они
+умещаются на один экран: <strong>топики</strong> отвязывают говорящего от слушающих; <strong>доставка
+детерминирована</strong> — опубликованное во время тика приходит на следующем, поэтому прогон
+воспроизводим; и <strong>очередь наблюдаема</strong>, ведь невидимая очередь — как раз то место, где системы
 умирают:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Bus</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Topics, deferred delivery, a visible queue. The real one adds threads and timers."""</span>
@@ -478,9 +478,9 @@
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Сервис владеет состоянием, подписывается, публикует — никто никого не вызывает. Здесь на шину переезжают
-игрушечный планировщик (слияние линий обратной дисперсией) и игрушечный контроллер (pure pursuit в
-связанной системе):</p>
+<p>Сервис владеет состоянием, подписывается, публикует — и никто никого не вызывает напрямую. Теперь переселим на
+шину игрушечный планировщик (слияние линий по обратной дисперсии) и игрушечный контроллер (pure pursuit в
+связанной системе координат):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -515,8 +515,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="o">.</span><span class="n">publish</span><span class="p">(</span><span class="s2">"controls/steer"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"delta"</span><span class="p">:</span> <span class="n">delta</span><span class="p">})</span>
 </pre></div>
 </div>
-<p>Приёмка архитектурного шага — <em>равенство</em>: сервисы на шине обязаны воспроизвести прямые вызовы бит в
-бит:</p>
+<p>Критерий приёмки для этого архитектурного шага — <em>равенство</em>: сервисы на шине обязаны воспроизвести прямые
+вызовы бит в бит:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <span class="n">x_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
 <span class="n">sig</span> <span class="o">=</span> <span class="mf">0.05</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">x_grid</span>
@@ -559,10 +559,10 @@
 <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">got</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span> <span class="ow">and</span> <span class="n">worst</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">"acceptance: the bus must change nothing"</span>
 </pre></div>
 </div>
-<p>Теперь посмотрите, как это умирает по-настоящему. Мост ZMQ на телефоне когда-то вычерпывал <strong>одно
-сообщение за 10-мс тик</strong> — потолок 100 сообщений/с. Третий топик на 28 Гц вытолкнул вход за потолок,
-очередь росла, план старел, и гейт свежести молча снимал поперечное управление через минуту каждого
-заезда. Воспроизведите:</p>
+<p>А теперь посмотрите, как это ломается на самом деле. Мост ZMQ на телефоне когда-то вычерпывал <strong>по одному
+сообщению за 10-мс тик</strong> — потолок в 100 сообщений/с. Третий топик на 28 Гц вытолкнул поток за этот потолок,
+очередь росла, план старел, и гейт свежести молча снимал поперечное управление через минуту после начала
+каждого заезда. Воспроизведём:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bus2</span> <span class="o">=</span> <span class="n">Bus</span><span class="p">()</span>
 <span class="n">delivered</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"n"</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
 <span class="n">bus2</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="s2">"t"</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">:</span> <span class="n">delivered</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="s2">"n"</span><span class="p">,</span> <span class="n">delivered</span><span class="p">[</span><span class="s2">"n"</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
@@ -582,10 +582,10 @@
 <span class="k">assert</span> <span class="n">backlog</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">400</span><span class="p">,</span> <span class="s2">"a fixed drain below inflow does not lag — it diverges"</span>
 </pre></div>
 </div>
-<p>Очередь не стабилизируется на каком-то отставании — она <strong>расходится линейно</strong>, и возраст того, на что
-вы реагируете, расходится с ней. Лекарство (вычерпывать досуха, с разумной границей) — здесь одна
-строка, на телефоне — одна константа, <code class="docutils literal notranslate"><span class="pre">kMaxPerTick</span> <span class="pre">=</span> <span class="pre">32</span></code>. Всё ниже — эта игрушка, повзрослевшая:
-потоки, таймеры, параметры и <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> — ваш <code class="docutils literal notranslate"><span class="pre">max_backlog</span></code> в мундире.</p>
+<p>Очередь не выходит на какое-то постоянное отставание — она <strong>расходится линейно</strong>, а вместе с ней растёт и
+возраст того, на что вы реагируете. Лекарство (вычерпывать досуха, с разумной границей) здесь укладывается в
+одну строку, а на телефоне — в одну константу, <code class="docutils literal notranslate"><span class="pre">kMaxPerTick</span> <span class="pre">=</span> <span class="pre">32</span></code>. Всё, что ниже, — это та же игрушка, только
+повзрослевшая: потоки, таймеры, параметры, а <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> — ваш <code class="docutils literal notranslate"><span class="pre">max_backlog</span></code>, вышедший в люди.</p>
 </section>
 <section id="id2">
 <h2>Мысленная модель<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
@@ -600,14 +600,14 @@
 </pre></div>
 </div>
 <ul class="simple">
-<li><p><strong>Service</strong> — одна единица параллельности: свой поток (<code class="docutils literal notranslate"><span class="pre">RealTime</span></code>) или общий <code class="docutils literal notranslate"><span class="pre">step()</span></code> (<code class="docutils literal notranslate"><span class="pre">Simulated</span></code>).</p></li>
-<li><p><strong>Топики</strong> — типизированные строковые имена (<code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>, …).</p></li>
+<li><p><strong>Service</strong> — единица параллельности: у него либо свой поток (<code class="docutils literal notranslate"><span class="pre">RealTime</span></code>), либо общий <code class="docutils literal notranslate"><span class="pre">step()</span></code> (<code class="docutils literal notranslate"><span class="pre">Simulated</span></code>).</p></li>
+<li><p><strong>Топики</strong> — это типизированные строковые имена (<code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>, …).</p></li>
 <li><p><strong>Публикация</strong> копирует сообщение в очередь каждого подписчика; колбэк выполняет <strong>владелец</strong> этой очереди.</p></li>
-<li><p><strong>Параметры</strong> можно задавать из любого потока (интерфейс, JNI); <strong>применяются</strong> они на потоке сервиса между колбэками.</p></li>
+<li><p><strong>Параметры</strong> можно задавать из любого потока (интерфейс, JNI); а <strong>применяются</strong> они на потоке сервиса, между колбэками.</p></li>
 </ul>
 <div class="tip admonition">
 <p class="admonition-title">Почему не вызывать сервисы напрямую?</p>
-<p>Java, реплей бега и MetaDrive нуждаются в одних и тех же алгоритмах. Шина плюс <code class="docutils literal notranslate"><span class="pre">Mode::Simulated</span></code> позволяют Python и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять <strong>тот же</strong> C++ без Camera2.</p>
+<p>Java, реплей бега и MetaDrive нужны одни и те же алгоритмы. Шина вместе с <code class="docutils literal notranslate"><span class="pre">Mode::Simulated</span></code> позволяют Python и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять <strong>тот же самый</strong> C++ без Camera2.</p>
 </div>
 </section>
 <section id="id3">
@@ -760,11 +760,11 @@
 </section>
 <section id="parambag">
 <h2>ParamBag (живые ручки)<a class="headerlink" href="#parambag" title="Ссылка на этот заголовок">#</a></h2>
-<p>Задача: поток интерфейса не должен гоняться за поток управления.</p>
+<p>Задача: поток интерфейса не должен состязаться с потоком управления за общие данные.</p>
 <p>Решение:</p>
 <ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">setParameter(&quot;pp_k_dd&quot;,</span> <span class="pre">&quot;0.8&quot;)</span></code> <strong>кладёт в очередь</strong> строку на владеющем сервисе.</p></li>
-<li><p>Перед следующим колбэком или таймером <code class="docutils literal notranslate"><span class="pre">ParamBag::flush()</span></code> разбирает её и пишет в переменную C++.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">setParameter(&quot;pp_k_dd&quot;,</span> <span class="pre">&quot;0.8&quot;)</span></code> <strong>кладёт строку в очередь</strong> на владеющем сервисе.</p></li>
+<li><p>Перед следующим колбэком или таймером <code class="docutils literal notranslate"><span class="pre">ParamBag::flush()</span></code> разбирает её и записывает в переменную C++.</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Student intuition (not the real class, but the timing)</span>
 <span class="n">pending</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"pp_k_dd"</span><span class="p">:</span> <span class="s2">"0.8"</span><span class="p">}</span>
@@ -780,17 +780,17 @@
 </pre></div>
 </div>
 <p>Поддерживаемые типы: <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">long</span> <span class="pre">long</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code>, <code class="docutils literal notranslate"><span class="pre">string</span></code>.
-Android NDK требует, чтобы разбирающие вспомогательные функции были свободными (см. <code class="docutils literal notranslate"><span class="pre">detail::parseParamText</span></code> в заголовке) — статический шаблон класса не слинковался.</p>
+Android NDK потребовал, чтобы вспомогательные функции разбора были свободными (см. <code class="docutils literal notranslate"><span class="pre">detail::parseParamText</span></code> в заголовке): статический шаблонный метод класса не слинковался.</p>
 </section>
 <section id="id6">
 <h2>Шина ли виновата? Измерьте, а не предполагайте<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>Шина сообщений — естественный подозреваемый, когда конвейер медленный, и подозревать дёшево. Эту измерили, и
-ответ определяет, как читать любое другое число задержки в книге.</p>
-<p><strong>Публикация будит подписчика немедленно.</strong> <code class="docutils literal notranslate"><span class="pre">publish</span></code> копирует в очередь каждого подписчика и вызывает
-<code class="docutils literal notranslate"><span class="pre">cv.notify_one()</span></code>, поэтому владеющий поток становится готовым к исполнению сразу — он не ждёт своего
-следующего тика таймера. Опрос есть ровно в двух местах, на границах с внешним миром: вход ZMQ от Java и
-выход CAN к панде, оба по таймеру 10 мс, потому что то, что с другой стороны, разбудить нас не умеет.</p>
-<p>Разницу между этими двумя схемами стоит увидеть, а не принять на слово:</p>
+<p>Когда конвейер тормозит, шина сообщений — первый подозреваемый, и подозревать её ничего не стоит. Но мы её
+измерили, и от ответа зависит, как читать любое другое число задержки в книге.</p>
+<p><strong>Публикация будит подписчика немедленно.</strong> <code class="docutils literal notranslate"><span class="pre">publish</span></code> копирует сообщение в очередь каждого подписчика и
+вызывает <code class="docutils literal notranslate"><span class="pre">cv.notify_one()</span></code>, поэтому владеющий поток сразу готов к исполнению — он не ждёт своего
+следующего тика таймера. Опрос остаётся ровно в двух местах, на границах с внешним миром: вход ZMQ от Java и
+выход CAN к панде, оба по таймеру 10 мс, — потому что то, что с другой стороны, разбудить нас не умеет.</p>
+<p>Разницу между этими двумя схемами стоит увидеть своими глазами, а не принимать на слово:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="c1"># Two ways to hand a message from producer to consumer. The producer emits vision frames at the measured</span>
@@ -816,39 +816,39 @@ Android NDK требует, чтобы разбирающие вспомогат
 <span class="nb">print</span><span class="p">(</span><span class="s2">"on nothing. Now try PRODUCE_MS = 90.0 and watch the cost vanish, which is how a benchmark lies."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><strong>Таймеры срабатывают тогда, когда обещают.</strong> За 143 700 срабатываний на настоящем заезде средний интервал
-был <strong>10.00 мс</strong> против номинальных 10. Худшие случаи — 44.8 мс в сервисе панды (скорее всего затык USB, то
-есть внешний мир, а не планировщик) и 21.8 мс в мосте ZMQ.</p>
-<p>Итого измеренный вывод: <strong>middleware никогда не задерживает сообщение на таймере</strong>, и та задержка конвейера,
-которая не инференс, — это не шина. Из примерно 8 мс между выходом модели и опубликованным планом около 5 —
-опрос входа ZMQ; это настоящая цена и единственная, которую стоит называть.</p>
-<p>Доля эта выросла безо всякого замедления шины. Когда инференс занимал 45.6 мс, опрос был 6 % бюджета и не
-стоил упоминания; при 17.6 мс он уже 10 % куда меньшего бюджета. Постоянные издержки становятся сюжетом,
-когда переменную убрали, — это нормальный конец оптимизации, а не новая беда.</p>
+<p><strong>Таймеры срабатывают тогда, когда обещали.</strong> За 143 700 срабатываний на настоящем заезде средний интервал
+составил <strong>10.00 мс</strong> против номинальных 10. Худшие случаи — 44.8 мс в сервисе панды (скорее всего затык USB,
+то есть внешний мир, а не планировщик) и 21.8 мс в мосте ZMQ.</p>
+<p>Итог измерений: <strong>middleware никогда не задерживает сообщение на таймере</strong>, и та часть задержки конвейера,
+которая не инференс, приходится не на шину. Из примерно 8 мс между выходом модели и опубликованным планом
+около 5 — это опрос входа ZMQ; вот настоящая цена, и единственная, которую стоит называть.</p>
+<p>При этом доля опроса выросла безо всякого замедления шины. Когда инференс занимал 45.6 мс, опрос составлял 6 %
+бюджета и упоминания не стоил; при 17.6 мс это уже 10 % куда меньшего бюджета. Постоянные издержки выходят на
+первый план, когда убрали переменную часть, — это нормальный конец оптимизации, а не новая беда.</p>
 <div class="tip admonition">
 <p class="admonition-title">Что это даёт диагностически</p>
-<p>Когда бег показывает устаревший эталон, шина уже исключена. Это дороже, чем звучит: область поиска сужается
-до тракта камера → модель или до внешних границ, а <code class="docutils literal notranslate"><span class="pre">manager.hpp</span></code> можно не читать.</p>
+<p>Если бег показывает устаревший эталон, шину можно сразу исключить. Это ценнее, чем кажется: область поиска
+сужается до тракта камера → модель или до внешних границ, а <code class="docutils literal notranslate"><span class="pre">manager.hpp</span></code> можно не открывать.</p>
 </div>
 </section>
 <section id="id7">
 <h2>Очереди и потери<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Ёмкость очереди подписчика по умолчанию конечна (около 100). Если медленный сервис не вычитывает:</p>
+<p>Ёмкость очереди подписчика по умолчанию конечна (около 100). Если медленный сервис её не вычитывает:</p>
 <ul class="simple">
 <li><p>при переполнении отбрасываются <strong>старые</strong> сообщения (<code class="docutils literal notranslate"><span class="pre">pop_front</span></code>), в очереди остаются последние ~100;</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> показывает отстающие таймеры и потери, и он есть в каждом беге.</p></li>
 </ul>
-<p>Так сделано намеренно: устаревшее измерение контуру не нужно, а издателя нельзя стопорить медленным
-подписчиком. Потери видны в статистике, а не прячутся в растущей задержке.</p>
+<p>Это сделано намеренно: устаревшее измерение контуру ни к чему, а издателя нельзя тормозить из-за медленного
+подписчика. Потери видны в статистике и не прячутся в растущей задержке.</p>
 <div class="admonition warning">
 <p class="admonition-title">Предупреждение</p>
 <p>«Плохой контроллер» на беге, где <code class="docutils literal notranslate"><span class="pre">middleware/stats</span></code> показывает огромное отставание таймеров, — это чаще
-история про <strong>планирование</strong>, а не про коэффициенты. Проверьте это прежде, чем трогать вес: нужен один график.</p>
+история про <strong>планирование</strong>, а не про коэффициенты. Проверьте это, прежде чем трогать веса: хватит одного графика.</p>
 </div>
-<p>С конвейером зрения политика <strong>та же по направлению</strong> — оба отбрасывают старое, чтобы оставить свежее, —
-но разная по <strong>глубине</strong>. Шина держит до сотни сообщений (логгеру и разбору бега нужна серия); <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code>
-держит ровно <strong>один</strong> слот и перезаписывает ожидающий кадр. Контроллеру запас несвежих кадров бесполезен,
-поэтому зрение агрессивнее; шина мягче, потому что один и тот же топик могут слушать и контур, и запись.</p>
+<p>У конвейера зрения политика <strong>та же по сути</strong> — и он, и шина отбрасывают старое, чтобы оставить свежее, — но
+разная по <strong>глубине</strong>. Шина держит до сотни сообщений (логгеру и разбору бега нужна серия); а <code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code>
+держит ровно <strong>один</strong> слот и перезаписывает ожидающий кадр. Контроллеру запас несвежих кадров ни к чему,
+поэтому зрение действует резче; шина мягче, ведь один и тот же топик могут слушать и контур, и запись.</p>
 </section>
 <section id="id8">
 <h2>Как это изучать в репозитории<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
@@ -864,7 +864,7 @@ Android NDK требует, чтобы разбирающие вспомогат
 <ol class="arabic simple">
 <li><p>Нарисуйте путь одного <code class="docutils literal notranslate"><span class="pre">ChassisSample</span></code> от <code class="docutils literal notranslate"><span class="pre">Platform</span></code> (или бега) до <code class="docutils literal notranslate"><span class="pre">Control</span></code>.</p></li>
 <li><p>Добавьте гипотетический параметр <code class="docutils literal notranslate"><span class="pre">echo.gain</span></code> — какой поток его пишет, какой читает?</p></li>
-<li><p>В режиме <code class="docutils literal notranslate"><span class="pre">Simulated</span></code> почему нужно вызвать <code class="docutils literal notranslate"><span class="pre">setTime</span></code> до <code class="docutils literal notranslate"><span class="pre">step</span></code>, чтобы таймеры сработали?</p></li>
+<li><p>Почему в режиме <code class="docutils literal notranslate"><span class="pre">Simulated</span></code> нужно вызвать <code class="docutils literal notranslate"><span class="pre">setTime</span></code> до <code class="docutils literal notranslate"><span class="pre">step</span></code>, чтобы таймеры сработали?</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />

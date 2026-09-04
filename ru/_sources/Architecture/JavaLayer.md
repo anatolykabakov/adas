@@ -1,8 +1,8 @@
 # Слой Java (обвязка телефона)
 
-Алгоритмы принадлежат C++. **Java** принадлежит мир Android: камера, ONNX Runtime, беги, интерфейс и мост ZMQ в Middleware.
+Алгоритмы — за C++. За **Java** остаётся весь мир Android: камера, ONNX Runtime, беги, интерфейс и мост ZMQ в Middleware.
 
-Корень пакета: `app/src/main/java/adas/app/`, разложенный по тому, с чем класс разговаривает:
+Корень пакета — `app/src/main/java/adas/app/`; он разбит по тому, с чем работает класс:
 
 | пакет | содержимое |
 |---|---|
@@ -25,8 +25,8 @@
 
 ```{admonition} Правило устройства
 :class: tip
-Если это решает, **как рулить или предупреждать**, лучше C++ (тестируется через `pyadas`).
-Если это требует **Camera2, Activity или ORT для Android**, оно остаётся в Java.
+Если код решает, **как рулить или предупреждать**, ему место в C++ (его тестируют через `pyadas`).
+Если ему нужны **Camera2, Activity или ORT для Android**, он остаётся в Java.
 ```
 
 ## Путь кадра (камера → нативный код)
@@ -95,7 +95,7 @@ for c in checks:
    `VisionPipeline.seesRoad()`.
    ```
 2. **`AdasConfig`** — какие узлы включены (`nodes.lane_keep`, `nodes.safety_warn`, …).
-3. **`RuntimeParams` и слайдеры интерфейса** — ручки в духе PP и калибровки прямо на ходу.
+3. **`RuntimeParams` и слайдеры интерфейса** — ручки PP и калибровки, которые крутят прямо на ходу.
 4. **`AdasAppHandler.applyLaneKeepParams`** → JNI → `Middleware::setParameter`.
 
 ```python

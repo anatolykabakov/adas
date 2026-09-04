@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -451,11 +451,11 @@
 </div></blockquote>
 <section id="id1">
 <h2>Постановка задачи<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Нам нужно <span class="math notranslate nohighlight">\(\delta(t)\)</span>, чтобы машина ехала по пути <span class="math notranslate nohighlight">\(\{(x_i,y_i)\}\)</span> в метрах — это и есть <strong>поперечное управление</strong>.</p>
+<p>Нужно найти <span class="math notranslate nohighlight">\(\delta(t)\)</span>, чтобы машина ехала по заданному в метрах пути <span class="math notranslate nohighlight">\(\{(x_i,y_i)\}\)</span>, — это и есть <strong>поперечное управление</strong>.</p>
 <p><strong>Идея Pure Pursuit:</strong></p>
 <ol class="arabic simple">
-<li><p>Выбрать <strong>целевую точку</strong> на пути на дальности взгляда <span class="math notranslate nohighlight">\(l_d\)</span> от задней оси.</p></li>
-<li><p>Выбрать <span class="math notranslate nohighlight">\(\delta\)</span> так, чтобы дуга <strong>кинематической велосипедной модели</strong> прошла через эту точку.</p></li>
+<li><p>Выбрать <strong>целевую точку</strong> на пути, на дальности взгляда <span class="math notranslate nohighlight">\(l_d\)</span> от задней оси.</p></li>
+<li><p>Подобрать <span class="math notranslate nohighlight">\(\delta\)</span> так, чтобы дуга <strong>кинематической велосипедной модели</strong> прошла через эту точку.</p></li>
 </ol>
 <div class="admonition note">
 <p class="admonition-title">Примечание</p>
@@ -498,7 +498,7 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 <span class="c1"># 5 → 8.0 (hit min), 15 → 12.0, 30 → 24.0</span>
 </pre></div>
 </div>
-<p>Малое <span class="math notranslate nohighlight">\(l_d\)</span>: агрессивно, дёргано. Большое <span class="math notranslate nohighlight">\(l_d\)</span>: плавно, срезает углы.
+<p>Малое <span class="math notranslate nohighlight">\(l_d\)</span> — резко и дёргано. Большое <span class="math notranslate nohighlight">\(l_d\)</span> — плавно, но срезает углы.
 Поставляемый конфиг телефона: <code class="docutils literal notranslate"><span class="pre">pp_k_dd=0.8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_min=8</span></code>, <code class="docutils literal notranslate"><span class="pre">pp_ld_max=25</span></code>.</p>
 </section>
 <section id="id3">
@@ -510,7 +510,7 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 <p><span class="caption-number">Рис. 12 </span><span class="caption-text">Неверный <span class="math notranslate nohighlight">\(\delta\)</span>: дуга велосипедной модели проходит мимо целевой точки.</span><a class="headerlink" href="#id11" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Пробуйте разные <span class="math notranslate nohighlight">\(\delta\)</span>, пока дуга не попадёт в точку (интерактивные рисунки AAD):</p>
+<p>Перебирайте <span class="math notranslate nohighlight">\(\delta\)</span>, пока дуга не попадёт в точку (интерактивные рисунки AAD):</p>
 <figure class="align-default" id="id12">
 <a class="reference internal image-reference" href="../_images/PurePursuit_delta_25.png"><img alt="../_images/PurePursuit_delta_25.png" src="../_images/PurePursuit_delta_25.png" style="width: 70%;" />
 </a>
@@ -557,7 +557,7 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 <li><p><span class="math notranslate nohighlight">\(L\)</span> — база.</p></li>
 </ul>
 <p><strong>Шаг 1.</strong> Целевая точка лежит на окружности радиуса <span class="math notranslate nohighlight">\(R\)</span> вокруг МЦВ, поэтому треугольник МЦВ–задняя ось–точка <strong>равнобедренный</strong>: обе стороны до МЦВ равны <span class="math notranslate nohighlight">\(R\)</span>. Обозначим углы при основании <span class="math notranslate nohighlight">\(\gamma_2=\gamma_3\)</span>.</p>
-<p><strong>Шаг 2.</strong> Из рисунка <span class="math notranslate nohighlight">\(\gamma_3 + \alpha = 90°\)</span>, значит <span class="math notranslate nohighlight">\(\gamma_2 = \gamma_3 = 90° - \alpha\)</span>.</p>
+<p><strong>Шаг 2.</strong> Из рисунка <span class="math notranslate nohighlight">\(\gamma_3 + \alpha = 90°\)</span>, откуда <span class="math notranslate nohighlight">\(\gamma_2 = \gamma_3 = 90° - \alpha\)</span>.</p>
 <p><strong>Шаг 3.</strong> Сумма углов треугольника равна <span class="math notranslate nohighlight">\(180°\)</span>:</p>
 <div class="math notranslate nohighlight">
 \[
@@ -581,7 +581,7 @@ l_d = \mathrm{clip}(K_{dd}\, v,\ l_{d,\min},\ l_{d,\max}).
 \Rightarrow
 R = \frac{l_d}{2\sin\alpha}.
 \]</div>
-<p><strong>Шаг 5.</strong> Велосипедная модель (предыдущая глава): <span class="math notranslate nohighlight">\(\delta = \arctan(L/R)\)</span>. Подставляем <span class="math notranslate nohighlight">\(R\)</span>:</p>
+<p><strong>Шаг 5.</strong> По велосипедной модели (предыдущая глава) <span class="math notranslate nohighlight">\(\delta = \arctan(L/R)\)</span>. Подставляем <span class="math notranslate nohighlight">\(R\)</span>:</p>
 <div class="math notranslate nohighlight" id="equation-eq-pp">
 <span class="eqno">(1)<a class="headerlink" href="#equation-eq-pp" title="Ссылка на эту формулу">#</a></span>\[
 \delta = \arctan\left(\frac{2 L \sin\alpha}{l_d}\right).
@@ -605,7 +605,7 @@ R = \frac{l_d}{2\sin\alpha}.
 \delta = \arctan\!\Big(\frac{2\cdot 2.64\cdot\sin(0.358)}{8}\Big)
 \approx \arctan(0.238) \approx 0.234~\mathrm{рад} \approx 13.4°.
 \]</div>
-<p>При <code class="docutils literal notranslate"><span class="pre">steer_ratio=15.7</span></code> получаем <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\approx 13.4\times 15.7 \approx 210°\)</span> до ограничителей — настоящие стеки насыщаются; формула даёт ненасыщенный геометрический запрос.</p>
+<p>При <code class="docutils literal notranslate"><span class="pre">steer_ratio=15.7</span></code> до ограничителей выходит <span class="math notranslate nohighlight">\(|\mathrm{SWA}|\approx 13.4\times 15.7 \approx 210°\)</span> — на настоящем стеке это уже насыщение; формула же даёт чистый геометрический запрос, без учёта насыщения.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">pure_pursuit_delta</span><span class="p">(</span><span class="n">x_tp</span><span class="p">,</span> <span class="n">y_tp</span><span class="p">,</span> <span class="n">ld</span><span class="p">,</span> <span class="n">L</span><span class="o">=</span><span class="mf">2.64</span><span class="p">):</span>
@@ -631,7 +631,7 @@ R = \frac{l_d}{2\sin\alpha}.
 </section>
 <section id="id5">
 <h2>Игрушечный замкнутый контур (прямой путь, старт со смещением)<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
-<p>Путь — это ось <span class="math notranslate nohighlight">\(x\)</span>. Машина начинает с <span class="math notranslate nohighlight">\(y=1\)</span> м при <span class="math notranslate nohighlight">\(\theta=0\)</span>. Pure Pursuit должен вернуть её.</p>
+<p>Путь — это ось <span class="math notranslate nohighlight">\(x\)</span>. Машина стартует из <span class="math notranslate nohighlight">\(y=1\)</span> м при <span class="math notranslate nohighlight">\(\theta=0\)</span>, и Pure Pursuit должен вернуть её на путь.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -664,15 +664,15 @@ R = \frac{l_d}{2\sin\alpha}.
 <a class="reference internal image-reference" href="../_images/pp_tradeoff.png"><img alt="../_images/pp_tradeoff.png" src="../_images/pp_tradeoff.png" style="width: 85%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 19 </span><span class="caption-text">|CTE| вдоль дуги R=60 м для трёх взглядов: длинный гладок на прямой, но оседает метрами внутри поворота.</span><a class="headerlink" href="#id18" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 19 </span><span class="caption-text">|CTE| вдоль дуги R=60 м для трёх дальностей взгляда: длинная гладка на прямой, но в повороте оседает на метры внутрь.</span><a class="headerlink" href="#id18" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="id6">
 <h2>Где одной точки перестаёт хватать<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>Pure Pursuit сводит весь путь к одной точке. В этом его прелесть и его потолок, и потолок легко показать: у
-закона нет способа различить два пути, которые проходят через одну и ту же точку взгляда, а дальше делают
-совершенно разное.</p>
+<p>Pure Pursuit сводит весь путь к одной точке. В этом и его красота, и его потолок — и потолок легко показать:
+закон не может различить два пути, которые проходят через одну и ту же точку взгляда, а дальше расходятся
+совершенно по-разному.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="n">L_WB</span> <span class="o">=</span> <span class="mf">2.64</span>
@@ -702,10 +702,10 @@ R = \frac{l_d}{2\sin\alpha}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;28</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">tx</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">ty</span><span class="si">:</span><span class="s1">+.2f</span><span class="si">}</span><span class="s1">)'</span><span class="si">:</span><span class="s2">&gt;15</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">pp_delta</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span><span class="w"> </span><span class="n">ty</span><span class="p">))</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Запустите — три команды различаются, и это выглядит успокаивающе, пока не заметишь <em>почему</em>. Они различаются
-только потому, что дальняя кривизна случайно сдвинула точку на 15 м. Укоротите дальность взгляда — разница
-исчезнет; удлините — исчезнет вместо неё ближний изгиб. Закон читает один отсчёт функции, а положение отсчёта
-— настраиваемый параметр.</p>
+<p>Запустите — три команды разные, и это успокаивает, пока не поймёшь <em>почему</em>. Они разные лишь потому, что
+дальняя кривизна случайно сдвинула точку на 15 м. Укоротите дальность взгляда — разница пропадёт; удлините
+— вместо неё пропадёт ближний изгиб. Закон читает один отсчёт функции, а где взять этот отсчёт — задаётся
+настраиваемым параметром.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'look-ahead'</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2"> "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">n</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"steady"</span><span class="p">,</span> <span class="s2">"straightens"</span><span class="p">,</span> <span class="s2">"reverses"</span><span class="p">)))</span>
 <span class="k">for</span> <span class="n">ld</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">8.0</span><span class="p">,</span> <span class="mf">12.0</span><span class="p">,</span> <span class="mf">15.0</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">,</span> <span class="mf">25.0</span><span class="p">):</span>
     <span class="n">row</span> <span class="o">=</span> <span class="p">[]</span>
@@ -716,27 +716,27 @@ R = \frac{l_d}{2\sin\alpha}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ld</span><span class="si">:</span><span class="s2">&gt;10.0f</span><span class="si">}</span><span class="s2"> m "</span> <span class="o">+</span> <span class="s2">" "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">&gt;11.2f</span><span class="si">}</span><span class="s2">°"</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">row</span><span class="p">)</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">"   spread </span><span class="si">{</span><span class="n">spread</span><span class="si">:</span><span class="s2">&gt;5.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>На 8 м три пути неразличимы: точка перелома лежит за целевой точкой, и контроллер не может знать, что она
-впереди. На 25 м разброс велик, но ближний изгиб перестал влиять, и машина его срежет. Такой дальности
-взгляда, которая читала бы оба, не существует, потому что читать нечего: число всего одно.</p>
-<p>Это аргумент в пользу горизонта, и он отличается от аргумента про недокрут. Недокрут — это ошибка
-<em>модели</em>, её можно исправить лучшей моделью того же одношагового закона. А здесь предел <em>информационный</em>, он
-у самого закона. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC</span></a> отвечает на него, оптимизируя сразу по многим точкам; глава про
-<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">модель машины</span></a> отвечает сначала на другой, потому что горизонт, построенный на неверной
-кинематике, просто даёт уверенный неверный план.</p>
+<p>На 8 м три пути неразличимы: точка перелома лежит за целевой точкой, и контроллер не знает, что она впереди.
+На 25 м разброс велик, но ближний изгиб уже не влияет, и машина его срежет. Дальности взгляда, которая
+учитывала бы оба изгиба, не существует, потому что учитывать нечего: число всего одно.</p>
+<p>Это довод в пользу горизонта, и он не тот, что довод про недокрут. Недокрут — ошибка <em>модели</em>, её лечит
+лучшая модель в рамках того же одношагового закона. А здесь предел <em>информационный</em>, он заложен в самом
+законе. <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC</span></a> снимает его, оптимизируя сразу по многим точкам; а глава про
+<a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">модель машины</span></a> отвечает сперва на другой вопрос, потому что горизонт, построенный
+на неверной кинематике, лишь даёт уверенный, но неверный план.</p>
 <div class="note admonition">
 <p class="admonition-title">Почему Pure Pursuit всё ещё в дереве</p>
-<p>У него нет весов стоимости, нет горизонта и есть один параметр с физическим смыслом — это единственный
-контроллер здесь, поведение которого можно предсказать руками. Когда заезд выглядит неправильно, переключение
-на <code class="docutils literal notranslate"><span class="pre">pp</span></code> говорит, в контроллере проблема или выше него. В офлайн-реплее он даже держит полосу лучше, чем <code class="docutils literal notranslate"><span class="pre">fp</span></code>,
-при любом испробованном уровне деградации — а на дороге наоборот, и это находка про реплей, а не про
-контроллеры.</p>
+<p>У него нет весов стоимости, нет горизонта, зато есть один параметр с ясным физическим смыслом — это
+единственный контроллер здесь, чьё поведение можно предсказать в уме. Когда заезд выглядит неправильно,
+переключение на <code class="docutils literal notranslate"><span class="pre">pp</span></code> показывает, где проблема — в контроллере или выше него. В офлайн-реплее он даже держит
+полосу лучше, чем <code class="docutils literal notranslate"><span class="pre">fp</span></code>, при любом испробованном уровне деградации, — а на дороге наоборот; и это открытие
+про реплей, а не про контроллеры.</p>
 </div>
 </section>
 <section id="id7">
 <h2>Измерьте компромисс сами<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Игрушечный контур выше пользовался осью x. Отсюда дорога — <strong>полилиния</strong>, той же формы, что
-<code class="docutils literal notranslate"><span class="pre">vision/path</span></code> на телефоне, и регулятору можно только искать по точкам, ровно как настоящему:</p>
+<p>Игрушечный контур выше опирался на ось x. Дальше дорога — <strong>полилиния</strong>, той же формы, что и
+<code class="docutils literal notranslate"><span class="pre">vision/path</span></code> на телефоне, и регулятору остаётся только искать по точкам, ровно как настоящему:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -794,7 +794,7 @@ R = \frac{l_d}{2\sin\alpha}.
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ctes</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dsteps</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>Теперь переберите единственный параметр этого регулятора:</p>
+<p>Теперь пройдитесь по единственному параметру этого регулятора:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sine</span><span class="p">,</span> <span class="n">arc</span> <span class="o">=</span> <span class="n">sine_path</span><span class="p">(),</span> <span class="n">arc_path</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="s1">'Ld'</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2"> | sine |CTE| p95 | arc settled | steer jitter °/tick"</span><span class="p">)</span>
 <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
@@ -807,12 +807,12 @@ R = \frac{l_d}{2\sin\alpha}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">ld</span><span class="si">:</span><span class="s2">4.0f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">sine_p95</span><span class="si">:</span><span class="s2">13.3f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">arc_settled</span><span class="si">:</span><span class="s2">11.3f</span><span class="si">}</span><span class="s2"> | </span><span class="si">{</span><span class="n">jit</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Читайте три колонки друг против друга. Незатухающее виляние прошлой главы ушло на <strong>любом</strong> взгляде —
-но появились два новых факта. Короткий взгляд пилит руль (в пять раз больший шаг руля за тик, чем у
-длинного). Длинный не просто сглаживает команду — он <strong>оседает метрами внутри поворота</strong>: гнаться за
-точкой в 20 м впереди на дуге радиусом 60 м значит рулить по хорде, а хорда проходит изнутри. И даже
-на дружелюбном <span class="math notranslate nohighlight">\(L_d\)</span> синусоида несёт постоянное хордовое отставание ~0.24 м — Pure Pursuit никогда не
-едет ровно ту кривую, которую ему дали.</p>
+<p>Сравните три колонки. Незатухающее виляние прошлой главы исчезло при <strong>любой</strong> дальности взгляда — но
+вылезли два новых факта. Короткий взгляд пилит руль (шаг руля за тик впятеро больше, чем у длинного).
+А длинный не просто сглаживает команду — он <strong>оседает на метры внутрь поворота</strong>: гнаться за точкой в
+20 м впереди на дуге радиусом 60 м значит рулить по хорде, а хорда идёт изнутри. И даже при удобном <span class="math notranslate nohighlight">\(L_d\)</span>
+синусоида даёт постоянное хордовое отставание ~0.24 м — Pure Pursuit никогда не едет ровно ту кривую,
+которую ему задали.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">0.40</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> \
     <span class="s2">"acceptance: bounded error at every Ld, no per-road gains — the oscillation is gone"</span>
 <span class="k">assert</span> <span class="n">results</span><span class="p">[</span><span class="mf">20.0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="n">results</span><span class="p">[</span><span class="mf">3.0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> \
@@ -822,9 +822,9 @@ R = \frac{l_d}{2\sin\alpha}.
       <span class="sa">f</span><span class="s2">"as Ld goes 3 → 20; jitter moves the other way"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Одна точка не может представить путь, чья кривизна меняется <em>внутри</em> взгляда, — числа выше и есть эта
-фраза, измеренная. Масштабирование <span class="math notranslate nohighlight">\(L_d\)</span> по скорости двигает компромисс; убрать его оно не может.
-Читать весь путь вместо одной точки — это то, <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">что делает MPC</span></a>.</p>
+<p>Одна точка не способна передать путь, чья кривизна меняется <em>в пределах</em> взгляда, — числа выше и есть эта
+мысль, переведённая в измерения. Масштабирование <span class="math notranslate nohighlight">\(L_d\)</span> по скорости сдвигает компромисс, но снять его не
+может. Читать весь путь целиком, а не одну точку, — это как раз то, <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">что делает MPC</span></a>.</p>
 </section>
 <section id="id8">
 <h2>Интеграция<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
@@ -837,28 +837,28 @@ R = \frac{l_d}{2\sin\alpha}.
 <h2>Частые ошибки<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Неверный знак <span class="math notranslate nohighlight">\(y\)</span> (device против ISO).</p></li>
-<li><p>Забыли <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>.</p></li>
+<li><p>Забыли про <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">=</span> <span class="pre">-1</span></code>.</p></li>
 <li><p>Настройка на окнах с тепловым троттлингом и темпом 3 Гц.</p></li>
 <li><p>Нет модели недокрута при <span class="math notranslate nohighlight">\(v\sim 20\)</span> м/с.</p></li>
-<li><p>Отношение к дальности взгляда как к ручке качества. Это выбор того, <strong>какую часть пути игнорировать</strong> —
-см. выше. Если её настройка ощущается как компромисс между срезанием углов и запоздалой реакцией, то это он
-и есть, и никакое значение его не снимает.</p></li>
+<li><p>Дальность взгляда воспринимают как ручку качества. На деле это выбор того, <strong>какую часть пути
+игнорировать</strong> (см. выше). Если её настройка ощущается как компромисс между срезанием углов и
+запаздыванием реакции — так и есть, и никакое значение этот компромисс не отменит.</p></li>
 </ol>
 </section>
 <section id="id10">
 <h2>Задания<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Меняйте <code class="docutils literal notranslate"><span class="pre">K_dd</span></code> в игрушечном контуре: как меняется установление <span class="math notranslate nohighlight">\(y\)</span>?</p></li>
-<li><p>Поставьте целевую точку в <span class="math notranslate nohighlight">\((8, 0)\)</span> против <span class="math notranslate nohighlight">\((8, 3)\)</span>: напечатайте <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
-<li><p>Перебор по бегу: <code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code>, парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.</p></li>
-<li><p>В прогоне по дальности взгляда выше найдите дальность, минимизирующую разброс между тремя путями.
+<li><p>Поменяйте <code class="docutils literal notranslate"><span class="pre">K_dd</span></code> в игрушечном контуре: как меняется выход <span class="math notranslate nohighlight">\(y\)</span> на устойчивый режим?</p></li>
+<li><p>Поставьте целевую точку в <span class="math notranslate nohighlight">\((8, 0)\)</span>, затем в <span class="math notranslate nohighlight">\((8, 3)\)</span>: выведите <span class="math notranslate nohighlight">\(\delta\)</span>.</p></li>
+<li><p>Перебор по бегу: <code class="docutils literal notranslate"><span class="pre">bag/bag_config_sweep.py</span></code>, фронт Парето |CTE| против |<span class="math notranslate nohighlight">\(\Delta\)</span>SWA|.</p></li>
+<li><p>В прогоне по дальности взгляда выше найдите дальность, при которой разброс между тремя путями минимален.
 Затем объясните, почему эта дальность — <em>худший</em> выбор, а не лучший.</p></li>
 <li><p>Добавьте поправку на недокрут из главы <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">про модель машины</span></a> в <code class="docutils literal notranslate"><span class="pre">pp_delta</span></code> и повторите
-прогон при 22 м/с. Меняет ли это информационный предел или только величины?</p></li>
+прогон при 22 м/с. Сдвигает ли это информационный предел или только сами величины?</p></li>
 </ol>
-<p>Каждый контроллер до сих пор <em>полагал путь заданным</em>. Но две линии разметки шумны, а план модели режет
-дуги — так откуда берётся единственная полилиния, которую они отслеживают? Это следующая глава, и именно
-там решается половина измеренного смещения на дуге.</p>
+<p>До сих пор каждый контроллер <em>считал путь заданным</em>. Но две линии разметки шумят, а план модели срезает
+дуги — так откуда берётся та единственная полилиния, которую они отслеживают? Об этом следующая глава, и
+именно там решается половина измеренного смещения на дуге.</p>
 <!-- next-chapter -->
 <hr class="docutils" />
 <p><strong>Дальше:</strong> <a class="reference internal" href="LanePath.html"><span class="std std-doc">Путь разметки</span></a></p>

@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -450,8 +450,8 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Три калибровки, а не одна<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>«Откалибровать камеру» в этом стеке означает три разные вещи, которые делаются в три разных момента тремя
-разными механизмами. Спутать их — самый частый способ потратить день на исправление не того.</p>
+<p>«Откалибровать камеру» в этом стеке — это три разные вещи, которые выполняются в три разных момента тремя
+разными механизмами. Перепутать их — самый частый способ потратить день на починку не того.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>#</p></th>
@@ -483,32 +483,32 @@
 </tbody>
 </table>
 </div>
-<p>Сети касается только третья, и она потребляет две первые. Поэтому ошибка в 1 или 2 не выглядит как ошибка
-калибровки — она выглядит как то, что сеть плохо делает свою работу.</p>
+<p>Сети касается только третья — и она вбирает в себя две первые. Поэтому ошибка в 1 или 2 выглядит не как ошибка
+калибровки, а как будто сеть плохо справляется со своей работой.</p>
 <div class="note admonition">
 <p class="admonition-title">Почему в этой главе настоящие числа</p>
-<p>Каждое значение ниже измерено на этом телефоне и этой машине, и несколько из них противоречили разумному
-ожиданию. Именно они и интересны.</p>
+<p>Каждое значение ниже измерено на этом телефоне и этой машине, и несколько из них разошлись с разумными
+ожиданиями. Как раз они и интересны.</p>
 </div>
 <hr class="docutils" />
 <section id="id2">
 <h2>Шаг 1: интринсики по шахматной доске<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель камеры-обскуры говорит, что направление <span class="math notranslate nohighlight">\((X, Y, Z)\)</span> в системе камеры попадает в</p>
+<p>Модель камеры-обскуры утверждает, что направление <span class="math notranslate nohighlight">\((X, Y, Z)\)</span> в системе камеры проецируется в</p>
 <div class="math notranslate nohighlight">
 \[
 u = f_x \frac{X}{Z} + c_x, \qquad v = f_y \frac{Y}{Z} + c_y .
 \]</div>
 <p>Два фокусных расстояния и главная точка — четыре числа. Доска известной геометрии, отснятая с достаточного
-числа углов, переопределяет их, и OpenCV решает задачу вместе с дисторсией объектива.</p>
+числа ракурсов, задаёт для них переопределённую систему, и OpenCV решает её заодно с дисторсией объектива.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
 <span class="c1"># Из каталога снимков или прямо из записанного заезда, в котором доска попала в кадр.</span>
 python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> </span>--images<span class="w"> </span>~/calib_shots<span class="w"> </span>--pattern<span class="w"> </span>9x6
 python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> </span>--bag<span class="w"> </span>../adas_logs/&lt;session&gt;<span class="w"> </span>--pattern<span class="w"> </span>9x6
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">--pattern</span></code> считает <strong>внутренние</strong> углы, поэтому доска из 10×7 клеток — это <code class="docutils literal notranslate"><span class="pre">9x6</span></code>. Скрипт ещё требует
-разнообразия видов: слишком похожие снимки ничего не добавляют, потому что фокусное расстояние переопределяется
-именно тем, что доска видна под по-настоящему разными углами.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--pattern</span></code> задаёт число <strong>внутренних</strong> углов, поэтому доска из 10×7 клеток — это <code class="docutils literal notranslate"><span class="pre">9x6</span></code>. Скрипт ещё требует
+разнообразия ракурсов: слишком похожие снимки ничего не добавляют, ведь фокусное расстояние удаётся определить
+именно потому, что доска видна под по-настоящему разными углами.</p>
 <p>Результат на этом телефоне, при 1280×720:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -543,11 +543,11 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <a class="reference internal image-reference" href="../_images/focal_fov.png"><img alt="../_images/focal_fov.png" src="../_images/focal_fov.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 42 </span><span class="caption-text">Фокусное расстояние важно лишь через угол обзора, который оно задаёт; измеренные 993.4 px попадают на
-тренировочный FOV EON, старые 951 — нет.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 42 </span><span class="caption-text">Фокусное расстояние важно лишь через угол обзора, который оно задаёт; измеренные 993.4 px попадают в
+тренировочный FOV EON, а старые 951 — нет.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Соблазнительно прочитать эту таблицу как «фокус был неверен на 4.5 %». Полезное чтение другое. Переведите
+<p>Таблицу заманчиво прочесть как «фокус был неверен на 4.5 %». Но полезнее прочитать её иначе. Переведите
 каждый вариант в горизонтальный угол зрения:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
@@ -568,17 +568,17 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 </div>
 <p>Измеренные 993.4 дают угол зрения 65.6° против 65.2° у камеры EON, на которой обучалась Supercombo. Старые
 951 давали 67.9°, а допущение flowpilot 930 — 69.1°.</p>
-<p>В этом весь аргумент. Сеть, обученная на одном угле зрения и получающая другой, видит сцену слегка растянутой,
-и сообщить об этом никак не может — она просто хуже оценивает расстояния. Целью никогда не было «истинное
-фокусное расстояние этой линзы» в отрыве от всего; целью было «число, при котором наш кадр совпадает с
+<p>В этом вся суть. Сеть, обученную на одном угле зрения, кормят другим — и она видит сцену слегка растянутой,
+а сказать об этом никак не может: она просто хуже оценивает расстояния. Задачей никогда не было «истинное
+фокусное расстояние этой линзы» само по себе; задачей было «число, при котором наш кадр совпадает с
 обучающим распределением».</p>
-<p>Измеренное следствие: масштаб камерной одометрии против скорости колёс изменился <strong>0.844 → 0.888</strong>, то есть
+<p>Измеренное следствие: масштаб камерной одометрии относительно скорости колёс сдвинулся <strong>0.844 → 0.888</strong> —
 ровно те +4.5 %, которые предсказывает смена фокуса.</p>
 </section>
 <section id="id4">
 <h3>Почему главную точку сознательно оставляют неверной<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>Доска говорит, что главная точка смещена на 18 px влево и 17 px вниз от центра. Мы всё равно поставляем
-640, 360. Это не лень, и причину стоит понять, потому что она обобщается.</p>
+<p>Доска показывает, что главная точка смещена на 18 px влево и 17 px вниз от центра. Мы всё равно поставляем
+640, 360. Это не лень, и причину стоит понять — она обобщается на другие случаи.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">FX</span><span class="p">,</span> <span class="n">FY</span> <span class="o">=</span> <span class="mf">993.4</span><span class="p">,</span> <span class="mf">995.2</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">offset_as_angle</span><span class="p">(</span><span class="n">du_px</span><span class="p">,</span> <span class="n">dv_px</span><span class="p">,</span> <span class="n">fx</span><span class="o">=</span><span class="n">FX</span><span class="p">,</span> <span class="n">fy</span><span class="o">=</span><span class="n">FY</span><span class="p">):</span>
@@ -591,15 +591,15 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <span class="nb">print</span><span class="p">(</span><span class="s2">"offset within a minute of driving. Correcting it in the intrinsics as well double-counts it."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Проверено, а не предположено: исправление <span class="math notranslate nohighlight">\(c_x, c_y\)</span> <strong>без</strong> сброса оценки экстринсиков удвоило σ разметки с
-0.25 до 0.55, измеренное на 90 кадрах записанного заезда (разовый скрипт A/B, давший это число, с тех пор
-убран; остаётся само число). Две поправки боролись друг с другом.
-Исправлять главную точку имеет смысл только вместе со сбросом калибровки, и даже тогда σ не улучшается — просто
-та же информация переезжает из одного места в другое.</p>
+<p>Это проверено, а не предположено: исправление <span class="math notranslate nohighlight">\(c_x, c_y\)</span> <strong>без</strong> сброса оценки экстринсиков удвоило σ разметки —
+с 0.25 до 0.55, по 90 кадрам записанного заезда (разовый A/B-скрипт, давший это число, с тех пор
+убран; осталось само число). Две поправки боролись друг с другом.
+Исправлять главную точку имеет смысл только вместе со сбросом калибровки, да и тогда σ не улучшается — та же
+информация просто переезжает из одного места в другое.</p>
 <div class="tip admonition">
 <p class="admonition-title">Правило</p>
-<p>Прежде чем исправлять параметр, спросите, какой другой параметр его уже впитывает. Два оценщика на одну
-физическую величину хуже одного неверного, потому что теперь ошибка гуляет.</p>
+<p>Прежде чем править параметр, спросите себя, какой другой параметр его уже вбирает. Два оценщика на одну
+физическую величину хуже одного неверного: теперь ошибка гуляет между ними.</p>
 </div>
 <hr class="docutils" />
 <figure class="align-default" id="id14">
@@ -614,12 +614,12 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 </section>
 <section id="id5">
 <h2>Шаг 2: экстринсики онлайн, по точке сходимости<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
-<p>Интринсики — свойство линзы, они не меняются. Углы крепления меняются каждый раз, когда телефон берут в руки:
-на двух подряд идущих ночных заездах выученный рыск ушёл с <strong>+1.67° до +0.10°</strong>, а тангаж с −1.11° до −0.67°.
-Ни один prior этого не выдерживает, поэтому углы приходится оценивать на ходу.</p>
+<p>Интринсики — свойство линзы, они не меняются. А углы крепления меняются каждый раз, когда телефон берут в руки:
+на двух ночных заездах подряд выученный рыск ушёл с <strong>+1.67° до +0.10°</strong>, а тангаж — с −1.11° до −0.67°.
+Ни один prior такого не выдержит, поэтому углы приходится оценивать на ходу.</p>
 <section id="id6">
 <h3>Геометрия<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
-<p>Параллельные в мире линии сходятся в изображении в одну точку, и эта точка зависит только от их направления, а
+<p>Параллельные в мире линии сходятся на изображении в одну точку, и эта точка зависит только от их направления, а
 не от того, где стоит камера. Линии разметки параллельны и указывают туда, куда идёт дорога, поэтому их
 пересечение говорит, куда камера нацелена относительно дороги.</p>
 <p>Для точки сходимости <span class="math notranslate nohighlight">\((u_i, v_i)\)</span> соответствующее направление —
@@ -643,10 +643,10 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="sa">f</span><span class="s1">'(</span><span class="si">{</span><span class="n">u</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">)'</span><span class="si">:</span><span class="s2">&gt;22</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">p</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">y</span><span class="si">:</span><span class="s2">&gt;7.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Следите за знаками, они не интуитивные. При <span class="math notranslate nohighlight">\(\mathrm{yaw} = -\arctan(r_x/r_z)\)</span> точка сходимости <strong>правее</strong>
-центра даёт <strong>отрицательный</strong> рыск — значит выученные на беге 08-04 +1.67° соответствуют точке на 29 px
+<p>Следите за знаками — они не интуитивны. При <span class="math notranslate nohighlight">\(\mathrm{yaw} = -\arctan(r_x/r_z)\)</span> точка сходимости <strong>правее</strong>
+центра даёт <strong>отрицательный</strong> рыск; значит, выученные на беге 08-04 +1.67° отвечают точке на 29 px
 <em>левее</em>. Запустите блок: третья строка показывает −1.67° для точки справа, а выученное значение — её зеркало.</p>
-<p>И обратите внимание на чувствительность: <strong>17 пикселей — это градус</strong>. Поэтому оценка усредняется по 50
+<p>И обратите внимание на чувствительность: <strong>17 пикселей — это градус</strong>. Поэтому оценку усредняют по 50
 отсчётам, и поэтому один кадр бесполезен.</p>
 </section>
 <section id="id7">
@@ -699,20 +699,20 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">&gt;12</span><span class="si">}</span><span class="s2">: mean residual </span><span class="si">{</span><span class="n">resid</span><span class="si">:</span><span class="s2">5.1f</span><span class="si">}</span><span class="s2"> px -&gt; </span><span class="si">{</span><span class="s1">'accepted'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">fit</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'rejected'</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Встроены три отказа, и каждый существует потому, что без него получается уверенно неверное число:</p>
+<p>Встроены три отказа, и каждый нужен потому, что без него получается уверенно неверное число:</p>
 <ul class="simple">
 <li><p><strong>подгонка должна быть прямой</strong> — средний остаток ≤ 25 px. На дуге линии разметки не параллельны, поэтому их
-пересечение в изображении вообще не точка сходимости;</p></li>
+пересечение на изображении — вообще не точка сходимости;</p></li>
 <li><p><strong>результат должен быть правдоподобным</strong> — <span class="math notranslate nohighlight">\(|\text{тангаж}| \le 25°\)</span>, <span class="math notranslate nohighlight">\(|\text{рыск}| \le 15°\)</span>. Телефон не
-крепят набок, и отсчёт вне этих границ пришёл из плохой подгонки;</p></li>
+крепят набок, и отсчёт вне этих границ пришёл из неудачной подгонки;</p></li>
 <li><p><strong>это должен быть консенсус</strong> — отсчёты накапливаются в историю из 50, среднее фиксируется, история
 очищается. Один кадр — это градус шума; пятьдесят кадров — это оценка.</p></li>
 </ul>
 </section>
 <section id="id8">
 <h3>Чего стоит начать неверно<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
-<p>Сходимость занимает 30–60 с движения, и в это время warp пользуется prior из конфига. Звучит опасно, а
-измеряется дёшево:</p>
+<p>Сходимость занимает 30–60 с движения, и всё это время warp пользуется prior из конфига. Звучит опасно, а
+на деле обходится дёшево:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">converge</span><span class="p">(</span><span class="n">prior_deg</span><span class="p">,</span> <span class="n">truth_deg</span><span class="p">,</span> <span class="n">tau_s</span><span class="p">,</span> <span class="n">t_s</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">truth_deg</span> <span class="o">+</span> <span class="p">(</span><span class="n">prior_deg</span> <span class="o">-</span> <span class="n">truth_deg</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t_s</span> <span class="o">/</span> <span class="n">tau_s</span><span class="p">)</span>
 
@@ -723,30 +723,30 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">t</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">s </span><span class="si">{</span><span class="n">est</span><span class="si">:</span><span class="s2">&gt;13.2f</span><span class="si">}</span><span class="s2">° </span><span class="si">{</span><span class="n">err</span><span class="si">:</span><span class="s2">&gt;21.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>На измеренном беге поперечное смещение на прямых за первые 30 с составило 0.02 м — значит гейт по состоянию
-калибровки не нужен. А нужна дисциплина: не судить об удержании полосы в первую минуту.</p>
+<p>На измеренном беге поперечное смещение на прямых за первые 30 с составило 0.02 м — значит, гейт по состоянию
+калибровки не нужен. Нужна дисциплина: не судить об удержании полосы в первую минуту.</p>
 <p>И вывод, который нас удивил: <strong>сохранять выученные углы почти бесполезно.</strong> Prior от прошлой посадки не лучше
-значения по умолчанию, потому что посадка не повторяема. Важна скорость сходимости, а не память.</p>
+значения по умолчанию, ведь посадка не повторяется. Важна скорость сходимости, а не память.</p>
 </section>
 </section>
 <hr class="docutils" />
 <section id="warp">
 <h2>Шаг 3: warp модели, где потребляются обе калибровки<a class="headerlink" href="#warp" title="Ссылка на этот заголовок">#</a></h2>
-<p>Supercombo не принимает наш кадр. Она принимает изображение 512×256 в канонической геометрии — во фрейме
+<p>Supercombo не принимает наш кадр как есть. Ей нужно изображение 512×256 в канонической геометрии — во фрейме
 «medmodel» из openpilot, с фокусом 910 px и главной точкой на 47.6 px ниже верха кропа. Наша задача каждый
 кадр — построить это изображение из нашего, вычтя углы крепления.</p>
 <div class="math notranslate nohighlight">
 \[
 \mathtt{warp} = K \cdot V \cdot R(\text{крен}, \text{тангаж}, \text{рыск}) \cdot (K_{\text{med}} \cdot V)^{-1}
 \]</div>
-<p>Читайте справа налево — именно так это действует на пиксель модельного кадра: отменить каноническую проекцию,
-выкрутить углы крепления, проецировать через нашу настоящую линзу. <span class="math notranslate nohighlight">\(V\)</span> — это <code class="docutils literal notranslate"><span class="pre">view_from_device</span></code>, фиксированная
+<p>Читайте справа налево — именно в таком порядке это действует на пиксель модельного кадра: отменить каноническую проекцию,
+выкрутить углы крепления, спроецировать через нашу настоящую линзу. <span class="math notranslate nohighlight">\(V\)</span> — это <code class="docutils literal notranslate"><span class="pre">view_from_device</span></code>, фиксированная
 перестановка из осей device (x вперёд, y вправо, z вниз) в оси камеры.</p>
-<p>Матрица строится один раз на обновление калибровки; применение её к полутора миллионам пикселей происходит
-каждый кадр, и эта часть считается ядром OpenCL на GPU (4.6 мс против 12.1 на процессоре). Арифметика при
-этом одна и та же — и это проверяется: первый кадр после запуска считается обоими способами и сверяется
+<p>Матрицу строят один раз на обновление калибровки, а применяют её к полутора миллионам пикселей
+каждый кадр — и эту часть считает ядро OpenCL на GPU (4.6 мс против 12.1 на процессоре). Арифметика при
+этом одна и та же — и это проверяется: первый кадр после запуска считают обоими способами и сверяют
 побитово. На GPU Mali такая сверка поймала неверно вернувшуюся плоскость цветности и со второго кадра
-вернула варп на процессор; ради этого проверка и существует.</p>
+вернула варп на процессор; ради этого проверка и нужна.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">MED_FL</span><span class="p">,</span> <span class="n">MED_CY</span> <span class="o">=</span> <span class="mf">910.0</span><span class="p">,</span> <span class="mf">47.6</span>
@@ -782,29 +782,29 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 </pre></div>
 </div>
 <p>Сравните первые две строки: один и тот же пиксель модели берётся из точек, отстоящих в нашем кадре на <strong>27 px</strong>,
-и зависит это только от того, как сел телефон. Третья строка — ловушка: это углы 08-04, применённые на заезде
-08-06, то есть именно то, что дал бы сохранённый prior, и он берёт пиксель в 27 px от нужного.</p>
+и зависит это только от того, как сел телефон. Третья строка — ловушка: это углы 08-04, применённые к заезду
+08-06, то есть ровно то, что дал бы сохранённый prior, — и он берёт пиксель в 27 px от нужного.</p>
 <p><strong>Изменение выученного рыска на 1.57° сдвигает место, откуда модельный кадр берёт наше изображение, на десятки
 пикселей</strong>, поэтому сеть видит другую картинку и выдаёт другой план.</p>
-<p>Это не абстрактное беспокойство. Именно поэтому два заезда по одной дороге с переставленным между ними
+<p>Это не отвлечённое беспокойство. Именно поэтому два заезда по одной дороге с переставленным между ними
 телефоном нельзя сравнивать по смещению плана: различается конфигурация восприятия. Проект однажды сделал вывод
-именно из такого сравнения и потом его отзывал.</p>
+из такого сравнения — и потом его отзывал.</p>
 </section>
 <hr class="docutils" />
 <section id="id9">
 <h2>Шаг 4: чего всё это не исправит<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
-<p>Три величины остаются недостижимыми, и понимание, какая из них какая, экономит много усилий:</p>
+<p>Три величины так и остаются недостижимыми, и понимание, какая из них какая, экономит немало усилий:</p>
 <p><strong>Крен наблюдаем слабо.</strong> Точка сходимости даёт два угла, и крен не из них: поворот по крену двигает точку
-вдоль линии, а не в различимое место. Оценки держатся около нуля; большое качание крена считайте ошибкой, а не
-измерением. Это та же дыра, что блокирует <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">paramsd</span></code></span></a>: поперечный уклон дороги
+вдоль линии, а не в различимое место. Оценки держатся около нуля; большие колебания крена считайте ошибкой, а не
+измерением. Это та же брешь, что блокирует <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">paramsd</span></code></span></a>: поперечный уклон дороги
 требует оценки ориентации по акселерометру, которой у плоского фильтра нет.</p>
-<p><strong>Высота камеры и продольное положение здесь не геометричны.</strong> По бегам оценка высоты гуляла от 0.80 до 0.98
+<p><strong>Высоту камеры и продольное положение геометрией здесь не взять.</strong> По бегам оценка высоты гуляла от 0.80 до 0.98
 против измеренных рулеткой 1.1 м. Берите рулетку.</p>
-<p><strong>Метрический масштаб принадлежит сети, а не линзе.</strong> После исправления фокуса камерная одометрия сидит на
+<p><strong>Метрический масштаб принадлежит сети, а не линзе.</strong> После исправления фокуса камерная одометрия держится на
 0.888 от скорости колёс. Чтобы дойти до 1.0, понадобился бы <span class="math notranslate nohighlight">\(f_x \approx 1119\)</span>, тогда как доска даёт 993 с
-остатком 0.38 px — значит оставшиеся 11 % это разрыв домена между нашей камерой и той, на которой училась
+остатком 0.38 px — значит, оставшиеся 11 % это разрыв домена между нашей камерой и той, на которой училась
 модель, а не ошибка калибровки. Это верхняя граница точности всего, что измеряется через модель, и никакая
-настройка ниже по потоку от неё не уходит.</p>
+настройка ниже по потоку от неё не уйдёт.</p>
 </section>
 <hr class="docutils" />
 <section id="id10">
@@ -821,13 +821,13 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <span class="p">}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> — начальная догадка, которую онлайн-оценщик заменяет в течение минуты; интринсики догадкой не
-являются, и править их без шахматной доски не следует. Главная точка остаётся в центре кадра намеренно — шаг 1.</p>
+<p><code class="docutils literal notranslate"><span class="pre">rpy_deg</span></code> — начальное приближение, которое онлайн-оценщик заменяет в течение минуты; интринсики приближением не
+являются, и править их без шахматной доски не следует. Главная точка остаётся в центре кадра намеренно — см. шаг 1.</p>
 <section id="id11">
 <h3>А чьи это, собственно, интринсики?<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">device:</span> <span class="pre">&quot;HD1901&quot;</span></code> — поле, которое делает этот блок честным. 993.4 px сняты доской на <em>том</em> телефоне, а на
-любом другом это просто чужое число: на Xiaomi 14 оно давало 993.4 там, где сама камера сообщает 951, и
-геометрия разметки уезжает, а сказать об этом в логе нечему.</p>
+<p><code class="docutils literal notranslate"><span class="pre">device:</span> <span class="pre">&quot;HD1901&quot;</span></code> — поле, которое делает этот блок честным. 993.4 px сняты доской на <em>том самом</em> телефоне, а на
+любом другом это просто чужое число: на Xiaomi 14 оно подставляло 993.4 там, где сама камера сообщает 951, —
+и геометрия разметки уезжает, а сказать об этом в логе нечему.</p>
 <p>Поэтому порядок предпочтения такой:</p>
 <ol class="arabic simple">
 <li><p><strong>своя калибровка доской</strong>, когда <code class="docutils literal notranslate"><span class="pre">intrinsics_prior.device</span></code> совпадает с этим телефоном;</p></li>
@@ -836,12 +836,12 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <li><p>чужой prior — то есть ничего.</p></li>
 </ol>
 <p>Что именно взято, написано в логе. Если там сказано, что prior снят как «неизвестное устройство», — это
-механизм работает, а не отказ.</p>
+работает механизм, а не сбой.</p>
 <div class="warning admonition">
 <p class="admonition-title">Две ловушки единиц в этом блоке, и обе срабатывали</p>
 <p>Числа здесь — в единицах <strong>полного кадра</strong>, 1280×720. Кадр бега — 640×360, и публикация чисел кадра бега в
 топик, который читают как полнокадровые, стоила заезда — см. <a class="reference internal" href="Overview.html"><span class="std std-doc">обзор калибровки</span></a>. И <span class="math notranslate nohighlight">\(f_y\)</span>
-обязан масштабироваться тем же множителем, что <span class="math notranslate nohighlight">\(f_x\)</span>: поток 16:9 — это вырезка из матрицы 4:3 с сохранением
+обязан масштабироваться тем же множителем, что и <span class="math notranslate nohighlight">\(f_x\)</span>: поток 16:9 — это вырезка из матрицы 4:3 с сохранением
 горизонтального поля зрения, поэтому масштабирование <span class="math notranslate nohighlight">\(f_y\)</span> по <em>высоте</em> активной матрицы давало <code class="docutils literal notranslate"><span class="pre">fx=427.5</span></code>
 рядом с <code class="docutils literal notranslate"><span class="pre">fy=320.6</span></code> при квадратных пикселях.</p>
 </div>
@@ -850,16 +850,16 @@ python3<span class="w"> </span>tools/camera_calib_chessboard.py<span class="w"> 
 <section id="id12">
 <h2>Задания<a class="headerlink" href="#id12" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Отснимите шахматную доску с десяти углов и прогоните скрипт. Сравните свой RMS перепроецирования с 0.38 px;
-если он сильно хуже, какой из снимков виноват и как вы это определите?</p></li>
+<li><p>Отснимите шахматную доску с десяти ракурсов и прогоните скрипт. Сравните свой RMS перепроецирования с 0.38 px;
+если он заметно хуже, какой из снимков виноват и как вы это определите?</p></li>
 <li><p>Посчитайте, какой угол зрения даёт ваше измеренное фокусное. Насколько он далёк от 65.2°, и какая часть
 разницы приходится на линзу, а какая — на кроп, который делает ваш телефон?</p></li>
 <li><p>Возьмите код точки сходимости и подайте ему линии разметки с дуги. Покажите, что гейт по подгонке их
-отбрасывает, затем уберите гейт и постройте тангаж, который он сообщал бы сквозь дугу.</p></li>
+отбрасывает, затем уберите гейт и постройте тангаж, который он выдавал бы сквозь дугу.</p></li>
 <li><p>Измените рыск, подаваемый в <code class="docutils literal notranslate"><span class="pre">model_to_camera</span></code>, на 1° и посчитайте, насколько сдвинется взятый пиксель у
 верха модельного кадра против низа. Объясните разницу.</p></li>
-<li><p>Измерьте по бегу, сколько времени онлайн-оценка идёт до попадания в 0.2° от финального значения. Затем
-поспорьте, должно ли приложение отказываться рулить до этого момента, — и защитите свой ответ измеренными
+<li><p>Измерьте по бегу, сколько времени онлайн-оценке нужно, чтобы войти в 0.2° от финального значения. Затем
+поспорьте, должно ли приложение отказываться рулить до этого момента, — и подкрепите свой ответ измеренными
 0.02 м смещения за первые 30 с.</p></li>
 </ol>
 <!-- next-chapter -->

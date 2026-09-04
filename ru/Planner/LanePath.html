@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -439,12 +439,11 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Путь разметки — из двух линий и плана в одну опору<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Планировщик не рулит на линии разметки и не рулит на план вождения модели. Он рулит на <strong>одну</strong>
-полилинию в <code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, а она — слияние того и другого, вычисляемое каждый кадр зрения в
-<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> (<code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, зеркало на Python <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>). Эта глава — про это
-слияние: что на входе, как решается вес и от каких двух отказов оно спасает. Это последнее, что
-происходит до <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">контроллеров</span></a>, и здесь решается примерно половина измеренного смещения
-от центра.</p>
+<p>Планировщик рулит не на линии разметки и не на план вождения модели. Он рулит на <strong>одну</strong> полилинию в
+<code class="docutils literal notranslate"><span class="pre">vision/path</span></code>, а она — слияние того и другого, которое пересчитывается каждый кадр зрения в
+<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> (<code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, питоновское зеркало — <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>). Эта глава — про
+само слияние: что на входе, как назначается вес и от каких двух отказов оно спасает. Это последний шаг
+перед <a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">контроллерами</span></a>, и здесь решается примерно половина измеренного смещения от центра.</p>
 <section id="id2">
 <h2>Два источника, и почему ни одного не хватает<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="table">
@@ -458,27 +457,27 @@
 <tbody>
 <tr class="row-even"><td><p><strong>линии разметки</strong></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">lanes[1]</span></code> (ближняя левая), <code class="docutils literal notranslate"><span class="pre">lanes[2]</span></code> (ближняя правая)</p></td>
-<td><p>геометрический центр <em>этой</em> полосы</p></td>
-<td><p>одна пропадает; σ взрывается на дугах и в дождь</p></td>
+<td><p>геометрический центр <em>именно этой</em> полосы</p></td>
+<td><p>одна пропадает; σ разлетается на дугах и в дождь</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>план модели</strong></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">plan_x</span></code> / <code class="docutils literal notranslate"><span class="pre">plan_y</span></code>, собственный путь сети</p></td>
-<td><p>всегда есть, всегда гладкий</p></td>
+<td><p>есть всегда, всегда гладкий</p></td>
 <td><p><strong>срезает внутрь</strong> дуги — систематическое смещение уставки</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Линии правы, когда есть, и лгут, когда пропадают. План есть всегда и всегда чуть неправ на дугах.
-Слияние — не «на всякий случай», а использование каждого ровно там, где отказывает другой.</p>
+<p>Линии верны, пока есть, и врут, как только пропадают. План есть всегда, но на дугах всегда чуть неверен.
+Слияние — не подстраховка «на всякий случай», а способ брать каждый источник ровно там, где отказывает другой.</p>
 </section>
 <section id="id3">
 <h2>Как читаются линии: что значит «ближняя левая»<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Supercombo отдаёт четыре линии; стек берёт две линии своей полосы, <code class="docutils literal notranslate"><span class="pre">lanes[1]</span></code> и <code class="docutils literal notranslate"><span class="pre">lanes[2]</span></code>, на той же
-продольной сетке, что и план (<code class="docutils literal notranslate"><span class="pre">lanes(1).y_size()</span> <span class="pre">==</span> <span class="pre">nx</span></code> — страж в <code class="docutils literal notranslate"><span class="pre">lane_path.cpp</span></code>: линия на другой
-сетке считается отсутствующей, а не пересемплируется). Каждая линия несёт вероятность и поточечное
-стандартное отклонение; слияние сводит кривую σ к одному числу — медиане по ближнему полю, потому что
-именно на этом диапазоне контроллер и действует.</p>
+<p>Supercombo выдаёт четыре линии; стек берёт две линии своей полосы, <code class="docutils literal notranslate"><span class="pre">lanes[1]</span></code> и <code class="docutils literal notranslate"><span class="pre">lanes[2]</span></code>, на той же
+продольной сетке, что и план (<code class="docutils literal notranslate"><span class="pre">lanes(1).y_size()</span> <span class="pre">==</span> <span class="pre">nx</span></code> — проверка-страж в <code class="docutils literal notranslate"><span class="pre">lane_path.cpp</span></code>: линию на
+другой сетке считают отсутствующей, а не пересэмплируют). Каждая линия несёт вероятность и поточечное
+стандартное отклонение; слияние сжимает всю кривую σ до одного числа — медианы по ближнему полю, ведь
+именно в этом диапазоне и работает контроллер.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">line_std</span><span class="p">(</span><span class="n">y_std</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lo</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">hi</span><span class="o">=</span><span class="mf">40.0</span><span class="p">):</span>
@@ -494,9 +493,9 @@
 </section>
 <section id="id4">
 <h2>Два гейта и вес<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Линия попадает в опору через два независимых теста, затем участвует по весу:</p>
+<p>Линия попадает в опору, пройдя два независимых теста, а затем входит с некоторым весом:</p>
 <ol class="arabic simple">
-<li><p><strong>вероятность</strong>, смягчённая, чтобы линия чуть выше порога не прыгала на полный вес:</p></li>
+<li><p><strong>вероятность</strong>, смягчённая, чтобы линия чуть выше порога не выскакивала сразу на полный вес:</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">soft_prob</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">min_p</span><span class="o">=</span><span class="mf">0.3</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="n">min_p</span><span class="p">:</span>
@@ -505,9 +504,9 @@
 </pre></div>
 </div>
 <ol class="arabic simple" start="2">
-<li><p><strong>σ-уверенность</strong> — полный вес до <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code> (0.15 м), линейно до нуля к <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code>
-(0.30 м). Это собственные полосы <code class="docutils literal notranslate"><span class="pre">laneLineStds</span></code> comma: ниже 0.15 м модель уверена настолько,
-насколько вообще бывает, выше 0.30 м — гадает:</p></li>
+<li><p><strong>σ-уверенность</strong> — полный вес до <code class="docutils literal notranslate"><span class="pre">lane_std_good_m</span></code> (0.15 м) и линейный спад до нуля к <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code>
+(0.30 м). Это собственные полосы <code class="docutils literal notranslate"><span class="pre">laneLineStds</span></code> от comma: ниже 0.15 м модель уверена настолько,
+насколько вообще способна, а выше 0.30 м — по сути гадает:</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">std_conf</span><span class="p">(</span><span class="n">median_std</span><span class="p">,</span> <span class="n">good</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">bad</span><span class="o">=</span><span class="mf">0.30</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">median_std</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -520,16 +519,16 @@
 </pre></div>
 </div>
 <ol class="arabic simple" start="3">
-<li><p><strong>ширина</strong> — паре доверяют (<em>заякорена</em>) только когда обе линии прошли и их медианная разница лежит
-в [2.6, 4.6] м. Стык гудрона или полоса слияния обычно ломают ширину, так что одна дешёвая проверка
-отсекает самый частый вход «уверенно, но неверно».</p></li>
+<li><p><strong>ширина</strong> — паре доверяют (она <em>заякорена</em>) только если обе линии прошли и их медианная разница лежит
+в пределах [2.6, 4.6] м. Стык гудрона или полоса слияния обычно нарушают ширину, так что одна дешёвая
+проверка отсекает самый частый случай «уверенно, но неверно».</p></li>
 </ol>
 </section>
 <section id="id5">
 <h2>Слияние и единственная важная ручка<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
-<p>Заякорено, центр полосы — взвешенная по вероятности середина двух линий (каждая сдвинута внутрь на
-половину измеренной ширины), а вес подмешивания — flowpilot-подобное ИЛИ двух вероятностей,
-масштабированное <code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code>:</p>
+<p>Когда пара заякорена, центр полосы — это взвешенная по вероятности середина двух линий (каждая сдвинута
+внутрь на половину измеренной ширины), а вес подмешивания — «мягкое ИЛИ» двух вероятностей в духе
+flowpilot, масштабированное на <code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code>:</p>
 <div class="math notranslate nohighlight">
 \[
 d_{\mathrm{prob}} = (p_L + p_R - p_L p_R)\cdot \mathrm{path\_lane\_blend\_scale}
@@ -562,59 +561,59 @@ y = d_{\mathrm{prob}}\,y_{\mathrm{lane}} + (1-d_{\mathrm{prob}})\,y_{\mathrm{pla
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"blend=</span><span class="si">{</span><span class="n">scale</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> anchored=</span><span class="si">{</span><span class="n">ok</span><span class="si">}</span><span class="s2"> d_prob=</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  y(40)=</span><span class="si">{</span><span class="n">y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по срезающему плану до −0.40 м; <code class="docutils literal notranslate"><span class="pre">blend=1</span></code> сидит на центрированной разметке; боевые
-<strong>0.6</strong> держат 40 % внутренней срезки плана даже при идеальных линиях. Это намеренно: comma-two
-доверяет разметке полностью при <code class="docutils literal notranslate"><span class="pre">d_prob≈1</span></code>, но на этом телефоне линии редко так хороши, поэтому
-частичное подмешивание — честный компромисс.</p>
+<p><code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по срезающему плану вплоть до −0.40 м; <code class="docutils literal notranslate"><span class="pre">blend=1</span></code> сидит на центрированной разметке; боевые
+<strong>0.6</strong> оставляют 40 % внутренней срезки плана даже при идеальных линиях. Так и задумано: comma-two
+полностью доверяет разметке при <code class="docutils literal notranslate"><span class="pre">d_prob≈1</span></code>, но на этом телефоне линии редко бывают настолько хороши,
+поэтому частичное подмешивание — честный компромисс.</p>
 <figure class="align-default" id="id9">
 <a class="reference internal image-reference" href="../_images/lanepath_blend.png"><img alt="../_images/lanepath_blend.png" src="../_images/lanepath_blend.png" style="width: 90%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 20 </span><span class="caption-text">На дуге план модели срезает внутрь; разметка сидит на истинном центре. <code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по плану,
-<code class="docutils literal notranslate"><span class="pre">blend=1</span></code> — по разметке, боевые 0.6 держат 40 % срезки.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 20 </span><span class="caption-text">На дуге план модели срезает внутрь, а разметка сидит на истинном центре. <code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по плану,
+<code class="docutils literal notranslate"><span class="pre">blend=1</span></code> — по разметке, боевые 0.6 оставляют 40 % срезки.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <figure class="align-default" id="id10">
 <a class="reference internal image-reference" href="../_images/lanepath_sigma.png"><img alt="../_images/lanepath_sigma.png" src="../_images/lanepath_sigma.png" style="width: 80%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 21 </span><span class="caption-text">Вес подмешивания по мере роста σ: за <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code> (0.30 м) линии получают нулевой вес, а 0.37/0.51 м с
-заезда лежат за краем.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 21 </span><span class="caption-text">Вес подмешивания по мере роста σ: за <code class="docutils literal notranslate"><span class="pre">lane_std_bad_m</span></code> (0.30 м) линии получают нулевой вес, а 0.37/0.51 м из
+заезда лежат уже за этим краем.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="id6">
 <h2>Почему смещение живёт именно здесь<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>Два измеренных факта делают эту главу важнее её размера. На заезде 2026-08-21 медианная σ была 0.37 м
-слева и 0.51 м справа — <strong>обе</strong> уже за краем нулевого веса 0.30 м, — и обе линии проходили гейты
-одновременно лишь в ~22 % кадров. Так что большую часть времени <code class="docutils literal notranslate"><span class="pre">d_prob</span></code> схлопывается к нулю, и опора
-<em>есть</em> план со всей его внутренней срезкой. Это σ-вето и винят примерно в половине смещения от центра
-на дугах (открытая задача #39); поднимать <code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code> бесполезно, пока σ в плохой полосе,
-потому что вес и так ноль.</p>
+<p>Два измеренных факта делают эту главу важнее, чем можно подумать по её объёму. В заезде 2026-08-21
+медианная σ была 0.37 м слева и 0.51 м справа — <strong>обе</strong> уже за краем нулевого веса 0.30 м, — и обе линии
+проходили гейты одновременно лишь в ~22 % кадров. Значит, большую часть времени <code class="docutils literal notranslate"><span class="pre">d_prob</span></code> схлопывается в
+ноль, и опорой <em>служит</em> план со всей его внутренней срезкой. Именно это σ-вето и винят примерно в половине
+смещения от центра на дугах (открытая задача #39); поднимать <code class="docutils literal notranslate"><span class="pre">path_lane_blend_scale</span></code> бесполезно, пока σ в
+плохой зоне, — вес всё равно нулевой.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="p">(</span><span class="mf">0.12</span><span class="p">,</span> <span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.37</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">):</span>
     <span class="n">_</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">blend_reference</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y_plan</span><span class="p">,</span> <span class="n">y_L</span><span class="p">,</span> <span class="n">y_R</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span>
                               <span class="n">std_L</span><span class="o">=</span><span class="n">sig</span><span class="p">,</span> <span class="n">std_R</span><span class="o">=</span><span class="n">sig</span><span class="p">,</span> <span class="n">blend_scale</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"σ=</span><span class="si">{</span><span class="n">sig</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m → d_prob=</span><span class="si">{</span><span class="n">d</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">  (</span><span class="si">{</span><span class="s1">'lines help'</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">d</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">0.05</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">'plan only'</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>После слияния применяется один постоянный сдвиг — <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code> (0.05 м), остаток того, что
-камера не сидит на осевой. На прямых остаточное смещение 3.6 см; на дугах — на порядок больше, и это
-срезка плана, проступающая сквозь схлопнутое подмешивание, а не ошибка калибровки.</p>
+<p>После слияния добавляется один постоянный сдвиг — <code class="docutils literal notranslate"><span class="pre">path_camera_offset_m</span></code> (0.05 м), поправка на то, что
+камера стоит не на осевой линии. На прямых остаточное смещение — 3.6 см; на дугах оно на порядок больше, и
+это срезка плана, проступающая сквозь схлопнувшееся подмешивание, а не ошибка калибровки.</p>
 </section>
 <section id="id7">
 <h2>Приёмка<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p>перебор подмешивания воспроизводится: <code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по плану, <code class="docutils literal notranslate"><span class="pre">blend=1</span></code> по разметке, <code class="docutils literal notranslate"><span class="pre">blend=0.6</span></code>
-между;</p></li>
-<li><p>перебор σ показывает, как <code class="docutils literal notranslate"><span class="pre">d_prob</span></code> уходит в ноль, едва σ переваливает 0.30 м, — так что, зная 0.37 и
-0.51 м с заезда, вы можете объяснить, почему линии обычно не участвуют;</p></li>
+<li><p>перебор подмешивания воспроизводится: <code class="docutils literal notranslate"><span class="pre">blend=0</span></code> едет по плану, <code class="docutils literal notranslate"><span class="pre">blend=1</span></code> — по разметке, <code class="docutils literal notranslate"><span class="pre">blend=0.6</span></code> —
+между ними;</p></li>
+<li><p>перебор σ показывает, как <code class="docutils literal notranslate"><span class="pre">d_prob</span></code> падает в ноль, едва σ переваливает за 0.30 м, — так что, зная 0.37 и
+0.51 м из заезда, вы можете объяснить, почему линии обычно не участвуют;</p></li>
 <li><p>одно предложение, связывающее долю «обе уверены» ~22 % со смещением на дуге.</p></li>
 </ul>
 </section>
 <section id="id8">
 <h2>Куда дальше<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение — обзор</span></a> — откуда берутся σ и план, и четыре условия к опоре.</p></li>
+<li><p><a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрение — обзор</span></a> — откуда берутся σ и план и какие четыре условия предъявляются к опоре.</p></li>
 <li><p><a class="reference internal" href="MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a> — контроллеры, которые потребляют эту полилинию.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code> и <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code> — боевое слияние и его офлайн-зеркало.</p></li>
 </ul>

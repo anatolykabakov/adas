@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -438,13 +438,14 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Платформенный слой — одна машина за интерфейсом<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Всё выше по течению — зрение, планировщик, управление — говорит физикой: кривизна, угол колеса, момент
-в cNm. Никто из них не знает, что машина — Volkswagen. Это знание живёт ровно в одном месте,
-<strong>платформенном слое</strong>, и эта глава — как он устроен: брендово-нейтральный интерфейс, путь декодирования
+<p>Всё, что выше по течению, — зрение, планировщик, управление — говорит на языке физики: кривизна, угол колеса,
+момент в cNm. Никто из них не знает, что машина — Volkswagen. Это знание живёт ровно в одном месте,
+<strong>платформенном слое</strong>, и глава эта — о том, как он устроен: брендово-нейтральный интерфейс, путь декодирования
 кадров CAN в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, путь кодирования запроса момента в валидный кадр <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> и супервизор
-панды, решающий, разрешено ли этому кадру вообще уйти.</p>
-<p>Правило проектирования — одно предложение: <strong>бренд это одна реализация интерфейса, а не архитектура.</strong>
-Добавление Toyota TSS2 однажды не изменило ни строки в <code class="docutils literal notranslate"><span class="pre">Planner</span></code> или <code class="docutils literal notranslate"><span class="pre">Control</span></code>. Дальше — почему так.</p>
+панды, который решает, разрешено ли этому кадру вообще уйти.</p>
+<p>Правило проектирования умещается в одно предложение: <strong>бренд — это одна реализация интерфейса, а не
+архитектура.</strong> Когда однажды добавляли Toyota TSS2, это не изменило ни строки в <code class="docutils literal notranslate"><span class="pre">Planner</span></code> или <code class="docutils literal notranslate"><span class="pre">Control</span></code>.
+Дальше — почему так.</p>
 <section id="id2">
 <h2>Интерфейс<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">platform::CarPlatform</span></code> (<code class="docutils literal notranslate"><span class="pre">include/adas/platform/car_platform.h</span></code>) — чисто виртуальный класс с четырьмя
@@ -458,14 +459,14 @@
 <p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> и <code class="docutils literal notranslate"><span class="pre">Control</span></code> видят только <code class="docutils literal notranslate"><span class="pre">stateView()</span></code> — <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code>, брендово-нейтральный: скорость, угол
 руля, скорость рыска, держит ли водитель руль, включён ли штатный круиз. Ни адреса CAN, ни имени
 сигнала они не видят. <code class="docutils literal notranslate"><span class="pre">VolkswagenMqb</span></code> (<code class="docutils literal notranslate"><span class="pre">vw_platform.cpp</span></code>) — единственная реализация, которую выбирает
-ключ конфига <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>; сервис платформы держит <code class="docutils literal notranslate"><span class="pre">unique_ptr&lt;CarPlatform&gt;</span></code> и зовёт интерфейс,
-ничего брендового.</p>
+ключ конфига <code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>; сервис платформы держит <code class="docutils literal notranslate"><span class="pre">unique_ptr&lt;CarPlatform&gt;</span></code> и обращается только к
+интерфейсу, ничего брендового не касаясь.</p>
 </section>
 <section id="carstateview">
 <h2>Декод: из кадров в <code class="docutils literal notranslate"><span class="pre">CarStateView</span></code><a class="headerlink" href="#carstateview" title="Ссылка на этот заголовок">#</a></h2>
-<p>Входящие кадры сперва проходят один дешёвый гейт — <code class="docutils literal notranslate"><span class="pre">isAllowedRxAddress</span></code> отбрасывает всё, чего нет в
-приёмном списке машины, до всякого декодирования, так что занятая шина ничего не стоит на нерелевантном
-кадре. Что уцелело, идёт в <code class="docutils literal notranslate"><span class="pre">MqbCarStateDecoder</span></code>, <code class="docutils literal notranslate"><span class="pre">switch</span></code> по адресу (<code class="docutils literal notranslate"><span class="pre">mqb_car_state_decoder.cpp</span></code>):</p>
+<p>Входящие кадры сперва проходят один дешёвый гейт: <code class="docutils literal notranslate"><span class="pre">isAllowedRxAddress</span></code> ещё до всякого декодирования
+отбрасывает всё, чего нет в приёмном списке машины, так что нерелевантный кадр на загруженной шине не стоит
+почти ничего. То, что уцелело, идёт в <code class="docutils literal notranslate"><span class="pre">MqbCarStateDecoder</span></code> — <code class="docutils literal notranslate"><span class="pre">switch</span></code> по адресу (<code class="docutils literal notranslate"><span class="pre">mqb_car_state_decoder.cpp</span></code>):</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>адрес</p></th>
@@ -501,10 +502,10 @@
 </tbody>
 </table>
 </div>
-<p>Значения извлекаются не рукописной битовой математикой, а <strong>парсером DBC</strong> (<code class="docutils literal notranslate"><span class="pre">utils/can_parser.h</span></code>):
+<p>Значения извлекаются не ручной битовой арифметикой, а <strong>парсером DBC</strong> (<code class="docutils literal notranslate"><span class="pre">utils/can_parser.h</span></code>):
 <code class="docutils literal notranslate"><span class="pre">extractSignal(frame,</span> <span class="pre">&quot;LWI_Lenkradwinkel&quot;)</span></code> возвращает физическое значение по тому же <code class="docutils literal notranslate"><span class="pre">vw_mqb_2010.dbc</span></code>,
-что поставляет comma. У этого выбора есть тонкое свойство безопасности, и парсер делает его явным — одна
-битая строка DBC пропускается, а не фатальна:</p>
+что поставляет comma. У этого выбора есть тонкое свойство с точки зрения безопасности, и парсер делает его
+явным — одна битая строка DBC просто пропускается, а не рушит всё:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The parser's contract, in miniature: a bad line must not void the whole database.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_dbc</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
     <span class="n">signals</span><span class="p">,</span> <span class="n">skipped</span> <span class="o">=</span> <span class="p">{},</span> <span class="mi">0</span>
@@ -529,10 +530,10 @@
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">sig</span><span class="p">)</span><span class="si">}</span><span class="s2"> signals, skipped </span><span class="si">{</span><span class="n">skipped</span><span class="si">}</span><span class="s2"> bad line(s)"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Почему это важно: DBC, не загрузившийся целиком, оставляет машину <strong>недекодированной</strong>, что снаружи
-выглядит ровно как машина, которая молчит, — неверный вывод из-за разницы в пробелах в одном не
-относящемся к делу сообщении. <code class="docutils literal notranslate"><span class="pre">update()</span></code> возвращает true, когда любое декодированное значение
-изменилось, и сервис платформы публикует <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> по этому.</p>
+<p>Почему это важно: DBC, не загрузившийся целиком, оставляет машину <strong>недекодированной</strong>, а снаружи это
+выглядит ровно так же, как молчащая машина, — и всё из-за разницы в пробелах в одном не относящемся к делу
+сообщении. <code class="docutils literal notranslate"><span class="pre">update()</span></code> возвращает true, когда изменилось хоть одно декодированное значение, и по этому событию
+сервис платформы публикует <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>.</p>
 </section>
 <section id="hca-01">
 <h2>Кодирование: сборка легального HCA_01<a class="headerlink" href="#hca-01" title="Ссылка на этот заголовок">#</a></h2>
@@ -540,7 +541,7 @@
 линий) в кадры, которые примет EPS этой машины. Для руления это <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code> по адресу <code class="docutils literal notranslate"><span class="pre">0x126</span></code>, и три вещи
 о нём не обсуждаются — все три принадлежат бренду, потому и живут здесь, а не в <code class="docutils literal notranslate"><span class="pre">Control</span></code>:</p>
 <ul class="simple">
-<li><p><strong>величина и знак разделены</strong>: 14-битное поле несёт <code class="docutils literal notranslate"><span class="pre">|момент|</span></code>, отдельный бит несёт знак. Момент
+<li><p><strong>величина и знак разделены</strong>: в 14-битном поле лежит <code class="docutils literal notranslate"><span class="pre">|момент|</span></code>, а знак — в отдельном бите. Момент
 зажат в ±<code class="docutils literal notranslate"><span class="pre">STEER_MAX</span></code> (300) до упаковки.</p></li>
 <li><p><strong>4-битный катящийся счётчик</strong> растёт каждый кадр; EPS отвергает кадр, чей счётчик не сдвинулся.</p></li>
 <li><p><strong>контрольная сумма CRC-8</strong> по полезной нагрузке, полином VW «8H2F» <code class="docutils literal notranslate"><span class="pre">0x2F</span></code>, инициализация <code class="docutils literal notranslate"><span class="pre">0xFF</span></code>,
@@ -597,43 +598,44 @@
 <p><code class="docutils literal notranslate"><span class="pre">Control</span></code> публикует ускорение в том же сообщении <code class="docutils literal notranslate"><span class="pre">SteerCommand</span></code>, что и момент. Платформа гейтит его по
 <code class="docutils literal notranslate"><span class="pre">controls_allowed</span></code> панды — нет никакого «всегда включённого» продольного, как есть всегда включённое
 поперечное, — и VW-порт кладёт его в <code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> (0x122, для мотора), <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> (0x12E, для ESP) на 50 Гц и
-<code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> (0x30C, приборка) на 16.7 Гц. Поле <code class="docutils literal notranslate"><span class="pre">ACC_Sollbeschleunigung_02</span></code> несёт запрос шагами 0.005 м/с² от
-−7.22; <strong>3.01</strong> — слово шины для «ничего не просим», а панда проверяет, что <code class="docutils literal notranslate"><span class="pre">ACC_Folgebeschl</span></code> в каждом
+<code class="docutils literal notranslate"><span class="pre">ACC_02</span></code> (0x30C, приборка) на 16.7 Гц. Поле <code class="docutils literal notranslate"><span class="pre">ACC_Sollbeschleunigung_02</span></code> передаёт запрос шагами 0.005 м/с² от
+−7.22; <strong>3.01</strong> на языке шины означает «ничего не просим», а панда проверяет, что <code class="docutils literal notranslate"><span class="pre">ACC_Folgebeschl</span></code> в каждом
 <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> читается ровно 3.02. Счётчик и CRC следуют рецепту <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>, с секретными таблицами на каждое
 сообщение (<code class="docutils literal notranslate"><span class="pre">ACC_06</span></code> и <code class="docutils literal notranslate"><span class="pre">ACC_07</span></code> — те два кадра MQB, у которых секрет меняется со счётчиком).</p>
 <p>Всё связывает один флаг: <code class="docutils literal notranslate"><span class="pre">FLAG_VOLKSWAGEN_LONG_CONTROL</span></code> в параметре безопасности панды. С ним панда
-принимает наши три кадра <strong>и перестаёт форвардить радарные</strong> — перехват одним переключателем, поэтому
-<code class="docutils literal notranslate"><span class="pre">vehicle.long_control:</span> <span class="pre">true</span></code> выставляет и флаг, и кадры, а выключенный оставляет штатный ACC нетронутым. Что
-флагу нужно на машине, честно сказать: панда на разъёме гейтвея (на камерном разъёме кадры радара через неё
-не проходят), машина с ACC-радаром, чтобы мотор и ESP были закодированы под запрос, и прошивка панды, собранная
-с <code class="docutils literal notranslate"><span class="pre">ALLOW_DEBUG</span></code>. У нашего Golf радара нет — поэтому дорожные данные этой главы взяты из симулятора.</p>
+принимает наши три кадра <strong>и перестаёт пересылать радарные</strong> — перехват одним переключателем, поэтому
+<code class="docutils literal notranslate"><span class="pre">vehicle.long_control:</span> <span class="pre">true</span></code> выставляет и флаг, и кадры, а выключенный оставляет штатный ACC нетронутым.
+Скажем честно, что нужно этому флагу на реальной машине: панда на разъёме гейтвея (на камерном разъёме кадры
+радара через неё не проходят), машина с ACC-радаром, чтобы мотор и ESP были закодированы под запрос, и прошивка
+панды, собранная с <code class="docutils literal notranslate"><span class="pre">ALLOW_DEBUG</span></code>. У нашего Golf радара нет — поэтому дорожные данные этой главы взяты из
+симулятора.</p>
 </section>
 <section id="id4">
 <h2>Разрешено: супервизор панды<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <p>Даже верно собранный кадр не должен уходить, пока машина не заведена и панда не в нужном режиме
-безопасности. Этим владеет <code class="docutils literal notranslate"><span class="pre">PandaSafetySupervisor</span></code> (<code class="docutils literal notranslate"><span class="pre">panda_safety_supervisor.cpp</span></code>), и он намеренно
-слоем ниже кодирования — платформа <em>строит</em> кадры каждый тик, супервизор решает, <em>пропустит</em> ли их
+безопасности. За это отвечает <code class="docutils literal notranslate"><span class="pre">PandaSafetySupervisor</span></code> (<code class="docutils literal notranslate"><span class="pre">panda_safety_supervisor.cpp</span></code>), и он намеренно
+расположен слоем ниже кодирования: платформа <em>строит</em> кадры каждый тик, а супервизор решает, <em>пропустит</em> ли их
 плата:</p>
 <ul class="simple">
-<li><p><strong>модель безопасности</strong> должна быть <code class="docutils literal notranslate"><span class="pre">kVolkswagen</span></code> (15); иначе <code class="docutils literal notranslate"><span class="pre">safetyModelOk()</span></code> ложно и момент не
-шлётся — неверный режим считается неисправностью, а не обходится;</p></li>
+<li><p><strong>модель безопасности</strong> должна быть <code class="docutils literal notranslate"><span class="pre">kVolkswagen</span></code> (15); иначе <code class="docutils literal notranslate"><span class="pre">safetyModelOk()</span></code> возвращает ложь и момент не
+шлётся — неверный режим считается неисправностью, а не обходится стороной;</p></li>
 <li><p>биты <strong>альтернативного поведения</strong> (например, не-отключаться-по-газу) выставляются на плате при init;</p></li>
 <li><p><strong>зажигание</strong> дебаунсится с гистерезисом по напряжению, чтобы просадка не переключала включение;</p></li>
 <li><p><strong>heartbeat</strong> шлётся каждый тик супервизора, иначе панда уходит в собственный безопасный режим.</p></li>
 </ul>
-<p>Это же делает панду переживающей сон телефона. Когда заново открытый USB-дескриптор пересаживается в
+<p>Благодаря этому же панда переживает сон телефона. Когда заново открытый USB-дескриптор пересаживается в
 работающий нативный слой, <code class="docutils literal notranslate"><span class="pre">resetPandaState()</span></code> забывает <strong>состояние платы</strong> — модель безопасности и
-alt-exp живут на плате и должны быть выставлены заново, — сохраняя декодированное <strong>состояние машины</strong> и
-уставку скорости. Две неудачные пересадки подряд эскалируют до полного перезапуска; одна невидима
-контроллерам.</p>
+alt-exp живут на плате и должны быть выставлены заново, — но сохраняет декодированное <strong>состояние машины</strong> и
+уставку скорости. Две неудачные пересадки подряд приводят к полному перезапуску; одна для контроллеров
+незаметна.</p>
 </section>
 <section id="id5">
 <h2>Темпы, и где всё это работает<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Сервис платформы (<code class="docutils literal notranslate"><span class="pre">services/platform.cpp</span></code>) крутит три таймера: <strong>rx</strong> и <strong>tx</strong> по 10 мс, <strong>state</strong> по
-100 мс. rx вычерпывает панду и декодирует; tx строит и шлёт кадры из <code class="docutils literal notranslate"><span class="pre">apply()</span></code>; state публикует
-<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, а рядом едет тик супервизора, публикуя <code class="docutils literal notranslate"><span class="pre">panda/health</span></code>. Всё выше в этой главе зовётся из
-этих трёх колбэков и ниоткуда больше — это и позволяет реплею бега и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> гонять идентичные
-декод/кодирование без подключённой панды.</p>
+100 мс. rx вычитывает панду и декодирует; tx строит и шлёт кадры из <code class="docutils literal notranslate"><span class="pre">apply()</span></code>; state публикует
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, а рядом с ним идёт тик супервизора, публикуя <code class="docutils literal notranslate"><span class="pre">panda/health</span></code>. Всё, о чём шла речь выше в этой
+главе, вызывается из этих трёх колбэков и ниоткуда больше — это и позволяет реплею бега и <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> прогонять
+тот же декод и кодирование без подключённой панды.</p>
 </section>
 <section id="id6">
 <h2>Приёмка<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>

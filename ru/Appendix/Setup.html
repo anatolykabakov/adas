@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -437,23 +437,23 @@
 <h1>Установка и запуск<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
 <section id="id2">
 <h2>Репозиторий<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Склонируйте и соберите — остальное одна команда сделает сама:</p>
+<p>Склонируйте и соберите — всё остальное одна команда сделает сама:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/anatolykabakov/adas.git
 <span class="nb">cd</span><span class="w"> </span>adas
 ./scripts/build_project.sh<span class="w">   </span><span class="c1"># local.properties, модели, сборка APK</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">&lt;корень</span> <span class="pre">репозитория&gt;</span></code> в остальной книге — это и есть каталог <code class="docutils literal notranslate"><span class="pre">adas/</span></code>.</p>
-<p><strong>Пререквизиты</strong>, которые сборка предполагает (на чистой Linux/macOS их нужно поставить первыми —
-<code class="docutils literal notranslate"><span class="pre">scripts/install_dependencies.sh</span></code> делает это на Debian/Ubuntu): JDK (17+), Android SDK и NDK
+<p><strong>Что сборка ожидает уже установленным</strong> (на чистой Linux/macOS это нужно поставить заранее —
+на Debian/Ubuntu за вас это сделает <code class="docutils literal notranslate"><span class="pre">scripts/install_dependencies.sh</span></code>): JDK (17+), Android SDK и NDK
 (<code class="docutils literal notranslate"><span class="pre">ANDROID_HOME</span></code> должен указывать на SDK, где уже есть платформа <code class="docutils literal notranslate"><span class="pre">compileSdk</span></code>), Conan 2 и CMake для C++,
-Python 3.10+ с <code class="docutils literal notranslate"><span class="pre">numpy</span></code>. Всё офлайновое — разбор бегов, симулятор, <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> — требует только Python-части
-и работает <strong>без телефона и машины</strong> (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>, <em>Запишите собственный бег</em>, — самый
-короткий путь по железу).</p>
+Python 3.10+ с <code class="docutils literal notranslate"><span class="pre">numpy</span></code>. Всё офлайновое — разбор бегов, симулятор, <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> — обходится одной Python-частью
+и работает <strong>без телефона и машины</strong> (см. <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>, <em>Запишите собственный бег</em>, — это самый
+короткий путь, не требующий железа).</p>
 <p>Моделей в репозитории нет. <code class="docutils literal notranslate"><span class="pre">scripts/fetch_models.sh</span></code> (сборка запускает его сама) скачивает fp16-supercombo
-из релиза comma и выводит из неё fp32- и <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>-варианты, сверяя каждый sha256 с
-<code class="docutils literal notranslate"><span class="pre">scripts/models.manifest</span></code>. Запускайте его отдельно, когда нужны только файлы.</p>
-<p>Смотрите также <code class="docutils literal notranslate"><span class="pre">README.md</span></code> в корне репозитория: сборка APK, <code class="docutils literal notranslate"><span class="pre">run_bag_vis.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">run_sim.sh</span></code>, раскладка Java / C++ / скриптов.</p>
+из релиза comma и выводит из неё варианты fp32 и <code class="docutils literal notranslate"><span class="pre">.thneed</span></code>, сверяя каждый sha256 с
+<code class="docutils literal notranslate"><span class="pre">scripts/models.manifest</span></code>. Запускайте его отдельно, если нужны только файлы.</p>
+<p>См. также <code class="docutils literal notranslate"><span class="pre">README.md</span></code> в корне репозитория: сборка APK, <code class="docutils literal notranslate"><span class="pre">run_bag_vis.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">run_sim.sh</span></code>, раскладка Java / C++ / скриптов.</p>
 </section>
 <section id="html">
 <h2>Сборка книги (HTML)<a class="headerlink" href="#html" title="Ссылка на этот заголовок">#</a></h2>
@@ -466,9 +466,9 @@ pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </s
 <span class="c1"># Живой сайт: https://anatolykabakov.github.io/adas/ (CI deploy-book на main)</span>
 </pre></div>
 </div>
-<p>Кнопка <strong>ENG/RU</strong> сверху переводит на ту же страницу в другой языковой версии. Раскладка <code class="docutils literal notranslate"><span class="pre">_site</span></code> и <code class="docutils literal notranslate"><span class="pre">_site/ru</span></code>
-— это контракт, на который опирается кнопка, а не деталь реализации; скрипт сборки отдельно проверяет, что у
-каждой страницы есть пара, иначе переключатель приводил бы в 404.</p>
+<p>Кнопка <strong>ENG/RU</strong> сверху открывает ту же страницу в другой языковой версии. Раскладка <code class="docutils literal notranslate"><span class="pre">_site</span></code> и <code class="docutils literal notranslate"><span class="pre">_site/ru</span></code>
+— это не деталь реализации, а контракт, на который опирается кнопка; скрипт сборки отдельно проверяет, что у
+каждой страницы есть пара, — иначе переключатель уводил бы в 404.</p>
 </section>
 <section id="python">
 <h2>Python для бегов<a class="headerlink" href="#python" title="Ссылка на этот заголовок">#</a></h2>
@@ -484,16 +484,16 @@ python3<span class="w"> </span>tools/latency.py<span class="w"> </span>/путь
 <h2>AAD (по желанию)<a class="headerlink" href="#aad" title="Ссылка на этот заголовок">#</a></h2>
 <p>Для глав про камеру «с нуля» и интерактивных упражнений по Pure Pursuit в CARLA:</p>
 <p><a class="reference external" href="https://github.com/thomasfermi/Algorithms-for-Automated-Driving">Algorithms for Automated Driving</a></p>
-<p>Рекомендуемый порядок: обзор Lane Detection и Control/PP в AAD → эта книга (Архитектура → Управление → Задержки) → задания A1/B1.</p>
+<p>Рекомендуемый порядок: обзор Lane Detection и Control/PP в AAD → эта книга (Архитектура → Управление → Задержки) → задания A1 и B1.</p>
 </section>
 <section id="id3">
 <h2>Телефон<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>Android arm64, USB OTG и Panda;</p></li>
-<li><p>модели берутся из ассетов APK (<code class="docutils literal notranslate"><span class="pre">supercombo.onnx</span></code>, <code class="docutils literal notranslate"><span class="pre">supercombo.thneed</span></code>); <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/</span></code> перекрывает
+<li><p>модели берутся из ассетов APK (<code class="docutils literal notranslate"><span class="pre">supercombo.onnx</span></code>, <code class="docutils literal notranslate"><span class="pre">supercombo.thneed</span></code>); каталог <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_models/</span></code> перекрывает
 их, когда нужно проверить другой файл без пересборки;</p></li>
 <li><p>новый телефон: сначала <code class="docutils literal notranslate"><span class="pre">python3</span> <span class="pre">tools/model_device_probe.py</span> <span class="pre">--iters</span> <span class="pre">50</span></code> — см. <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>;</p></li>
-<li><p>логи → <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_logs/…</span></code>;</p></li>
+<li><p>логи пишутся в <code class="docutils literal notranslate"><span class="pre">/sdcard/adas_logs/…</span></code>;</p></li>
 <li><p>для учебных измерений: <code class="docutils literal notranslate"><span class="pre">vision_traffic:</span> <span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">phone_stats:</span> <span class="pre">true</span></code>.</p></li>
 </ul>
 <!-- next-chapter -->

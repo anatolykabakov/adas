@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -445,15 +445,15 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Слияние с гироскопом — гироскоп телефона и ошибка, которую стоит изучить<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Скорость колёс и угол руля дали самую дешёвую оценку курса — и предыдущая глава закончилась её пределом:
-велосипедная модель не знает, что на самом деле сделали шины. В телефоне есть гироскоп, который измеряет
-скорость рыскания напрямую. Эта глава делает его пригодным (смещение, ориентация крепления, рыскание,
-которого не видит гравитация) и вливает в фильтр — а затем внимательно разбирает одну ошибку в этом
-слиянии, потому что она из тех, что выглядят работающими.</p>
+<p>Скорость колёс и угол руля дали самую грубую оценку курса — и предыдущая глава уперлась в её предел:
+велосипедная модель не знает, что на самом деле сделали шины. В телефоне есть гироскоп, измеряющий
+скорость рыскания напрямую. Эта глава приводит его в пригодный вид (смещение, ориентация крепления,
+рыскание, которого не видит гравитация) и вливает в фильтр — а затем подробно разбирает одну ошибку в этом
+слиянии, потому что она из тех, что с виду работают.</p>
 <section id="a">
 <h2>Шаг 2a: сделать гироскоп телефона пригодным<a class="headerlink" href="#a" title="Ссылка на этот заголовок">#</a></h2>
-<p>Телефон зажат под тем углом, какой позволяет крепление. Сырой гироскоп — в <strong>осях телефона</strong>; велосипедной
-модели нужна <strong>скорость рыска машины</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span>.</p>
+<p>Телефон закреплён под тем углом, какой позволяет держатель. Сырой гироскоп выдаёт данные в <strong>осях телефона</strong>,
+а велосипедной модели нужна <strong>скорость рыска машины</strong> <span class="math notranslate nohighlight">\(\dot\psi\)</span>.</p>
 <section id="imucalibrator">
 <h3>Процедура захвата (<code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code>)<a class="headerlink" href="#imucalibrator" title="Ссылка на этот заголовок">#</a></h3>
 <ol class="arabic simple">
@@ -472,18 +472,18 @@
 \[
 \dot\psi = \pm \big(R(\omega - b)\big)_z.
 \]</div>
-<p>Отметьте, что эта процедура может дать, а что нет. Гравитация фиксирует два угла из трёх — крен и тангаж
-телефона относительно машины. <strong>Рыск по гравитации не наблюдаем вообще</strong>, поэтому и существует prior крепления,
-и поэтому камера с IMU его делят.</p>
+<p>Стоит понять, что эта процедура даёт, а что нет. Гравитация задаёт два угла из трёх — крен и тангаж
+телефона относительно машины. <strong>Рыск по гравитации не наблюдаем в принципе</strong>, поэтому и существует prior
+крепления, и поэтому камера с IMU его делят.</p>
 </section>
 <section id="prior">
 <h3>Prior крепления<a class="headerlink" href="#prior" title="Ссылка на этот заголовок">#</a></h3>
-<p>Если <code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code> задан, те же крен, тангаж и рыск засевают</p>
+<p>Если задан <code class="docutils literal notranslate"><span class="pre">calibration.camera.rpy_deg</span></code>, те же крен, тангаж и рыск инициализируют</p>
 <div class="math notranslate nohighlight">
 \[
 R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
 \]</div>
-<p>и сервис может публиковать скорость рыска <strong>до</strong> захвата на месте (<code class="docutils literal notranslate"><span class="pre">ready</span> <span class="pre">=</span> <span class="pre">has_prior</span> <span class="pre">∨</span> <span class="pre">orientation_locked</span></code>).</p>
+<p>и тогда сервис может публиковать скорость рыска <strong>до</strong> захвата на месте (<code class="docutils literal notranslate"><span class="pre">ready</span> <span class="pre">=</span> <span class="pre">has_prior</span> <span class="pre">∨</span> <span class="pre">orientation_locked</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">g</span> <span class="o">=</span> <span class="mf">9.81</span>
@@ -511,30 +511,30 @@ R = R_z(\mathrm{yaw})\,R_y(\mathrm{pitch})\,R_x(\mathrm{roll})
 <span class="nb">print</span><span class="p">(</span><span class="s2">"yaw_rate ="</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">yaw_rate_from_gyro</span><span class="p">(</span><span class="n">gyro</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="n">bias</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span> <span class="s2">"rad/s"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Пока не <code class="docutils literal notranslate"><span class="pre">ready</span></code>, топика <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> <strong>нет</strong>, и локализация откатывается на скорость рыска с шасси, а если
-и её нет — на чистую велосипедную модель.</p>
+<p>Пока сервис не <code class="docutils literal notranslate"><span class="pre">ready</span></code>, топика <code class="docutils literal notranslate"><span class="pre">sensors/imu_yaw</span></code> <strong>нет</strong>: локализация откатывается на скорость рыска с шасси, а
+если нет и её — на чистую велосипедную модель.</p>
 <div class="tip admonition">
 <p class="admonition-title">Подсказка перед выездом</p>
-<p>Постойте несколько секунд после запуска двигателя, чтобы ориентация захватилась. Плохой prior плюс отсутствие
-захвата дают неверный знак или огромное смещение, и тогда гейт согласия в EKF отбрасывает IMU целиком
-(<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> рад/с) — фильтр замолкает именно тогда, когда он был нужен.</p>
+<p>Постойте несколько секунд после запуска двигателя, чтобы ориентация успела захватиться. Плохой prior вместе с
+несостоявшимся захватом дают неверный знак или огромное смещение — и тогда гейт согласия в EKF отбрасывает IMU
+целиком (<span class="math notranslate nohighlight">\(|\omega - v\tan\delta/L| &lt; 0.35\)</span> рад/с), а фильтр замолкает ровно тогда, когда он и был нужен.</p>
 </div>
 <hr class="docutils" />
 <div class="note admonition">
 <p class="admonition-title">Если вы не встречали фильтр Калмана</p>
-<p>Дальше оцениватель — это <strong>EKF</strong>, в два полушага на тик. <strong>Предсказание:</strong> толкнуть состояние вперёд по
+<p>Дальше оценщик — это <strong>EKF</strong>, по два полушага на тик. <strong>Предсказание:</strong> протолкнуть состояние вперёд по
 модели движения и <em>увеличить</em> его неопределённость (ковариацию <span class="math notranslate nohighlight">\(P\)</span>). <strong>Обновление:</strong> сравнить показание
-датчика с тем, что предсказывает состояние (<em>innovation</em>), и поправить состояние на долю этого разрыва —
-<em>усиление</em> <span class="math notranslate nohighlight">\(K\)</span>: большое, когда датчику верят больше, чем предсказанию, и малое — когда меньше. «EKF»
-значит лишь, что модели нелинейны и линеаризуются (якобиан <span class="math notranslate nohighlight">\(F\)</span>) на каждом шаге. Для этой главы вывод не
-нужен — только: предсказание растит неопределённость, измерение её уменьшает, а усиление — это насколько
-вы верите измерению.</p>
+датчика с тем, что предсказывает состояние (<em>невязка</em>), и подправить состояние на долю этого расхождения — с
+<em>усилением</em> <span class="math notranslate nohighlight">\(K\)</span>: оно велико, когда датчику доверяют больше, чем предсказанию, и мало — когда меньше. «EKF»
+означает лишь, что модели нелинейны и линеаризуются (якобиан <span class="math notranslate nohighlight">\(F\)</span>) на каждом шаге. Для этой главы вывод не
+нужен — достаточно помнить: предсказание растит неопределённость, измерение её уменьшает, а усиление — это
+мера доверия к измерению.</p>
 </div>
 </section>
 </section>
 <section id="b">
 <h2>Шаг 2b: слияние с гироскопом и ошибка, которую стоит изучить<a class="headerlink" href="#b" title="Ссылка на этот заголовок">#</a></h2>
-<p>Состояние <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> в ENU. Тик по <strong>шасси</strong>, примерно каждые 10 мс.</p>
+<p>Состояние <span class="math notranslate nohighlight">\([x,\ y,\ \psi,\ v,\ \dot\psi]^\top\)</span> в ENU. Тик — по <strong>шасси</strong>, примерно каждые 10 мс.</p>
 <section id="id2">
 <h3>Предсказание<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
 <div class="math notranslate nohighlight">
@@ -546,57 +546,57 @@ y &amp;\leftarrow y + v\sin\psi\,dt,\\
 v &amp;\leftarrow v_{\text{measured}}.
 \end{aligned}
 \end{split}\]</div>
-<p>Интересный вопрос: <strong>какая <span class="math notranslate nohighlight">\(\dot\psi\)</span>?</strong></p>
+<p>Интересный вопрос — <strong>какая именно <span class="math notranslate nohighlight">\(\dot\psi\)</span>?</strong></p>
 </section>
 <section id="id3">
 <h3>Что фильтр делал раньше и почему это было неверно<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Исходный код двигал курс велосипедной моделью, <span class="math notranslate nohighlight">\(\dot\psi_{\text{pred}} = v\tan\delta/L\)</span>, и затем
-<strong>перезатирал состояние скорости рыска</strong> этим же значением. Каждый шаг. То есть всё, чему научил фильтр
-гироскоп, выбрасывалось до прихода следующего измерения, а само измерение могло дойти до курса только через
-взаимную ковариацию <span class="math notranslate nohighlight">\(P_{\psi\dot\psi}\)</span> за один шаг.</p>
-<p>Сколько это — «только через взаимную ковариацию»? Легко угадать <span class="math notranslate nohighlight">\(dt\)</span> и ошибиться; я так и сделал. Разберём:
-обновление скорости рыска имеет усиление <span class="math notranslate nohighlight">\(K_4 = P_{44}/(P_{44}+R)\)</span>, а курс получает
-<span class="math notranslate nohighlight">\(K_2 = P_{24}/(P_{44}+R)\)</span>. При <span class="math notranslate nohighlight">\(F_{24} = dt\)</span> предсказанный перекрёстный член равен <span class="math notranslate nohighlight">\(P_{24} \approx dt\,P_{44}\)</span>,
-поэтому</p>
+<p>Исходный код двигал курс велосипедной моделью, <span class="math notranslate nohighlight">\(\dot\psi_{\text{pred}} = v\tan\delta/L\)</span>, а затем
+<strong>затирал состояние скорости рыска</strong> этим же значением. И так на каждом шаге. То есть всё, чему гироскоп
+научил фильтр, выбрасывалось до прихода следующего измерения, а само измерение успевало повлиять на курс
+только через взаимную ковариацию <span class="math notranslate nohighlight">\(P_{\psi\dot\psi}\)</span> за один шаг.</p>
+<p>Сколько это — «только через взаимную ковариацию»? Здесь легко прикинуть <span class="math notranslate nohighlight">\(dt\)</span> на глаз и промахнуться; так со
+мной и вышло. Разберёмся: обновление скорости рыска имеет усиление <span class="math notranslate nohighlight">\(K_4 = P_{44}/(P_{44}+R)\)</span>, а курсу
+достаётся <span class="math notranslate nohighlight">\(K_2 = P_{24}/(P_{44}+R)\)</span>. При <span class="math notranslate nohighlight">\(F_{24} = dt\)</span> предсказанный перекрёстный член равен
+<span class="math notranslate nohighlight">\(P_{24} \approx dt\,P_{44}\)</span>, поэтому</p>
 <div class="math notranslate nohighlight">
 \[
 K_2 \approx dt\,\frac{P_{44}}{P_{44}+R} = dt\,K_4 .
 \]</div>
-<p>Это неверный ответ, и причина в том, что сама <span class="math notranslate nohighlight">\(P_{44}\)</span> сжата предыдущим обновлением. Прогоните рекурсию
-численно с настоящими <span class="math notranslate nohighlight">\(Q_{44} = 0.05^2\)</span> и <span class="math notranslate nohighlight">\(R_{\text{imu}} = 0.02^2\)</span>, и установившийся вес окажется
-<span class="math notranslate nohighlight">\(dt\,(1-K_4) \approx 0.12\,dt\)</span> — то есть курс выходил как</p>
+<p>Ответ неверный, и причина в том, что сама <span class="math notranslate nohighlight">\(P_{44}\)</span> уже сжата предыдущим обновлением. Прогоните рекурсию
+численно с настоящими <span class="math notranslate nohighlight">\(Q_{44} = 0.05^2\)</span> и <span class="math notranslate nohighlight">\(R_{\text{imu}} = 0.02^2\)</span> — и установившийся вес окажется
+<span class="math notranslate nohighlight">\(dt\,(1-K_4) \approx 0.12\,dt\)</span>, то есть курс получался как</p>
 <div class="math notranslate nohighlight">
 \[
 \psi \approx 0.88 \cdot (\text{велосипедная модель}) + 0.12 \cdot (\text{измерение}).
 \]</div>
 <p><strong>Смоделируйте, прежде чем утверждать.</strong> Аналитическая прикидка и рекурсия расходятся в семь раз.</p>
-<p>Такое разделение было бы нормально, будь велосипедная модель верна. На этой машине она неверна: измеренная
+<p>Такое разделение было бы допустимо, будь велосипедная модель верна. На этой машине она неверна: измеренная
 передача недокрута <span class="math notranslate nohighlight">\(\kappa_{\text{fact}}/\kappa_{\text{kin}} = 0.54\)</span> при 22 м/с, значит кинематическое
-предсказание перекручивает в <span class="math notranslate nohighlight">\(1/0.54 = 1.85\)</span> раза, и курс вращался примерно <strong>в 1.75 раза быстрее правды</strong>. На
-30-секундной дуге при 0.15 рад/с это 450° вместо 258°.</p>
-<p>Почему ни один заезд этого не показал? Потому что <code class="docutils literal notranslate"><span class="pre">updateGpsYaw</span></code> жёстко защёлкивает курс всякий раз, когда курс
-GPS расходится больше чем на 0.5 рад. Фильтр несколько раз в минуту затягивало обратно в строй, и логи
-выглядели здоровыми. <strong>Дефект, замаскированный коррекцией, остаётся дефектом</strong> — он всплывает в момент, когда
-коррекция недоступна, а для GPS это тоннели, городские каньоны и холодный старт.</p>
+предсказание перекручивает в <span class="math notranslate nohighlight">\(1/0.54 = 1.85\)</span> раза, и курс уходил примерно <strong>в 1.75 раза быстрее истинного</strong>.
+На 30-секундной дуге при 0.15 рад/с это 450° вместо 258°.</p>
+<p>Почему ни один заезд этого не выявил? Потому что <code class="docutils literal notranslate"><span class="pre">updateGpsYaw</span></code> жёстко защёлкивает курс всякий раз, когда курс
+GPS расходится больше чем на 0.5 рад. Несколько раз в минуту фильтр затягивало обратно в строй, и логи
+выглядели здоровыми. <strong>Дефект, замаскированный коррекцией, остаётся дефектом</strong> — он вылезает ровно тогда, когда
+коррекции нет, а для GPS это тоннели, городские каньоны и холодный старт.</p>
 </section>
 <section id="id4">
 <h3>Что он делает теперь<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>Скорость рыска — состояние со своим случайным блужданием, курс интегрирует состояние, а велосипедная модель
-входит <em>слабым измерением</em> с <span class="math notranslate nohighlight">\(R_{\text{model}} = 0.15^2\)</span> против <span class="math notranslate nohighlight">\(0.02^2\)</span> у гироскопа. Слабым потому, что
-0.15 рад/с — это примерно то, насколько они расходятся при 20 м/с и 10° руля. Итого:</p>
+<p>Скорость рыска стала состоянием со своим случайным блужданием, курс интегрирует это состояние, а велосипедная
+модель входит <em>слабым измерением</em> с <span class="math notranslate nohighlight">\(R_{\text{model}} = 0.15^2\)</span> против <span class="math notranslate nohighlight">\(0.02^2\)</span> у гироскопа. Слабым — потому что
+0.15 рад/с примерно и есть их расхождение при 20 м/с и 10° руля. Итого:</p>
 <ul class="simple">
 <li><p>гироскопу доверяют, и его коррекция доживает до следующего шага;</p></li>
-<li><p>модель всё равно затыкает дыры — если IMU станет невалидным, а CAN продолжит сообщать угол руля, курс
+<li><p>модель по-прежнему затыкает дыры: если IMU станет невалидным, а CAN продолжит сообщать угол руля, курс
 продолжит двигаться, а не замрёт;</p></li>
-<li><p>обновления от модели считаются отдельно (<code class="docutils literal notranslate"><span class="pre">model_update_count</span></code>), поэтому диагностика по-прежнему говорит,
+<li><p>обновления от модели считаются отдельно (<code class="docutils literal notranslate"><span class="pre">model_update_count</span></code>), поэтому диагностика по-прежнему показывает,
 каким датчиком получен курс.</p></li>
 </ul>
-<p><code class="docutils literal notranslate"><span class="pre">setYawRateIsAState(false)</span></code> в точности возвращает старое поведение — именно так эти два и сравнивали.</p>
+<p><code class="docutils literal notranslate"><span class="pre">setYawRateIsAState(false)</span></code> в точности возвращает прежнее поведение — именно так эти два варианта и сравнивали.</p>
 </section>
 <section id="id5">
 <h3>Воспроизвести оба, в двадцати строках<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
-<p>Это вся глава в одном запускаемом блоке: катим установившуюся дугу, где гироскоп говорит правду, а угол руля
-заявляет в 1.85 раза больше, и смотрим на курс.</p>
+<p>Вся глава в одном запускаемом блоке: катим установившуюся дугу, где гироскоп говорит правду, а угол руля
+заявляет в 1.85 раза больше, — и смотрим на курс.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -669,14 +669,14 @@ GPS расходится больше чем на 0.5 рад. Фильтр не�
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">no gyro, as a state     : </span><span class="si">{</span><span class="n">no_gyro</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">° against the model's </span><span class="si">{</span><span class="n">model5</span><span class="si">:</span><span class="s2">6.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Запустите — и получите 51.7° правды, 52.4° от нового фильтра и 90.2° от старого, гонящегося за 95.7° модели.
-Один флаг — <strong>38° ошибки курса за пять секунд</strong>, то есть около 0.13 рад/с скорости накопления ошибки, а за
-минуту без GPS это разница между «на своей дороге» и «на соседней». Вариант без гироскопа даёт 95.2° против
-95.7° модели, то есть откат работает: курс продолжает двигаться, а не замирает.</p>
+<p>Запустите — и получите 51.7° истины, 52.4° у нового фильтра и 90.2° у старого, гонящегося за 95.7° модели.
+Один флаг — и <strong>38° ошибки курса за пять секунд</strong>, то есть около 0.13 рад/с скорости накопления ошибки; за
+минуту без GPS это уже разница между «на своей дороге» и «на соседней». Вариант без гироскопа даёт 95.2° против
+95.7° модели — то есть откат работает: курс продолжает двигаться, а не замирает.</p>
 </section>
 <section id="id6">
 <h3>Все гейты в одной таблице<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
-<p>Измерения дёшево добавлять и дорого им доверять, поэтому у каждого есть гейт. Числа — как поставляется:</p>
+<p>Измерение дёшево добавить и дорого ему довериться, поэтому у каждого есть гейт. Числа — как в поставке:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>измерение</p></th>
@@ -719,11 +719,11 @@ GPS расходится больше чем на 0.5 рад. Фильтр не�
 </tbody>
 </table>
 </div>
-<p>Две вещи, на которые стоит обратить внимание. Во-первых, путь пересева существует потому, что измерение,
-которое отбрасывается снова и снова, — это не шум, а фильтр, потерявший связь с реальностью; после четырёх
+<p>Стоит обратить внимание на две вещи. Во-первых, путь пересева существует потому, что измерение,
+которое отбрасывается раз за разом, — это не шум: это фильтр потерял связь с реальностью. После четырёх
 отказов он принимает реальность, а не защищает свою оценку.</p>
-<p>Во-вторых, строка про скорость — самая слабая из шести, и о причине шаг 4. Её шум был предположен, а не
-измерен (1.0 против доплера, точного до 0.1), и пока скорость не стала состоянием, предсказание перезатирало
+<p>Во-вторых, строка про скорость — самая слабая из шести, и о причине речь в шаге 4. Её шум не измеряли, а
+предположили (1.0 против доплера, точного до 0.1), и пока скорость не стала состоянием, предсказание затирало
 это обновление примерно двадцать раз на каждую посылку GPS. Обе беды исправлены, а масштаб <em>всё равно</em> не
 выучивается — причина в шаге 4, и она интереснее самой ошибки.</p>
 <hr class="docutils" />

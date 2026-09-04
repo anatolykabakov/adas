@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -440,10 +440,10 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Локализация: собираем оценщик по одному датчику<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Эта глава написана как сборка, а не как описание. Начинаем с самой дешёвой оценки того, где машина, узнаём,
-чего она не может, добавляем один датчик и повторяем. Каждый шаг — это несколько строк, которые можно
-запустить, и каждый шаг соответствует переключателю в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>, так что датчик можно выключить на
-настоящей машине и посмотреть на отказ, который предсказывает текст.</p>
+<p>Эта глава написана как сборка, а не как описание. Начинаем с самой грубой оценки того, где находится машина,
+выясняем, чего она не может, добавляем один датчик — и повторяем. Каждый шаг умещается в несколько строк,
+которые можно запустить, и каждому соответствует переключатель в <code class="docutils literal notranslate"><span class="pre">config.json</span></code>: датчик можно отключить на
+настоящей машине и увидеть тот самый отказ, что предсказан в тексте.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>шаг</p></th>
@@ -456,21 +456,21 @@
 <tr class="row-even"><td><p>1</p></td>
 <td><p>скорость колёс и угол руля (велосипедная модель)</p></td>
 <td><p>поза из ничего</p></td>
-<td><p>сносит без границы; требует, чтобы модель была верна</p></td>
+<td><p>уплывает без ограничения; работает только при верной модели</p></td>
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
 <td><p>гироскоп телефона как измерение скорости рыска</p></td>
 <td><p>курс идёт за датчиком, а не за моделью</p></td>
-<td><p>позиция всё равно сносит; помогает только при верном слиянии</p></td>
+<td><p>позиция всё равно уплывает; помогает только при правильном слиянии</p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
 <td><p>позиция и курс GPS</p></td>
 <td><p>ограниченные позиция и курс</p></td>
-<td><p><strong>прячет</strong> ошибки шагов 1–2; в тоннеле не даёт ничего</p></td>
+<td><p><strong>прячет</strong> ошибки шагов 1–2; в тоннеле бесполезен</p></td>
 </tr>
 <tr class="row-odd"><td><p>4</p></td>
 <td><p>скорость как состояние, скорость GPS</p></td>
-<td><p>коррекция, переживающая следующий тик</p></td>
+<td><p>коррекция, доживающая до следующего тика</p></td>
 <td><p>масштабную ошибку всё равно не выучить</p></td>
 </tr>
 <tr class="row-even"><td><p>5</p></td>
@@ -483,24 +483,24 @@
 </div>
 <div class="note admonition">
 <p class="admonition-title">Читайте эту главу про оценщик, а не про руление</p>
-<p>Ничто в тракте управления не подписано на <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>. Единственный подписчик — отладочный выход, а
-поперечный контроллер берёт скорость рыска прямо из <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>. Это делает данное место самым
-безопасным в проекте для изучения оценщика: можно ошибиться грубо, и машина не заметит. Это же означает, что
-каждое утверждение ниже пришлось проверять против GNSS, а не против «машина поехала нормально».</p>
+<p>В тракте управления никто не подписан на <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code>. Единственный подписчик — отладочный вывод, а
+поперечный контроллер берёт скорость рыска прямо из <code class="docutils literal notranslate"><span class="pre">vehicle/chassis</span></code>. Поэтому здесь удобнее всего в проекте
+изучать оценщик: ошибись хоть грубо — машина этого не заметит. Обратная сторона в том, что каждое утверждение
+ниже приходилось проверять по GNSS, а не по принципу «машина поехала — значит, порядок».</p>
 </div>
-<p>Опорные точки в коде, в порядке, в котором глава до них доходит:</p>
+<p>Опорные точки в коде, в том порядке, в каком глава до них добирается:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">SpeedFilter</span></code> (<code class="docutils literal notranslate"><span class="pre">utils/speed_filter.h</span></code>) — скорости колёс → скорость и ускорение</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ImuCalibrator</span></code> / <code class="docutils literal notranslate"><span class="pre">ImuCalibService</span></code> — IMU телефона → скорость рыска машины</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">GpsLocalProjector</span></code> — широта и долгота → метры на восток и север</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">VehicleEKF</span></code> / <code class="docutils literal notranslate"><span class="pre">OnlineLocalizer</span></code> / <code class="docutils literal notranslate"><span class="pre">LocalizationService</span></code> — слияние → <code class="docutils literal notranslate"><span class="pre">localization/pose</span></code></p></li>
 </ul>
-<p>RPY камеры для warp Supercombo — <strong>другая</strong> история (<a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">калибровка</span></a>);
-с IMU у неё общий только prior крепления, и она опционально подаёт в EKF скорость рыска от камерной одометрии.</p>
+<p>RPY камеры для warp Supercombo — <strong>отдельная</strong> история (<a class="reference internal" href="../Calibration/Overview.html"><span class="std std-doc">калибровка</span></a>):
+с IMU у неё общий только prior крепления, и она может опционально подавать в EKF скорость рыска от камерной одометрии.</p>
 <section id="id2">
 <h2>Переключатели, которыми вы будете пользоваться<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Каждый источник — отдельный ключ, потому что слитая оценка не говорит, каким датчиком она держится, а когда
-несколько источников согласны, сломанный прячется за остальными.</p>
+<p>Каждый источник вынесен в отдельный ключ: слитая оценка не сообщает, каким датчиком она держится, а когда
+несколько источников согласны между собой, сломанный прячется за остальными.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="nt">"localization"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">  </span><span class="nt">"use_gps_position"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">"use_gps_course"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
@@ -512,14 +512,14 @@
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Это не боевая функция — в машине вам нужны все они включёнными. Это инструмент, которым пользуется остальная
-глава, и именно так дефект из шага 2 был наконец измерен: с включённым курсом GPS ошибка курса невидима, без
-него — 38° за пять секунд.</p>
+<p>Это не боевая функция — в машине все они должны быть включены. Это инструмент для остальной главы, и именно
+так был наконец измерен дефект из шага 2: с включённым курсом GPS ошибка курса невидима, без него — 38° за
+пять секунд.</p>
 </section>
 <section id="id3">
 <h2>Шаг 0: системы координат, прежде чем что-либо ещё<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Половина ошибок в этой области — не ошибки оценивания, а ошибки систем координат. Сначала приведите в порядок
-словарь.</p>
+<p>Половина ошибок в этой области — не ошибки оценивания, а путаница в системах координат. Сначала наведите
+порядок в терминах.</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>система</p></th>
@@ -553,28 +553,28 @@
 </div>
 <div class="warning admonition">
 <p class="admonition-title">Одно имя топика, две начинки</p>
-<p>Java публикует <code class="docutils literal notranslate"><span class="pre">sensors/gps/location</span></code> как <strong>прото с широтой и долготой</strong>. После <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> <strong>то же имя
-топика</strong> несёт типизированный <code class="docutils literal notranslate"><span class="pre">GpsSample</span></code> в метрах ENU. Офлайн-инструменты должны знать, с какой стороны
-конвертации они читают. Это уже не раз стоило реального времени отладки.</p>
+<p>Java публикует <code class="docutils literal notranslate"><span class="pre">sensors/gps/location</span></code> как <strong>прото с широтой и долготой</strong>. После <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> <strong>под тем же
+именем топика</strong> идёт типизированный <code class="docutils literal notranslate"><span class="pre">GpsSample</span></code> в метрах ENU. Офлайн-инструменты обязаны знать, с какой
+стороны конвертации они читают. Это уже не раз оборачивалось потерянным на отладку временем.</p>
 </div>
 </section>
 <hr class="docutils" />
 <section id="id4">
 <h2>Шаг 1: самая дешёвая оценка — скорость колёс и угол руля<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Скорость выглядит скучным входом. Это не так, по двум причинам: ею масштабируется весь поперечный тракт
-(недокрут входит как <span class="math notranslate nohighlight">\(v^2\)</span>), и очевидный способ посчитать по ней ускорение неверен.</p>
+<p>Скорость кажется скучным входом. Это не так, и по двум причинам: она масштабирует весь поперечный тракт
+(недокрут входит как <span class="math notranslate nohighlight">\(v^2\)</span>), а очевидный способ вычислить по ней ускорение неверен.</p>
 <section id="id5">
 <h3>Откуда она берётся<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
-<p><code class="docutils literal notranslate"><span class="pre">ESP_02</span></code> несёт четыре скорости колёс. Декодер их усредняет. Upstream затем гоняет по этому среднему фильтр
+<p><code class="docutils literal notranslate"><span class="pre">ESP_02</span></code> несёт четыре скорости колёс, декодер их усредняет. Дальше upstream прогоняет это среднее через фильтр
 Калмана из двух состояний (скорость, ускорение) — <code class="docutils literal notranslate"><span class="pre">CarInterfaceBase.update_speed_kf</span></code> в flowpilot — и берёт из
-фильтра <strong>и</strong> <code class="docutils literal notranslate"><span class="pre">vEgo</span></code>, <strong>и</strong> <code class="docutils literal notranslate"><span class="pre">aEgo</span></code>. Мы делаем то же с одним отличием: их коэффициенты запечены под такт 100 Гц,
-а наши считаются из фактического интервала между кадрами, потому что <code class="docutils literal notranslate"><span class="pre">ESP_02</span></code> приходит не по метроному.</p>
+фильтра <strong>и</strong> <code class="docutils literal notranslate"><span class="pre">vEgo</span></code>, <strong>и</strong> <code class="docutils literal notranslate"><span class="pre">aEgo</span></code>. Мы делаем то же самое с одним отличием: их коэффициенты зашиты под такт
+100 Гц, а наши вычисляются по фактическому интервалу между кадрами, потому что <code class="docutils literal notranslate"><span class="pre">ESP_02</span></code> приходит не по метроному.</p>
 </section>
 <section id="id6">
 <h3>Почему нельзя просто продифференцировать<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
-<p>Потому что сигнал скорости колеса квантован с шагом 0.0075 км/ч, а интервал около 10 мс. Дифференцирование
-квантованного сигнала на коротком интервале усиливает квант в <span class="math notranslate nohighlight">\(1/dt\)</span> раз. Измерено на настоящем 28-минутном
-заезде, наивная конечная разность дала:</p>
+<p>Потому что сигнал скорости колеса квантован с шагом 0.0075 км/ч, а интервал между отсчётами — около 10 мс.
+Дифференцирование квантованного сигнала на коротком интервале усиливает квант в <span class="math notranslate nohighlight">\(1/dt\)</span> раз. На настоящем
+28-минутном заезде наивная конечная разность дала:</p>
 <figure class="align-default" id="id8">
 <a class="reference internal image-reference" href="../_images/a_ego.png"><img alt="../_images/a_ego.png" src="../_images/a_ego.png" style="width: 80%;" />
 </a>
@@ -606,11 +606,11 @@
 </tbody>
 </table>
 </div>
-<p>Машина не может изменить ускорение на 4 м/с² за 10 мс. Это поле было шумом квантования под именем ускорения.
-Никто его не читал — только поэтому вреда и не было, — а урок в том, что неиспользуемый сигнал не является
-безвредным: это ловушка, поставленная для того, кто воспользуется им следующим.</p>
-<p>Отфильтрованная скорость отличается от сырого среднего на 0.010 м/с медианно, то есть ничего не искажено;
-ушёл только шум, который дифференцировали.</p>
+<p>Машина не может изменить ускорение на 4 м/с² за 10 мс. Это поле было шумом квантования, выступавшим под именем
+ускорения. Его никто не читал — только поэтому и обошлось без вреда, — но урок в другом: неиспользуемый сигнал
+не безобиден, это ловушка для того, кто воспользуется им следующим.</p>
+<p>Отфильтрованная скорость отклоняется от сырого среднего на 0.010 м/с по медиане — то есть ничего не искажено:
+ушёл лишь тот шум, который и дифференцировали.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -665,9 +665,9 @@
 </section>
 <section id="id7">
 <h3>Радиус колеса, который никто не откалибровал<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h3>
-<p>Скорость колеса — это длина окружности на частоту, поэтому изношенная или недокачанная шина смещает весь сигнал
-на постоянную величину. Проверено против доплеровской скорости GNSS — которая на трёхмерном фиксе точна до
-сантиметров в секунду, куда лучше любой шины — на двух заездах:</p>
+<p>Скорость колеса — это длина окружности, умноженная на частоту вращения, поэтому изношенная или недокачанная
+шина смещает весь сигнал на постоянную величину. Сверено с доплеровской скоростью GNSS — на трёхмерном фиксе
+она точна до сантиметров в секунду, куда лучше любой шины — на двух заездах:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p></p></th>
@@ -691,15 +691,15 @@
 </tbody>
 </table>
 </div>
-<p>CAN завышает на <strong>1.2 %</strong>, и масштаб плоский по диапазонам скорости. Эта плоскость и есть весь аргумент:
-пробуксовка росла бы с нагрузкой и скоростью, отказывающий датчик не был бы настолько согласован, а радиус
-колеса — постоянная. <code class="docutils literal notranslate"><span class="pre">SpeedFilter::Config::wheel_speed_factor</span></code> для этого и существует, по умолчанию 1.0, чтобы
-поправка приходила осознанным изменением.</p>
+<p>CAN завышает на <strong>1.2 %</strong>, и масштаб не зависит от диапазона скорости. В этом постоянстве и весь аргумент:
+пробуксовка росла бы с нагрузкой и скоростью, отказывающий датчик не был бы настолько стабилен, а радиус
+колеса — величина постоянная. Для этого и существует <code class="docutils literal notranslate"><span class="pre">SpeedFilter::Config::wheel_speed_factor</span></code>, по умолчанию
+1.0, чтобы поправку вносили осознанно.</p>
 <div class="warning admonition">
 <p class="admonition-title">Ошибка скорости в 1.2 % — не задача на 1.2 %</p>
-<p>Компенсация недокрута — это <span class="math notranslate nohighlight">\(\kappa = \delta / (L(1 + K v^2))\)</span>, скорость входит квадратом. И метрический
-масштаб модели, который в этом проекте фигурирует как 0.888, измерялся <em>против скорости колёс</em>; против истины
-он 0.899. Когда сам эталон смещён, каждое производное число это наследует.</p>
+<p>Компенсация недокрута — это <span class="math notranslate nohighlight">\(\kappa = \delta / (L(1 + K v^2))\)</span>, скорость входит в квадрате. А метрический
+масштаб модели, который в этом проекте фигурирует как 0.888, измерялся <em>по скорости колёс</em>; относительно
+истины он равен 0.899. Когда сам эталон смещён, это смещение наследует каждое производное число.</p>
 </div>
 <hr class="docutils" />
 <!-- next-chapter -->

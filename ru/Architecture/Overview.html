@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -432,10 +432,10 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Обзор системы<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Идея простая. На лобовое стекло Golf 7 ставится телефон. Его камера смотрит на дорогу, нейросеть находит на
-картинке линии разметки и рисует путь, код на C++ считает, на сколько повернуть руль, а небольшой
+<p>Идея простая. На лобовое стекло Golf 7 крепят телефон. Камера смотрит на дорогу, нейросеть находит на
+картинке линии разметки и рисует путь, код на C++ считает, насколько повернуть руль, а небольшой
 USB-адаптер к бортовой сети машины — <strong>панда</strong> — отправляет команду в шину CAN кадром <code class="docutils literal notranslate"><span class="pre">HCA_01</span></code>, тем же,
-который посылает заводской ассистент удержания в полосе. Поэтому машина слушается. Эта глава — карта
+каким командует заводской ассистент удержания в полосе. И машина слушается. Эта глава — карта
 проекта: что программа делает, из чего состоит и как с ней работать.</p>
 <section id="id2">
 <h2>Что делает приложение<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
@@ -450,9 +450,9 @@ USB-адаптер к бортовой сети машины — <strong>пан�
 Панда проверяет их своей моделью безопасности и только потом пропускает в шину;</p></li>
 <li><p>записывает всё, что увидела и решила, в <strong>бег</strong> — файл-журнал поездки (bag) для разбора на компьютере.</p></li>
 </ol>
-<p>Честная оговорка. Это исследовательский и учебный проект, а не «автопилот»: управление рулём проверено на
-дороге, на этом самом Golf; управление скоростью (план → ускорение → ACC-кадры машины) проверено только в
-симуляторе — у нашей машины нет радара, и её мотор и тормоза такие запросы не принимают.</p>
+<p>Сразу оговоримся. Это исследовательский и учебный проект, а не «автопилот». Управление рулём мы проверили на
+дороге, на этом самом Golf; управление скоростью (план → ускорение → ACC-кадры машины) — только в
+симуляторе: у нашей машины нет радара, а её мотор и тормоза таких запросов не принимают.</p>
 <figure class="align-default" id="id4">
 <a class="reference internal image-reference" href="../_images/pipeline_simple.png"><img alt="../_images/pipeline_simple.png" src="../_images/pipeline_simple.png" style="width: 95%;" />
 </a>
@@ -487,12 +487,12 @@ USB-адаптер к бортовой сети машины — <strong>пан�
 </tbody>
 </table>
 </div>
-<p>Главное правило: <strong>все алгоритмы написаны на C++, и только там</strong>. На Python контроллер не переписывается:
-Python либо читает готовый бег, либо запускает <em>тот же самый</em> C+±код через модуль <code class="docutils literal notranslate"><span class="pre">pyadas</span></code> (подать данные →
-шаг → забрать результат). Сам контроллер видит только два входа — линию пути в системе координат машины и
-скорость — и не может отличить, пришли они с живой камеры, из записи или из симулятора. Поэтому перебор
-параметров на ноутбуке значит ровно то же, что значил бы на телефоне, и большая часть работы в этой книге
-делается на записях, без машины.</p>
+<p>Главное правило: <strong>все алгоритмы написаны на C++ и только на C++</strong>. Контроллер на Python никто не
+переписывает — Python либо читает готовый бег, либо запускает <em>тот же самый</em> C+±код через модуль <code class="docutils literal notranslate"><span class="pre">pyadas</span></code>
+(подать данные → шаг → забрать результат). Сам контроллер видит только два входа — линию пути в системе
+координат машины и скорость — и не отличает, пришли они с живой камеры, из записи или из симулятора. Поэтому
+перебор параметров на ноутбуке значит ровно то же, что значил бы на телефоне, и бо́льшая часть работы в этой
+книге идёт по записям, без машины.</p>
 <p>Внутри C++ управление разделено на три сервиса, и каждый отвечает на свой вопрос:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Planner</span></code> — <em>какую траекторию ехать</em>: кривизна и план скорости;</p></li>
@@ -500,18 +500,18 @@ Python либо читает готовый бег, либо запускает 
 <li><p><code class="docutils literal notranslate"><span class="pre">Platform</span></code> — <em>как положить команду в шину</em>. Это единственный сервис, который знает, что машина —
 Volkswagen: адреса CAN, счётчики, контрольные суммы и модель безопасности панды живут только здесь.</p></li>
 </ul>
-<p>У интерфейса между <code class="docutils literal notranslate"><span class="pre">Control</span></code> и <code class="docutils literal notranslate"><span class="pre">Platform</span></code> семнадцать методов и сегодня одна реализация — платформа VW MQB с
-семнадцатью моделями машин. Вторая марка не потребует менять ни <code class="docutils literal notranslate"><span class="pre">Planner</span></code>, ни <code class="docutils literal notranslate"><span class="pre">Control</span></code> (порядок действий —
+<p>У интерфейса между <code class="docutils literal notranslate"><span class="pre">Control</span></code> и <code class="docutils literal notranslate"><span class="pre">Platform</span></code> семнадцать методов и пока одна реализация — платформа VW MQB на
+семнадцать моделей машин. Ради второй марки не придётся менять ни <code class="docutils literal notranslate"><span class="pre">Planner</span></code>, ни <code class="docutils literal notranslate"><span class="pre">Control</span></code> (порядок действий —
 в <code class="docutils literal notranslate"><span class="pre">docs/PORTING.md</span></code>). Части книги идут в том же порядке: Зрение → Локализация → Planner → Control → Platform.</p>
 <p>Всё настраивается одним файлом <code class="docutils literal notranslate"><span class="pre">app/src/main/assets/config.json</span></code>: какая машина (<code class="docutils literal notranslate"><span class="pre">vehicle.name</span></code>), какой
-контроллер рулит (<code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code>: <code class="docutils literal notranslate"><span class="pre">pp</span></code> или <code class="docutils literal notranslate"><span class="pre">fp</span></code>), чем исполняется нейросеть
-(<code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code>), брать ли на себя скорость (<code class="docutils literal notranslate"><span class="pre">vehicle.long_control</span></code>). Каждый ключ вводится в той
+контроллер рулит (<code class="docutils literal notranslate"><span class="pre">vehicle.lane_keep_controller</span></code>: <code class="docutils literal notranslate"><span class="pre">pp</span></code> или <code class="docutils literal notranslate"><span class="pre">fp</span></code>), чем считается нейросеть
+(<code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code>), берём ли мы на себя скорость (<code class="docutils literal notranslate"><span class="pre">vehicle.long_control</span></code>). Каждый ключ мы разбираем в той
 главе, где он нужен, а не списком здесь.</p>
-<p>Одна привычка, на которой эта книга настаивает: сначала измерь, потом трогай код. В одной реальной поездке
+<p>Есть привычка, на которой эта книга настаивает: сначала измерь, потом трогай код. В одной реальной поездке
 машина вообще не рулила, а приложение не записало ни одной ошибки — панда присылала пакет состояния длиной
-57 байт, а код ждал 58, и все поля после третьего, включая флаг «управление разрешено», читались с неверного
-места. Чтением контроллера это не находится; сравнение двух независимых измерений одной величины нашло это
-за вечер — этому навыку и учит глава <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>.</p>
+57 байт, а код ждал 58, и все поля после третьего, включая флаг «управление разрешено», читались не с того
+места. Чтением кода контроллера этого не найти; а сравнение двух независимых измерений одной величины нашло
+ошибку за вечер — этому навыку и учит глава <a class="reference internal" href="../Logging/Bags.html"><span class="std std-doc">Беги</span></a>.</p>
 </section>
 </section>
 

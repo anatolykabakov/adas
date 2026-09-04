@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -419,7 +419,7 @@
             </div>
             <nav aria-label="Page">
                 <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Стройка: формат в сорок строк</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Соберём сами: формат в сорок строк</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Команды</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Ключевые топики</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как читать бег самому</a></li>
@@ -449,9 +449,9 @@
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">/</span></code> в имени топика → <code class="docutils literal notranslate"><span class="pre">__</span></code> на диске.</p>
 <section id="id2">
-<h2>Стройка: формат в сорок строк<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>Бег — это каталоги топиков с записями, у каждой впереди длина. Это вся идея; остальное — protobuf.
-Напишите игрушечную версию, чтобы в настоящей не осталось загадок:</p>
+<h2>Соберём сами: формат в сорок строк<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
+<p>Бег — это каталоги топиков с записями, и перед каждой записью стоит её длина. В этом вся идея; остальное —
+protobuf. Напишите игрушечную версию, чтобы в настоящей не осталось загадок:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
@@ -562,12 +562,12 @@ python3<span class="w"> </span>vis/export_to_plotjuggler.py<span class="w"> </sp
 <span class="nb">print</span><span class="p">(</span><span class="s2">"fields:"</span><span class="p">,</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">DESCRIPTOR</span><span class="o">.</span><span class="n">fields</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>Три вещи кусают каждого по одному разу, поэтому их стоит узнать заранее, а не потом.</p>
-<p><strong>Передавайте <code class="docutils literal notranslate"><span class="pre">Path</span></code>, а не строку.</strong> <code class="docutils literal notranslate"><span class="pre">load_topic_messages</span></code> склеивает через <code class="docutils literal notranslate"><span class="pre">/</span></code>, поэтому <code class="docutils literal notranslate"><span class="pre">str</span></code> даёт
-<code class="docutils literal notranslate"><span class="pre">TypeError:</span> <span class="pre">unsupported</span> <span class="pre">operand</span> <span class="pre">type(s)</span> <span class="pre">for</span> <span class="pre">/</span></code>. Задним числом очевидно, в момент — непрозрачно.</p>
-<p><strong>Не выравнивайте сканированием.</strong> Вспомогательная <code class="docutils literal notranslate"><span class="pre">nearest(ts,</span> <span class="pre">series)</span></code> — линейный поиск: это нормально для
-пары обращений и квадратично для всего бега. Выровнять 22 000 кадров зрения по 140 000 отсчётов шасси таким
-способом — это часы. Отсортируйте раз и ищите двоичным поиском.</p>
+<p>На трёх вещах спотыкается каждый — по разу, — поэтому лучше знать о них заранее.</p>
+<p><strong>Передавайте <code class="docutils literal notranslate"><span class="pre">Path</span></code>, а не строку.</strong> <code class="docutils literal notranslate"><span class="pre">load_topic_messages</span></code> склеивает пути через <code class="docutils literal notranslate"><span class="pre">/</span></code>, поэтому <code class="docutils literal notranslate"><span class="pre">str</span></code> даёт
+<code class="docutils literal notranslate"><span class="pre">TypeError:</span> <span class="pre">unsupported</span> <span class="pre">operand</span> <span class="pre">type(s)</span> <span class="pre">for</span> <span class="pre">/</span></code>. Задним числом очевидно, а в момент сбивает с толку.</p>
+<p><strong>Не выравнивайте сканированием.</strong> Вспомогательная <code class="docutils literal notranslate"><span class="pre">nearest(ts,</span> <span class="pre">series)</span></code> — это линейный поиск: для пары
+обращений нормально, а на весь бег — уже квадратично. Выровнять так 22 000 кадров зрения по 140 000 отсчётов
+шасси таким способом — это часы работы. Отсортируйте один раз и ищите двоичным поиском.</p>
 <p><strong>Убирайте повторяющиеся метки времени.</strong> Рекордер пишет несколько топиков в одну миллисекунду, поэтому в
 топике могут встретиться повторы. Если их оставить, <code class="docutils literal notranslate"><span class="pre">dt</span></code> станет нулём, любая производная — <code class="docutils literal notranslate"><span class="pre">inf</span></code> или <code class="docutils literal notranslate"><span class="pre">nan</span></code>, а
 дальше какой-нибудь гейт вида <code class="docutils literal notranslate"><span class="pre">abs(accel)</span> <span class="pre">&lt;</span> <span class="pre">0.5</span></code> молча отбросит все отсчёты. Именно эта ошибка однажды срезала
@@ -625,23 +625,24 @@ python3<span class="w"> </span>vis/export_to_plotjuggler.py<span class="w"> </sp
 <span class="nb">print</span><span class="p">(</span><span class="s2">"flat across bands -&gt; a constant to calibrate; sloping -&gt; something physical to model"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>На настоящих бегах это даёт 1.0117 и 1.0120 на двух разных заездах, плоско по всем диапазонам. Так и была
-найдена ошибка радиуса колеса, описанная в главе <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">про локализацию</span></a>, и тем же
+<p>На настоящих бегах это даёт 1.0117 и 1.0120 на двух разных заездах и ровно по всем диапазонам. Так и была
+найдена ошибка радиуса колеса, описанная в главе <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">про локализацию</span></a>; тем же
 методом получены конверт замедления выбегом и метрический масштаб модели.</p>
 <div class="warning admonition">
 <p class="admonition-title">Всегда сообщайте гейты</p>
 <p>Каждое измерение выше выбрасывает часть отсчётов — медленные, переходные, с плохим фиксом, с устаревшим
-выравниванием. Говорите, сколько выжило. «Масштаб 1.012» по восьми отсчётам и по 798 — это разные
-утверждения, и первое здесь уже однажды оказывалось неверным.</p>
+выравниванием. Указывайте, сколько осталось. «Масштаб 1.012» по восьми отсчётам и по 798 — это разные
+утверждения, и первое здесь уже однажды оказалось неверным.</p>
 </div>
 </section>
 <section id="id7">
 <h2>Запишите собственный бег и прогоните по нему собственный код<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Для первого бега машина не нужна: лучше всего телефон на лобовом пассажиром, годится и прогулка вдоль
-дороги с окрашенными краями. Соберите (<code class="docutils literal notranslate"><span class="pre">./scripts/build_project.sh</span></code>), поставьте, включите логгирование
-из UI, подвигайтесь 3–5 минут, заберите сессию (<code class="docutils literal notranslate"><span class="pre">./scripts/pull_bags.sh</span></code>), откройте в визуализаторе.
-Чего в вашем беге не может быть — <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, <code class="docutils literal notranslate"><span class="pre">can/rx</span></code>, момента — это достоинство: всё, что
-контроллер на нём выдаёт, непроверяемо, так что ошибаться можно сколько угодно, бесплатно.</p>
+<p>Для первого бега машина не нужна: лучше всего — телефон на лобовом стекле, когда вы едете пассажиром, но
+сгодится и прогулка вдоль дороги с окрашенными краями. Соберите (<code class="docutils literal notranslate"><span class="pre">./scripts/build_project.sh</span></code>), поставьте,
+включите логгирование из UI, подвигайтесь 3–5 минут, заберите сессию (<code class="docutils literal notranslate"><span class="pre">./scripts/pull_bags.sh</span></code>), откройте в
+визуализаторе. То, чего в вашем беге быть не может — <code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code>, <code class="docutils literal notranslate"><span class="pre">can/rx</span></code>, момента, — это как раз
+достоинство: всё, что контроллер на нём выдаёт, проверить нельзя, так что ошибаться можно сколько угодно и без
+последствий.</p>
 <p>Затем скормите его коду, который вы построили в <a class="reference internal" href="../Vision/Overview.html"><span class="std std-doc">Зрении</span></a> и
 <a class="reference internal" href="../Planner/PurePursuit.html"><span class="std std-doc">Pure Pursuit</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — needs your session directory and generated protobufs</span>
@@ -674,10 +675,10 @@ python3<span class="w"> </span>vis/export_to_plotjuggler.py<span class="w"> </sp
 <span class="nb">print</span><span class="p">(</span><span class="s2">"|delta| p95 [deg]:"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">deltas</span><span class="p">),</span> <span class="mi">95</span><span class="p">)))</span>
 </pre></div>
 </div>
-<p>Ждите форму, если не числа: σ ничем не похожа на синтетические 5 см (медианы 0.37/0.51 м на заездах
-проекта, обе линии уверены одновременно в ~22 % кадров); целые нефлагуемые отрезки без обеих линий;
-шаг кадров 42 мс с дрожанием. Запишите три худших момента — пропуск, вспышку σ, скачок шага кадров, по
-метке времени и предложению на каждый. Эти три метки — ваш личный тестовый набор с этого дня.</p>
+<p>Ждите совпадения формы, но не чисел: σ ничем не похожа на синтетические 5 см (медианы 0.37/0.51 м на заездах
+проекта, обе линии уверены одновременно лишь в ~22 % кадров); целые неотмечаемые отрезки без обеих линий;
+шаг кадров 42 мс с дрожанием. Запишите три худших момента — пропуск, вспышку σ, скачок шага кадров — с меткой
+времени и одним предложением на каждый. Эти три метки с этого дня станут вашим личным тестовым набором.</p>
 </section>
 <section id="id8">
 <h2>Шаблон отчёта<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
@@ -759,7 +760,7 @@ python3<span class="w"> </span>vis/export_to_plotjuggler.py<span class="w"> </sp
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Стройка: формат в сорок строк</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Соберём сами: формат в сорок строк</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Команды</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Ключевые топики</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">Как читать бег самому</a></li>

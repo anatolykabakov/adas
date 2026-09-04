@@ -247,7 +247,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -435,43 +435,43 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Глоссарий<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Термины, которые главы используют как известные. Каждый определяется там, где впервые идёт в дело; здесь —
-единственное место, где их можно посмотреть все сразу.</p>
+<p>Термины, которые главы считают уже знакомыми. Каждый из них вводится там, где впервые идёт в дело; а здесь —
+единственное место, где их можно увидеть все сразу.</p>
 <section id="id2">
 <h2>Машина и шина<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><strong>MQB</strong> — платформа Volkswagen (здесь Golf 7). Задаёт колёсную базу, передаточное отношение, раскладку CAN.</p></li>
-<li><p><strong>CAN</strong> — внутренняя шина сообщений машины; каждый кадр сенсора и актуатора идёт по ней.</p></li>
-<li><p><strong>DBC</strong> — текстовая база, говорящая, какие биты какого кадра CAN — какой физический сигнал.</p></li>
-<li><p><strong>panda</strong> — USB-интерфейс CAN от <a class="reference external" href="http://comma.ai">comma.ai</a> между телефоном и машиной, с моделью безопасности на плате.</p></li>
-<li><p><strong>EPS</strong> — электроусилитель руля: мотор рейки, реально поворачивающий колёса.</p></li>
-<li><p><strong>HCA / HCA_01</strong> — кадр CAN (адрес <code class="docutils literal notranslate"><span class="pre">0x126</span></code>), запрашивающий у EPS момент ассиста.</p></li>
+<li><p><strong>MQB</strong> — платформа Volkswagen (здесь Golf 7). Она задаёт колёсную базу, передаточное отношение и раскладку CAN.</p></li>
+<li><p><strong>CAN</strong> — внутренняя шина сообщений машины; по ней идёт каждый кадр сенсора и актуатора.</p></li>
+<li><p><strong>DBC</strong> — текстовая база, которая описывает, какие биты какого CAN-кадра соответствуют какому физическому сигналу.</p></li>
+<li><p><strong>panda</strong> — USB-интерфейс CAN от <a class="reference external" href="http://comma.ai">comma.ai</a> между телефоном и машиной, с собственной моделью безопасности на плате.</p></li>
+<li><p><strong>EPS</strong> — электроусилитель руля: мотор рейки, который и поворачивает колёса.</p></li>
+<li><p><strong>HCA / HCA_01</strong> — CAN-кадр (адрес <code class="docutils literal notranslate"><span class="pre">0x126</span></code>), который запрашивает у EPS момент ассиста.</p></li>
 <li><p><strong>cNm</strong> — сантиньютон-метр, 1/100 Н·м; единица команды момента. ±300 cNm = ±3 Н·м.</p></li>
 </ul>
 </section>
 <section id="id3">
 <h2>Геометрия и управление<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><strong>SWA</strong> — угол рулевого колеса, как его сообщает колонка на CAN.</p></li>
+<li><p><strong>SWA</strong> — угол рулевого колеса в том виде, в каком его сообщает колонка на CAN.</p></li>
 <li><p><strong>δ (delta)</strong> — угол колеса. SWA = <code class="docutils literal notranslate"><span class="pre">steer_sign</span> <span class="pre">·</span> <span class="pre">δ</span> <span class="pre">·</span> <span class="pre">steer_ratio</span></code>.</p></li>
-<li><p><strong>steer_ratio</strong> — градусов на руле на градус на колесе (~15.7 здесь).</p></li>
-<li><p><strong>κ (kappa)</strong> — кривизна пути, 1/радиус. Планировщик выдаёт её, а не угол.</p></li>
+<li><p><strong>steer_ratio</strong> — сколько градусов на руле приходится на градус на колесе (здесь ~15.7).</p></li>
+<li><p><strong>κ (kappa)</strong> — кривизна пути, 1/радиус. Планировщик выдаёт именно её, а не угол.</p></li>
 <li><p><strong>CTE</strong> — поперечное смещение машины от центра пути.</p></li>
-<li><p><strong>epsi</strong> — ошибка курса: угол между носом машины и касательной пути.</p></li>
-<li><p><strong>PID</strong> — регулятор, складывающий пропорциональный, интегральный и упреждающий члены ошибки (см.
+<li><p><strong>epsi</strong> — ошибка курса: угол между носом машины и касательной к пути.</p></li>
+<li><p><strong>PID</strong> — регулятор, который складывает пропорциональный, интегральный и упреждающий члены ошибки (см.
 <a class="reference internal" href="../Control/AngleControl.html"><span class="std std-doc">Угловой контур</span></a>).</p></li>
-<li><p><strong>недокрут / tire_stiffness_factor</strong> — колёса поворачивают меньше, чем предсказывает геометрия; фактор
+<li><p><strong>недокрут / tire_stiffness_factor</strong> — колёса поворачивают меньше, чем предсказывает геометрия; этот фактор
 масштабирует эталонную жёсткость (см. <a class="reference internal" href="../Control/VehicleModel.html"><span class="std std-doc">Модель машины</span></a>).</p></li>
 </ul>
 </section>
 <section id="id4">
 <h2>Локализация<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><strong>ENU</strong> — East-North-Up, локальный метрический кадр, в который проецируется GPS.</p></li>
-<li><p><strong>RPY</strong> — крен, тангаж, рыскание: углы установки камеры (и затравка установки IMU телефона).</p></li>
-<li><p><strong>EKF</strong> — расширенный фильтр Калмана: оцениватель «предсказание→обновление» (см.
+<li><p><strong>ENU</strong> — East-North-Up, локальная метрическая система координат, в которую проецируется GPS.</p></li>
+<li><p><strong>RPY</strong> — крен, тангаж, рыскание: углы установки камеры (и начальное приближение для установки IMU телефона).</p></li>
+<li><p><strong>EKF</strong> — расширенный фильтр Калмана: оцениватель по схеме «предсказание→обновление» (см.
 <a class="reference internal" href="../Localization/Overview.html"><span class="std std-doc">Локализация</span></a>).</p></li>
-<li><p><strong>paramsd</strong> — онлайн-оцениватель параметров машины (жёсткость, передаточное, смещения); построен и
+<li><p><strong>paramsd</strong> — онлайновый оцениватель параметров машины (жёсткость, передаточное, смещения); он готов, но
 поставляется отключённым.</p></li>
 </ul>
 </section>
@@ -479,21 +479,21 @@
 <h2>Зрение и рантайм<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p><strong>Supercombo</strong> — сеть вождения comma: от кадров камеры к линиям разметки и плану.</p></li>
-<li><p><strong>thneed</strong> — записанный прогон Supercombo на GPU, переигрываемый на GPU телефона (см.
+<li><p><strong>thneed</strong> — записанный прогон Supercombo на GPU, который переигрывается на GPU телефона (см.
 <a class="reference internal" href="../Vision/Supercombo.html"><span class="std std-doc">Supercombo</span></a>).</p></li>
-<li><p><strong>ONNX / ONNX Runtime</strong> — переносимый формат модели и его CPU/NNAPI-рантайм, запасной путь.</p></li>
-<li><p><strong>ZMQ</strong> — библиотека сообщений, соединяющая Java-сторону сенсоров с нативной C++.</p></li>
-<li><p><strong>protobuf</strong> — двоичный формат, в котором закодировано каждое логируемое сообщение и запись бега.</p></li>
+<li><p><strong>ONNX / ONNX Runtime</strong> — переносимый формат модели и его CPU/NNAPI-рантайм; запасной путь.</p></li>
+<li><p><strong>ZMQ</strong> — библиотека сообщений, которая связывает Java-сторону сенсоров с нативным C++.</p></li>
+<li><p><strong>protobuf</strong> — двоичный формат, в котором закодировано каждое логируемое сообщение и каждая запись бега.</p></li>
 </ul>
 </section>
 <section id="id6">
 <h2>Родословная<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
-<li><p><strong>comma / comma-two</strong> — <a class="reference external" href="http://comma.ai">comma.ai</a> и её устройство comma-two; линия openpilot, форк которой этот стек.</p></li>
-<li><p><strong>openpilot / flowpilot</strong> — стек вождения comma и его порт на Android; <code class="docutils literal notranslate"><span class="pre">fp</span></code> назван по flowpilot.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> / <code class="docutils literal notranslate"><span class="pre">vp</span></code></strong> — поперечные стратегии: pure pursuit, MPC flowpilot (по умолчанию на дороге) и
-удалённый MPC VisionPilot (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, преподаётся только как игрушка).</p></li>
-<li><p><strong>acados</strong> — встраиваемый солвер оптимального управления, который может использовать <code class="docutils literal notranslate"><span class="pre">fp</span></code> для своего MPC.</p></li>
+<li><p><strong>comma / comma-two</strong> — <a class="reference external" href="http://comma.ai">comma.ai</a> и её устройство comma-two; линия openpilot, форком которой является этот стек.</p></li>
+<li><p><strong>openpilot / flowpilot</strong> — стек вождения comma и его порт на Android; название <code class="docutils literal notranslate"><span class="pre">fp</span></code> — от flowpilot.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> / <code class="docutils literal notranslate"><span class="pre">vp</span></code></strong> — поперечные стратегии: pure pursuit, MPC flowpilot (на дороге по умолчанию) и
+удалённый MPC VisionPilot (<code class="docutils literal notranslate"><span class="pre">vp</span></code>, разбирается только как игрушка).</p></li>
+<li><p><strong>acados</strong> — встраиваемый солвер оптимального управления; <code class="docutils literal notranslate"><span class="pre">fp</span></code> может использовать его для своего MPC.</p></li>
 </ul>
 </section>
 </section>

@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -435,9 +435,9 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="gps">
 <h1>GPS — локальные метры, что он даёт и как сделать, чтобы коррекция дожила<a class="headerlink" href="#gps" title="Ссылка на этот заголовок">#</a></h1>
-<p>Одометрия уплывает; единственная абсолютная опора у телефона — его GPS. Эта глава переводит широту и долготу в
-метры на локальной плоскости, честно смотрит, что фикс в 1–5 м может и не может поправить, и разбирается,
-почему коррекция, дошедшая до фильтра, через секунду всё равно может исчезнуть.</p>
+<p>Одометрия уплывает, и единственная абсолютная опора у телефона — его GPS. Эта глава переводит широту и долготу
+в метры на локальной плоскости, честно разбирает, что фикс в 1–5 м способен и не способен поправить, и выясняет,
+почему коррекция, уже дошедшая до фильтра, через секунду может всё равно исчезнуть.</p>
 <section id="a-gps">
 <h2>Шаг 3a: GPS → локальные метры<a class="headerlink" href="#a-gps" title="Ссылка на этот заголовок">#</a></h2>
 <p>Начало <span class="math notranslate nohighlight">\((\phi_0,\lambda_0)\)</span> — первый валидный фикс. С радиусом Земли <span class="math notranslate nohighlight">\(R = 6\,371\,000\)</span> м:</p>
@@ -455,11 +455,10 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
 \[
 \psi = \mathrm{normalize}\Big(\tfrac{\pi}{2} - b_{\deg}\tfrac{\pi}{180}\Big).
 \]</div>
-<p>Это <span class="math notranslate nohighlight">\(\tfrac{\pi}{2} - b\)</span> стоит выжечь в памяти. Однажды перевёрнутое, оно дало в анализе заезда сообщение об
-ошибке курса в 103° там, где настоящая ошибка была 0.3°, и час ушёл на охоту за несуществующей ошибкой
-фильтра.</p>
-<p>Курсу доверяют только выше <span class="math notranslate nohighlight">\(v &gt; 2\)</span> м/с, а особенность стояния (<span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> при почти нулевом пеленге)
-отбрасывается. Затем <span class="math notranslate nohighlight">\(v_x = v\sin b\)</span>, <span class="math notranslate nohighlight">\(v_y = v\cos b\)</span>.</p>
+<p>Это <span class="math notranslate nohighlight">\(\tfrac{\pi}{2} - b\)</span> стоит вызубрить намертво. Стоило один раз его перепутать — и разбор заезда показал
+ошибку курса в 103° там, где настоящая была 0.3°, а час ушёл на охоту за несуществующей ошибкой фильтра.</p>
+<p>Курсу доверяют только при <span class="math notranslate nohighlight">\(v &gt; 2\)</span> м/с, а вырожденный случай стоянки (<span class="math notranslate nohighlight">\(v &lt; 0.5\)</span> при почти нулевом пеленге)
+отбрасывается. Дальше <span class="math notranslate nohighlight">\(v_x = v\sin b\)</span>, <span class="math notranslate nohighlight">\(v_y = v\cos b\)</span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 
 <span class="n">R_EARTH</span> <span class="o">=</span> <span class="mf">6_371_000.0</span>
@@ -479,13 +478,13 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"bearing </span><span class="si">{</span><span class="n">b</span><span class="si">:</span><span class="s2">5.0f</span><span class="si">}</span><span class="s2">° → ENU yaw </span><span class="si">{</span><span class="n">math</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">yaw_enu_from_bearing_deg</span><span class="p">(</span><span class="n">b</span><span class="p">))</span><span class="si">:</span><span class="s2">+7.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Плоская Земля подходит для заезда на несколько километров. Пересечение сброса начала координат (перезапуск
-приложения) начинает <strong>новую</strong> плоскость — не сшивайте беги без повторной привязки.</p>
+<p>Приближение плоской Земли годится для заезда в несколько километров. Сброс начала координат (перезапуск
+приложения) заводит <strong>новую</strong> плоскость — не сшивайте беги без повторной привязки.</p>
 </section>
 <hr class="docutils" />
 <section id="b-gps">
 <h2>Шаг 3b: что даёт GPS и что он прячет<a class="headerlink" href="#b-gps" title="Ссылка на этот заголовок">#</a></h2>
-<p>Измерено против GNSS на ночном заезде (23.5 мин, трёхмерный фикс всё время):</p>
+<p>Сверено с GNSS на ночном заезде (23.5 мин, трёхмерный фикс всё время):</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>величина</p></th>
@@ -502,28 +501,28 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
 </tbody>
 </table>
 </div>
-<p>Выглядит отлично, и так оно и есть — с оговоркой, что число по курсу частично измеряет, как часто GPS
-защёлкивал курс на место, а число по скорости несёт описанное выше смещение радиуса колеса. Фильтр,
-сравниваемый с тем, что его корректирует, всегда будет выглядеть хорошо.</p>
-<p>Честная проверка фильтра — что он делает, когда источника нет. Ровно для этого нужна симуляция дуги выше, и
-именно поэтому правка со скоростью рыска была важна, хотя ни один записанный заезд не жаловался.</p>
+<p>Выглядит отлично — и так оно и есть, с одной оговоркой: число по курсу отчасти отражает, как часто GPS
+защёлкивал курс на место, а число по скорости несёт то самое смещение радиуса колеса. Фильтр, который
+сравнивают с тем, что его же и корректирует, всегда будет выглядеть хорошо.</p>
+<p>Честная проверка фильтра — как он ведёт себя, когда источника нет. Ровно для этого и нужна симуляция дуги
+выше, и именно поэтому правка со скоростью рыска была важна, хотя ни один записанный заезд на неё не жаловался.</p>
 </section>
 <hr class="docutils" />
 <section id="id1">
 <h2>Шаг 4: как сделать, чтобы коррекция дожила, и обнаружить, что этого всё равно мало<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Шаг 3 дал ограниченные позицию и курс. Он не дал заслуживающей доверия <strong>скорости</strong>, и причина той же формы,
-что в шаге 2, — это стоит увидеть дважды, потому что так фильтр Калмана тихо выводят из строя чаще всего.</p>
-<p><code class="docutils literal notranslate"><span class="pre">updateGpsVel</span></code> вызывался. Но <code class="docutils literal notranslate"><span class="pre">predict</span></code> делал <code class="docutils literal notranslate"><span class="pre">state_(3)</span> <span class="pre">=</span> <span class="pre">v_measured</span></code> на каждом тике, то есть примерно каждые
-10 мс, а скорость GPS приходит раз в 0.2 с. Значит коррекцию перезаписывало около двадцати раз до прихода
-следующей. Слитая скорость была скоростью колёс с точностью до шестого знака.</p>
-<p>Была и вторая, независимая причина: обновлению задали <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code>, то есть предположенный шум доплера в 1 м/с.
-Измеренный доплер на порядок лучше — остаток против скорости колёс с исправленным масштабом составляет
-0.066–0.101 м/с, и в него входят оба датчика плюс дискретизация 1 Гц.</p>
-<p>Две причины взаимодействуют так, что стоит предсказать до запуска кода. В старом режиме с присваиванием
-дисперсию скорости ничто не сжимало, поэтому она росла без границы и усиление GPS подходило к единице:
-обновление сдвигало скорость <em>полностью</em> к значению GPS, а следующий тик это выбрасывал. Сделайте скорость
-состоянием — и дисперсия теперь мала, поэтому при <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code> обновление почти не регистрируется. Только с
-обеими правками оно и попадает, и держится.</p>
+<p>Шаг 3 дал ограниченные позицию и курс, но не дал надёжной <strong>скорости</strong>, и причина здесь той же природы, что в
+шаге 2. Её стоит увидеть дважды: именно так фильтр Калмана тихо выводят из строя чаще всего.</p>
+<p><code class="docutils literal notranslate"><span class="pre">updateGpsVel</span></code> вызывался. Но <code class="docutils literal notranslate"><span class="pre">predict</span></code> на каждом тике делал <code class="docutils literal notranslate"><span class="pre">state_(3)</span> <span class="pre">=</span> <span class="pre">v_measured</span></code> — то есть примерно каждые
+10 мс, — а скорость GPS приходит раз в 0.2 с. Значит, коррекцию перезаписывало около двадцати раз до прихода
+следующей. Слитая скорость была скоростью колёс вплоть до шестого знака.</p>
+<p>Была и вторая, независимая причина: обновлению задали <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code> — то есть предполагаемый шум доплера в 1 м/с.
+На деле доплер на порядок точнее: остаток относительно скорости колёс с исправленным масштабом составляет
+0.066–0.101 м/с, причём в него входят оба датчика плюс дискретизация 1 Гц.</p>
+<p>Эти две причины сцепляются так, что исход стоит предсказать ещё до запуска кода. В старом режиме с присваиванием
+дисперсию скорости ничто не сжимало, поэтому она росла без ограничения, а усиление GPS подходило к единице:
+обновление сдвигало скорость <em>целиком</em> к значению GPS, а следующий тик его выбрасывал. Сделайте скорость
+состоянием — и дисперсия становится малой, так что при <code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">1.0</span></code> обновление почти не сказывается. И только с
+обеими правками оно попадает в цель и держится.</p>
 <p>Обе исправлены: скорость — состояние (<code class="docutils literal notranslate"><span class="pre">setSpeedIsAState</span></code>), а <code class="docutils literal notranslate"><span class="pre">gps_vel_R</span></code> равно <span class="math notranslate nohighlight">\(0.1^2\)</span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The two failure modes and the fix, in one experiment. True speed 20.0; CAN reports 20.24 (the measured</span>
 <span class="c1"># 1.2 % scale); GPS velocity reports the truth once every 20 ticks.</span>
@@ -567,20 +566,20 @@ x &amp;= R\,\Delta\lambda\cos\phi_0 &amp;&amp; \text{(восток)}.
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: right after GPS </span><span class="si">{</span><span class="n">after</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, one GPS period later </span><span class="si">{</span><span class="n">end</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Прочитайте третью строку внимательно. Коррекция теперь попадает — и к моменту, когда GPS заговорит снова,
-скорость колёс затянула оценку обратно к 20.24.</p>
-<p>Это не провал настройки, а неидентифицируемость. Смещённое измерение приходит в двадцать раз чаще при том же
-предполагаемом шуме, поэтому между посылками выигрывает оно; и никакая пара предположений о несмещённом шуме
-не отделит <strong>постоянное смещение на частом измерении</strong> от истины. Понизить доверие к колёсам значило бы
-выбросить их по-настоящему низкий шум и ухудшить оценку везде.</p>
-<p>Выход — перестать делать вид, что смещение это шум, и дать ему собственное состояние: оценивать масштаб. Именно
-это <code class="docutils literal notranslate"><span class="pre">paramsd</span></code> делает для параметров машины, и поэтому шаг 5 — то место, где эта глава останавливается, а та
-работа начинается.</p>
+<p>Прочитайте третью строку внимательно. Коррекция теперь попадает — но к моменту, когда GPS заговорит снова,
+скорость колёс уже утянула оценку обратно к 20.24.</p>
+<p>Дело не в плохой настройке, а в неидентифицируемости. Смещённое измерение приходит в двадцать раз чаще при том
+же предполагаемом шуме, поэтому в промежутках между посылками побеждает именно оно; и никакая пара допущений о
+несмещённом шуме не отделит <strong>постоянное смещение на частом измерении</strong> от истины. Понизить доверие к колёсам —
+значит отказаться от их по-настоящему низкого шума и ухудшить оценку повсюду.</p>
+<p>Выход — перестать выдавать смещение за шум и дать ему собственное состояние: оценивать масштаб. Именно это
+<code class="docutils literal notranslate"><span class="pre">paramsd</span></code> делает для параметров машины, поэтому шаг 5 — та точка, где эта глава заканчивается, а та работа
+начинается.</p>
 <div class="tip admonition">
 <p class="admonition-title">Общий урок</p>
-<p>Дважды в одном фильтре измерение победила не плохая математика, а присваивание в шаге предсказания. Если вам
-досталcя оценщик и датчик «как будто ни на что не влияет», сначала проверьте, не пишет ли кто-то ниже по
-потоку в его состояние.</p>
+<p>Дважды в одном фильтре измерение погубила не плохая математика, а присваивание на шаге предсказания. Если вам
+достался оценщик, а датчик «как будто ни на что не влияет», первым делом проверьте, не пишет ли кто-то ниже по
+потоку прямо в его состояние.</p>
 </div>
 <hr class="docutils" />
 <!-- next-chapter -->

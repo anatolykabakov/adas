@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Угловой контур — то место, где обратная связь действительно кончается &#8212; Алгоритмы ADAS на телефоне</title>
+    <title>Угловой контур — там, где обратная связь и вправду заканчивается &#8212; Алгоритмы ADAS на телефоне</title>
   
   
   
@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -409,7 +409,7 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Угловой контур — то место, где обратная связь действительно кончается</h1>
+    <h1>Угловой контур — там, где обратная связь и вправду заканчивается</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -440,14 +440,14 @@
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
-<h1>Угловой контур — то место, где обратная связь действительно кончается<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Каждая глава до сих пор производила <em>желаемую</em> траекторию: кривизну из планировщика, угол колеса из
-модели машины. Эта глава — про последний контур, которому нужно заставить физическую рулевую рейку
-согласиться, через единственный рычаг, который предлагает машина: <strong>момент ассиста, ±300 cNm, с
-темповым ограничителем панды</strong>. Здесь же живут три измеренных сюрприза этого проекта: момент насыщается
-о <em>трение</em> задолго до того, как в дело вступают шины; интегратор накручивается против ограничителя,
-которого не видит; а упреждение, которое должно было помогать, вносит единицы cNm из 300.</p>
-<p>Цепочка, с владельцами и темпами:</p>
+<h1>Угловой контур — там, где обратная связь и вправду заканчивается<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
+<p>Все предыдущие главы выдавали <em>желаемую</em> траекторию: кривизну от планировщика, угол колеса от
+модели машины. Эта глава — про последний контур, которому предстоит заставить физическую рулевую рейку
+подчиниться, и рычаг у него один — тот, что даёт машина: <strong>момент ассиста, ±300 cNm, с
+темповым ограничителем панды</strong>. Здесь же собрались три измеренных сюрприза этого проекта: момент
+упирается в <em>трение</em> задолго до того, как в дело вступают шины; интегратор накручивается против
+ограничителя, которого не видит; а упреждение, которое должно было помогать, добавляет считаные cNm из 300.</p>
+<p>Вот вся цепочка — кто чем владеет и на каком темпе работает:</p>
 <figure class="align-default" id="id8">
 <a class="reference internal image-reference" href="../_images/control_cascade.png"><img alt="../_images/control_cascade.png" src="../_images/control_cascade.png" style="width: 95%;" />
 </a>
@@ -463,21 +463,21 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
 </div>
 <p>Код: <code class="docutils literal notranslate"><span class="pre">lateral/angle_control.h</span></code> (уставка, выученный ноль, слю), <code class="docutils literal notranslate"><span class="pre">utils/lat_control_pid.h</span></code> (сам PID),
 <code class="docutils literal notranslate"><span class="pre">services/control.cpp</span></code> (момент = <code class="docutils literal notranslate"><span class="pre">lround(steer_norm</span> <span class="pre">*</span> <span class="pre">max_torque_cnm)</span></code>),
-<code class="docutils literal notranslate"><span class="pre">platform/volkswagen/values.h</span></code> (константы панды). Момент здесь — в <strong>cNm</strong> (сантиньютон-метрах, сотых
-Н·м); потолок панды ±300 cNm — это ±3 Н·м ассиста на колонке.</p>
+<code class="docutils literal notranslate"><span class="pre">platform/volkswagen/values.h</span></code> (константы панды). Момент здесь измеряется в <strong>cNm</strong> (сантиньютон-метрах,
+сотых долях Н·м); потолок панды ±300 cNm — это ±3 Н·м ассиста на колонке.</p>
 <div class="note admonition">
 <p class="admonition-title">Если вы не встречали PID</p>
-<p>PID превращает <em>ошибку</em> (уставка минус измерение — здесь ошибку угла руля) в <em>команду</em> (момент), складывая
-три члена: <strong>P</strong> — пропорционально текущей ошибке, <strong>I</strong> — интеграл прошлой ошибки (съедает постоянное
-смещение, которое P оставляет), <strong>F</strong> — упреждение, считаемое прямо из цели, а не из ошибки. «Антивиндап»
-— правило, не дающее <strong>I</strong> накапливаться, пока выход уже в упоре и действовать не может; именно этот
-механизм, смотрящий не на тот предел, эта глава и измеряет.</p>
+<p>PID превращает <em>ошибку</em> (уставка минус измерение — здесь это ошибка угла руля) в <em>команду</em> (момент),
+складывая три члена: <strong>P</strong> — пропорционально текущей ошибке; <strong>I</strong> — интеграл прошлой ошибки (он
+съедает постоянное смещение, которое P оставляет); <strong>F</strong> — упреждение, посчитанное прямо из цели, а не
+из ошибки. «Антивиндап» — это правило, которое не даёт <strong>I</strong> копиться, пока выход уже в упоре и
+подействовать не может; именно этот механизм, глядящий не на тот предел, эта глава и измеряет.</p>
 </div>
 <section id="id2">
 <h2>Постройте рейку<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <p>Объект, с которым борется этот контур, — не машина, а <strong>рейка</strong>: сухое трение плюс самоустанавливающий
-момент, растущий со скоростью и углом. Выученный comma <code class="docutils literal notranslate"><span class="pre">frictionCoefficientRaw</span> <span class="pre">=</span> <span class="pre">0.192</span></code> для этой
-платформы — это около <strong>57 cNm</strong> страгивания; игрушка берёт это число:</p>
+момент, растущий со скоростью и углом. Выученный comma коэффициент <code class="docutils literal notranslate"><span class="pre">frictionCoefficientRaw</span> <span class="pre">=</span> <span class="pre">0.192</span></code> для
+этой платформы — это около <strong>57 cNm</strong> страгивания; игрушечная модель берёт именно это число:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -496,14 +496,14 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
     <span class="k">return</span> <span class="n">swa_deg</span> <span class="o">+</span> <span class="n">K_RACK</span> <span class="o">*</span> <span class="p">(</span><span class="n">net</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">copysign</span><span class="p">(</span><span class="n">T_FRICTION</span><span class="p">,</span> <span class="n">net</span><span class="p">))</span> <span class="o">*</span> <span class="n">dt</span>
 </pre></div>
 </div>
-<p>Два честных упрощения: нет инерции (рейка сильно заредуцирована) и нет водителя. Оба значат меньше
-трения — в этом и смысл стройки.</p>
+<p>Два честных упрощения: инерции нет (рейка сильно заредуцирована) и водителя нет. И то и другое означает
+меньше трения — в этом и смысл затеи.</p>
 </section>
 <section id="p">
 <h2>Только P: мёртвая зона трения<a class="headerlink" href="#p" title="Ссылка на этот заголовок">#</a></h2>
 <p>Боевой пропорциональный коэффициент в единицах момента — около 180 cNm на градус ошибки угла
-(<code class="docutils literal notranslate"><span class="pre">pid_kp</span> <span class="pre">=</span> <span class="pre">0.6</span></code> на нормированной шкале, где ±1 — это ±300 cNm; измерено на этом стеке: один P упирается
-в предел при ошибке 1.67°):</p>
+(<code class="docutils literal notranslate"><span class="pre">pid_kp</span> <span class="pre">=</span> <span class="pre">0.6</span></code> на нормированной шкале, где ±1 — это ±300 cNm; замерено на этом стеке: один только P
+упирается в предел уже при ошибке 1.67°):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KP_T</span> <span class="o">=</span> <span class="mf">180.0</span>    <span class="c1"># cNm per degree of angle error</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">drive_to</span><span class="p">(</span><span class="n">target_deg</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span> <span class="n">t_end</span><span class="o">=</span><span class="mf">6.0</span><span class="p">):</span>
@@ -526,30 +526,30 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
 <span class="k">assert</span> <span class="mf">0.25</span> <span class="o">&lt;</span> <span class="n">standing</span> <span class="o">&lt;</span> <span class="mf">0.6</span><span class="p">,</span> <span class="s2">"P alone must stall on friction: a standing error it can never close"</span>
 </pre></div>
 </div>
-<p>P замирает ровно там, где его момент перестаёт побеждать страгивание плюс самоустановку: ошибка
-застывает на <span class="math notranslate nohighlight">\((T_{\mathrm{sat}} + T_{\mathrm{fric}})/k_p\)</span>. Ниже этого 2° ошибки и 0.4° ошибки командуют
-одно и то же <em>ничего</em>. Никакой коэффициент это не чинит — рост <span class="math notranslate nohighlight">\(k_p\)</span> сжимает мёртвую зону и заодно
-усиливает каждый квантованный тик измеренного SWA с CAN.</p>
+<p>P замирает ровно там, где его момента перестаёт хватать на страгивание плюс самоустановку: ошибка
+застывает на <span class="math notranslate nohighlight">\((T_{\mathrm{sat}} + T_{\mathrm{fric}})/k_p\)</span>. Ниже этого порога и ошибка в 2°, и ошибка в
+0.4° командуют одно и то же — <em>ничего</em>. Коэффициентом это не лечится: рост <span class="math notranslate nohighlight">\(k_p\)</span> сжимает мёртвую зону,
+но заодно усиливает каждый квантованный тик измеренного SWA, пришедшего по CAN.</p>
 <figure class="align-default" id="id9">
 <a class="reference internal image-reference" href="../_images/friction_deadband.png"><img alt="../_images/friction_deadband.png" src="../_images/friction_deadband.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 34 </span><span class="caption-text">Команда P пропорциональна ошибке, но ниже момента трения-плюс-самоустановки рейка не двигается вовсе —
-мёртвая зона, которую не закрыть коэффициентом.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 34 </span><span class="caption-text">Команда P пропорциональна ошибке, но пока её момент ниже суммы трения и самоустановки, рейка не
+трогается с места — это мёртвая зона, которую коэффициентом не закрыть.</span><a class="headerlink" href="#id9" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 </section>
 <section id="i">
 <h2>I: один интегратор, два ограничения — а знает он только про одно<a class="headerlink" href="#i" title="Ссылка на этот заголовок">#</a></h2>
-<p>Интегратор съедает смещение от трения. Но живёт он между <strong>двумя</strong> ограничениями, и боевой антивиндап
-(<code class="docutils literal notranslate"><span class="pre">lat_control_pid.h</span></code>) смотрит только на первое:</p>
+<p>Интегратор съедает смещение от трения. Но живёт он между <strong>двумя</strong> ограничениями, а боевой антивиндап
+(<code class="docutils literal notranslate"><span class="pre">lat_control_pid.h</span></code>) видит только первое из них:</p>
 <ul class="simple">
 <li><p>зажим выхода ±1 (±300 cNm) — интегрирование пропускается, когда пробный выход вышел бы за него;</p></li>
-<li><p><strong>темповой ограничитель панды</strong> — величина может расти лишь на 4 cNm за 20-мс кадр (200 cNm/с) и
-падать на 10 (500 cNm/с). PID его не видит: его выход <em>не</em> у зажима, пока применённый момент ползёт,
-и интеграл накручивается на ошибку, которую физически ещё нельзя убрать.</p></li>
+<li><p><strong>темповой ограничитель панды</strong> — величина момента может расти лишь на 4 cNm за 20-мс кадр (200 cNm/с)
+и падать на 10 (500 cNm/с). PID его не замечает: его собственный выход <em>не</em> у зажима, пока применённый
+момент ещё ползёт, — и интеграл накручивается на ошибку, которую физически пока не убрать.</p></li>
 </ul>
-<p>Постройте ограничитель и измерьте слепое пятно:</p>
+<p>Соберём ограничитель и измерим это слепое пятно:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">panda_limit</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">wanted</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">DT</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""MQB HCA rate limit: magnitude up 4 cNm / 20 ms, down 10 cNm / 20 ms."""</span>
     <span class="n">up</span><span class="p">,</span> <span class="n">down</span> <span class="o">=</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span><span class="p">,</span> <span class="mf">10.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="mf">0.02</span>
@@ -591,10 +591,11 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
 <span class="k">assert</span> <span class="n">over_blind</span> <span class="o">&gt;</span> <span class="n">over_aware</span> <span class="o">+</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s2">"winding against the rate limiter must cost visible overshoot"</span>
 </pre></div>
 </div>
-<p>Это слепое пятно не гипотеза: апстримный openpilot передаёт в тот же PID
-<code class="docutils literal notranslate"><span class="pre">freeze_integrator</span> <span class="pre">=</span> <span class="pre">steer_limited</span></code>, а наш порт несёт параметр в сигнатуре, <strong>не передавая его</strong>, —
-применённый момент после разворота ползёт со скоростью 200 cNm/с, пока интеграл тихо заряжается. Та же
-форма, что в игрушке, измерена по дорожным бегам в <code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code>.</p>
+<p>Это слепое пятно не гипотеза: апстримный openpilot передаёт в тот же самый PID
+<code class="docutils literal notranslate"><span class="pre">freeze_integrator</span> <span class="pre">=</span> <span class="pre">steer_limited</span></code>, а наш порт держит этот параметр в сигнатуре, но <strong>так его и не
+передаёт</strong>, — после разворота применённый момент ползёт со скоростью 200 cNm/с, а интеграл тем временем
+тихо заряжается. Ровно та же картина, что и в игрушке, измерена по дорожным бегам в
+<code class="docutils literal notranslate"><span class="pre">docs/LATERAL_CHAIN_RU.md</span></code>.</p>
 </section>
 <section id="f">
 <h2>F: упреждение, которое почти не участвует<a class="headerlink" href="#f" title="Ссылка на этот заголовок">#</a></h2>
@@ -602,12 +603,12 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
 <a class="reference internal image-reference" href="../_images/feedforward.png"><img alt="../_images/feedforward.png" src="../_images/feedforward.png" style="width: 75%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 35 </span><span class="caption-text">При боевом <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> упреждение до шоссейной скорости остаётся ниже собственного трения рейки; порог 9.8 м/с
-поднимает его в полезный диапазон.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 35 </span><span class="caption-text">При боевом <code class="docutils literal notranslate"><span class="pre">v0</span> <span class="pre">=</span> <span class="pre">0</span></code> упреждение вплоть до шоссейной скорости остаётся ниже собственного трения рейки;
+порог 9.8 м/с выводит его в полезный диапазон.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Упреждение — это <span class="math notranslate nohighlight">\(k_f \cdot \mathrm{SWA} \cdot (v^2 + v_0^2)\)</span>: момент, который понадобится даже при
-нулевой ошибке, из физики самоустановки. Его боевой размер, в тех единицах, которые важны:</p>
+<p>Упреждение — это <span class="math notranslate nohighlight">\(k_f \cdot \mathrm{SWA} \cdot (v^2 + v_0^2)\)</span>: момент, который из-за самоустановки
+понадобится даже при нулевой ошибке. Вот его боевая величина в тех единицах, которые тут важны:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">KF</span> <span class="o">=</span> <span class="mf">6e-5</span>     <span class="c1"># shipped lat_pid_kf, on the normalised scale</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">ff_cnm</span><span class="p">(</span><span class="n">swa_deg</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">v0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
@@ -619,45 +620,46 @@ Platform (темп HCA, 50 Гц)       темповой ограничитель
 <span class="k">assert</span> <span class="n">ff_cnm</span><span class="p">(</span><span class="mf">5.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">T_FRICTION</span> <span class="o">/</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">"at city speed the feedforward is buried under friction"</span>
 </pre></div>
 </div>
-<p>Держите вместе два факта. Первый: ниже ~10 м/с член — погрешность округления рядом с 57 cNm трения,
-которые ему нужно перебороть, — потому и существует скоростной порог <span class="math notranslate nohighlight">\(v_0\)</span> (дефолт в коде 9.8 м/с).
+<p>Держите в голове два факта сразу. Первый: ниже ~10 м/с этот член — погрешность округления на фоне 57 cNm
+трения, которые ему нужно перебороть; ради этого и введён скоростной порог <span class="math notranslate nohighlight">\(v_0\)</span> (дефолт в коде 9.8 м/с).
 Второй: <strong>в боевом конфиге <code class="docutils literal notranslate"><span class="pre">lat_pid_ff_floor_mps:</span> <span class="pre">0.0</span></code></strong> — на заезде 2026-08-21 подразумеваемый <span class="math notranslate nohighlight">\(k_f\)</span>,
-восстановленный из <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> бега, был 5.63e-5 против конфигурационных 6e-5 (арифметика нулевого порога),
-а измеренный вклад — 1.3 / 3.2 / 4.3 cNm по скоростным корзинам, из 300. Поправка существует в коде и
-выключена в поле; измерение — в <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code>.</p>
+восстановленный из <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> бега, оказался 5.63e-5 против конфигурационных 6e-5 (арифметика нулевого
+порога), а измеренный вклад — 1.3 / 3.2 / 4.3 cNm по скоростным корзинам, из тех же 300. Поправка в коде
+есть, но в поле выключена; само измерение — в <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code>.</p>
 </section>
 <section id="id3">
 <h2>Перехват водителем: разматывать, не замораживать<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
 <p>Когда водитель держит руль (<code class="docutils literal notranslate"><span class="pre">steering_pressed</span></code>, допуск 80 cNm на стороне панды), интегратор не
-замораживается — он <strong>разматывается</strong> со скоростью <code class="docutils literal notranslate"><span class="pre">0.3/rate</span></code> за тик, исчезая примерно за три секунды.
-Замороженное состояние вернуло бы момент до перехвата в тот миг, когда водитель отпустит руль, — на
-дороге, которая с тех пор изогнулась; размотка возвращает контур, который учится заново с нуля.
-Асимметрия намеренная, и в игрушке её дёшево увидеть: заморозьте <code class="docutils literal notranslate"><span class="pre">st[&quot;i&quot;]</span></code> на время имитированного
-перехвата и посмотрите на переходный процесс отпускания.</p>
+замораживается — он <strong>разматывается</strong> со скоростью <code class="docutils literal notranslate"><span class="pre">0.3/rate</span></code> за тик и обнуляется примерно за три
+секунды. Заморозь мы его — и в момент, когда водитель отпустит руль, контур вернул бы прежний, довходной
+момент на дорогу, которая с тех пор уже изогнулась; размотка же возвращает контур, начинающий учиться
+заново с нуля. Асимметрия сделана намеренно, и в игрушке её ничего не стоит увидеть: заморозьте <code class="docutils literal notranslate"><span class="pre">st[&quot;i&quot;]</span></code>
+на время имитированного перехвата и посмотрите на переходный процесс отпускания.</p>
 </section>
 <section id="id4">
 <h2>Что здесь меняет обучатель<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> подаёт в этот контур три числа (<code class="docutils literal notranslate"><span class="pre">setLearnedParams</span></code>): <strong>жёсткость</strong> шин (работает уровнем выше,
-κ→δ), <strong>передаточное отношение</strong> и <strong>ноль угла</strong> — выученное смещение, добавляемое к каждой уставке
-(<code class="docutils literal notranslate"><span class="pre">setSetpointFromSteer</span></code>). В быту важнее всего ноль: переустановка телефона или уплывший сход-развал
-проявляются постоянным смещением руля, которое иначе интегратор медленно съедал бы при каждом
-включении заново. Аксессоры <code class="docutils literal notranslate"><span class="pre">effective*</span></code> в <code class="docutils literal notranslate"><span class="pre">angle_control.h</span></code> говорят, какой источник в силе.</p>
+<p><code class="docutils literal notranslate"><span class="pre">paramsd</span></code> подаёт в этот контур три числа (<code class="docutils literal notranslate"><span class="pre">setLearnedParams</span></code>): <strong>жёсткость</strong> шин (она работает уровнем
+выше, κ→δ), <strong>передаточное отношение</strong> и <strong>ноль угла</strong> — выученное смещение, которое добавляется к каждой
+уставке (<code class="docutils literal notranslate"><span class="pre">setSetpointFromSteer</span></code>). На практике важнее всего ноль: переустановка телефона или уплывший
+сход-развал дают постоянное смещение руля, которое иначе интегратору пришлось бы медленно съедать при
+каждом новом включении. Аксессоры <code class="docutils literal notranslate"><span class="pre">effective*</span></code> в <code class="docutils literal notranslate"><span class="pre">angle_control.h</span></code> показывают, какой источник сейчас в силе.</p>
 </section>
 <section id="id5">
 <h2>Как это читать в беге<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
-<p>Всё выше пишется в <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> на каждом тике: <code class="docutils literal notranslate"><span class="pre">desired_swa_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">actual_swa_deg</span></code>,
-<code class="docutils literal notranslate"><span class="pre">angle_error_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">torque_cnm</span></code> и разложение <code class="docutils literal notranslate"><span class="pre">pid_p</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_f</span></code>. <code class="docutils literal notranslate"><span class="pre">torque_saturated</span></code>
-взводится на 99 % потолка и, продержавшись секунду, становится экранным алертом <strong>STEERING LIMIT</strong>.
-Самый полезный график здравомыслия — <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> от времени: он должен дышать с поворотами, а не
-защёлкиваться.</p>
+<p>Всё перечисленное выше пишется в <code class="docutils literal notranslate"><span class="pre">control/lane_keep_debug</span></code> на каждом тике: <code class="docutils literal notranslate"><span class="pre">desired_swa_deg</span></code>,
+<code class="docutils literal notranslate"><span class="pre">actual_swa_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">angle_error_deg</span></code>, <code class="docutils literal notranslate"><span class="pre">torque_cnm</span></code> и разложение <code class="docutils literal notranslate"><span class="pre">pid_p</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> / <code class="docutils literal notranslate"><span class="pre">pid_f</span></code>.
+<code class="docutils literal notranslate"><span class="pre">torque_saturated</span></code> взводится на 99 % потолка и, продержавшись секунду, превращается в экранный алерт
+<strong>STEERING LIMIT</strong>. Самый полезный график для проверки на вменяемость — <code class="docutils literal notranslate"><span class="pre">pid_i</span></code> от времени: он должен
+дышать вместе с поворотами, а не защёлкиваться.</p>
 </section>
 <section id="id6">
 <h2>Приёмка<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p>мёртвая зона P воспроизводится и сходится с <span class="math notranslate nohighlight">\((T_{\mathrm{sat}}+T_{\mathrm{fric}})/k_p\)</span>;</p></li>
-<li><p>опыт с разворотом показывает измеримо большее перерегулирование, когда интегратор слеп к темповому
-ограничителю, — теперь вы можете назвать боевой пробел <code class="docutils literal notranslate"><span class="pre">freeze_integrator</span></code> одним предложением;</p></li>
-<li><p>таблица упреждения объясняет — вместе с измеренными по бегу 1.3–4.3 cNm — почему дуги насыщаются на
+<li><p>опыт с разворотом даёт измеримо большее перерегулирование, когда интегратор слеп к темповому
+ограничителю, — и теперь вы можете одним предложением объяснить, чего не хватает боевому
+<code class="docutils literal notranslate"><span class="pre">freeze_integrator</span></code>;</p></li>
+<li><p>таблица упреждения вместе с измеренными по бегу 1.3–4.3 cNm объясняет, почему дуги насыщаются на
 300 cNm, пока <code class="docutils literal notranslate"><span class="pre">pid_f</span></code> остаётся однозначным числом.</p></li>
 </ul>
 </section>

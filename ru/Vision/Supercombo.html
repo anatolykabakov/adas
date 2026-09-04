@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -454,25 +454,24 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="supercombo">
 <h1>Supercombo на устройстве<a class="headerlink" href="#supercombo" title="Ссылка на этот заголовок">#</a></h1>
-<p>Мы хотим, чтобы телефон превращал кадр с камеры на лобовом стекле в контракт <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора</span></a>.
+<p>Наша цель — чтобы телефон превращал кадр с камеры на лобовом стекле в контракт <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора</span></a>.
 Сеть — одна модель из семейства openpilot / flowpilot: <strong>supercombo 0.9.7</strong>, семь входов, ширина выхода
-6504. В приложении она едет дважды: как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.onnx</span></code> (fp32) и как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.thneed</span></code> —
-та же сеть в fp16 под GPU, собранная из этого же ONNX. Какой бы раннер ни был выбран, сеть одна и та же, и
-именно это делает два пути вообще сравнимыми.</p>
+6504. В приложении она лежит в двух видах: как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.onnx</span></code> (fp32) и как <code class="docutils literal notranslate"><span class="pre">assets/supercombo.thneed</span></code> —
+та же сеть в fp16 под GPU, собранная из того же самого ONNX. Какой бы раннер ни выбрали, сеть одна и та же — именно поэтому два пути вообще можно сравнивать.</p>
 <section id="id1">
 <h2>Шаг 1: привести кадр к геометрии, которую ждёт модель<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Сеть обучалась на одной камере в одном положении крепления. У нас ни то, ни другое, поэтому перед инференсом
-кадр разворачивается в каноническую геометрию openpilot «medmodel» — 512×256, фокус 910 px — с вычтенными
-выученными углами крепления. Эта гомография, почему она зависит от двух разных калибровок и что с ней делает
-перестановка телефона на 1.5°, — предмет главы
-<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">Три калибровки, а не одна</span></a>. Прочтите её сначала, если ещё не.</p>
-<p>Два следствия, которые надо унести в эту главу:</p>
+<p>Сеть обучалась на одной камере в одном положении крепления. У нас ни то ни другое не совпадает, поэтому перед
+инференсом кадр разворачивается в каноническую геометрию openpilot «medmodel» — 512×256, фокус 910 px — с
+вычтенными выученными углами крепления. Что это за гомография, почему она зависит от двух разных калибровок и
+что с ней делает перестановка телефона на 1.5°, — предмет главы
+<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">Три калибровки, а не одна</span></a>. Прочтите её сначала, если ещё не читали.</p>
+<p>Два вывода, которые надо унести отсюда:</p>
 <ul class="simple">
-<li><p>модель видит <em>производное</em> изображение, поэтому её выход наследует любую ошибку калибровки выше;</p></li>
-<li><p>warp не бесплатен. На процессоре он стоил 7 мс медианно и 35.7 мс на p95, и этот хвост был ровно теми
-кадрами, где эталон старше 150 мс. Теперь он считается ядром OpenCL: <strong>4.6 мс медианно, 10.8 мс на p95</strong>.
-Первый кадр после запуска считается обоими способами и сверяется побитово — потому что неверный варп не
-падает, он отдаёт сети правдоподобную картинку другой дороги.</p></li>
+<li><p>модель видит <em>производное</em> изображение, поэтому её выход наследует любую ошибку калибровки, сделанную выше;</p></li>
+<li><p>warp не бесплатен. На процессоре он стоил 7 мс по медиане и 35.7 мс на p95, и этот хвост приходился ровно
+на те кадры, где эталон старше 150 мс. Теперь его считает ядро OpenCL: <strong>4.6 мс по медиане, 10.8 мс на p95</strong>.
+Первый кадр после запуска считается обоими способами и сверяется побитово — ведь неверный warp не
+падает, а отдаёт сети правдоподобную картинку совсем другой дороги.</p></li>
 </ul>
 <section id="id2">
 <h3>Что происходит с одним кадром<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
@@ -488,13 +487,13 @@
 <div class="warning admonition">
 <p class="admonition-title">Политика отбрасывания</p>
 <p>Когда конвейер занят, <strong>новые кадры отбрасываются</strong>. Измеренный темп падает.
-Это задача зрения и планирования, а не приглашение поднять веса CTE в MPC.</p>
+Это задача зрения и планирования — и не повод поднимать веса CTE в MPC.</p>
 </div>
 </section>
 </section>
 <section id="gpu">
 <h2>Шаг 2: запустить — на GPU или на процессоре<a class="headerlink" href="#gpu" title="Ссылка на этот заголовок">#</a></h2>
-<p>Два раннера реализуют один интерфейс, а <code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code> выбирает один из них:</p>
+<p>Оба раннера реализуют один и тот же интерфейс, а <code class="docutils literal notranslate"><span class="pre">vision.model_runner</span></code> выбирает, какой из них запустить:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>раннер</p></th>
@@ -516,17 +515,17 @@
 </div>
 <section id="thneed">
 <h3>Что такое <code class="docutils literal notranslate"><span class="pre">.thneed</span></code> на самом деле<a class="headerlink" href="#thneed" title="Ссылка на этот заголовок">#</a></h3>
-<p>Не модель и не формат весов, а <strong>запись прогона сети на GPU</strong>. Файл — это заголовок JSON и блобы за ним, а в
-JSON перечислены ядра в том порядке, в котором их запускали, их аргументы, буферы и образы, которых они
-касаются, и либо <strong>исходники</strong> ядер на OpenCL, либо их скомпилированные <strong>бинарники</strong>. Воспроизведение — это
-повторная выдача записанной последовательности.</p>
-<p>Два убеждения о нём стоит развидеть пораньше, потому что оба написаны в апстримных README и оба здесь неверны:</p>
+<p>Это не модель и не формат весов, а <strong>запись прогона сети на GPU</strong>. Файл — это заголовок JSON и блобы за ним; в
+JSON перечислены ядра в том порядке, в котором их запускали, их аргументы, буферы и образы, к которым они
+обращаются, и либо <strong>исходники</strong> ядер на OpenCL, либо их скомпилированные <strong>бинарники</strong>. Воспроизведение —
+это повторная выдача записанной последовательности.</p>
+<p>Два расхожих мнения о нём лучше отбросить сразу, потому что оба написаны в апстримных README и оба здесь неверны:</p>
 <ul class="simple">
 <li><p><em>«thneed — это ускоритель SNPE, нужна лицензия Qualcomm».</em> Нет. Цепочка такая: ONNX → tinygrad компилирует
-его в ядра OpenCL → один прогон записывается → запись и есть файл.</p></li>
+его в ядра OpenCL → один прогон записывается → эта запись и есть файл.</p></li>
 <li><p><em>«thneed работает только на Adreno».</em> Апстримный openpilot воспроизводит запись на уровне ioctl драйвера
-Adreno (KGSL) — оттуда это убеждение и берётся. Наш загрузчик так не делает: весь тот блок стоит под
-<code class="docutils literal notranslate"><span class="pre">#ifndef</span> <span class="pre">QCOM2</span></code> и не компилируется, а в <code class="docutils literal notranslate"><span class="pre">libthneedrunner.so</span></code> нет ни одной строки <code class="docutils literal notranslate"><span class="pre">kgsl</span></code>. Быстрому пути на
+Adreno (KGSL) — отсюда и мнение. Наш загрузчик так не делает: весь тот блок стоит под
+<code class="docutils literal notranslate"><span class="pre">#ifndef</span> <span class="pre">QCOM2</span></code> и не компилируется, а в <code class="docutils literal notranslate"><span class="pre">libthneedrunner.so</span></code> нет ни единой строки <code class="docutils literal notranslate"><span class="pre">kgsl</span></code>. Быстрому пути на
 самом деле нужны доступный приложению OpenCL, <code class="docutils literal notranslate"><span class="pre">cl_khr_fp16</span></code>, образы поверх буферов и шаг строки, который
 примет драйвер. На Mali он запускался.</p></li>
 </ul>
@@ -536,7 +535,7 @@ Adreno (KGSL) — оттуда это убеждение и берётся. На
 <p><code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_from_onnx.py</span></code> собирает его из <code class="docutils literal notranslate"><span class="pre">assets/supercombo.onnx</span></code>, а
 <code class="docutils literal notranslate"><span class="pre">scripts/tools/thneed_check.py</span></code> проигрывает собранное на OpenCL хоста и сверяет с эталоном, который генератор
 кладёт рядом. На поставляемом файле расхождение <strong>нулевое, до последнего бита</strong>.</p>
-<p>Собрать самому — четыре команды, подробности в <code class="docutils literal notranslate"><span class="pre">docs/THNEED.md</span></code>:</p>
+<p>Собрать самому — это четыре команды, подробности в <code class="docutils literal notranslate"><span class="pre">docs/THNEED.md</span></code>:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
 python3<span class="w"> </span>tools/thneed_from_onnx.py<span class="w"> </span>../app/src/main/assets/supercombo.onnx<span class="w"> </span>--half<span class="w"> </span>-o<span class="w"> </span>out.thneed
 python3<span class="w"> </span>tools/thneed_check.py<span class="w"> </span>out.thneed<span class="w"> </span>--ref<span class="w"> </span>out.thneed.ref.npy
@@ -544,7 +543,7 @@ adb<span class="w"> </span>push<span class="w"> </span>out.thneed<span class="w"
 python3<span class="w"> </span>tools/model_device_probe.py<span class="w"> </span>--iters<span class="w"> </span><span class="m">50</span>
 </pre></div>
 </div>
-<p>Генератор начинал с 71 мс на кадр и закончил на 23.9. Что дало время, по порядку:</p>
+<p>Генератор начинал с 71 мс на кадр, а вышел на 23.9. Что и сколько сэкономило, по порядку:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>шаг</p></th>
@@ -599,24 +598,24 @@ python3<span class="w"> </span>tools/model_device_probe.py<span class="w"> </spa
 </tbody>
 </table>
 </div>
-<p>Ни ошибки, ни предупреждения: сессия создаётся, считает и отдаёт правдоподобные числа. С fp32 процессор
-телефона считает верно (−1.2458 / 3.2807); NNAPI неверен и на fp32 (−0.1234 / 7.79). Поэтому запасной путь
-везёт fp32 — ценой ассета в 103 МБ, — а в fp16 модель переводит сам генератор, для пути через GPU.</p>
+<p>Ни ошибки, ни предупреждения: сессия создаётся, что-то считает и отдаёт правдоподобные числа. На fp32 процессор
+телефона считает верно (−1.2458 / 3.2807); NNAPI ошибается и на fp32 (−0.1234 / 7.79). Поэтому запасной путь
+несёт fp32 — ценой ассета в 103 МБ, — а в fp16 модель переводит уже сам генератор, для пути через GPU.</p>
 </section>
 <section id="id4">
 <h3>Ничему не верят на основании того, что оно загрузилось<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
 <p>Эта таблица и есть причина правила, которое теперь действует во всём тракте зрения: <strong>компонент, который
 считает не то, не падает — он складно врёт.</strong> Поэтому каждый раннер и каждый провайдер исполнения, который
-удалось собрать ORT, один раз прогоняется на нулевых входах, и подпись его выхода сверяется с величиной,
+удалось собрать в ORT, один раз прогоняют на нулевых входах, а подпись его выхода сверяют с величиной,
 снятой офлайн:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>XNNPACK: на нулях mean=-1.2458 std=3.2807 (ждём -1.2455 / 3.2799) — принято
 NNAPI:   на нулях mean=-0.1234 std=7.7858 (ждём -1.2455 / 3.2799) — ОТБРОШЕНО, считает не то
 ThneedRunner: на нулях mean=-1.2505 std=3.2742 (ждём -1.2498 / 3.2745) — принято
 </pre></div>
 </div>
-<p>Так NNAPI отсеял себя сам на всех трёх проверенных телефонах, без единой строки под конкретное устройство.
-Если не сойдётся проверка thneed, приложение откатится на ONNX, а не поедет по разметке от модели, считающей
-неизвестно что.</p>
+<p>Так NNAPI сам себя отсеял на всех трёх проверенных телефонах — и ни одной строки кода под конкретное устройство.
+А если не сойдётся проверка thneed, приложение откатится на ONNX, но не поедет по разметке от модели, которая
+считает неизвестно что.</p>
 </section>
 <section id="id5">
 <h3>Как выглядит здоровое состояние<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
@@ -664,11 +663,11 @@ OnePlus 7T:</p>
 </tbody>
 </table>
 </div>
-<p>Читать надо с последней строки. На 13 Гц конвейер терял кадры всякий раз, когда инференс затягивался, и
-поперечный метроном наследовал это дрожание; на 30 Гц темп задаёт только период камеры.</p>
-<p>Если вы видите инференс по 300–500 мс и 2–3 Гц, это <strong>нагрев или борьба за процессор</strong>, а не «сеть обычно
-такая медленная». Включение детектора знаков YOLO делает то же самое намеренно: он конкурирует за тот же
-SoC, поэтому выключайте его перед сравнением контроллеров.</p>
+<p>Читать эту таблицу надо с последней строки. На 13 Гц конвейер терял кадры всякий раз, когда инференс
+затягивался, и поперечный метроном подхватывал это дрожание; на 30 Гц темп задаёт только период камеры.</p>
+<p>Если вы видите инференс по 300–500 мс и 2–3 Гц, это <strong>нагрев или борьба за процессор</strong>, а не «сеть вообще
+такая медленная». Детектор знаков YOLO при включении делает ровно то же самое, только намеренно: он
+конкурирует за тот же SoC, поэтому выключайте его перед сравнением контроллеров.</p>
 </section>
 <section id="id6">
 <h3>Та же сеть на трёх телефонах<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
@@ -704,33 +703,33 @@ SoC, поэтому выключайте его перед сравнением 
 </tbody>
 </table>
 </div>
-<p>Полезная здесь — строка про Mali. Быстрый путь там работает — подпись выхода сходится, то есть считается
-именно то, что нужно, — и всё равно вчетверо медленнее, чем нужно, чтобы ехать, потому что Mali-G52 MC2 это
-два вычислительных ядра. «Оно запускается» и «оно успевает» — разные вопросы, и на оба отвечает только
-замер; порядок описан в <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>.</p>
+<p>Самое интересное здесь — строка про Mali. Быстрый путь на нём работает — подпись выхода сходится, значит
+считается именно то, что нужно, — и всё равно он вчетверо медленнее, чем требуется, чтобы ехать, потому что
+Mali-G52 MC2 — это всего два вычислительных ядра. «Оно запускается» и «оно успевает» — разные вопросы, и на
+оба отвечает только замер; порядок описан в <code class="docutils literal notranslate"><span class="pre">docs/NEW_PHONE.md</span></code>.</p>
 <div class="warning admonition">
 <p class="admonition-title">Зависания зрения: с тех пор не воспроизводились, но и не объяснены</p>
-<p>На дневном беге эталон был старше 300 мс 15.9 % времени, с одной дырой в <strong>75 секунд</strong>, при том что CAN
-держал свои 10 мс и таймеры держали свои — то есть ни процессор, ни планирование этого не объясняли. Нагрев
-был ведущим кандидатом и так и не стал доказанным. Метки прихода кадра, добавленные в августе 2026,
-существуют, чтобы решить это в следующий раз: они отделяют поздно пришедший кадр от медленного инференса, и
-на всех бегах после переезда модели на GPU обе читаются как 0 мс при нуле потерянных кадров. Это отсутствие
-симптома на конвейере, чей бюджет инференса втрое меньше прежнего, — а не диагноз того зависания.</p>
+<p>На дневном беге эталон был старше 300 мс в 15.9 % времени, с одной дырой в <strong>75 секунд</strong>, — и это при том, что
+CAN держал свои 10 мс, а таймеры держали свои. То есть ни процессор, ни планирование зависание не объясняли.
+Нагрев был главным подозреваемым, но так и не был доказан. Метки прихода кадра, добавленные в августе 2026,
+и нужны, чтобы разобраться в следующий раз: они отделяют поздно пришедший кадр от медленного инференса, и
+на всех бегах после переезда модели на GPU обе читаются как 0 мс при нуле потерянных кадров. Но это лишь
+отсутствие симптома на конвейере, чей бюджет инференса втрое меньше прежнего, — а не диагноз того зависания.</p>
 </div>
 </section>
 </section>
 <section id="id7">
 <h2>Шаг 3: прочитать выходной вектор<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель возвращает один плоский массив float. Ничто в нём не подписано, а раскладка — самое неверно
-прочитанное место в этом проекте, поэтому этот раздел — её запускаемая карта.</p>
+<p>Модель возвращает один плоский массив float. Ни один элемент в нём не подписан, а раскладка — самое частое
+место ошибок в этом проекте, поэтому данный раздел — её исполняемая карта.</p>
 <figure class="align-default" id="id14">
 <a class="reference internal image-reference" href="../_images/supercombo_layout.png"><img alt="../_images/supercombo_layout.png" src="../_images/supercombo_layout.png" style="width: 95%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 5 </span><span class="caption-text">Выход — один плоский вектор, читаемый по срезам; смещения ниже говорят, где какой блок.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 5 </span><span class="caption-text">Выход — один плоский вектор, который читается по срезам; смещения ниже говорят, где какой блок.</span><a class="headerlink" href="#id14" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Для supercombo 0.9.7, ширина 6504 (у сборок 0.8.x шириной 6472 и 6409 весь префикс тот же — двигается
+<p>Для supercombo 0.9.7 шириной 6504 (у сборок 0.8.x шириной 6472 и 6409 весь префикс тот же — сдвигается
 только хвост):</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
@@ -768,19 +767,19 @@ SoC, поэтому выключайте его перед сравнением 
 </div>
 <p>Именно в хвосте и кусается несовпадение версий. Смещения между поколениями разные, и чтение позы 0.9.x по
 смещению 0.8.x возвращает числа конечные, гладкие и неверные — ровно это здесь однажды и случилось, и ровно
-поэтому оба раннера теперь везут одну сеть, а не каждый свою.</p>
-<p>Последние две строки — это рекуррентность, и она забота раннера, а не модели: после каждого кадра 512
+поэтому оба раннера теперь несут одну сеть, а не каждый свою.</p>
+<p>Последние две строки — это рекуррентность, и это забота раннера, а не модели: после каждого кадра 512
 признаков сдвигаются на кадр внутри <code class="docutils literal notranslate"><span class="pre">features_buffer</span></code>, а <code class="docutils literal notranslate"><span class="pre">prev_desired_curv</span></code> — на одно значение. Ошибётесь —
-модель всё равно посчитает, просто она будет помнить прошлое, которого не было.</p>
-<p>Внутри живут ещё две ловушки.</p>
-<p><strong>Ловушка первая: чередуются <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">z)</span></code>, а не <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code>.</strong> Внутри 66 float одной линии значения чередуют
-поперечное положение и высоту: индекс <code class="docutils literal notranslate"><span class="pre">i*2</span></code> — это <span class="math notranslate nohighlight">\(y\)</span>, <code class="docutils literal notranslate"><span class="pre">i*2+1</span></code> — это <span class="math notranslate nohighlight">\(z\)</span>. Широко скопированный демо-парсер
-читает их как <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code> и кажется работающим — потому что чётные индексы для <span class="math notranslate nohighlight">\(y\)</span> он берёт правильно, — а
+модель всё равно что-нибудь посчитает, просто будет помнить прошлое, которого не было.</p>
+<p>Внутри прячутся ещё две ловушки.</p>
+<p><strong>Ловушка первая: чередуются <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">z)</span></code>, а не <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code>.</strong> Внутри 66 float одной линии значения идут вперемежку —
+поперечное положение и высота: индекс <code class="docutils literal notranslate"><span class="pre">i*2</span></code> — это <span class="math notranslate nohighlight">\(y\)</span>, <code class="docutils literal notranslate"><span class="pre">i*2+1</span></code> — это <span class="math notranslate nohighlight">\(z\)</span>. Широко разошедшийся демо-парсер
+читает их как <code class="docutils literal notranslate"><span class="pre">(y,</span> <span class="pre">std)</span></code> и вроде бы работает — ведь чётные индексы для <span class="math notranslate nohighlight">\(y\)</span> он берёт правильно, — а
 его «сигма» на самом деле высота линии над дорогой. Если ваша неопределённость подозрительно гладкая и
-маленькая, вот почему.</p>
-<p><strong>Ловушка вторая: сигмы лежат второй половиной, и они логарифмы.</strong> Настоящая <span class="math notranslate nohighlight">\(\sigma\)</span> — это <span class="math notranslate nohighlight">\(\exp(\cdot)\)</span>
-соответствующего элемента второй половины блока. У нас для краёв дороги их не читал никто до 6 августа
-2026 — потому ни один бег и не мог ответить, годны ли края, — а когда наконец прочли, оказалось, что они в
+маленькая, вот вам причина.</p>
+<p><strong>Ловушка вторая: сигмы лежат во второй половине блока, и это логарифмы.</strong> Настоящая <span class="math notranslate nohighlight">\(\sigma\)</span> — это <span class="math notranslate nohighlight">\(\exp(\cdot)\)</span>
+соответствующего элемента второй половины блока. У нас для краёв дороги их до 6 августа 2026 не читал никто —
+потому ни один бег и не мог ответить, годны ли края, — а когда наконец прочли, оказалось, что они в
 7.5 раза шумнее линий разметки.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
@@ -845,17 +844,17 @@ SoC, поэтому выключайте его перед сравнением 
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"left sigma 20-40 m   : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">lanes</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">'sigma'</span><span class="p">][</span><span class="n">far</span><span class="p">])</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> m"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Последняя пара — не игрушечная деталь. Уверенность подмешивания в <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> сворачивает <span class="math notranslate nohighlight">\(\sigma\)</span> по
-дальности, и на настоящих данных σ примерно удваивается между этими двумя полосами, потому что на дуге
+<p>Последняя пара строк — не игрушечная деталь. При подмешивании <code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> сворачивает <span class="math notranslate nohighlight">\(\sigma\)</span> по
+дальности, а на настоящих данных σ примерно удваивается между этими двумя полосами, ведь на дуге
 внутренняя линия уходит из кадра и её дальние отсчёты — экстраполяция. Свернуть по слишком большой дальности
-— значит позволить «я так далеко не видел» забраковать линию, у которой ближняя половина в порядке.</p>
+— значит позволить «так далеко я не видел» забраковать линию, у которой ближняя половина в порядке.</p>
 <section id="id8">
 <h3>Выбор гипотезы плана<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h3>
 <p>PLAN содержит пять гипотез по 991 float: 33 шага по времени × 15 столбцов средних, затем 33 × 15
-логарифмов σ, затем один логит выбора. Берите гипотезу с наибольшим логитом — <strong>не</strong> среднее по ним,
-которое усреднило бы два разных будущих в путь через бордюр.</p>
-<p>На точку 15 столбцов — это положение (0–2), скорость (3–5), нечто вроде ускорения (6–8), ориентация (9–11)
-и её скорость (12–14). Мы читаем <span class="math notranslate nohighlight">\(y\)</span> из столбца 1, <span class="math notranslate nohighlight">\(z\)</span> из 2, а рыск и его скорость из 11 и 14.</p>
+логарифмов σ, затем один логит выбора. Берите гипотезу с наибольшим логитом — а <strong>не</strong> среднее по ним:
+усреднение сложило бы два разных будущих в один путь через бордюр.</p>
+<p>На каждую точку — 15 столбцов: положение (0–2), скорость (3–5), нечто вроде ускорения (6–8), ориентация (9–11)
+и её скорость (12–14). Мы читаем <span class="math notranslate nohighlight">\(y\)</span> из столбца 1, <span class="math notranslate nohighlight">\(z\)</span> из 2, а рыскание и его скорость — из 11 и 14.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">PLAN_MHP_N</span><span class="p">,</span> <span class="n">PLAN_COLS</span><span class="p">,</span> <span class="n">PLAN_T</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">33</span>
 <span class="n">HYP_SIZE</span> <span class="o">=</span> <span class="n">PLAN_T</span> <span class="o">*</span> <span class="n">PLAN_COLS</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>        <span class="c1"># means, log-sigmas, one logit</span>
 
@@ -891,47 +890,47 @@ SoC, поэтому выключайте его перед сравнением 
 </div>
 <div class="warning admonition">
 <p class="admonition-title">Выход модели — это форма, а не метры</p>
-<p>Голова <strong>скорости/позы</strong> этой сети против скорости колёс занижает — это другая величина, чем масштаб
-<em>дистанции</em> камерной одометрии 0.888 из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора Vision</span></a> и
-<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>, и другое число. На текущей сети множитель позы <strong>0.686</strong>, и
-интересна его плоскость: на интервалах между кадрами от 28 до 50 мс он держится в 0.686–0.688, корреляция с
-<code class="docutils literal notranslate"><span class="pre">dt</span></code> равна +0.005.</p>
-<p>Эта плоскость и убила очевидное объяснение. Поза, выраженная на кадр, а не на секунду, масштабировалась бы
+<p>Голова <strong>скорости/позы</strong> этой сети занижает относительно скорости колёс — и это другая величина и другое
+число, чем масштаб <em>дистанции</em> камерной одометрии 0.888 из <a class="reference internal" href="Overview.html"><span class="std std-doc">обзора Vision</span></a> и
+<a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>. На текущей сети множитель позы <strong>0.686</strong>, и
+интересно, насколько он ровный: на интервалах между кадрами от 28 до 50 мс он держится в пределах 0.686–0.688,
+а корреляция с <code class="docutils literal notranslate"><span class="pre">dt</span></code> равна +0.005.</p>
+<p>Эта ровность и убила очевидное объяснение. Поза, выраженная на кадр, а не на секунду, масштабировалась бы
 интервалом между кадрами, и 20/30 = 0.667 соблазнительно близко к измеренному множителю — но тогда отношение
-двигалось бы вместе с <code class="docutils literal notranslate"><span class="pre">dt</span></code>, а оно не двигается. Причина по-прежнему неизвестна (задача #37), сверх того
-перевёрнут знак рыскания, и поэтому продольный планировщик не берёт скорость модели за цель вовсе.</p>
-<p>Урок шире этой ошибки: константа, совпавшая с правдоподобным отношением, — это не доказательство. Решает
-проверка, <em>сдвинется</em> ли константа, когда сдвинется то, из чего она якобы берётся.</p>
+менялось бы вместе с <code class="docutils literal notranslate"><span class="pre">dt</span></code>, а оно не меняется. Причина по-прежнему неизвестна (задача #37); вдобавок
+перевёрнут знак рыскания, и поэтому продольный планировщик вообще не берёт скорость модели за цель.</p>
+<p>Урок шире этой конкретной ошибки: константа, совпавшая с правдоподобным отношением, — ещё не доказательство.
+Решает проверка, <em>сдвинется</em> ли константа, когда сдвинется то, из чего она якобы берётся.</p>
 </div>
 </section>
 </section>
 <section id="id9">
 <h2>Шаг 4: какой темп получится на самом деле<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
-<p>Разобранные головы становятся <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code>, и следующее важное число — как часто. Оно не равно
-<span class="math notranslate nohighlight">\(1000 / \text{работа}\)</span>.</p>
-<p>Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его в тот же момент, когда
-освобождается, — то есть по своей воле не простаивает никогда. Но цикл может начаться только когда кадр
+<p>Разобранные головы становятся <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code>, и следующее важное число — как часто это происходит. И оно не
+равно <span class="math notranslate nohighlight">\(1000 / \text{работа}\)</span>.</p>
+<p>Конвейер держит буфер на один слот с самым свежим кадром и подхватывает его сразу, как только
+освобождается, — то есть сам по себе не простаивает никогда. Но цикл может начаться, только когда кадр уже
 пришёл. Поэтому темп квантован целыми периодами камеры, <span class="math notranslate nohighlight">\(f = 1 / (T \lceil W/T \rceil)\)</span>, и глава
-<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> разбирает, что это делает с решениями об оптимизации.</p>
-<p>Эта формула и есть причина, по которой работа с GPU дала столько, сколько дала. При периоде камеры 33 мс
-59 мс работы давали 11.29 Гц — два кадра камеры на один обработанный, — и сняв оттуда 10 мс, вы получили бы
-ровно те же 11.29 Гц. Меняет что-то только переход <em>под</em> период, и переход этот стоит сразу вдвое: 22 мс
-работы при периоде 33 мс дают измеренные 30.01 Гц, кадр вошёл — кадр вышел.</p>
+<a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> разбирает, что из этого следует для решений об оптимизации.</p>
+<p>Эта формула и есть причина, по которой перенос на GPU дал столько, сколько дал. При периоде камеры 33 мс
+59 мс работы давали 11.29 Гц — два кадра камеры на один обработанный, — и, срезав оттуда 10 мс, вы получили бы
+ровно те же 11.29 Гц. Что-то меняет только переход <em>под</em> период, и стоит он сразу вдвое: 22 мс
+работы при периоде 33 мс дают измеренные 30.01 Гц — кадр вошёл, кадр вышел.</p>
 <div class="warning admonition">
 <p class="admonition-title">Политика отбрасывания</p>
-<p>Когда конвейер занят, ожидающий кадр <strong>перезаписывается</strong>, а не ставится в очередь. Измеренный темп падает.
-Это задача зрения и планирования, а не приглашение поднять веса CTE в MPC. С 6 августа 2026 бег пишет
-<code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, поэтому поздний кадр и медленный инференс наконец
+<p>Когда конвейер занят, ожидающий кадр <strong>перезаписывается</strong>, а не встаёт в очередь. Измеренный темп падает.
+Это задача зрения и планирования — и не повод поднимать веса CTE в MPC. С 6 августа 2026 бег пишет
+<code class="docutils literal notranslate"><span class="pre">frames_dropped</span></code>, <code class="docutils literal notranslate"><span class="pre">submit_ts_ms</span></code> и <code class="docutils literal notranslate"><span class="pre">pickup_ts_ms</span></code>, так что поздний кадр и медленный инференс наконец
 различимы — на беге выше оба читаются как 0, и ни один кадр из 52 690 не потерян.</p>
 </div>
 </section>
 <section id="id10">
 <h2>Шаг 5: что реально потребляет управление<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
 <p>После <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервис <code class="docutils literal notranslate"><span class="pre">Planner</span></code> видит полилинию (плюс шасси), а стоящий за ним <code class="docutils literal notranslate"><span class="pre">Control</span></code> — только
-кривизну. Ни тот, ни другой <strong>не знает</strong>, пришёл путь из Supercombo, из карты или из скрипта реплея. Поэтому:</p>
+кривизну. Ни тот ни другой <strong>не знает</strong>, откуда пришёл путь — из Supercombo, из карты или из скрипта реплея. Поэтому:</p>
 <ol class="arabic simple">
 <li><p>Сначала проверяйте линии и задержки.</p></li>
-<li><p>И только потом настраивайте параметры <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> / MPC / <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p></li>
+<li><p>И только потом крутите параметры <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> / MPC / <code class="docutils literal notranslate"><span class="pre">fp</span></code>.</p></li>
 </ol>
 <p>Опциональный YOLO для знаков делит телефон с ORT — включайте его для демонстраций и <strong>выключайте</strong>, когда измеряете качество удержания полосы (<code class="docutils literal notranslate"><span class="pre">TRAFFIC_VISION.md</span></code>).</p>
 </section>
@@ -959,7 +958,7 @@ SoC, поэтому выключайте его перед сравнением 
 </ol>
 <div class="note admonition">
 <p class="admonition-title">Обсуждение — против детекции разметки в AAD</p>
-<p>В AAD вы обучаете сегментацию и делаете IPM. Здесь промышленная практика ближе к <strong>одной многозадачной сети</strong> плюс warp с учётом калибровки. Педагогический компромисс: меньше реализации восприятия, больше дисциплины в отношении <strong>контрактов, меток времени и режимов отказа</strong>, которые и определяют реальный телефонный ADAS.</p>
+<p>В AAD вы обучаете сегментацию и делаете IPM. Здесь промышленная практика ближе к <strong>одной многозадачной сети</strong> плюс warp с учётом калибровки. Отсюда и учебный компромисс: меньше возни с реализацией восприятия, больше дисциплины в том, что касается <strong>контрактов, меток времени и режимов отказа</strong>, — а именно они и определяют реальный телефонный ADAS.</p>
 </div>
 </section>
 </section>

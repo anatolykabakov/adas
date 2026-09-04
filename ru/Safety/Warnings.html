@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -449,7 +449,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="fcw-aeb-ldw">
 <h1>Предупреждения: FCW, AEB, LDW<a class="headerlink" href="#fcw-aeb-ldw" title="Ссылка на этот заголовок">#</a></h1>
-<p>Сервис <strong><code class="docutils literal notranslate"><span class="pre">safety_warn</span></code></strong> поднимает <strong>только иконки и текст на экране</strong> — он <strong>не</strong> тормозит и не рулит.
+<p>Сервис <strong><code class="docutils literal notranslate"><span class="pre">safety_warn</span></code></strong> выводит на экран <strong>только иконки и текст</strong> — он <strong>не</strong> тормозит и не рулит.
 Это сделано намеренно: студенты изучают логику угроз без риска актуации.</p>
 <p>Основной инженерный документ: <code class="docutils literal notranslate"><span class="pre">docs/SAFETY_WARN.md</span></code>.
 Код: <code class="docutils literal notranslate"><span class="pre">safety_planner.hpp</span></code>, <code class="docutils literal notranslate"><span class="pre">safety_warn_service.cpp</span></code>, тесты <code class="docutils literal notranslate"><span class="pre">test_safety_warn.cpp</span></code>.</p>
@@ -496,8 +496,8 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 там, где опасности не было, и последовательность стоит проследить: поломки поучительнее формул.</p>
 <section id="id4">
 <h3>Круг 1: ускорение как признак опасности<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>Первая версия поднимала FCW, когда желаемое ускорение IDM падало ниже −3 м/с², а AEB — ниже −5. Звучало
-разумно: хотим сильно тормозить — значит впереди опасность.</p>
+<p>Первая версия включала FCW, когда желаемое ускорение IDM падало ниже −3 м/с², а AEB — ниже −5. Звучало
+разумно: хотим сильно тормозить — значит, впереди опасность.</p>
 <p>Это неверно, потому что в ускорении IDM есть слагаемые, не имеющие отношения к машине впереди.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">idm_accel</span><span class="p">(</span><span class="n">v_ego</span><span class="p">,</span> <span class="n">v_lim</span><span class="p">,</span> <span class="n">gap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">v_lead</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">a_max</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">s0</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">expn</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Treiber IDM. The free-road term alone can demand hard braking with nothing in front."""</span>
@@ -521,19 +521,19 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 </pre></div>
 </div>
 <p>В первых двух строках нет никакой машины. И пустая дорога выше предполагаемого ограничения, и пустой крутой
-поворот требуют сильного торможения, и оба раньше зажигали предупреждение о столкновении. Урок обобщается за
-пределы этого проекта: <strong>желаемый выход контроллера не является сигналом опасности.</strong> В нём лежит всё, что
-контроллеру важно, а предупреждение должно строиться из самой угрозы.</p>
-<p>Поэтому правило стало основанным на угрозе — время до столкновения и требуемое замедление, вычисленные по
-цели, которая существует, — а ускорение IDM осталось в сообщении только как отладочное поле.</p>
+поворот требуют сильного торможения, и оба раньше зажигали предупреждение о столкновении. Урок выходит за
+пределы этого проекта: <strong>желаемый выход контроллера не является сигналом опасности.</strong> В нём заложено всё, что
+важно контроллеру, а предупреждение должно строиться из самой угрозы.</p>
+<p>Поэтому правило стало опираться на саму угрозу — время до столкновения и требуемое замедление, вычисленные по
+реально существующей цели, — а ускорение IDM осталось в сообщении только как отладочное поле.</p>
 </section>
 <section id="id5">
 <h3>Круг 2: цель, которой ещё нет<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h3>
 <p>Вторая версия брала самый вероятный из <code class="docutils literal notranslate"><span class="pre">lead0</span></code>, <code class="docutils literal notranslate"><span class="pre">lead1</span></code>, <code class="docutils literal notranslate"><span class="pre">lead2</span></code>. Это не три кандидата в машины: <code class="docutils literal notranslate"><span class="pre">lead1</span></code> и
 <code class="docutils literal notranslate"><span class="pre">lead2</span></code> — предсказания модели о лидере <strong>на +2 с и +4 с</strong>. Предупреждать о машине, которая по мнению модели
 окажется там через четыре секунды, — это другой продукт.</p>
-<p>Исправлено переходом только на <code class="docutils literal notranslate"><span class="pre">lead0</span></code>. Отмечаю это отдельно, потому что тот же дефект прожил в продольном
-планировщике ещё два месяца и нашёлся только когда планировщику дали действовать.</p>
+<p>Исправили переходом только на <code class="docutils literal notranslate"><span class="pre">lead0</span></code>. Отмечаю это отдельно, потому что тот же дефект прожил в продольном
+планировщике ещё два месяца и обнаружился только тогда, когда планировщику дали действовать.</p>
 </section>
 <section id="id6">
 <h3>Круг 3: предупреждение о самих себе<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h3>
@@ -558,15 +558,15 @@ vehicle/chassis (v, blinker, steering_pressed)     ─┘
 </tbody>
 </table>
 </div>
-<p>Вторая причина — интереснее. LDW существует, чтобы предупреждать <em>сносящего водителя</em>. С включённым
-ассистентом смещение, которое он измеряет, — это собственная ошибка слежения ассистента на дуге; система
-предупреждала о себе, и делала это в 82 % случаев, когда открывала рот.</p>
+<p>Вторая причина интереснее. LDW существует, чтобы предупреждать <em>сносящего водителя</em>. Но при включённом
+ассистенте смещение, которое он измеряет, — это собственная ошибка слежения ассистента на дуге; система
+предупреждала сама о себе и делала это в 82 % случаев, когда вообще подавала голос.</p>
 <div class="warning admonition">
 <p class="admonition-title">Дефолт в заголовке — ещё не решение</p>
-<p>Скоростной гейт выше был поднят в коде и <strong>не</strong> в <code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code>, а тот держит своё значение и
-перебивает. Поэтому правка оказалась мёртвой, и следующий заезд воспроизвёл те же три ложных срабатывания на
-4.8–5.5 м/с. Теперь три теста проверяют, что поставляемый конфиг соответствует решениям, принятым на дороге, а
-сборка отказывается компилировать конфиг, который не разбирается.</p>
+<p>Скоростной гейт выше подняли в коде, но <strong>не</strong> в <code class="docutils literal notranslate"><span class="pre">assets/config.json</span></code>, а тот хранит своё значение и
+перебивает его. Поэтому правка оказалась мёртвой, и следующий заезд воспроизвёл те же три ложных срабатывания
+на 4.8–5.5 м/с. Теперь три теста проверяют, что поставляемый конфиг соответствует решениям, принятым на
+дороге, а сборка отказывается компилировать конфиг, который не разбирается.</p>
 </div>
 <figure class="align-default" id="id10">
 <a class="reference internal image-reference" href="../_images/fcw_thresholds.png"><img alt="../_images/fcw_thresholds.png" src="../_images/fcw_thresholds.png" style="width: 95%;" />
@@ -722,7 +722,7 @@ a_{\mathrm{req}} = \frac{(\Delta v)^{2}}{2\cdot\mathrm{gap}}.
 <span class="nb">print</span><span class="p">([</span><span class="nb">int</span><span class="p">(</span><span class="n">L</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">bool</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">])</span>
 </pre></div>
 </div>
-<p>(Настоящая семантика защёлки — в <code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>, истина в тестах; этот набросок показывает, <em>зачем</em> антидребезг нужен.)</p>
+<p>(Настоящая семантика защёлки — в <code class="docutils literal notranslate"><span class="pre">WarningLatch</span></code>, эталон — в тестах; этот набросок показывает лишь, <em>зачем</em> нужен антидребезг.)</p>
 </section>
 <section id="id7">
 <h2>Блок конфига<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>

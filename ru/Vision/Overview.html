@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -443,30 +443,30 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Зрение — обзор<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>В этом модуле нам нужна <strong>метрическая геометрия полосы</strong>, за которой может ехать поперечный контроллер, а не красивая наложенная картинка.
-Если полилиния неверна, запаздывает или выражена с неверным знаком <span class="math notranslate nohighlight">\(y\)</span>, то Pure Pursuit и MPC будут выглядеть «сломанными», хотя их математика в порядке.</p>
+<p>В этом модуле нам нужна <strong>метрическая геометрия полосы</strong>, по которой поперечный контроллер сможет вести машину, а не красивая картинка поверх видео.
+Если полилиния неверна, приходит с опозданием или задана с неправильным знаком <span class="math notranslate nohighlight">\(y\)</span>, Pure Pursuit и MPC будут казаться «сломанными», хотя с их математикой всё в порядке.</p>
 <figure class="align-default" id="id12">
 <a class="reference internal image-reference" href="../_images/iso8850_crop.png"><img alt="../_images/iso8850_crop.png" src="../_images/iso8850_crop.png" style="width: 85%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 3 </span><span class="caption-text">Путь <span class="math notranslate nohighlight">\(y(x)\)</span> вид сверху, в метрах. Контроллеры думают в этой плоскости: продольная <span class="math notranslate nohighlight">\(x\)</span> вперёд, поперечная <span class="math notranslate nohighlight">\(y\)</span> через полосу.</span><a class="headerlink" href="#id12" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 3 </span><span class="caption-text">Путь <span class="math notranslate nohighlight">\(y(x)\)</span> сверху, в метрах. Контроллеры мыслят в этой плоскости: продольная ось <span class="math notranslate nohighlight">\(x\)</span> смотрит вперёд, поперечная <span class="math notranslate nohighlight">\(y\)</span> — поперёк полосы.</span><a class="headerlink" href="#id12" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <section id="id2">
 <h2>Что нужно контроллеру<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
-<p>На каждом кадре зрения стек должен публиковать нечто равносильное:</p>
+<p>На каждом кадре зрения стек должен публиковать нечто равносильное такому набору:</p>
 <ul class="simple">
 <li><p><strong>эталонный путь</strong> <span class="math notranslate nohighlight">\(\{(x_i, y_i)\}\)</span> в метрах впереди машины;</p></li>
-<li><p>достаточно метаданных, чтобы понять, можно ли доверять разметке и плану (вероятности, возраст);</p></li>
-<li><p>метки времени (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>), чтобы задержку потом можно было измерить.</p></li>
+<li><p>столько метаданных, чтобы было понятно, можно ли доверять разметке и плану (вероятности, возраст);</p></li>
+<li><p>метки времени (<code class="docutils literal notranslate"><span class="pre">capture_ts</span></code>, <code class="docutils literal notranslate"><span class="pre">infer_ts</span></code>), чтобы задержку можно было потом измерить.</p></li>
 </ul>
-<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> сервисы на C++ видят полилинию). Источник — живая Supercombo, карта или реплей бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неразличим</strong>. Это сделано намеренно: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
+<p>В нашем стеке этот контракт живёт на топике <code class="docutils literal notranslate"><span class="pre">vision/lanes</span></code> (после <code class="docutils literal notranslate"><span class="pre">proto_convert</span></code> полилинию видят сервисы на C++). Откуда пришёл путь — от живой Supercombo, из карты или из реплея бега — для <code class="docutils literal notranslate"><span class="pre">pp</span></code> / <code class="docutils literal notranslate"><span class="pre">fp</span></code> <strong>неважно</strong>. Так задумано: геометрию можно отлаживать офлайн, не трогая коэффициенты.</p>
 </section>
 <section id="id3">
 <h2>Четыре условия, которые должны выполниться, по порядку<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h2>
-<p>Студент, который обучал сегментатор разметки, склонен считать, что восприятие — трудная часть, а контракт —
-бумажная работа. В телефонном стеке всё наоборот. Прежде чем контроллер сможет за чем-то ехать, должны
-выполниться четыре условия, и отказывают они в таком порядке частоты:</p>
+<p>Студент, который обучал сегментатор разметки, обычно думает, что восприятие — это трудная часть, а контракт —
+бумажная работа. В телефонном стеке всё наоборот. Прежде чем контроллер вообще сможет за чем-то ехать, должны
+выполниться четыре условия, и отказывают они именно в таком порядке — от самого частого к редкому:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <thead>
 <tr class="row-odd"><th class="head"><p>#</p></th>
@@ -483,23 +483,23 @@
 </tr>
 <tr class="row-odd"><td><p>2</p></td>
 <td><p>геометрия <strong>свежая</strong></p></td>
-<td><p>зрение встало, а контур продолжает командовать</p></td>
-<td><p>логи выглядят здоровыми, эталону несколько секунд</p></td>
+<td><p>зрение встало, а контур управления продолжает командовать</p></td>
+<td><p>логи выглядят здоровыми, а эталону уже несколько секунд</p></td>
 </tr>
 <tr class="row-even"><td><p>3</p></td>
-<td><p>геометрии <strong>можно доверять там, где она используется</strong></p></td>
-<td><p>σ свёрнута по дальности, которую модель не наблюдала</p></td>
-<td><p>хорошая линия отбрасывается, эталон прыгает на план модели</p></td>
+<td><p>геометрии <strong>можно доверять там, где ею пользуются</strong></p></td>
+<td><p>σ свёрнута по дальности, которую модель не видела</p></td>
+<td><p>хорошая линия отбрасывается, эталон перескакивает на план модели</p></td>
 </tr>
 <tr class="row-odd"><td><p>4</p></td>
 <td><p>геометрия <strong>метрически верна</strong></p></td>
-<td><p>две головы занижают по-разному: одометрия-дистанция ×0.888, скорость/поза ×0.686</p></td>
+<td><p>две головы занижают по-разному: дистанция одометрии ×0.888, скорость/поза ×0.686</p></td>
 <td><p>каждая производная величина наследует масштаб</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p>Каждое из четырёх стоило проекту заезда, и за каждым стоит глава или раздел. Условие 1 — это
+<p>Каждое из четырёх однажды стоило проекту заезда, и за каждым стоит своя глава или раздел. Условие 1 — это
 <a class="reference internal" href="Coordinates.html"><span class="std std-doc">системы координат</span></a>. Условия 3 и 4 — <a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>. Условие 2 —
 <a class="reference internal" href="../Latency/Overview.html"><span class="std std-doc">задержки</span></a> и гейт устаревания ниже.</p>
 </section>
@@ -516,14 +516,14 @@
 <span class="nb">print</span><span class="p">(</span><span class="s2">"corrects away from the lane centre with full confidence."</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Это всё условие 1, и оно стоит трёх строк, потому что это самый частый способ заставить работающий
-контроллер выглядеть сломанным.</p>
+<p>Это всё — условие 1, и ему отведено целых три строки: перепутать здесь знак — самый частый способ заставить
+исправный контроллер вести себя как сломанный.</p>
 </section>
 <section id="id5">
 <h2>Шаг 2: свежесть, и почему таймаута недостаточно<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
 <p>Очевидная защита — «если команда старая, остановись». Она не работает, и причина поучительна.</p>
-<p>У нашего актуатора уже был таймаут команды HCA в 250 мс. Он не помог, потому что быстрый угловой PID
-публикует 100 раз в секунду независимо от того, насколько стар <em>эталон</em>, — то есть команда всегда была
+<p>У нашего актуатора уже был таймаут команды HCA в 250 мс. Он не помог: быстрый угловой PID
+публикуется 100 раз в секунду независимо от того, насколько стар <em>эталон</em>, — то есть команда всегда была
 свежей, а путь, на котором она построена, мог быть минутной давности. В одном измеренном зависании
 <code class="docutils literal notranslate"><span class="pre">controls/steer</span></code> шёл со средним интервалом 9.9 мс, а плану было до <strong>75 секунд</strong>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">reference_age_ms</span><span class="p">(</span><span class="n">capture_ts_ms</span><span class="p">,</span> <span class="n">now_ms</span><span class="p">):</span>
@@ -539,33 +539,34 @@
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"reference age </span><span class="si">{</span><span class="n">age</span><span class="si">:</span><span class="s2">&gt;6</span><span class="si">}</span><span class="s2"> ms  </span><span class="si">{</span><span class="n">verdict</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Правка должна опираться на метку времени съёмки кадра — потому её и несёт каждое сообщение в этом конвейере.
+<p>Проверять надо метку времени съёмки кадра — потому-то её и несёт каждое сообщение в этом конвейере.
 На беге, который это вскрыл, гейт снимает управление 16 % времени, и это правильное поведение, а не
 регрессия.</p>
 </section>
 <section id="id6">
 <h2>Шаг 3: доверие там, где используется<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель отдаёт σ на каждый отсчёт каждой линии, и подмешивание взвешивает разметку против плана модели по
-этой σ. Тонкость в том, <em>какие отсчёты сворачивать</em>: σ примерно удваивается от ближней половины окна 40 м к
-дальней, потому что на дуге внутренняя линия уходит из кадра и её дальние отсчёты — экстраполяция. Свернёте
-слишком далеко — и «я так далеко не видел» забракует линию, у которой ближняя половина в порядке; измеренная
-таблица в главе <a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
+<p>Модель отдаёт σ для каждого отсчёта каждой линии, и при подмешивании разметка взвешивается против плана
+модели именно по этой σ. Тонкость — в том, <em>какие отсчёты сворачивать</em>: σ примерно удваивается от ближней
+половины окна 40 м к дальней, ведь на дуге внутренняя линия уходит из кадра и её дальние отсчёты — уже
+экстраполяция. Свернёте слишком далеко — и «так далеко я не видел» забракует линию, у которой ближняя
+половина в полном порядке; измеренная таблица приведена в главе <a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>.</p>
 </section>
 <section id="id7">
 <h2>Шаг 4: метрическая верность и что делать, когда её нет<a class="headerlink" href="#id7" title="Ссылка на этот заголовок">#</a></h2>
-<p>Модель занижает против скорости колёс, и <em>две разные головы занижают на разную величину</em> — это первое,
-что надо держать в голове. Масштаб <strong>дистанции</strong> камерной одометрии после поправки фокуса — <strong>0.888</strong>
-(около 11 % занижения, <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>); сырая голова
-<strong>скорости/позы</strong> занижает сильнее — <strong>0.686</strong> (<a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>). Извне это не исправить,
-поэтому дисциплина в другом: знать, какие ваши числа какой масштаб
-наследуют. Смещения в полосе — это отношения внутри одного кадра, они в основном выживают; всё, что
-сравнивает расстояние по модели с расстоянием по колёсам или GNSS, — нет.</p>
+<p>Модель занижает относительно скорости колёс, и <em>две разные головы занижают по-разному</em> — вот что надо
+держать в голове в первую очередь. Масштаб <strong>дистанции</strong> камерной одометрии после поправки фокуса — <strong>0.888</strong>
+(занижение около 11 %, <a class="reference internal" href="../Calibration/IntrinsicsAndWarp.html"><span class="std std-doc">IntrinsicsAndWarp</span></a>); сырая голова
+<strong>скорости/позы</strong> занижает сильнее — <strong>0.686</strong> (<a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo</span></a>). Снаружи это не исправить,
+поэтому дисциплина сводится к другому: знать, какое из ваших чисел какой масштаб
+наследует. Смещения внутри полосы — это отношения в пределах одного кадра, они по большей части выживают; а
+вот всё, что сравнивает расстояние по модели с расстоянием по колёсам или GNSS, — нет.</p>
 </section>
 <section id="id8">
 <h2>Стройка: опорный путь из двух шумных линий<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
-<p>Четыре условия выше — это чему обязана опорная траектория. Теперь постройте её — из того, что реально
-отдаёт модель восприятия: две линии, обе шумные, у каждой своя заявленная σ, каждая вольна исчезнуть.
-Синтезируйте вход честно (σ растёт с расстоянием — на дальний пиксель приходится больше дороги):</p>
+<p>Четыре условия выше задают, чему обязана удовлетворять опорная траектория. Теперь постройте её — из того,
+что реально отдаёт модель восприятия: две линии, обе шумные, у каждой своя заявленная σ, каждая может в любой
+момент пропасть. Вход сгенерируйте честно (σ растёт с расстоянием — на дальний пиксель приходится больше
+дороги):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -586,9 +587,8 @@
     <span class="k">return</span> <span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span>
 </pre></div>
 </div>
-<p>Наивный планировщик берёт одну линию и сдвигает на полполосы. Честный взвешивает обе по тому, сколько
-каждая о себе заявляет, — обратной дисперсией, тем же правилом, на котором работает каждый оцениватель
-этой книги:</p>
+<p>Наивный планировщик берёт одну линию и сдвигает её на полполосы. Честный взвешивает обе по тому, что каждая
+о себе заявляет, — обратной дисперсией, тем же правилом, на котором держится любой оцениватель в этой книге:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">centre_from_one</span><span class="p">(</span><span class="n">y_line</span><span class="p">,</span> <span class="n">side</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">y_line</span> <span class="o">-</span> <span class="n">side</span> <span class="o">*</span> <span class="n">HALF</span>          <span class="c1"># side=+1 for the left line</span>
 
@@ -606,9 +606,9 @@
 <span class="k">assert</span> <span class="n">e_two</span> <span class="o">&lt;</span> <span class="mf">0.75</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fusion must beat a single line by the sqrt(2) class"</span>
 </pre></div>
 </div>
-<p>При равных σ слияние делит дисперсию пополам: отношение RMSE сидит около <span class="math notranslate nohighlight">\(1/\sqrt{2} \approx 0.707\)</span>.
-Этот множитель — вся причина существования слияния сенсоров. Настоящие линии ещё и пропадают — съезды,
-стёртая краска, дождь, — и запасной ход это <em>другая линия плюс ширина</em>, запомненная, пока были видны
+<p>При равных σ слияние вдвое уменьшает дисперсию: отношение RMSE держится около <span class="math notranslate nohighlight">\(1/\sqrt{2} \approx 0.707\)</span>.
+Ради этого множителя слияние сенсоров и существует. Настоящие линии к тому же пропадают — съезды,
+стёртая краска, дождь, — и запасной ход тут — это <em>вторая линия плюс ширина</em>, запомненная, пока были видны
 обе:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">width_memory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">l</span> <span class="o">-</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">])</span>  <span class="c1"># learned while both were visible</span>
 
@@ -622,8 +622,8 @@
 <span class="k">assert</span> <span class="n">e_fallback</span> <span class="o">&lt;</span> <span class="mf">1.2</span> <span class="o">*</span> <span class="n">e_one</span><span class="p">,</span> <span class="s2">"acceptance: fallback must not be worse than trusting one line ever was"</span>
 </pre></div>
 </div>
-<p>Самый тонкий отказ — линия, которая <em>есть и уверена в себе</em>, но неправа: стык гудрона, мокрый след
-фуры. Взвешивание по заявленной σ тянет слитый путь к лжецу:</p>
+<p>Самый коварный отказ — линия, которая <em>есть и уверена в себе</em>, но врёт: стык гудрона, мокрый след
+фуры. Взвешивание по заявленной σ тянет слитый путь к этому лжецу:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">y_l_liar</span> <span class="o">=</span> <span class="n">y_l</span> <span class="o">+</span> <span class="mf">0.8</span>                              <span class="c1"># left "line" found 0.8 m off, confidently</span>
 <span class="n">fused_honest</span> <span class="o">=</span> <span class="n">centre_fused</span><span class="p">(</span><span class="n">y_l</span><span class="p">,</span> <span class="n">y_r</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">)</span>
@@ -633,13 +633,13 @@
 <span class="k">assert</span> <span class="mf">0.3</span> <span class="o">&lt;</span> <span class="n">shift</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">"half the lie, because the weights were equal"</span>
 </pre></div>
 </div>
-<p>Половина лжи уходит прямо в путь: σ-взвешивание защищает только от шума, в котором сенсор <em>признаётся</em>.
-Боевое слияние (<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> в <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, зеркало <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>) добавляет две
-защиты, которые вы теперь читаете с пониманием: <strong>фильтр ширины</strong> (2.6–4.6 м) и <strong>второе мнение</strong> с
-другими отказами — собственный план модели (<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>, <em>слияние разметки и
-плана</em>). И ваша σ здесь была честной по построению; настоящая выходит из сети — на заездах проекта
-медианы 0.37 м (левая) и 0.51 м (правая), и обе линии уверены одновременно лишь в ~22 % кадров.
-Запасной ход, который вы только что построили, — основной случай, а не исключение.</p>
+<p>Половина лжи уходит прямо в путь: σ-взвешивание защищает только от того шума, в котором сенсор
+<em>сам признаётся</em>. Боевое слияние (<code class="docutils literal notranslate"><span class="pre">laneLinesToPath</span></code> в <code class="docutils literal notranslate"><span class="pre">utils/lane_path.cpp</span></code>, зеркало <code class="docutils literal notranslate"><span class="pre">core/path_fusion.py</span></code>)
+добавляет две защиты, которые вы теперь прочтёте с пониманием: <strong>фильтр ширины</strong> (2.6–4.6 м) и <strong>второе
+мнение</strong> с другой природой отказов — собственный план модели (<a class="reference internal" href="../Planner/MPC_and_FP.html"><span class="std std-doc">MPC и fp</span></a>,
+<em>слияние разметки и плана</em>). И σ здесь была честной по построению; настоящая приходит из сети — на заездах
+проекта медианы 0.37 м (левая) и 0.51 м (правая), а обе линии уверены одновременно лишь в ~22 % кадров.
+Так что запасной ход, который вы только что построили, — это основной случай, а не исключение.</p>
 </section>
 <section id="aad">
 <h2>Два конвейера (AAD против этого курса)<a class="headerlink" href="#aad" title="Ссылка на этот заголовок">#</a></h2>
@@ -672,16 +672,16 @@
 </div>
 <div class="admonition note">
 <p class="admonition-title">Примечание</p>
-<p>Обучение Supercombo <strong>за рамками курса</strong>. Сеть рассматривается как чёрный ящик с опубликованной раскладкой выхода, а изучается то, как наш конвейер на Java и C++ её кормит и разбирает.</p>
+<p>Обучение Supercombo <strong>вне рамок курса</strong>. Сеть мы рассматриваем как чёрный ящик с опубликованной раскладкой выхода, а изучаем то, как наш конвейер на Java и C++ её кормит и разбирает её ответ.</p>
 </div>
 </section>
 <section id="id9">
 <h2>Главы этого модуля<a class="headerlink" href="#id9" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Системы координат</span></a> — device с <span class="math notranslate nohighlight">\(y\)</span> вправо против ISO с <span class="math notranslate nohighlight">\(y\)</span> влево; источник инвертированного руления номер один.</p></li>
+<li><p><a class="reference internal" href="Coordinates.html"><span class="std std-doc">Системы координат</span></a> — device с <span class="math notranslate nohighlight">\(y\)</span> вправо против ISO с <span class="math notranslate nohighlight">\(y\)</span> влево; причина инвертированного руления номер один.</p></li>
 <li><p><a class="reference internal" href="Supercombo.html"><span class="std std-doc">Supercombo на устройстве</span></a> — warp → GPU или ORT → разбор → публикация; темп и нагрев.</p></li>
 </ol>
-<p>Дальше вы переходите к <a class="reference internal" href="../Planner/Overview.html"><span class="std std-doc">управлению</span></a>.</p>
+<p>Дальше вы перейдёте к <a class="reference internal" href="../Planner/Overview.html"><span class="std std-doc">управлению</span></a>.</p>
 </section>
 <section id="id10">
 <h2>Карта кода (читать, не запоминать)<a class="headerlink" href="#id10" title="Ссылка на этот заголовок">#</a></h2>
@@ -705,7 +705,7 @@
 <td><p>головы модели → полилинии</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">VisionPipeline</span></code></p></td>
-<td><p>политика отбрасывания, когда занято</p></td>
+<td><p>политика отбрасывания кадров, когда конвейер занят</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LaneOverlayView</span></code></p></td>
 <td><p>только интерфейс, не контракт управления</p></td>
@@ -718,9 +718,9 @@
 <h2>Проверки, прежде чем винить контроллер<a class="headerlink" href="#id11" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
 <li><p>Темп зрения <span class="math notranslate nohighlight">\(\gtrsim 9\)</span> Гц на том окне, которое вы оцениваете.</p></li>
-<li><p>График сверху: у левой разметки ожидаемый знак <span class="math notranslate nohighlight">\(y\)</span> для выбранной системы.</p></li>
-<li><p>Подмешивание плана и разметки выглядит непрерывным (нет прыжков на метры между кадрами).</p></li>
-<li><p>И только потом перебирать <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> или веса MPC.</p></li>
+<li><p>На виде сверху у левой разметки знак <span class="math notranslate nohighlight">\(y\)</span> такой, какого ждёт выбранная система координат.</p></li>
+<li><p>Подмешивание плана и разметки идёт непрерывно (между кадрами нет скачков на метры).</p></li>
+<li><p>И только потом крутить <code class="docutils literal notranslate"><span class="pre">pp_*</span></code> или веса MPC.</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />

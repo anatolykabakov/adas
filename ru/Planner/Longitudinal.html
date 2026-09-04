@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -442,14 +442,15 @@
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Продольный планировщик — скорость и дистанция<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
 <p>Поперечные главы заканчивались кривизной. Эта заканчивается <strong>ускорением</strong>: планировщик решает, как быстро
-ехать и на каком расстоянии сидеть за машиной впереди, закон управления превращает это в запрос ускорения,
-а платформа кладёт его в собственные ACC-кадры автомобиля — те же три сервиса, что и у рулевого пути,
-намеренно. Это замена кнопочному пути через штатный круиз, которым стек управлял скоростью раньше: нажимать
-подрулевой переключатель за водителя — обход отсутствия актуатора; ускорение — и есть актуатор.</p>
+ехать и на каком расстоянии держаться за машиной впереди, закон управления превращает это в запрос ускорения,
+а платформа упаковывает его в штатные ACC-кадры автомобиля — намеренно через те же три сервиса, что и рулевой
+путь. Это замена прежнему способу — через кнопки штатного круиза, которыми стек раньше управлял скоростью:
+дёргать подрулевой переключатель за водителя было обходным манёвром из-за отсутствия актуатора; теперь
+актуатор — само ускорение.</p>
 <p>Код: <code class="docutils literal notranslate"><span class="pre">longitudinal/long_mpc.cpp</span></code> (оптимизатор), <code class="docutils literal notranslate"><span class="pre">longitudinal/long_planner.cpp</span></code> (то, что вокруг него),
 <code class="docutils literal notranslate"><span class="pre">longitudinal/long_control.cpp</span></code> (закон), <code class="docutils literal notranslate"><span class="pre">platform/volkswagen/mqbcan.cpp</span></code> (<code class="docutils literal notranslate"><span class="pre">ACC_06</span></code>/<code class="docutils literal notranslate"><span class="pre">ACC_07</span></code>/<code class="docutils literal notranslate"><span class="pre">ACC_02</span></code>).
 Формулировка, веса и сетка — из <code class="docutils literal notranslate"><span class="pre">long_mpc.py</span></code> / <code class="docutils literal notranslate"><span class="pre">longitudinal_planner.py</span></code> openpilot; солвер — наш, а глава
-заканчивается прогонами в симуляторе, которые говорят, что порт ведёт себя как надо.</p>
+заканчивается прогонами в симуляторе, которые показывают, что порт ведёт себя как надо.</p>
 <div class="note admonition">
 <p class="admonition-title">Если вы не встречали ACC</p>
 <p>Адаптивный круиз держит <strong>уставку скорости</strong>, когда дорога пуста, и <strong>временной зазор</strong> за машиной впереди,
@@ -517,9 +518,9 @@ d_{\mathrm{gap}}(v_{\mathrm{ego}}, v_{\mathrm{lead}}) = d_{\mathrm{safe}}(v_{\ma
 = \frac{v_{\mathrm{ego}}^{2} - v_{\mathrm{lead}}^{2}}{2\,a_{\mathrm{brake}}} + t_{\mathrm{follow}}\, v_{\mathrm{ego}} + d_{\mathrm{stop}} .
 \]</div>
 <p>При равных скоростях квадраты сокращаются и <span class="math notranslate nohighlight">\(d_{\mathrm{gap}} = 1.45\,v + 6\)</span>: 35 м на 20 м/с. При сближении с
-более медленным лидом разность квадратов и требует запаса: на 25 м/с за машиной на 15 м/с она добавляет
+более медленным лидом именно разность квадратов и требует запаса: на 25 м/с за машиной на 15 м/с она добавляет
 <span class="math notranslate nohighlight">\((625 - 225)/5 = 80\)</span> м — ровно то торможение, что показывает прогон в симуляторе в конце главы.</p>
-<p>Две вещи, которые надо удержать. Во-первых, <strong>безопасная дистанция</strong> — это тормозной путь: она растёт как
+<p>Два вывода, которые стоит удержать в голове. Во-первых, <strong>безопасная дистанция</strong> — это тормозной путь: она растёт как
 <span class="math notranslate nohighlight">\(v^2\)</span>, и при 30 м/с это 230 м. Во-вторых, лид, который <em>движется</em>, возвращает вам свой тормозной путь,
 поэтому за машиной на вашей же скорости зазор схлопывается до линейной части: <span class="math notranslate nohighlight">\(1.45\,v + 6\)</span>. Весь
 планировщик — способ жить между этими двумя кривыми.</p>
@@ -568,19 +569,19 @@ d_{\mathrm{gap}}(v_{\mathrm{ego}}, v_{\mathrm{lead}}) = d_{\mathrm{safe}}(v_{\ma
 </figure>
 <p>У P-закона три отказа, которые не лечатся коэффициентом. Он реагирует на зазор <em>после</em> того, как тот
 закрылся; лида, тормозящего с −2, и лида, который уже перестал тормозить, он трактует одинаково; и у него
-нет понятия <strong>рывка</strong>, поэтому он просит любое ускорение, какое скажет ошибка, мгновенно. Каждый из трёх —
-утверждение о будущем, а для этого и существует оптимизатор на горизонте.</p>
+нет понятия <strong>рывка</strong>, поэтому он мгновенно требует любого ускорения, какого потребует ошибка. Каждый из
+трёх — утверждение о будущем, а для этого и существует оптимизатор на горизонте.</p>
 </section>
 <section id="id4">
 <h2>Сборка 2: горизонт — тройной интегратор, управляемый рывком<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Продольный MPC upstream мал настолько, что помещается в одной руке. Объект — положение, скорость и
+<p>Продольный MPC upstream настолько мал, что умещается на ладони. Объект — положение, скорость и
 ускорение ego, управление — рывок:</p>
 <div class="math notranslate nohighlight">
 \[
 \dot x = v,\qquad \dot v = a,\qquad \dot a = j .
 \]</div>
-<p>Он интегрируется на <strong>двенадцати интервалах квадратичной сетки</strong> <span class="math notranslate nohighlight">\(t_i = 10\,(i/12)^2\)</span>: 0.07 с у руля,
-1.6 с в конце 10-секундного горизонта. Ближние решения получают разрешение, дальний конец — охват.</p>
+<p>Он интегрируется на <strong>двенадцати интервалах квадратичной сетки</strong> <span class="math notranslate nohighlight">\(t_i = 10\,(i/12)^2\)</span>: 0.07 с в начале,
+1.6 с в конце 10-секундного горизонта. Ближние решения получают точность, дальний конец — дальность обзора.</p>
 <p>При постоянном рывке на интервале длиной <span class="math notranslate nohighlight">\(\Delta t\)</span> три уравнения интегрируются точно — каждое есть
 первообразная предыдущего:</p>
 <div class="math notranslate nohighlight">
@@ -712,9 +713,9 @@ v_{\mathrm{lead}}(t) = \max\!\Big(0,\ v_{\mathrm{lead},0} + \int_0^{t} a_{\mathr
 \]</div>
 <p>Машина, тормозящая сейчас, не будет тормозить вечно, и гауссово затухание говорит это мягко: всего лид
 может потерять <span class="math notranslate nohighlight">\(\int_0^\infty a_0 e^{-\tau t^2/2}\,\mathrm{d}t = a_0\sqrt{\pi / 2\tau} \approx 1.02\,a_0\)</span> скорости —
-торможение с <span class="math notranslate nohighlight">\(-3\)</span> м/с² стоит ему около 3 м/с, большую часть в первую секунду. <span class="math notranslate nohighlight">\(\max(0, \cdot)\)</span> — единственный
-нефизический факт, который нужен модели: машины не едут назад. Лид из фрагмента на 15 м/с при −3
-заканчивает горизонт около 12 м/с, а не стоя.</p>
+торможение с <span class="math notranslate nohighlight">\(-3\)</span> м/с² стоит ему около 3 м/с, большую часть — в первую секунду. <span class="math notranslate nohighlight">\(\max(0, \cdot)\)</span> —
+единственная нефизичная оговорка, которая нужна модели: машины не едут назад. Лид из фрагмента на 15 м/с при
+−3 к концу горизонта едет около 12 м/с, а не стоит.</p>
 <figure class="align-default" id="id13">
 <a class="reference internal image-reference" href="../_images/long_mpc_plan.png"><img alt="../_images/long_mpc_plan.png" src="../_images/long_mpc_plan.png" style="width: 100%;" />
 </a>
@@ -723,18 +724,19 @@ v_{\mathrm{lead}}(t) = \max\!\Big(0,\ v_{\mathrm{lead},0} + \int_0^{t} a_{\mathr
 осесть там, где зазор равен безопасной дистанции от точки остановки лида.</span><a class="headerlink" href="#id13" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Выпадают три свойства, которых у P-закона быть не могло. План тормозит <strong>до</strong> того, как зазор закрылся,
-потому что предсказанная траектория лида — внутри стоимости. Он тормозит <strong>сильнее круизного лимита</strong>, когда
-должен, — <code class="docutils literal notranslate"><span class="pre">A_CRUISE_MIN</span></code> формирует круизное препятствие ниже, а жёсткая граница — панда с её −3.5. И за
-каждый рывок платится, так что запрос гладок по построению, а не благодаря фильтру после.</p>
+<p>Отсюда возникают три свойства, которых у P-закона быть не могло. План тормозит <strong>до</strong> того, как зазор
+закрылся, потому что предсказанная траектория лида уже сидит внутри стоимости. Он тормозит <strong>сильнее
+круизного лимита</strong>, когда нужно, — <code class="docutils literal notranslate"><span class="pre">A_CRUISE_MIN</span></code> формирует круизное препятствие ниже, а жёсткую границу
+задаёт панда с её −3.5. И за каждый рывок назначена цена, так что запрос гладок по построению, а не из-за
+фильтра на выходе.</p>
 <div class="warning admonition">
 <p class="admonition-title">Солвер не upstream’овский — задача да</p>
 <p>upstream генерирует эту задачу в C через <code class="docutils literal notranslate"><span class="pre">acados_template</span></code> и решает SQP-RTI. Этого генератора в сборке
 репозитория нет, поэтому <code class="docutils literal notranslate"><span class="pre">long_mpc.cpp</span></code> решает идентичную формулировку плотным Гауссом–Ньютоном
 (аналитический якобиан, демпфирование Левенберга, бэктрекинг, тёплый старт). Две вещи, на которые ушёл день
 и которые стоит знать: <strong>масштабирование стадий по Δt</strong> выше, и то, что полный гаусс-ньютоновский шаг из
-покоя перепрыгивает в штраф границы с весом 1e6, так что шагу нужен линейный поиск — одно раздувание
-демпфирования заставляет его ползти. Сходимость — 4–9 итераций на тёплом старте, меньше миллисекунды.</p>
+покоя перепрыгивает прямо в штраф на границе с весом 1e6, так что шагу нужен линейный поиск — а одно лишь
+раздувание демпфирования заставляет его ползти. Сходимость — 4–9 итераций на тёплом старте, меньше миллисекунды.</p>
 </div>
 </section>
 <section id="id5">
@@ -761,7 +763,7 @@ v_{\mathrm{lead}}(t) = \max\!\Big(0,\ v_{\mathrm{lead},0} + \int_0^{t} a_{\mathr
 v_{c,i} = \mathrm{clip}\big(v_{\mathrm{cruise}},\ v_{\mathrm{ego}} + 1.05\,a_{\min} T_i,\ v_{\mathrm{ego}} + 1.05\,a_{\max} T_i\big),\qquad
 x_{\mathrm{cruise},i} = \sum_{k \le i} v_{c,k}\,\Delta T_k + d_{\mathrm{safe}}(v_{c,i}) .
 \]</div>
-<p>Клип — честность призрачной машины: она может быть лишь там, где оказалось бы ego, разгоняясь на комфортном
+<p>Клип — это честность призрачной машины: она может быть лишь там, где оказалось бы ego, разгоняясь на комфортном
 потолке (<span class="math notranslate nohighlight">\(1.2\)</span> м/с², плюс 5 % запаса, чтобы граница не была активна на старте), — иначе член препятствия
 требовал бы ускорения, запрещённого границами, и солвер стартовал бы в штрафе. Прибавка <span class="math notranslate nohighlight">\(d_{\mathrm{safe}}(v_c)\)</span>
 ставит препятствие на полную безопасную дистанцию впереди призрака, так что следовать за ним с <span class="math notranslate nohighlight">\(g = 0\)</span> и
@@ -783,8 +785,8 @@ a_x \le \sqrt{a_{\mathrm{total}}^{2} - a_y^{2}},\qquad a_{\mathrm{total}} = 1.7 
 \]</div>
 <p><span class="math notranslate nohighlight">\(a_y = v^2\kappa\)</span> — центростремительное ускорение с <span class="math notranslate nohighlight">\(\kappa = \tan\delta/L \approx \delta/L\)</span> велосипедной модели и
 вложенным передаточным «руль → колесо»; корень — Пифагор на круге трения: у шины одно общее сцепление, и что
-берёт поворот, того нет у газа. На 15 м/с и 10° руля: <span class="math notranslate nohighlight">\(a_y = 225 \cdot 0.1745 / (15.6 \cdot 2.636) \approx 0.95\)</span>,
-значит <span class="math notranslate nohighlight">\(a_x \le \sqrt{1.7^2 - 0.95^2} \approx 1.4\)</span> м/с² — не режет. На 20 м/с и 20°: <span class="math notranslate nohighlight">\(a_y \approx 3.4\)</span>, бюджет
+забрал поворот, того не остаётся разгону. На 15 м/с и 10° руля: <span class="math notranslate nohighlight">\(a_y = 225 \cdot 0.1745 / (15.6 \cdot 2.636) \approx 0.95\)</span>,
+значит <span class="math notranslate nohighlight">\(a_x \le \sqrt{1.7^2 - 0.95^2} \approx 1.4\)</span> м/с² — ограничение не срабатывает. На 20 м/с и 20°: <span class="math notranslate nohighlight">\(a_y \approx 3.4\)</span>, бюджет
 исчерпан, ускорения в этом такте нет.</p>
 <p>Превью кривизны превращает поворот впереди в потолок скорости тем же центростремительным соотношением:</p>
 <div class="math notranslate nohighlight">
@@ -795,15 +797,15 @@ v_{\mathrm{curv}} = \sqrt{\frac{a_{\mathrm{lat,max}}}{\kappa_{\mathrm{ahead}}}} 
 R 391–699 м при 25 м/с потолок не срабатывает (их <span class="math notranslate nohighlight">\(a_y\)</span> — 0.9–1.6).</p>
 <p>Планировщик вокруг MPC (<code class="docutils literal notranslate"><span class="pre">long_planner.cpp</span></code>) делает ещё четыре вещи, которые делает upstream: фильтрует
 желаемую скорость с постоянной времени 2 с и интегрирует её вперёд по плану, ограничивает ускорение по
-скорости и по <strong>повороту</strong> (дуга на 20 м/с при 60° руля почти ничего не оставляет продольному), верит лиду
-модели только выше <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> и только на нашем пути и поднимает <strong>FCW</strong>, когда план три тика подряд
+скорости и по <strong>повороту</strong> (дуга на 20 м/с при 60° руля почти ничего не оставляет продольному каналу), верит
+лиду модели только выше <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> и только на нашем пути и поднимает <strong>FCW</strong>, когда план три тика подряд
 предсказывает столкновение внутри 5 с. Этот стек добавляет одну свою вещь: превью кривизны по слитому пути
-ограничивает <em>уставку</em> — никогда не текущую скорость, — чтобы к повороту впереди подъезжали, а не
-обнаруживали его.</p>
+ограничивает <em>уставку</em> — никогда не текущую скорость, — чтобы к повороту подъезжали заранее, а не
+обнаруживали его в упор.</p>
 </section>
 <section id="metadrive">
 <h2>Замкнуть контур в MetaDrive<a class="headerlink" href="#metadrive" title="Ссылка на этот заголовок">#</a></h2>
-<p>Стенд играет машину: скриптованный лид, движущийся по полосе с заданной скоростью, и актуатор, превращающий
+<p>Стенд изображает машину: скриптованный лид, движущийся по полосе с заданной скоростью, и актуатор, превращающий
 запрос ускорения в педальную ось MetaDrive (измеренный feedforward — газ 0.3 даёт 2.84 м/с² на этой машине
 — плюс небольшой внутренний контур, как ECU замыкает свой):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
@@ -875,12 +877,12 @@ python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"
 <h2>Где ломается<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ul class="simple">
 <li><p><strong>Превью кривизны принимает шум за поворот.</strong> С измеренными 0.15 м разброса пути на 20 м квадратичная
-аппроксимация 25 м пути говорит <span class="math notranslate nohighlight">\(R \approx 200\)</span> м на прямой, и первая версия тихо режала уставку до 19 м/с.
+аппроксимация 25 м пути говорит <span class="math notranslate nohighlight">\(R \approx 200\)</span> м на прямой, и первая версия тихо срезала уставку до 19 м/с.
 Одно длинное окно, медиана, НЧ-фильтр 2 с и мёртвая зона при <span class="math notranslate nohighlight">\(R &lt; 250\)</span> м лечат это в симуляторе — на дороге
 смотрите <code class="docutils literal notranslate"><span class="pre">v_curv</span></code> в <code class="docutils literal notranslate"><span class="pre">control/long_plan</span></code>, прежде чем доверять.</p></li>
 <li><p><strong>Лид — зрение, не радар.</strong> <code class="docutils literal notranslate"><span class="pre">long_plan.lead_source</span></code> называет это явно — <code class="docutils literal notranslate"><span class="pre">vision</span></code> сегодня, <code class="docutils literal notranslate"><span class="pre">none</span></code>, чтобы
 планировать только по уставке, <code class="docutils literal notranslate"><span class="pre">radar</span></code> зарезервирован (ни одна платформа не декодирует объекты радара;
-он падает в vision и говорит об этом). У лида модели нет доплера; его скорость и ускорение выведены. <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> —
+он откатывается на vision и сообщает об этом). У лида модели нет доплера; его скорость и ускорение выведены. <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.5</span></code> —
 гейт, <code class="docutils literal notranslate"><span class="pre">prob</span> <span class="pre">0.9</span></code> — гейт FCW, а лид дальше 2 м от нашего пути игнорируется. Безрадарный фолбэк upstream —
 тот же, но у upstream на большинстве машин ещё и радар.</p></li>
 <li><p><strong>Модель актуатора.</strong> В симуляторе ускорение становится педалью через калиброванную карту; в машине это

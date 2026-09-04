@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -432,7 +432,7 @@
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Где горизонт не помогает</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">1. Устойчивое смещение почти бесплатно в функции стоимости</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2. Удлинять горизонт тоже не помогает</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">3. У плана, который оптимизируется, своё смещение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">3. У самого оптимизируемого плана есть своё смещение</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">4. А когда момент насыщается, всё это неважно</a></li>
 </ul>
 </li>
@@ -453,11 +453,11 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="fp-mpc">
 <h1>fp — MPC в области времени, который едет<a class="headerlink" href="#fp-mpc" title="Ссылка на этот заголовок">#</a></h1>
-<p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">Игрушка</span></a> оптимизировала вдоль пути. Боевой <code class="docutils literal notranslate"><span class="pre">fp</span></code> оптимизирует вдоль <strong>времени</strong>: предсказывает,
-где машина будет через 0.01 … 2.5 с на сетке flowpilot, платит за ошибку опоры, ошибку курса и скорость
-руления и — чего игрушка не умела — компенсирует 0.35 с, за которые рулевой тракт отвечает. Эта глава
-собирает его в семь шагов, затем измеряет, где горизонт не помогает, перечисляет ручки телефона и
-замыкает контур в MetaDrive.</p>
+<p><a class="reference internal" href="MpcToy.html"><span class="std std-doc">Игрушка</span></a> оптимизировала вдоль пути. Боевой <code class="docutils literal notranslate"><span class="pre">fp</span></code> оптимизирует вдоль <strong>времени</strong>: он
+предсказывает, где машина окажется через 0.01 … 2.5 с на сетке flowpilot, платит за ошибку опоры, ошибку
+курса и скорость руления и — чего игрушка не умела — компенсирует те 0.35 с, на которые запаздывает рулевой
+тракт. Эта глава собирает его в семь шагов, затем показывает, где горизонт не помогает, перечисляет ручки
+на телефоне и замыкает контур в MetaDrive.</p>
 <p>Код: <code class="docutils literal notranslate"><span class="pre">lateral/fp_planner.cpp</span></code>, <code class="docutils literal notranslate"><span class="pre">lateral/flowpilot_mpc.cpp</span></code> (<span class="math notranslate nohighlight">\(N{=}16\)</span>, сетка по времени → 2.5 с), сменный
 численный метод <code class="docutils literal notranslate"><span class="pre">kappa_solver_grad</span></code> / <code class="docutils literal notranslate"><span class="pre">kappa_solver_acados</span></code>.</p>
 <section id="fp-mpc-flowpilot">
@@ -500,7 +500,7 @@
 t_i = 10\left(\frac{i}{32}\right)^{2},\quad i=0\ldots 16.
 \]</div>
 <p>Строятся <span class="math notranslate nohighlight">\(y_{\mathrm{ref}}(t)\)</span>, <span class="math notranslate nohighlight">\(\psi_{\mathrm{ref}}(t)\)</span>, <span class="math notranslate nohighlight">\(r_{\mathrm{ref}}=\dot\psi_{\mathrm{ref}}\)</span>.
-Если головы ориентации Supercombo есть, <span class="math notranslate nohighlight">\(\psi\)</span> и <span class="math notranslate nohighlight">\(r\)</span> берутся из <code class="docutils literal notranslate"><span class="pre">plan_yaw</span></code> и <code class="docutils literal notranslate"><span class="pre">plan_yaw_rate</span></code>.</p>
+Если у Supercombo есть головы ориентации, <span class="math notranslate nohighlight">\(\psi\)</span> и <span class="math notranslate nohighlight">\(r\)</span> берутся из <code class="docutils literal notranslate"><span class="pre">plan_yaw</span></code> и <code class="docutils literal notranslate"><span class="pre">plan_yaw_rate</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="n">N_FP</span> <span class="o">=</span> <span class="mi">16</span>
@@ -541,7 +541,7 @@ t_i = 10\left(\frac{i}{32}\right)^{2},\quad i=0\ldots 16.
 \dot r &amp;= u.
 \end{aligned}
 \end{split}\]</div>
-<p><span class="math notranslate nohighlight">\(R_{\mathrm{rot}}\approx L/2\)</span> в нашем конфиге. Машина начинается в начале координат; <span class="math notranslate nohighlight">\(r_0\)</span> засевается из геометрии пути при первом вызове.</p>
+<p><span class="math notranslate nohighlight">\(R_{\mathrm{rot}}\approx L/2\)</span> в нашем конфиге. Машина стартует из начала координат; <span class="math notranslate nohighlight">\(r_0\)</span> засевается из геометрии пути при первом вызове.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">forward_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">r0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">R_rot</span><span class="o">=</span><span class="mf">1.32</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""u length N; return Y, psi, r trajectories length N+1."""</span>
     <span class="n">X</span> <span class="o">=</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">psi</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -571,7 +571,7 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 + w_{\mathrm{srate}}(u_i/(v+0.1))^2
 \Big).
 \]</div>
-<p>Примерно поставляемые веса: <code class="docutils literal notranslate"><span class="pre">path_weight=1</span></code>, <code class="docutils literal notranslate"><span class="pre">heading_weight=0.11</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_jerk_weight=0.05</span></code>,
+<p>Веса примерно как в поставке: <code class="docutils literal notranslate"><span class="pre">path_weight=1</span></code>, <code class="docutils literal notranslate"><span class="pre">heading_weight=0.11</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_jerk_weight=0.05</span></code>,
 <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">cost_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">y_ref</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">w_y</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w_psi</span><span class="o">=</span><span class="mf">0.11</span><span class="p">,</span> <span class="n">w_srate</span><span class="o">=</span><span class="mf">400.0</span><span class="p">,</span> <span class="n">speed_offset</span><span class="o">=</span><span class="mf">10.0</span><span class="p">):</span>
     <span class="n">Y</span><span class="p">,</span> <span class="n">psi</span><span class="p">,</span> <span class="n">r</span> <span class="o">=</span> <span class="n">forward_fp</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
@@ -596,7 +596,7 @@ w_y(Y_i-y_{\mathrm{ref}})^2
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"u=</span><span class="si">{</span><span class="n">u0</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">  Y_end=</span><span class="si">{</span><span class="n">Y</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">+.3f</span><span class="si">}</span><span class="s2">  J_path=</span><span class="si">{</span><span class="n">j_path</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">  J_full=</span><span class="si">{</span><span class="n">j_full</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p><span class="math notranslate nohighlight">\(u{=}0.01\)</span> снижает стоимость пути и заканчивает около эталонных 0.25 м; полное <span class="math notranslate nohighlight">\(J\)</span> всё равно растёт из-за слагаемого по скорости — настоящий градиентный спуск балансирует оба (поставляется <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>).</p>
+<p><span class="math notranslate nohighlight">\(u{=}0.01\)</span> снижает стоимость пути и приводит примерно к эталонным 0.25 м; полное <span class="math notranslate nohighlight">\(J\)</span> всё равно растёт из-за слагаемого по скорости — настоящий градиентный спуск балансирует и то, и другое (в поставке <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight=400</span></code>).</p>
 </section>
 <section id="fp-4">
 <h3>fp-4. Решение<a class="headerlink" href="#fp-4" title="Ссылка на этот заголовок">#</a></h3>
@@ -613,7 +613,7 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 \kappa^\star = 2\kappa_{\mathrm{avg}} - \kappa_0,
 \]</div>
 <p>где <span class="math notranslate nohighlight">\(t_d=\mathrm{fp\_steer\_delay\_s}\)</span> (поставляется <strong>0.35</strong> с), затем <span class="math notranslate nohighlight">\(\kappa^\star\)</span> ограничивается по скорости через
-<code class="docutils literal notranslate"><span class="pre">max_lateral_jerk</span> <span class="pre">/</span> <span class="pre">v²</span></code>. Это порт <code class="docutils literal notranslate"><span class="pre">get_lag_adjusted_curvature</span></code> из openpilot:
+<code class="docutils literal notranslate"><span class="pre">max_lateral_jerk</span> <span class="pre">/</span> <span class="pre">v²</span></code>. Это порт <code class="docutils literal notranslate"><span class="pre">get_lag_adjusted_curvature</span></code> из openpilot: смысл в том, чтобы
 командовать ту кривизну, которая нужна <strong>в момент, когда рейка действительно двинется</strong>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">lag_adjusted_kappa</span><span class="p">(</span><span class="n">psi_sol</span><span class="p">,</span> <span class="n">r_sol</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">delay_s</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">dt_s</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span> <span class="n">max_jerk</span><span class="o">=</span><span class="mf">5.0</span><span class="p">):</span>
     <span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
@@ -644,15 +644,15 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 </section>
 <section id="fp-7">
 <h3>fp-7. Следующий кадр зрения<a class="headerlink" href="#fp-7" title="Ссылка на этот заголовок">#</a></h3>
-<p>Решаем заново с измеренным <code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> (а не с фиксированными 0.05). Угловой PID на телефоне идёт от
-<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> (около 100 Гц после приёма CAN за 10 мс); темп планировщика остаётся ограничен зрением (около 24 Гц).</p>
+<p>Решаем заново с измеренным <code class="docutils literal notranslate"><span class="pre">frame_dt</span></code> (а не с фиксированными 0.05). Угловой PID на телефоне работает от
+<code class="docutils literal notranslate"><span class="pre">vehicle/state</span></code> (около 100 Гц после приёма CAN за 10 мс); темп планировщика по-прежнему ограничен зрением (около 24 Гц).</p>
 </section>
 </section>
 <hr class="docutils" />
 <section id="id1">
 <h2>Где горизонт не помогает<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h2>
-<p>Горизонт снимает информационный предел Pure Pursuit — он читает весь путь, а не одну точку. Но не всё, и три
-вещи, которые он не снимает, каждая была измерена, а не выведена из рассуждений.</p>
+<p>Горизонт снимает информационный предел Pure Pursuit — он читает весь путь, а не одну точку. Но снимает не
+всё. Есть три предела, которые ему не поддаются, и каждый из них измерен, а не выведен умозрительно.</p>
 <section id="id2">
 <h3>1. Устойчивое смещение почти бесплатно в функции стоимости<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">fp</span></code> сбрасывает состояние каждый кадр: <span class="math notranslate nohighlight">\(x_0 = [0, 0, 0, \dot\psi]\)</span>. Машина по определению находится точно на
@@ -672,23 +672,23 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 <a class="reference internal image-reference" href="../_images/mpc_timegrid.png"><img alt="../_images/mpc_timegrid.png" src="../_images/mpc_timegrid.png" style="width: 80%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 24 </span><span class="caption-text">Квадратная сетка по времени плотно сэмплирует ближнее поле, но в первых узлах машина физически не может
-сдвинуться вбок — поэтому постоянное смещение там в косте почти бесплатно.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 24 </span><span class="caption-text">Квадратичная сетка по времени густо набирает отсчёты в ближней зоне, но в первых узлах машина физически не
+успевает сдвинуться вбок — поэтому постоянное смещение там почти ничего не стоит.</span><a class="headerlink" href="#id10" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
-<p>Прочитайте колонку доступного бокового смещения. За первые четыре узла машина не может сдвинуться боком больше
-чем на пару сантиметров, что бы руль ни делал, — поэтому 0.35 м смещения в этих узлах не стоимость, на которую
-оптимизатор может подействовать, а константа. Узлы, где боковое движение возможно, лежат достаточно далеко, и
-там доминирует ошибка кривизны.</p>
+<p>Посмотрите на колонку доступного бокового смещения. За первые четыре узла машина не сдвинется вбок больше
+чем на пару сантиметров, что бы руль ни делал, — поэтому 0.35 м смещения в этих узлах для оптимизатора не
+стоимость, на которую он может повлиять, а константа. Узлы, где боковое движение уже возможно, лежат
+достаточно далеко, и там доминирует ошибка кривизны.</p>
 <p>Измеренное следствие: машина сидела <strong>0.35 м внутри своего же эталона</strong> на дугах. И это не вес, который надо
 подстроить: прогоны в замкнутом контуре подтвердили, что ни <code class="docutils literal notranslate"><span class="pre">fp_steering_rate_weight</span></code> (150 против 800), ни
-<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> (0.23 против 0.35) этого не меняют. Устойчивое смещение убирает интегральное слагаемое,
-которого в этой постановке нет, либо уже сдвинутый эталон — что и делает
-подмешивание разметки, несколькими разделами выше.</p>
+<code class="docutils literal notranslate"><span class="pre">fp_steer_delay_s</span></code> (0.23 против 0.35) этого не меняют. Устойчивое смещение убирается либо интегральным
+слагаемым, которого в этой постановке нет, либо уже сдвинутым эталоном — а именно это и делает
+подмешивание разметки из раздела несколькими выше.</p>
 </section>
 <section id="id3">
 <h3>2. Удлинять горизонт тоже не помогает<a class="headerlink" href="#id3" title="Ссылка на этот заголовок">#</a></h3>
-<p>Очевидный ответ — «взять N = 32, как у flowpilot, вместо наших 16». Проверено, и из этого не следует, потому
+<p>Очевидный ответ — «взять N = 32, как у flowpilot, вместо наших 16». Проверили — не помогает, потому
 что сетка квадратичная:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">first_second</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_FP</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">t_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"our N=16: </span><span class="si">{</span><span class="n">first_second</span><span class="si">}</span><span class="s2"> of </span><span class="si">{</span><span class="n">N_FP</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> nodes inside the first second, horizon </span><span class="si">{</span><span class="n">t_node</span><span class="p">(</span><span class="n">N_FP</span><span class="p">)</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> s"</span><span class="p">)</span>
@@ -702,20 +702,20 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 </div>
 </section>
 <section id="id4">
-<h3>3. У плана, который оптимизируется, своё смещение<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
-<p>MPC минимизирует расстояние до эталона. Если эталон неверен, он идеально следит за неверным. На дугах план
-модели сидит в <strong>+0.32 / −0.35 м</strong> от центра полосы, и попытка убрать это одним коэффициентом кривизны
-провалилась поучительно:</p>
+<h3>3. У самого оптимизируемого плана есть своё смещение<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h3>
+<p>MPC минимизирует расстояние до эталона. Если эталон неверен, MPC будет идеально следовать за неверным. На
+дугах план модели сидит в <strong>+0.32 / −0.35 м</strong> от центра полосы, и попытка убрать это одним коэффициентом
+кривизны провалилась — и провалилась поучительно:</p>
 <ul class="simple">
 <li><p>параметризованный как постоянное расстояние (<span class="math notranslate nohighlight">\(50.2\kappa\)</span>), он был нестабилен даже внутри одного заезда —
 20.2 ниже 12 м/с против 77.2 выше;</p></li>
 <li><p>верная параметризация — упреждение по <em>времени</em>, <span class="math notranslate nohighlight">\(\tfrac{1}{2}\kappa(vT)^2\)</span>, и <span class="math notranslate nohighlight">\(T\)</span> действительно устойчиво
 по скорости: 0.71–1.03 с;</p></li>
 <li><p>но не воспроизводимо <strong>между</strong> заездами: 0.84 с на одном, 0.56 с на другом, потому что у двух заездов был
-разный выученный рыск камеры (+1.12° против +0.24°), а он меняет warp входа, поэтому сеть видит другое
-изображение и выдаёт другой план.</p></li>
+разный выученный рыск камеры (+1.12° против +0.24°), а он меняет warp входного кадра, так что сеть видит
+другую картинку и выдаёт другой план.</p></li>
 </ul>
-<p>Значит коэффициент нельзя запечь: на другой калибровке он добавит своё собственное смещение. Поэтому главным
+<p>Значит, коэффициент нельзя зашить в код: на другой калибровке он добавит собственное смещение. Поэтому главным
 рычагом стало подмешивание разметки, которому не нужно ни одного настраиваемого числа.</p>
 </section>
 <section id="id5">
@@ -725,10 +725,10 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 оптимизатора меняется, а рейка нет. Лечится это запросом меньшей кривизны, а не более усердным решением.</p>
 <div class="tip admonition">
 <p class="admonition-title">Что вынести из этого раздела</p>
-<p>Каждый предел выше — своего рода. Один структурный (нет интегрального слагаемого), один — не-результат
-(горизонт и так достаточно длинный), один вышестоящий (собственное смещение плана, связанное с калибровкой) и
-один физический (актуатор). Понять, на какой из них вы смотрите, — это и есть основная работа, и ни один из них
-не находится перебором весов.</p>
+<p>Каждый из пределов выше — своей природы. Один структурный (нет интегрального слагаемого), один — отрицательный
+результат (горизонт и так достаточно длинный), один приходит сверху по цепочке (собственное смещение плана,
+связанное с калибровкой) и один физический (актуатор). Понять, с каким из них имеешь дело, — и есть главная
+работа; и ни один из них не отыскивается перебором весов.</p>
 </div>
 </section>
 </section>
@@ -753,16 +753,16 @@ w_y(Y_i-y_{\mathrm{ref}})^2
 </section>
 <section id="id8">
 <h2>Замкните контур в симуляторе<a class="headerlink" href="#id8" title="Ссылка на этот заголовок">#</a></h2>
-<p>Всё в этой части можно прогнать в замкнутом контуре MetaDrive до всякой машины (сборка под хост и
-установка: <a class="reference internal" href="../Appendix/Setup.html"><span class="std std-doc">Установка</span></a>):</p>
+<p>Всё в этой части можно прогнать в замкнутом контуре MetaDrive, ещё не подходя к реальной машине (сборка под
+хост и установка: <a class="reference internal" href="../Appendix/Setup.html"><span class="std std-doc">Установка</span></a>):</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>scripts
 python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--track<span class="w"> </span>highway<span class="w"> </span>--controllers<span class="w"> </span>fp,pure_pursuit<span class="w"> </span>--seeds<span class="w"> </span><span class="m">7</span>
 python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"> </span>--list-tracks
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">highway</span></code> собран из рабочей области <code class="docutils literal notranslate"><span class="pre">docs/CONTROLLER_LIMITS.md</span></code> (радиусы 250–700 м); <code class="docutils literal notranslate"><span class="pre">serpentine</span></code>
-сознательно за её пределами. Стенд возит всё, что реализует один вызов, — включая ваш собственный
-регулятор:</p>
+сознательно выходит за её пределы. Стенд повезёт любой регулятор, реализующий один-единственный вызов, — в
+том числе ваш собственный:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># not-runnable — the sketch of the adapter; MetaDrive and the harness live outside the book build</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MyPurePursuit</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">"""Duck-typed like core/lane_keep.py results: steer_norm in [-1, 1]."""</span>
@@ -774,10 +774,10 @@ python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"
         <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">delta</span> <span class="o">/</span> <span class="n">max_steer_rad</span><span class="p">))</span>
 </pre></div>
 </div>
-<p>Две вещи меняются тихо: путь приходит в <strong>связанной системе</strong> каждый тик, а на выходе —
-<strong>нормированный руль</strong>: пределы актуатора принадлежат стенду, как на телефоне они принадлежат
-<code class="docutils literal notranslate"><span class="pre">Control</span></code>. И помните, чем симулятор льстит: восприятие идеально — ни σ, ни пропаданий, ни 42 мс
-задержки. Контроллер, выигрывающий здесь и проигрывающий на беге, — ожидаемый порядок событий
+<p>Незаметно меняются две вещи: путь на каждом тике приходит уже в <strong>связанной системе</strong>, а на выходе —
+<strong>нормированный руль</strong>: пределы актуатора принадлежат стенду — так же, как на телефоне они принадлежат
+<code class="docutils literal notranslate"><span class="pre">Control</span></code>. И помните, в чём симулятор вам льстит: восприятие идеально — ни σ, ни пропаданий, ни 42 мс
+задержки. Если контроллер выигрывает здесь, но проигрывает на реальном беге, — это ожидаемый порядок вещей
 (<code class="docutils literal notranslate"><span class="pre">docs/SIM_CONTROLLER_TEST.md</span></code>).</p>
 </section>
 <section id="id9">
@@ -874,7 +874,7 @@ python3<span class="w"> </span>-m<span class="w"> </span>sim.eval<span class="w"
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Где горизонт не помогает</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">1. Устойчивое смещение почти бесплатно в функции стоимости</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2. Удлинять горизонт тоже не помогает</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">3. У плана, который оптимизируется, своё смещение</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">3. У самого оптимизируемого плана есть своё смещение</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">4. А когда момент насыщается, всё это неважно</a></li>
 </ul>
 </li>

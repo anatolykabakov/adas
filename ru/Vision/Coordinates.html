@@ -249,7 +249,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Control</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../Control/VehicleModel.html">Модель машины (недокрут)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — то место, где обратная связь действительно кончается</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Control/AngleControl.html">Угловой контур — там, где обратная связь и вправду заканчивается</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Control/LongControl.html">Продольное управление — читать план там, где будет актуатор</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Platform</span></p>
@@ -438,7 +438,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Системы координат<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">#</a></h1>
-<p>Неверный знак <span class="math notranslate nohighlight">\(y\)</span> или неверный <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> <strong>инвертируют руление</strong>. Приведите договорённости в порядок до всякой математики контроллера.</p>
+<p>Неверный знак <span class="math notranslate nohighlight">\(y\)</span> или неверный <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> <strong>инвертируют руление</strong>. Наведите порядок в договорённостях раньше, чем возьмётесь за математику контроллера.</p>
 <section id="id2">
 <h2>Три представления<a class="headerlink" href="#id2" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
@@ -450,12 +450,12 @@
 <a class="reference internal image-reference" href="../_images/coordinate_systems.png"><img alt="../_images/coordinate_systems.png" src="../_images/coordinate_systems.png" style="width: 90%;" />
 </a>
 <figcaption>
-<p><span class="caption-number">Рис. 4 </span><span class="caption-text">Всегда спрашивайте, в каком <span class="math notranslate nohighlight">\(y\)</span> построен график.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
+<p><span class="caption-number">Рис. 4 </span><span class="caption-text">Всегда уточняйте, в каком <span class="math notranslate nohighlight">\(y\)</span> построен график.</span><a class="headerlink" href="#id7" title="Ссылка на это изображение">#</a></p>
 </figcaption>
 </figure>
 <div class="tip admonition">
 <p class="admonition-title">Запомнить</p>
-<p>Supercombo: <span class="math notranslate nohighlight">\(y\)</span> вправо. Машина по ISO: <span class="math notranslate nohighlight">\(y\)</span> влево. Смешать их без явного переворота — значит поменять лево и право.</p>
+<p>Supercombo: <span class="math notranslate nohighlight">\(y\)</span> вправо. Машина по ISO: <span class="math notranslate nohighlight">\(y\)</span> влево. Смешать их без явного переворота — всё равно что поменять местами лево и право.</p>
 </div>
 </section>
 <section id="id3">
@@ -477,7 +477,7 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 \[
 \mathrm{CTE} \approx - y_{\mathrm{center}}
 \]</div>
-<p>(знак зависит от того, значит ли положительная CTE «машина левее пути» или наоборот — <strong>выберите одно и держитесь</strong>).</p>
+<p>(знак зависит от того, означает ли положительная CTE «машина левее пути» или наоборот — <strong>выберите что-то одно и держитесь этого</strong>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Device frame: y right-positive</span>
 <span class="n">y_left</span><span class="p">,</span> <span class="n">y_right</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.85</span><span class="p">,</span> <span class="mf">1.90</span>   <span class="c1"># meters at some x ahead</span>
 <span class="n">y_center</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">y_left</span> <span class="o">+</span> <span class="n">y_right</span><span class="p">)</span>
@@ -509,12 +509,12 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 <span class="nb">print</span><span class="p">(</span><span class="s2">"If you forget steer_sign:"</span><span class="p">,</span> <span class="o">+</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">STEER_RATIO</span><span class="p">,</span> <span class="s2">"(WRONG sign on car)"</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Перевернуть <strong>только</strong> <span class="math notranslate nohighlight">\(y\)</span> или <strong>только</strong> <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> — всё равно получить инвертированный HCA. Согласованы должны быть оба.</p>
+<p>Перевернуть <strong>только</strong> <span class="math notranslate nohighlight">\(y\)</span> или <strong>только</strong> <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> — и вы получите инвертированный HCA. Согласованными должны быть оба.</p>
 </section>
 <section id="id4">
 <h2>Пиксель против метра<a class="headerlink" href="#id4" title="Ссылка на этот заголовок">#</a></h2>
-<p>Пиксель — это <strong>луч</strong>, а не дальность. AAD восстанавливает метры через IPM.
-Здесь Supercombo уже отдаёт метры; экстринсики всё равно важны, потому что они задают <strong>warp входа</strong>. Неверный тангаж → смещённые поперечные величины → постоянная CTE.</p>
+<p>Пиксель — это <strong>луч</strong>, а не дальность. В AAD метры восстанавливают через IPM.
+Здесь Supercombo отдаёт метры сразу; но экстринсики всё равно важны, ведь они задают <strong>warp входа</strong>. Неверный тангаж → смещённые поперечные величины → постоянная CTE.</p>
 </section>
 <section id="id5">
 <h2>Готовый чеклист<a class="headerlink" href="#id5" title="Ссылка на этот заголовок">#</a></h2>
@@ -526,7 +526,7 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 </thead>
 <tbody>
 <tr class="row-even"><td><p>левая разметка <span class="math notranslate nohighlight">\(y\approx -1.8\)</span> м</p></td>
-<td><p>как ожидается</p></td>
+<td><p>так и должно быть</p></td>
 </tr>
 <tr class="row-odd"><td><p>левая разметка устойчиво <span class="math notranslate nohighlight">\(y&gt;0\)</span></p></td>
 <td><p>ошибка в знаке или в имени</p></td>
@@ -551,9 +551,9 @@ y_{\mathrm{center}} = \tfrac{1}{2}\big(y_{\mathrm{left}} + y_{\mathrm{right}}\bi
 <section id="id6">
 <h2>Задания<a class="headerlink" href="#id6" title="Ссылка на этот заголовок">#</a></h2>
 <ol class="arabic simple">
-<li><p>Запустите примеры; меняйте знаки, пока <code class="docutils literal notranslate"><span class="pre">left_line_ok</span></code> не начнёт возвращать ложь — именно на эту ошибку студенты натыкаются в бегах.</p></li>
-<li><p>В визуализаторе одним предложением назовите систему координат графика сверху.</p></li>
-<li><p>Предскажите офлайн: переверните в конфиге только <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code> и прогоните реплей PP — в какую сторону пойдёт руль?</p></li>
+<li><p>Запустите примеры и меняйте знаки, пока <code class="docutils literal notranslate"><span class="pre">left_line_ok</span></code> не начнёт возвращать ложь, — именно на эту ошибку студенты и натыкаются в бегах.</p></li>
+<li><p>В визуализаторе одним предложением назовите систему координат для вида сверху.</p></li>
+<li><p>Сделайте офлайн-прогноз: переверните в конфиге только <code class="docutils literal notranslate"><span class="pre">steer_sign</span></code>, прогоните реплей PP — в какую сторону пойдёт руль?</p></li>
 </ol>
 <!-- next-chapter -->
 <hr class="docutils" />
